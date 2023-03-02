@@ -30,7 +30,7 @@ def list_from_file(filename,
             Defaults to None. It will be deprecated in future. Please use
             ``backend_args`` instead.
         backend_args (dict, optional): Arguments to instantiate the
-            preifx of uri corresponding backend. Defaults to None.
+            prefix of uri corresponding backend. Defaults to None.
             New in v0.2.0.
 
     Examples:
@@ -94,7 +94,7 @@ def dict_from_file(filename,
             Defaults to None. It will be deprecated in future. Please use
             ``backend_args`` instead.
         backend_args (dict, optional): Arguments to instantiate the
-            preifx of uri corresponding backend. Defaults to None.
+            prefix of uri corresponding backend. Defaults to None.
             New in v0.2.0.
 
     Examples:

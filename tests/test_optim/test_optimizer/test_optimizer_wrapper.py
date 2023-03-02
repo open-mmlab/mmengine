@@ -4,10 +4,10 @@ import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock
 
-import pytest
 import torch
 import torch.distributed as torch_dist
 import torch.nn as nn
+from parameterized import parameterized
 from torch.cuda.amp import GradScaler
 from torch.nn.parallel.distributed import DistributedDataParallel
 from torch.optim import SGD, Adam, Optimizer
@@ -17,8 +17,8 @@ from mmengine.logging import MessageHub, MMLogger
 from mmengine.optim import AmpOptimWrapper, ApexOptimWrapper, OptimWrapper
 from mmengine.testing import assert_allclose
 from mmengine.testing._internal import MultiProcessTestCase
-from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
+from mmengine.utils.version_utils import digit_version
 
 is_apex_available = False
 try:
@@ -26,6 +26,17 @@ try:
     is_apex_available = True
 except ImportError:
     pass
+
+amp_valid_dtypes = ['float64', 'float32', 'float16', 'bfloat16', None]
+torch_dtypes = [
+    torch.float16 if dtype is None else getattr(torch, dtype)
+    for dtype in amp_valid_dtypes
+]
+
+
+def bf16_supported() -> bool:
+    return (hasattr(torch.cuda, 'is_bf16_supported')
+            and torch.cuda.is_bf16_supported())
 
 
 class ToyModel(nn.Module):
@@ -196,7 +207,7 @@ class TestOptimWrapper(MultiProcessTestCase):
     # TODO: This unit test could cause CI to fail with some probability, which
     #       is caused by MultiProcessTestCase. This problem should be solved
     #       in the future).
-    @pytest.mark.skipif(True, reason='Solved in the future')
+    @unittest.skipIf(True, reason='Solved in the future')
     def test_clip_grads(self):
         # Test `clip_grad` with `clip_norm_`
         optim_wrapper = OptimWrapper(
@@ -392,10 +403,8 @@ class TestAmpOptimWrapper(TestCase):
         self.optimizer = SGD(self.model.parameters(), lr=0.1)
 
     @unittest.skipIf(
-        not torch.cuda.is_available()
-        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
-        reason='`torch.cuda.amp` is only available when pytorch-gpu version '
-        '>= 1.6')
+        not torch.cuda.is_available(),
+        reason='`torch.cuda.amp` is only available when pytorch-gpu installed')
     def test_init(self):
         # Test with default arguments.
         amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
@@ -407,6 +416,16 @@ class TestAmpOptimWrapper(TestCase):
         self.assertIsNone(amp_optim_wrapper._scale_update_param)
         self.assertIsInstance(amp_optim_wrapper.loss_scaler, GradScaler)
 
+        # Test with dtype float16
+        amp_optim_wrapper = AmpOptimWrapper(
+            dtype='float16', optimizer=self.optimizer)
+        self.assertIs(amp_optim_wrapper.cast_dtype, torch.float16)
+
+        # Test with dtype bfloat16
+        amp_optim_wrapper = AmpOptimWrapper(
+            dtype='bfloat16', optimizer=self.optimizer)
+        self.assertIs(amp_optim_wrapper.cast_dtype, torch.bfloat16)
+
         # Test with dict loss_scale.
         amp_optim_wrapper = AmpOptimWrapper(
             dict(init_scale=1, growth_factor=2), optimizer=self.optimizer)
@@ -416,14 +435,19 @@ class TestAmpOptimWrapper(TestCase):
                                     'loss_scale must be of type float'):
             AmpOptimWrapper(optimizer=self.optimizer, loss_scale='unknown')
 
+    @parameterized.expand(list(zip(amp_valid_dtypes)))
     @unittest.skipIf(
-        not torch.cuda.is_available()
-        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
-        reason='`torch.cuda.amp` is only available when pytorch-gpu version '
-        '>= 1.6')
-    def test_step(self):
+        not torch.cuda.is_available(),
+        reason='`torch.cuda.amp` is only available when pytorch-gpu installed')
+    def test_step(self, dtype):
+        if dtype is not None and (digit_version(TORCH_VERSION) <
+                                  digit_version('1.10.0')):
+            raise unittest.SkipTest('Require PyTorch version >= 1.10.0 to '
+                                    'support `dtype` argument in autocast')
+        if dtype == 'bfloat16' and not bf16_supported():
+            raise unittest.SkipTest('bfloat16 not supported by device')
         optimizer = MagicMock(spec=Optimizer)
-        amp_optim_wrapper = AmpOptimWrapper(optimizer=optimizer)
+        amp_optim_wrapper = AmpOptimWrapper(optimizer=optimizer, dtype=dtype)
         amp_optim_wrapper.loss_scaler = MagicMock()
         amp_optim_wrapper.step()
         amp_optim_wrapper.loss_scaler.step.assert_called_with(
@@ -431,13 +455,19 @@ class TestAmpOptimWrapper(TestCase):
         amp_optim_wrapper.loss_scaler.update.assert_called_with(
             amp_optim_wrapper._scale_update_param)
 
+    @parameterized.expand(list(zip(amp_valid_dtypes)))
     @unittest.skipIf(
-        not torch.cuda.is_available()
-        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
-        reason='`torch.cuda.amp` is only available when pytorch-gpu version '
-        '>= 1.6')
-    def test_backward(self):
-        amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
+        not torch.cuda.is_available(),
+        reason='`torch.cuda.amp` is only available when pytorch-gpu installed')
+    def test_backward(self, dtype):
+        if dtype is not None and (digit_version(TORCH_VERSION) <
+                                  digit_version('1.10.0')):
+            raise unittest.SkipTest('Require PyTorch version >= 1.10.0 to '
+                                    'support `dtype` argument in autocast')
+        if dtype == 'bfloat16' and not bf16_supported():
+            raise unittest.SkipTest('bfloat16 not supported by device')
+        amp_optim_wrapper = AmpOptimWrapper(
+            optimizer=self.optimizer, dtype=dtype)
         loss_scaler = MagicMock()
         scale_return = MagicMock()
         scale_fn = MagicMock(return_value=scale_return)
@@ -449,10 +479,8 @@ class TestAmpOptimWrapper(TestCase):
         scale_return.backward.assert_called_with()
 
     @unittest.skipIf(
-        not torch.cuda.is_available()
-        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
-        reason='`torch.cuda.amp` is only available when pytorch-gpu version '
-        '>= 1.6')
+        not torch.cuda.is_available(),
+        reason='`torch.cuda.amp` is only available when pytorch-gpu installed')
     def test_state_dict(self):
         self.model = self.model.cuda()
         amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
@@ -468,10 +496,8 @@ class TestAmpOptimWrapper(TestCase):
                              amp_optim_wrapper.loss_scaler.state_dict())
 
     @unittest.skipIf(
-        not torch.cuda.is_available()
-        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
-        reason='`torch.cuda.amp` is only available when pytorch-gpu version '
-        '>= 1.6')
+        not torch.cuda.is_available(),
+        reason='`torch.cuda.amp` is only available when pytorch-gpu installed')
     def test_load_state_dict(self):
         amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
         self.model = self.model.cuda()
@@ -491,14 +517,20 @@ class TestAmpOptimWrapper(TestCase):
         self.assertDictEqual(amp_optim_wrapper.loss_scaler.state_dict(),
                              amp_optim_wrapper_.loss_scaler.state_dict())
 
+    @parameterized.expand(list(zip(amp_valid_dtypes, torch_dtypes)))
     @unittest.skipIf(
-        not torch.cuda.is_available()
-        and (digit_version(TORCH_VERSION) >= digit_version('1.6.0')),
-        reason='`torch.cuda.amp` is only available when pytorch-gpu version '
-        '>= 1.6')
-    def test_optim_context(self):
-        amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
+        not torch.cuda.is_available(),
+        reason='`torch.cuda.amp` is only available when pytorch-gpu installed')
+    def test_optim_context(self, dtype, target_dtype):
+        if dtype is not None and (digit_version(TORCH_VERSION) <
+                                  digit_version('1.10.0')):
+            raise unittest.SkipTest('Require PyTorch version >= 1.10.0 to '
+                                    'support `dtype` argument in autocast')
+        if dtype == 'bfloat16' and not bf16_supported():
+            raise unittest.SkipTest('bfloat16 not supported by device')
+        amp_optim_wrapper = AmpOptimWrapper(
+            optimizer=self.optimizer, dtype=dtype)
         with amp_optim_wrapper.optim_context(self.model):
             x = torch.randn(1, 1, 1, 1).cuda()
             y = nn.Conv2d(1, 1, 1).cuda()(x)
-            self.assertEqual(y.dtype, torch.float16)
+            self.assertEqual(y.dtype, target_dtype)

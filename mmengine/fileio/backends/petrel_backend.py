@@ -375,7 +375,7 @@ class PetrelBackend(BaseStorageBackend):
             src (str or Path): A directory to be copied.
             dst (str or Path): Copy directory to dst.
             backend_args (dict, optional): Arguments to instantiate the
-                preifx of uri corresponding backend. Defaults to None.
+                prefix of uri corresponding backend. Defaults to None.
 
         Returns:
             str: The destination directory.
@@ -415,7 +415,7 @@ class PetrelBackend(BaseStorageBackend):
             src (str or Path): A local file to be copied.
             dst (str or Path): Copy file to dst.
             backend_args (dict, optional): Arguments to instantiate the
-                preifx of uri corresponding backend. Defaults to None.
+                prefix of uri corresponding backend. Defaults to None.
 
         Returns:
             str: If dst specifies a directory, the file will be copied into dst
@@ -540,7 +540,7 @@ class PetrelBackend(BaseStorageBackend):
             src (str or Path): A directory to be copied.
             dst (str or Path): Copy directory to local dst.
             backend_args (dict, optional): Arguments to instantiate the
-                preifx of uri corresponding backend. Defaults to None.
+                prefix of uri corresponding backend. Defaults to None.
 
         Returns:
             str: The destination directory.
@@ -624,7 +624,7 @@ class PetrelBackend(BaseStorageBackend):
             src (str or Path): A file or directory to be copied.
             dst (str or Path): Copy a file or directory to dst.
             backend_args (dict, optional): Arguments to instantiate the
-                preifx of uri corresponding backend. Defaults to None.
+                prefix of uri corresponding backend. Defaults to None.
 
         Returns:
             bool: Return False because PetrelBackend does not support create

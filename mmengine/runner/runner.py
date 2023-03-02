@@ -1078,7 +1078,7 @@ class Runner:
             else:
                 # if `optimizer` is not defined, it should be the case of
                 # training with multiple optimizers. If `constructor` is not
-                # defined either, Each value of `optim_wrapper` must be an
+                # defined either, each value of `optim_wrapper` must be an
                 # `OptimWrapper` instance since `DefaultOptimizerConstructor`
                 # will not handle the case of training with multiple
                 # optimizers. `build_optim_wrapper` will directly build the
@@ -2082,7 +2082,7 @@ class Runner:
             by_epoch (bool): Whether the scheduled momentum is updated by
                 epochs. Defaults to True.
             backend_args (dict, optional): Arguments to instantiate the
-                preifx of uri corresponding backend. Defaults to None.
+                prefix of uri corresponding backend. Defaults to None.
                 New in v0.2.0.
         """
         if meta is None:
