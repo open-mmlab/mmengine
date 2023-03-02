@@ -61,7 +61,7 @@ print("Model Parameters:{}".format(analysis_results['params_str']))
 
 ### 结果描述
 
-返回的输出是一个包含以下7个键的字典:
+返回的 `analysis_results` 是一个包含以下 7 个键的字典:
 
 - `flops`: flop 的总数, 例如, 1000, 1000000
 - `flops_str`: 格式化的字符串, 例如, 1.0G, 1.0M
