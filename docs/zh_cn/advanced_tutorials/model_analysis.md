@@ -36,7 +36,7 @@ class InnerNet(nn.Module):
 
     def forward(self, x):
         return self.fc1(self.fc2(x))
-    
+
 
 class TestNet(nn.Module):
     def __init__(self):
