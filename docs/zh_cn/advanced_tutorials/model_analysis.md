@@ -10,7 +10,7 @@
 
 激活量（activation）用于衡量某一层产生的特征数量。
 
-例如，给定输入尺寸 `inputs = torch.randn((1, 3, 10, 10))`，和一个有3个输入通道、10个输出通道的线性层 `conv = nn.Conv2d(in_channels=3, out_channels=10, kernel_size=1)`。
+例如，给定输入尺寸 `inputs = torch.randn((1, 3, 10, 10))`，和一个输入通道为 3、输出通道为 10 的线性层 `conv = nn.Conv2d(in_channels=3, out_channels=10, kernel_size=1)`。
 
 将 `inputs` 输入到 `conv`，得到的输出特征图的尺寸是 `(1, 10, 10, 10)`。则 `output` 对这个 `conv` 层的激活量就是 `1000=10*10*10`。
 
