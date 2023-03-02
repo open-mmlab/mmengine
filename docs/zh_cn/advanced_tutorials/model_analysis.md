@@ -63,12 +63,12 @@ print("Model Parameters:{}".format(analysis_results['params_str']))
 
 返回的输出是一个包含以下7个键的字典:
 
-- `flops`: flop 的总数, 例如, 10000, 10000
-- `flops_str`: 格式化的字符串, 例如, 1.0G, 100M
-- `params`: 全部参数的数量, 例如, 10000, 10000
-- `params_str`: 格式化的字符串, 例如, 1.0G, 100M
-- `activations`: 激活量的总数, 例如, 10000, 10000
-- `activations_str`: 格式化的字符串, 例如, 1.0G, 100M
+- `flops`: flop 的总数, 例如, 1000, 1000000
+- `flops_str`: 格式化的字符串, 例如, 1.0G, 1.0M
+- `params`: 全部参数的数量, 例如, 1000, 1000000
+- `params_str`: 格式化的字符串, 例如, 1.0K, 1M
+- `activations`: 激活量的总数, 例如, 1000, 1000000
+- `activations_str`: 格式化的字符串, 例如, 1.0G, 1M
 - `out_table`: 以表格形式打印相关信息
 
 ```
