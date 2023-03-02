@@ -7,12 +7,13 @@
 - Support `Apex` with `ApexOptimWrapper`
 - Support analyzing model complexity.
 - Add `Lion` optimizer.
-- Support using environment variable in the config file.
+- Support using environment variables in the config file.
 
 ### New Features & Enhancements
 
 - Support model complexity computation by [@tonysy](https://github.com/tonysy) in https://github.com/open-mmlab/mmengine/pull/779
 - Add Lion optimizer by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/952
+- Support `Apex` with `ApexOptimWrapper` by [@xcnick](https://github.com/xcnick) in https://github.com/open-mmlab/mmengine/pull/742
 - Support using environment variable in config file. by [@jbwang1997](https://github.com/jbwang1997) in https://github.com/open-mmlab/mmengine/pull/744
 - Improve registry infer_scope by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/334
 - Support configuring `timeout` in dist configuration by [@apacha](https://github.com/apacha) in https://github.com/open-mmlab/mmengine/pull/877
@@ -30,9 +31,7 @@
 - Backend_args should not be modified by get_file_backend by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/897
 - Support update `np.ScalarType` data in message_hub by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/898
 - Support rendering Chinese character in `Visualizer` by [@KevinNuNu](https://github.com/KevinNuNu) in https://github.com/open-mmlab/mmengine/pull/887
-- Support `Apex` with `ApexOptimWrapper` by [@xcnick](https://github.com/xcnick) in https://github.com/open-mmlab/mmengine/pull/742
 - Fix the bug of `DefaultOptimWrapperConstructor` when the shared parameters do not require the grad by [@HIT-cwh](https://github.com/HIT-cwh) in https://github.com/open-mmlab/mmengine/pull/903
-- Support model complexity computation by [@tonysy](https://github.com/tonysy) in https://github.com/open-mmlab/mmengine/pull/779
 
 ### Docs
 
