@@ -180,6 +180,14 @@ class Runner:
         cfg (dict or Configdict or :obj:`Config`, optional): Full config.
             Defaults to None.
 
+    Note:
+        Since PyTorch 2.0.0, you can enable ``torch.compile`` by passing in
+        `cfg.compile = True`. If you want to control compile options, you
+        can pass a dict, e.g. ``cfg.compile = dict(backend='eager')``.
+        Refer to `PyTorch API Documentation <https://pytorch.org/docs/
+        master/generated/torch.compile.html#torch.compile>`_ for more valid
+        options.
+
     Examples:
         >>> from mmengine.runner import Runner
         >>> cfg = dict(
