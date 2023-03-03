@@ -2325,7 +2325,7 @@ class Runner:
         assert digit_version(TORCH_VERSION) >= digit_version('2.0.0'), (
             'PyTorch >= 2.0.0 is required to enable torch.compile')
         assert isinstance(compile_cfg, dict), (
-            f'`compile` option should be a dict, got {type(compile_cfg)}')
+            f'`compile` should be a dict or bool, got {type(compile_cfg)}')
 
         # Compile the model.forward
         self.model.forward = torch.compile(self.model.forward, **compile_cfg)
