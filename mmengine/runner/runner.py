@@ -413,6 +413,9 @@ class Runner:
         self.logger.info(f'Hooks will be executed in the following '
                          f'order:\n{self.get_hooks_info()}')
 
+        # whether model has been compiled by torch.compile
+        self._is_compiled = False
+
         # dump `cfg` to `work_dir`
         self.dump_config()
 
@@ -2293,27 +2296,29 @@ class Runner:
                          dash_line + '\n')
         self.logger.info(f'Config:\n{self.cfg.pretty_text}')
 
-    def _maybe_compile(self):
+    def _maybe_compile(self) -> None:
         """Use `torch.compile` to optimize model/wrapped_model."""
+        if self._is_compiled:
+            # won't recompile
+            return
+
         compile_cfg = self.cfg.get('compile', None)
         if compile_cfg is None:
             # no compile options given, won't compile
             return
 
+        if isinstance(compile_cfg, bool):
+            if not compile_cfg:
+                # compile=False, compilation is disabled
+                return
+            # compile=True, use default configurations
+            compile_cfg = dict()
+
         assert digit_version(TORCH_VERSION) >= digit_version('2.0.0'), (
             'PyTorch >= 2.0.0 is required to enable torch.compile')
         assert isinstance(compile_cfg, dict), (
             f'`compile` option should be a dict, got {type(compile_cfg)}')
-        assert 'target' in compile_cfg
-        target = compile_cfg.pop('target')
-        assert target == '' or hasattr(self.model, target), (
-            f'compile.target `{target}` should be an attribute of Model')
 
-        if target == '':
-            # Compile the model itself
-            self.model = torch.compile(self.model, **compile_cfg)
-        else:
-            # Compile its function/module: forward, train_step, etc.
-            func = getattr(self.model, target)
-            compiled_func = torch.compile(func, **compile_cfg)
-            setattr(self.model, target, compiled_func)
+        # Compile the model.forward
+        self.model.forward = torch.compile(self.model.forward, **compile_cfg)
+        self._is_compiled = True
