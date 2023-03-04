@@ -417,10 +417,11 @@ class WandbVisBackend(BaseVisBackend):
         Args:
             config (Config): The Config object
         """
-        if self._init_kwargs is not None and 'allow_val_change' in self._init_kwargs and self._init_kwargs['allow_val_change'] is not None:
-            self._wandb.config.update(dict(config), allow_val_change=self._init_kwargs['allow_val_change'])
-        else:
-            self._wandb.config.update(dict(config))
+        if 'allow_val_change' in self._init_kwargs:
+            allow_val_change=self._init_kwargs['allow_val_change']
+        else: 
+            allow_val_change=False
+        self._wandb.config.update(dict(config), allow_val_change=allow_val_change)
         self._wandb.run.log_code(name=self._log_code_name)
 
     @force_init_env
