@@ -52,12 +52,13 @@ class EarlyStoppingHook(Hook):
     ):
 
         self.monitor = monitor
-        if monitor in self._default_greater_keys:
-            rule = 'greater'
-        elif monitor in self._default_less_keys:
-            rule = 'less'
-        assert rule in ['greater', 'less'], \
-            '`rule` should be either "greater" or "less".'
+        if rule is not None:
+            if rule not in ['greater', 'less']:
+                raise ValueError(
+                    '`rule` should be either "greater" or "less", '
+                    f'but got {rule}')
+        else:
+            rule = self._init_rule(monitor)
         self.rule = rule
         self.min_delta = min_delta if rule == 'greater' else -1 * min_delta
         self.strict = strict
@@ -67,6 +68,23 @@ class EarlyStoppingHook(Hook):
 
         self.wait_count = 0
         self.best_score = -inf if rule == 'greater' else inf
+
+    def _init_rule(self, monitor: str) -> str:
+        greater_keys = {key.lower() for key in self._default_greater_keys}
+        less_keys = {key.lower() for key in self._default_less_keys}
+        monitor_lc = monitor.lower()
+        if monitor_lc in greater_keys:
+            rule = 'greater'
+        elif monitor_lc in less_keys:
+            rule = 'less'
+        elif any(key in monitor_lc for key in greater_keys):
+            rule = 'greater'
+        elif any(key in monitor_lc for key in less_keys):
+            rule = 'less'
+        else:
+            raise ValueError(f'Cannot infer the rule for {monitor}, thus rule '
+                             'must be specified.')
+        return rule
 
     def _check_stop_condition(self, current_score: float) -> Tuple[bool, str]:
         compare = self.rule_map[self.rule]

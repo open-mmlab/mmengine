@@ -100,11 +100,34 @@ class TestEarlyStoppingHook(RunnerTestCase):
         assert hook.rule == 'greater'
         assert hook.best_score < 0
 
+        hook = EarlyStoppingHook(monitor='ACC')
+        assert hook.rule == 'greater'
+        assert hook.best_score < 0
+
+        hook = EarlyStoppingHook(monitor='ACC')
+        assert hook.rule == 'greater'
+        assert hook.best_score < 0
+
+        hook = EarlyStoppingHook(monitor='mAP_50')
+        assert hook.rule == 'greater'
+        assert hook.best_score < 0
+
         hook = EarlyStoppingHook(monitor='loss')
         assert hook.rule == 'less'
         assert hook.best_score > 0
 
-        with pytest.raises(AssertionError):
+        hook = EarlyStoppingHook(monitor='Loss')
+        assert hook.rule == 'less'
+        assert hook.best_score > 0
+
+        hook = EarlyStoppingHook(monitor='ce_loss')
+        assert hook.rule == 'less'
+        assert hook.best_score > 0
+
+        with pytest.raises(ValueError):
+            EarlyStoppingHook(monitor='recall')
+
+        with pytest.raises(ValueError):
             EarlyStoppingHook(monitor='accuracy/top1', rule='the world')
 
     def test_before_run(self):
