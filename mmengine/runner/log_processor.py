@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import datetime
-import re
 from collections import OrderedDict
 from itertools import chain
 from typing import List, Optional, Tuple
@@ -135,14 +134,13 @@ class LogProcessor:
         # Overwrite ``window_size`` defined in ``custom_cfg`` to int value.
         parsed_cfg = self._parse_windows_size(runner, batch_idx,
                                               self.custom_cfg)
-        # tag is used to write log information to different backends.
-        log_tag = self._collect_scalars(parsed_cfg, runner, mode)
+        # log_tag is used to write log information to terminal
         # If `self.log_with_hierarchy` is False, the tag is the same as
-        # log_tag Otherwise each key in tag starts with prefix `train`, `test`
-        # and `val`
-
+        # log_tag. Otherwise, each key in tag starts with prefix `train`,
+        # `test` or `val`
         tag = self._collect_scalars(parsed_cfg, runner, mode,
                                     self.log_with_hierarchy)
+        log_tag = self._collect_scalars(parsed_cfg, runner, mode)
         # Record learning rate.
         lr_str_list = []
         for key, value in tag.items():
@@ -404,9 +402,12 @@ class LogProcessor:
                 mode_infos[key] = value
         return mode_infos
 
-    def _remove_prefix(self, mode: str, key: str):
+    def _remove_prefix(self, string: str, prefix: str):
         """Remove the prefix ``train``, ``val`` and ``test`` of the key."""
-        return re.sub(f'{mode}/(.*)', r'\1', key)
+        if string.startswith(prefix):
+            return string[len(prefix) + 1:]
+        else:
+            return string
 
     def _check_custom_cfg(self) -> None:
         """Check the legality of ``self.custom_cfg``."""
