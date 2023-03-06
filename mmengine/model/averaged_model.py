@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import warnings
+import logging
 from abc import abstractmethod
 from copy import deepcopy
 from typing import Optional
@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
+from mmengine.logging import print_log
 from mmengine.registry import MODELS
 
 
@@ -184,11 +185,13 @@ class ExponentialMovingAverage(BaseAveragedModel):
         assert 0.0 < momentum < 1.0, 'momentum must be in range (0.0, 1.0)'\
                                      f'but got {momentum}'
         if momentum > 0.5:
-            warnings.warn(
+            print_log(
                 'The value of momentum in EMA is usually a small number,'
                 'which is different from the conventional notion of '
                 f'momentum but got {momentum}. Please make sure the '
-                f'value is correct.')
+                f'value is correct.',
+                logger='current',
+                level=logging.WARNING)
         self.momentum = momentum
 
     def avg_func(self, averaged_param: Tensor, source_param: Tensor,

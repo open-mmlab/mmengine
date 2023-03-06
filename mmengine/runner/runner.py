@@ -1387,8 +1387,11 @@ class Runner:
         # `persistent_workers` requires pytorch version >= 1.7
         if ('persistent_workers' in dataloader_cfg
                 and digit_version(TORCH_VERSION) < digit_version('1.7.0')):
-            warnings.warn('`persistent_workers` is only available when '
-                          'pytorch version >= 1.7')
+            print_log(
+                '`persistent_workers` is only available when '
+                'pytorch version >= 1.7',
+                logger='current',
+                level=logging.WARNING)
             dataloader_cfg.pop('persistent_workers')
 
         # The default behavior of `collat_fn` in dataloader is to
@@ -1956,10 +1959,13 @@ class Runner:
         current_seed = self._randomness_cfg.get('seed')
         if resumed_seed is not None and resumed_seed != current_seed:
             if current_seed is not None:
-                warnings.warn(f'The value of random seed in the '
-                              f'checkpoint "{resumed_seed}" is '
-                              f'different from the value in '
-                              f'`randomness` config "{current_seed}"')
+                print_log(
+                    f'The value of random seed in the '
+                    f'checkpoint "{resumed_seed}" is '
+                    f'different from the value in '
+                    f'`randomness` config "{current_seed}"',
+                    logger='current',
+                    level=logging.WARNING)
             self._randomness_cfg.update(seed=resumed_seed)
             self.set_randomness(**self._randomness_cfg)
 
@@ -1970,11 +1976,13 @@ class Runner:
         # np.ndarray, which cannot be directly judged as equal or not,
         # therefore we just compared their dumped results.
         if pickle.dumps(resumed_dataset_meta) != pickle.dumps(dataset_meta):
-            warnings.warn(
+            print_log(
                 'The dataset metainfo from the resumed checkpoint is '
                 'different from the current training dataset, please '
                 'check the correctness of the checkpoint or the training '
-                'dataset.')
+                'dataset.',
+                logger='current',
+                level=logging.WARNING)
 
         self.message_hub.load_state_dict(checkpoint['message_hub'])
 

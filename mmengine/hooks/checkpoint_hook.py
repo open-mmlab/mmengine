@@ -1,12 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import logging
 import os.path as osp
-import warnings
 from math import inf
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
 from mmengine.dist import is_main_process
 from mmengine.fileio import FileClient, get_file_backend
+from mmengine.logging import print_log
 from mmengine.registry import HOOKS
 from mmengine.utils import is_list_of, is_seq_of
 from .hook import Hook
@@ -138,9 +139,11 @@ class CheckpointHook(Hook):
         self.args = kwargs
 
         if file_client_args is not None:
-            warnings.warn(
+            print_log(
                 '"file_client_args" will be deprecated in future. '
-                'Please use "backend_args" instead', DeprecationWarning)
+                'Please use "backend_args" instead',
+                logger='current',
+                level=logging.WARNING)
             if backend_args is not None:
                 raise ValueError(
                     '"file_client_args" and "backend_args" cannot be set '

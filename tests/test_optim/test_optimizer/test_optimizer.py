@@ -10,6 +10,7 @@ import torch.nn as nn
 from torch.distributed.rpc import is_available
 
 from mmengine.dist import get_rank
+from mmengine.logging import MMLogger
 from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             DefaultOptimWrapperConstructor, OptimWrapper,
                             build_optim_wrapper)
@@ -592,10 +593,9 @@ class TestBuilder(TestCase):
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
 
-        self.assertWarnsRegex(
-            Warning,
-            'conv3.0 is duplicate. It is skipped since bypass_duplicate=True',
-            lambda: optim_constructor(model))
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
+            # Warning should be raised since conv3.0 is a duplicate param.
+            optim_constructor(model)
         optim_wrapper = optim_constructor(model)
         model_parameters = list(model.parameters())
         num_params = 14 if MMCV_FULL_AVAILABLE else 11
@@ -607,10 +607,9 @@ class TestBuilder(TestCase):
         # test DefaultOptimWrapperConstructor when the params in shared
         # modules do not require grad
         model.conv1[0].requires_grad_(False)
-        self.assertWarnsRegex(
-            Warning,
-            'conv3.0 is duplicate. It is skipped since bypass_duplicate=True',
-            lambda: optim_constructor(model))
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
+            # Warning should be raised since conv3.0 is a duplicate param.
+            optim_constructor(model)
         optim_wrapper = optim_constructor(model)
         model_parameters = list(model.parameters())
         num_params = 14 if MMCV_FULL_AVAILABLE else 11

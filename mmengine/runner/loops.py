@@ -1,13 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import bisect
+import logging
 import time
-import warnings
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import torch
 from torch.utils.data import DataLoader
 
 from mmengine.evaluator import Evaluator
+from mmengine.logging import print_log
 from mmengine.registry import LOOPS
 from .amp import autocast
 from .base_loop import BaseLoop
@@ -56,10 +57,12 @@ class EpochBasedTrainLoop(BaseLoop):
             self.runner.visualizer.dataset_meta = \
                 self.dataloader.dataset.metainfo
         else:
-            warnings.warn(
+            print_log(
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
                 'metainfo. ``dataset_meta`` in visualizer will be '
-                'None.')
+                'None.',
+                logger='current',
+                level=logging.WARNING)
 
         self.dynamic_milestones, self.dynamic_intervals = \
             calc_dynamic_intervals(
@@ -160,11 +163,14 @@ class _InfiniteDataloaderIterator:
         try:
             data = next(self._iterator)
         except StopIteration:
-            warnings.warn('Reach the end of the dataloader, it will be '
-                          'restarted and continue to iterate. It is '
-                          'recommended to use '
-                          '`mmengine.dataset.InfiniteSampler` to enable the '
-                          'dataloader to iterate infinitely.')
+            print_log(
+                'Reach the end of the dataloader, it will be '
+                'restarted and continue to iterate. It is '
+                'recommended to use '
+                '`mmengine.dataset.InfiniteSampler` to enable the '
+                'dataloader to iterate infinitely.',
+                logger='current',
+                level=logging.WARNING)
             self._epoch += 1
             if hasattr(self._dataloader, 'sampler') and hasattr(
                     self._dataloader.sampler, 'set_epoch'):
@@ -226,10 +232,12 @@ class IterBasedTrainLoop(BaseLoop):
             self.runner.visualizer.dataset_meta = \
                 self.dataloader.dataset.metainfo
         else:
-            warnings.warn(
+            print_log(
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
                 'metainfo. ``dataset_meta`` in visualizer will be '
-                'None.')
+                'None.',
+                logger='current',
+                level=logging.WARNING)
         # get the iterator of the dataloader
         self.dataloader_iterator = _InfiniteDataloaderIterator(self.dataloader)
 
@@ -338,10 +346,12 @@ class ValLoop(BaseLoop):
             self.runner.visualizer.dataset_meta = \
                 self.dataloader.dataset.metainfo
         else:
-            warnings.warn(
+            print_log(
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
                 'metainfo. ``dataset_meta`` in evaluator, metric and '
-                'visualizer will be None.')
+                'visualizer will be None.',
+                logger='current',
+                level=logging.WARNING)
         self.fp16 = fp16
 
     def run(self) -> dict:
@@ -408,10 +418,12 @@ class TestLoop(BaseLoop):
             self.runner.visualizer.dataset_meta = \
                 self.dataloader.dataset.metainfo
         else:
-            warnings.warn(
+            print_log(
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
                 'metainfo. ``dataset_meta`` in evaluator, metric and '
-                'visualizer will be None.')
+                'visualizer will be None.',
+                logger='current',
+                level=logging.WARNING)
         self.fp16 = fp16
 
     def run(self) -> dict:

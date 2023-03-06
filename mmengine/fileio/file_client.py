@@ -1,10 +1,11 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import inspect
-import warnings
+import logging
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Generator, Iterator, Optional, Tuple, Union
 
+from mmengine.logging import print_log
 from mmengine.utils import is_filepath
 from .backends import (BaseStorageBackend, HTTPBackend, LmdbBackend,
                        LocalBackend, MemcachedBackend, PetrelBackend)
@@ -14,9 +15,11 @@ class HardDiskBackend(LocalBackend):
     """Raw hard disks storage backend."""
 
     def __init__(self) -> None:
-        warnings.warn(
+        print_log(
             '"HardDiskBackend" is the alias of "LocalBackend" '
-            'and the former will be deprecated in future.', DeprecationWarning)
+            'and the former will be deprecated in future.',
+            logger='current',
+            level=logging.WARNING)
 
     @property
     def name(self):
@@ -83,11 +86,12 @@ class FileClient:
     client: Any
 
     def __new__(cls, backend=None, prefix=None, **kwargs):
-        warnings.warn(
+        print_log(
             '"FileClient" will be deprecated in future. Please use io '
             'functions in '
             'https://mmengine.readthedocs.io/en/latest/api/fileio.html#file-io',  # noqa: E501
-            DeprecationWarning)
+            logger='current',
+            level=logging.WARNING)
         if backend is None and prefix is None:
             backend = 'disk'
         if backend is not None and backend not in cls._backends:

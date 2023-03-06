@@ -1,14 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import logging
 import os
 import os.path as osp
 import sys
-import warnings
 from typing import Callable, Optional, Union
 
 import torch
 
 from mmengine.dist import master_only
 from mmengine.hooks import Hook
+from mmengine.logging import print_log
 from mmengine.registry import HOOKS
 
 
@@ -18,7 +19,7 @@ def check_kineto() -> bool:  # noqa
         if torch.autograd.kineto_available():
             kineto_exist = True
     except AttributeError:
-        warnings.warn('NO KINETO')
+        print_log('NO KINETO', logger='current', level=logging.WARNING)
     return kineto_exist
 
 

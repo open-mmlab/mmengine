@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import warnings
+import logging
 from abc import ABCMeta, abstractmethod
 from typing import Any, List, Optional, Sequence, Union
 
@@ -44,8 +44,11 @@ class BaseMetric(metaclass=ABCMeta):
         self.results: List[Any] = []
         self.prefix = prefix or self.default_prefix
         if self.prefix is None:
-            warnings.warn('The prefix is not set in metric class '
-                          f'{self.__class__.__name__}.')
+            print_log(
+                'The prefix is not set in metric class '
+                f'{self.__class__.__name__}.',
+                logger='current',
+                level=logging.WARNING)
 
     @property
     def dataset_meta(self) -> Optional[dict]:
@@ -97,10 +100,12 @@ class BaseMetric(metaclass=ABCMeta):
             names of the metrics, and the values are corresponding results.
         """
         if len(self.results) == 0:
-            warnings.warn(
+            print_log(
                 f'{self.__class__.__name__} got empty `self.results`. Please '
                 'ensure that the processed results are properly added into '
-                '`self.results` in `process` method.')
+                '`self.results` in `process` method.',
+                logger='current',
+                level=logging.WARNING)
 
         results = collect_results(self.results, size, self.collect_device)
 

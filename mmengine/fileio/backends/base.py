@@ -1,6 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import warnings
+import logging
 from abc import ABCMeta, abstractmethod
+
+from mmengine.logging import print_log
 
 
 class BaseStorageBackend(metaclass=ABCMeta):
@@ -19,8 +21,10 @@ class BaseStorageBackend(metaclass=ABCMeta):
 
     @property
     def allow_symlink(self):
-        warnings.warn('allow_symlink will be deprecated in future',
-                      DeprecationWarning)
+        print_log(
+            'allow_symlink will be deprecated in future',
+            logger='current',
+            level=logging.WARNING)
         return self._allow_symlink
 
     @property

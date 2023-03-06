@@ -1478,10 +1478,8 @@ class TestRunner(TestCase):
         cfg.train_cfg = dict(
             by_epoch=False, max_iters=12, val_interval=4, val_begin=4)
         runner = Runner.from_cfg(cfg)
-        with self.assertWarnsRegex(
-                Warning,
-                'Reach the end of the dataloader, it will be restarted and '
-                'continue to iterate.'):
+        # Warning should be raised since the sampler is not InfiniteSampler.
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             runner.train()
 
         assert isinstance(runner.train_loop, IterBasedTrainLoop)
@@ -2073,11 +2071,8 @@ class TestRunner(TestCase):
         # ckpt_modified['meta']['seed'] = 123
         path_modified = osp.join(self.temp_dir, 'modified.pth')
         torch.save(ckpt_modified, path_modified)
-        with self.assertWarnsRegex(
-                Warning, 'The dataset metainfo from the resumed checkpoint is '
-                'different from the current training dataset, please '
-                'check the correctness of the checkpoint or the training '
-                'dataset.'):
+        # Warning should be raised since dataset_meta is not matched
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             runner.resume(path_modified)
 
         # 1.3.3 test resume with unmatched seed
@@ -2085,8 +2080,8 @@ class TestRunner(TestCase):
         ckpt_modified['meta']['seed'] = 123
         path_modified = osp.join(self.temp_dir, 'modified.pth')
         torch.save(ckpt_modified, path_modified)
-        with self.assertWarnsRegex(
-                Warning, 'The value of random seed in the checkpoint'):
+        # Warning should be raised since seed is not matched
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             runner.resume(path_modified)
 
         # 1.3.3 test resume with no seed and dataset meta
