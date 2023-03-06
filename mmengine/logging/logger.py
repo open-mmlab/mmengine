@@ -1,8 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
 import os
+import os.path as osp
+import re
 import sys
+import warnings
+from getpass import getuser
 from logging import Logger, LogRecord
+from socket import gethostname
 from typing import Optional, Union
 
 from termcolor import colored
@@ -168,15 +173,21 @@ class MMLogger(Logger, ManagerMixin):
 
         if log_file is not None:
             if rank != 0:
-                # rename `log_file` with rank suffix.
-                path_split = log_file.split(os.sep)
-                if '.' in path_split[-1]:
-                    filename_list = path_split[-1].split('.')
-                    filename_list[-2] = f'{filename_list[-2]}_rank{rank}'
-                    path_split[-1] = '.'.join(filename_list)
-                else:
-                    path_split[-1] = f'{path_split[-1]}_rank{rank}'
-                log_file = os.sep.join(path_split)
+                # The first (.*{os.sep}) matches the file directory.
+                # The second (.*) matches the filename without suffix
+                # The last (.*) matches the suffix
+                pattern = f'(.*{os.sep}|' r')(.*)(\..*|' ')$'
+                matched = re.match(pattern, log_file)
+                if matched is None:
+                    raise ValueError(
+                        f'Invalid log file: {log_file}, please check its '
+                        'correctness')
+                filepath, filename, suffix = matched.groups()
+                hostname = _get_host_info()
+                filename = f'{filename}_{hostname}_rank{rank}'
+                if suffix:
+                    filename = f'{filename}.{suffix}'
+                log_file = osp.join(filepath, filename)
             # Save multi-ranks logs if distributed is True. The logs of rank0
             # will always be saved.
             if rank == 0 or distributed:
@@ -192,6 +203,11 @@ class MMLogger(Logger, ManagerMixin):
                     MMFormatter(color=False, datefmt='%Y/%m/%d %H:%M:%S'))
                 file_handler.setLevel(log_level)
                 self.handlers.append(file_handler)
+        self._log_file = log_file
+
+    @property
+    def log_file(self):
+        return self._log_file
 
     @classmethod
     def get_current_instance(cls) -> 'MMLogger':
@@ -297,3 +313,18 @@ def _get_rank():
         return 0
     else:
         return get_rank()
+
+
+def _get_host_info() -> str:
+    """Get hostname and username.
+
+    Return empty string if exception raised, e.g. ``getpass.getuser()`` will
+    lead to error in docker container
+    """
+    host = ''
+    try:
+        host = f'{getuser()}@{gethostname()}'
+    except Exception as e:
+        warnings.warn(f'Host or user not found: {str(e)}')
+    finally:
+        return host

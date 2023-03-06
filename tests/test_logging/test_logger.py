@@ -52,7 +52,6 @@ class TestLogger:
     def test_init_rank1(self, tmp_path):
         # If `rank!=1`, the `loglevel` of file_handler is `logging.ERROR`.
         tmp_file = tmp_path / 'tmp_file.log'
-        log_path = tmp_path / 'tmp_file_rank1.log'
         logger = MMLogger.get_instance(
             'rank1.pkg2', log_level='INFO', log_file=str(tmp_file))
         assert len(logger.handlers) == 1
@@ -64,11 +63,14 @@ class TestLogger:
         assert logger.handlers[0].level == logging.ERROR
         assert logger.handlers[1].level == logging.INFO
         assert len(logger.handlers) == 2
-        assert os.path.exists(log_path)
+        assert os.path.exists(logger._log_file)
         # `FileHandler` should be closed in Windows, otherwise we cannot
         # delete the temporary directory
         logging.shutdown()
         MMLogger._instance_dict.clear()
+
+        logger = MMLogger.get_instance(
+            'rank1.pkg4', log_level='INFO', log_file='a.log')
 
     @pytest.mark.parametrize('log_level',
                              [logging.WARNING, logging.INFO, logging.DEBUG])
