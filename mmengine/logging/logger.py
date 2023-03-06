@@ -173,21 +173,12 @@ class MMLogger(Logger, ManagerMixin):
 
         if log_file is not None:
             if rank != 0:
-                # The first (.*{os.sep}) matches the file directory.
-                # The second (.*) matches the filename without suffix
-                # The last (.*) matches the suffix
-                pattern = f'(.*{os.sep}|' r')(.*)(\..*|' ')$'
-                matched = re.match(pattern, log_file)
-                if matched is None:
-                    raise ValueError(
-                        f'Invalid log file: {log_file}, please check its '
-                        'correctness')
-                filepath, filename, suffix = matched.groups()
+                filename, suffix = osp.splitext(osp.basename(log_file))
                 hostname = _get_host_info()
                 filename = f'{filename}_{hostname}_rank{rank}'
                 if suffix:
                     filename = f'{filename}.{suffix}'
-                log_file = osp.join(filepath, filename)
+                log_file = osp.join(osp.dirname(log_file), filename)
             # Save multi-ranks logs if distributed is True. The logs of rank0
             # will always be saved.
             if rank == 0 or distributed:
