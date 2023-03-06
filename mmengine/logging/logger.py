@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
+import os
 import os.path as osp
 import sys
 import warnings
@@ -155,7 +156,8 @@ class MMLogger(Logger, ManagerMixin):
         ManagerMixin.__init__(self, name)
         # Get rank in DDP mode.
 
-        rank = _get_rank()
+        global_rank = _get_rank()
+        device_id = _get_device_id()
 
         # Config stream_handler. If `rank != 0`. stream_handler can only
         # export ERROR logs.
@@ -165,21 +167,21 @@ class MMLogger(Logger, ManagerMixin):
         stream_handler.setFormatter(
             MMFormatter(color=True, datefmt='%m/%d %H:%M:%S'))
         # Only rank0 `StreamHandler` will log messages below error level.
-        stream_handler.setLevel(log_level) if rank == 0 else \
+        stream_handler.setLevel(log_level) if global_rank == 0 else \
             stream_handler.setLevel(logging.ERROR)
         self.handlers.append(stream_handler)
 
         if log_file is not None:
-            if rank != 0:
+            if global_rank != 0 or log_level == 'DEBUG' or distributed:
                 filename, suffix = osp.splitext(osp.basename(log_file))
                 hostname = _get_host_info()
-                filename = f'{filename}_{hostname}_rank{rank}'
-                if suffix:
-                    filename = f'{filename}.{suffix}'
+                filename = f'{filename}_{hostname}_device{device_id}_' \
+                           f'rank{global_rank}{suffix}'
                 log_file = osp.join(osp.dirname(log_file), filename)
             # Save multi-ranks logs if distributed is True. The logs of rank0
             # will always be saved.
-            if rank == 0 or distributed:
+            if global_rank == 0 or distributed or \
+               logging._nameToLevel[log_level] <= logging.DEBUG:
                 # Here, the default behaviour of the official logger is 'a'.
                 # Thus, we provide an interface to change the file mode to
                 # the default behaviour. `FileHandler` is not supported to
@@ -302,6 +304,26 @@ def _get_rank():
         return 0
     else:
         return get_rank()
+
+
+def _get_device_id():
+    """Get device id of current machine."""
+    try:
+        import torch
+    except ImportError:
+        return 0
+    else:
+        local_rank = int(os.getenv('LOCAL_RANK', '0'))
+        # TODO: return device id of npu and mlu.
+        if not torch.cuda.is_available():
+            return local_rank
+        num_device = torch.cuda.device_count()
+        cuda_visible_device = os.getenv('CUDA_VISIBLE_DEVICES', None)
+        if cuda_visible_device is None:
+            cuda_visible_device = list(range(num_device))
+        else:
+            cuda_visible_device = cuda_visible_device.split(',')
+        return int(cuda_visible_device[local_rank])
 
 
 def _get_host_info() -> str:
