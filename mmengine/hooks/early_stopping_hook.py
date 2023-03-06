@@ -29,7 +29,7 @@ class EarlyStoppingHook(Hook):
             the monitored quantity reaches this threshold. Defaults to None.
 
        Note:
-           `New in version 0.6.0.`
+           `New in version 0.7.0.`
     """
     priority = 'LOWEST'
 
