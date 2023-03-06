@@ -54,11 +54,12 @@ class LogProcessor:
         num_digits (int): The number of significant digit shown in the
             logging message.
         log_with_hierarchy (bool): Whether to log with hierarchy. If it is
-            True.The information writed to visualizer backend such as
+            True. The information is written to visualizer backend such as
             :obj:`LocalVisBackend` and :obj:`TensorboardBackend` will be logged
             with hierarchy. For example, ``loss`` will be saved as
             ``train/loss``, and accuracy will be saved as ``val/accuracy``.
-            Defaults to False
+            Defaults to False.
+            `New in version 0.7.0.`
 
     Examples:
         >>> # `log_name` is defined, `loss_large_window` will be an additional
@@ -132,16 +133,15 @@ class LogProcessor:
         current_loop = self._get_cur_loop(runner, mode)
         cur_iter = self._get_iter(runner, batch_idx=batch_idx)
         # Overwrite ``window_size`` defined in ``custom_cfg`` to int value.
-        custom_cfg_copy = copy.deepcopy(self.custom_cfg)
-        custom_cfg_copy = self._parse_windows_size(runner, batch_idx,
-                                                   custom_cfg_copy)
+        parsed_cfg = self._parse_windows_size(runner, batch_idx,
+                                              self.custom_cfg)
         # tag is used to write log information to different backends.
-        log_tag = self._collect_scalars(custom_cfg_copy, runner, mode)
+        log_tag = self._collect_scalars(parsed_cfg, runner, mode)
         # If `self.log_with_hierarchy` is False, the tag is the same as
         # log_tag Otherwise each key in tag starts with prefix `train`, `test`
         # and `val`
 
-        tag = self._collect_scalars(custom_cfg_copy, runner, mode,
+        tag = self._collect_scalars(parsed_cfg, runner, mode,
                                     self.log_with_hierarchy)
         # Record learning rate.
         lr_str_list = []
@@ -272,10 +272,10 @@ class LogProcessor:
                     data_src=f'{mode}/data_time',
                     window_size='epoch',
                     method_name='mean'))
-        custom_cfg_copy = self._parse_windows_size(runner, batch_idx,
-                                                   custom_cfg_copy)
+        parsed_cfg = self._parse_windows_size(runner, batch_idx,
+                                              custom_cfg_copy)
         # tag is used to write log information to different backends.
-        ori_tag = self._collect_scalars(custom_cfg_copy, runner, mode,
+        ori_tag = self._collect_scalars(parsed_cfg, runner, mode,
                                         self.log_with_hierarchy)
         non_scalar_tag = self._collect_non_scalars(runner, mode)
         # move `time` or `data_time` to the end of the log
@@ -331,7 +331,7 @@ class LogProcessor:
                          custom_cfg: List[dict],
                          runner,
                          mode: str,
-                         reserve_prefix=False) -> dict:
+                         reserve_prefix: bool = False) -> dict:
         """Collect log information to compose a dict according to mode.
 
         Args:
@@ -455,6 +455,8 @@ class LogProcessor:
         """
         if custom_cfg is None:
             custom_cfg = copy.deepcopy(self.custom_cfg)
+        else:
+            custom_cfg = copy.deepcopy(custom_cfg)
         for log_cfg in custom_cfg:
             window_size = log_cfg.get('window_size', None)
             if window_size is None or isinstance(window_size, int):
