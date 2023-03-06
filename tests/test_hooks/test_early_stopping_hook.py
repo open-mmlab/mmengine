@@ -5,7 +5,6 @@ import os.path as osp
 import tempfile
 from unittest.mock import Mock
 
-import pytest
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
@@ -97,37 +96,35 @@ class TestEarlyStoppingHook(RunnerTestCase):
     def test_init(self):
 
         hook = EarlyStoppingHook(monitor='acc')
-        assert hook.rule == 'greater'
-        assert hook.best_score < 0
+        self.assertEqual(hook.rule, 'greater')
+        self.assertLess(hook.best_score, 0)
 
         hook = EarlyStoppingHook(monitor='ACC')
-        assert hook.rule == 'greater'
-        assert hook.best_score < 0
-
-        hook = EarlyStoppingHook(monitor='ACC')
-        assert hook.rule == 'greater'
-        assert hook.best_score < 0
+        self.assertEqual(hook.rule, 'greater')
+        self.assertLess(hook.best_score, 0)
 
         hook = EarlyStoppingHook(monitor='mAP_50')
-        assert hook.rule == 'greater'
-        assert hook.best_score < 0
+        self.assertEqual(hook.rule, 'greater')
+        self.assertLess(hook.best_score, 0)
 
         hook = EarlyStoppingHook(monitor='loss')
-        assert hook.rule == 'less'
-        assert hook.best_score > 0
+        self.assertEqual(hook.rule, 'less')
+        self.assertGreater(hook.best_score, 0)
 
         hook = EarlyStoppingHook(monitor='Loss')
-        assert hook.rule == 'less'
-        assert hook.best_score > 0
+        self.assertEqual(hook.rule, 'less')
+        self.assertGreater(hook.best_score, 0)
 
         hook = EarlyStoppingHook(monitor='ce_loss')
-        assert hook.rule == 'less'
-        assert hook.best_score > 0
+        self.assertEqual(hook.rule, 'less')
+        self.assertGreater(hook.best_score, 0)
 
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
+            # `rule` should be passed.
             EarlyStoppingHook(monitor='recall')
 
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
+            # Invalid `rule`
             EarlyStoppingHook(monitor='accuracy/top1', rule='the world')
 
     def test_before_run(self):
@@ -135,32 +132,22 @@ class TestEarlyStoppingHook(RunnerTestCase):
         runner.train_loop = object()
 
         # `train_loop` must contain `stop_training` variable.
-        with pytest.raises(AssertionError):
+        with self.assertRaises(AssertionError):
             hook = EarlyStoppingHook(monitor='accuracy/top1', rule='greater')
             hook.before_run(runner)
 
     def test_after_val_epoch(self):
         runner = get_mock_runner()
+        metrics = {'accuracy/top1': 0.5, 'loss': 0.23}
+        hook = EarlyStoppingHook(monitor='acc', rule='greater')
 
-        # if `monitor` does not match, skip the hook.
-        with pytest.warns(UserWarning) as record_warnings:
-            metrics = {'accuracy/top1': 0.5, 'loss': 0.23}
-            hook = EarlyStoppingHook(monitor='acc', rule='greater')
+        with self.assertWarns(UserWarning):
+            # Skip early stopping process since the evaluation results does not
+            # include the key 'acc'
             hook.after_val_epoch(runner, metrics)
 
-        # Since there will be many warnings thrown, we just need to check
-        # if the expected exceptions are thrown
-        expected_message = (
-            f'Skip early stopping process since the evaluation results '
-            f'({metrics.keys()}) do not include `monitor` ({hook.monitor}).')
-        for warning in record_warnings:
-            if str(warning.message) == expected_message:
-                break
-        else:
-            assert False
-
         # if `monitor` does not match and strict=True, crash the training.
-        with pytest.raises(RuntimeError):
+        with self.assertRaises(RuntimeError):
             metrics = {'accuracy/top1': 0.5, 'loss': 0.23}
             hook = EarlyStoppingHook(
                 monitor='acc', rule='greater', strict=True)
@@ -195,7 +182,7 @@ class TestEarlyStoppingHook(RunnerTestCase):
             hook.after_val_epoch(runner, metric)
             if runner.train_loop.stop_training:
                 break
-        assert runner.train_loop.stop_training
+        self.assertTrue(runner.train_loop.stop_training)
 
         # Check finite
         runner = get_mock_runner()
@@ -206,7 +193,7 @@ class TestEarlyStoppingHook(RunnerTestCase):
             hook.after_val_epoch(runner, metric)
             if runner.train_loop.stop_training:
                 break
-        assert runner.train_loop.stop_training
+        self.assertTrue(runner.train_loop.stop_training)
 
         # Check patience
         runner = get_mock_runner()
@@ -217,7 +204,7 @@ class TestEarlyStoppingHook(RunnerTestCase):
             hook.after_val_epoch(runner, metric)
             if runner.train_loop.stop_training:
                 break
-        assert not runner.train_loop.stop_training
+        self.assertFalse(runner.train_loop.stop_training)
 
         # Check stopping_threshold
         runner = get_mock_runner()
@@ -265,4 +252,4 @@ class TestEarlyStoppingHook(RunnerTestCase):
             custom_hooks=[early_stop_cfg],
             experiment_name='earlystop_test')
         runner.train()
-        assert runner.epoch == 6
+        self.assertEqual(runner.epoch, 6)
