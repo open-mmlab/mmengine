@@ -14,8 +14,10 @@ import torch
 
 from mmengine.config import Config
 from mmengine.fileio import dump
+from mmengine.hooks.logger_hook import SUFFIX_TYPE
 from mmengine.logging import MMLogger
 from mmengine.registry import VISBACKENDS
+from mmengine.utils import scandir
 from mmengine.utils.dl_utils import TORCH_VERSION
 
 
@@ -645,6 +647,8 @@ class MLflowVisBackend(BaseVisBackend):
         tracking_uri (str, optional): The tracking uri. Default to None.
         log_artifact (bool, optional): Whether to log the artifact.
             Default to False.
+        artifact_suffix (Tuple[str] or str, optional): The artifact suffix.
+            Default to ('.json', '.log', '.py', 'yaml', '').
     """
 
     def __init__(self,
@@ -654,7 +658,9 @@ class MLflowVisBackend(BaseVisBackend):
                  tags: Optional[dict] = None,
                  params: Optional[dict] = None,
                  tracking_uri: Optional[str] = None,
-                 log_artifact: bool = False):
+                 log_artifact: bool = False,
+                 artifact_suffix: SUFFIX_TYPE = ('.json', '.log', '.py',
+                                                 'yaml', '')):
         super().__init__(save_dir)
         self._exp_name = exp_name
         self._run_name = run_name
@@ -662,6 +668,7 @@ class MLflowVisBackend(BaseVisBackend):
         self._params = params
         self._tracking_uri = tracking_uri
         self._log_artifact = log_artifact
+        self._artifact_suffix = artifact_suffix
 
     def _init_env(self):
         """Setup env for MLflow."""
@@ -769,8 +776,12 @@ class MLflowVisBackend(BaseVisBackend):
 
     def close(self) -> None:
         """Close the mlflow."""
-        if self._log_artifact:
-            self._mlflow.log_artifacts(self.cfg.work_dir)
+        for filename in scandir(self.cfg.work_dir, self._artifact_suffix,
+                                True):
+            file_path = osp.join(self.cfg.work_dir, filename)
+            relative_path = os.path.relpath(file_path, self.cfg.work_dir)
+            dir_path = os.path.dirname(relative_path)
+            self._mlflow.log_artifact(file_path, dir_path)
 
         if hasattr(self, '_mlflow'):
             self._mlflow.end_run()
