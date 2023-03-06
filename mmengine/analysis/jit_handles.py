@@ -209,9 +209,9 @@ def einsum_flop_jit(inputs: List[Any], outputs: List[Any]) -> Union[int, Any]:
 
 def matmul_flop_jit(inputs: List[Any], outputs: List[Any]) -> Union[int, Any]:
     """Count flops for matmul."""
+    # input_shapes is a list of length 2.
     input_shapes: list = [get_shape(v) for v in inputs]
     input1, input2 = input_shapes
-    # input_shapes is a list of length 2.
     if len(input1) == 1:
         input1 = [1, input1[0]]
     if len(input2) == 1:
