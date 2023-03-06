@@ -25,3 +25,4 @@ mmengine.hooks
    ProfilerHook
    NPUProfilerHook
    PrepareTTAHook
+   EarlyStoppingHook

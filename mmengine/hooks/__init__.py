@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .checkpoint_hook import CheckpointHook
+from .early_stopping_hook import EarlyStoppingHook
 from .ema_hook import EMAHook
 from .empty_cache_hook import EmptyCacheHook
 from .hook import Hook
@@ -17,5 +18,5 @@ __all__ = [
     'Hook', 'IterTimerHook', 'DistSamplerSeedHook', 'ParamSchedulerHook',
     'SyncBuffersHook', 'EmptyCacheHook', 'CheckpointHook', 'LoggerHook',
     'NaiveVisualizationHook', 'EMAHook', 'RuntimeInfoHook', 'ProfilerHook',
-    'NPUProfilerHook', 'PrepareTTAHook'
+    'PrepareTTAHook', 'NPUProfilerHook', 'EarlyStoppingHook'
 ]
