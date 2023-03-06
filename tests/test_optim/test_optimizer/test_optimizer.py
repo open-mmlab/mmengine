@@ -594,6 +594,7 @@ class TestBuilder(TestCase):
             optim_wrapper_cfg, paramwise_cfg)
 
         with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
+            # Warning should be raised since conv3.0 is a duplicate param.
             optim_constructor(model)
         optim_wrapper = optim_constructor(model)
         model_parameters = list(model.parameters())
@@ -607,6 +608,7 @@ class TestBuilder(TestCase):
         # modules do not require grad
         model.conv1[0].requires_grad_(False)
         with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
+            # Warning should be raised since conv3.0 is a duplicate param.
             optim_constructor(model)
         optim_wrapper = optim_constructor(model)
         model_parameters = list(model.parameters())

@@ -95,6 +95,8 @@ class TestAveragedModel(TestCase):
                 torch.nn.Conv2d(1, 5, kernel_size=3), torch.nn.Linear(5, 10))
             ExponentialMovingAverage(model, momentum=3)
 
+        # Warning should be raised if the value of momentum in EMA is
+        # a large number
         with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             model = torch.nn.Sequential(
                 torch.nn.Conv2d(1, 5, kernel_size=3), torch.nn.Linear(5, 10))

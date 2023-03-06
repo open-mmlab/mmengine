@@ -76,5 +76,7 @@ class TestUtils(TestCase):
         # init default scope when another scope is init
         name = f'test-{datetime.datetime.now()}'
         DefaultScope.get_instance(name, scope_name='test')
+        # Warning should be raised since the current
+        # default scope is not 'mmdet'
         with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             init_default_scope('mmdet')

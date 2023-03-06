@@ -69,6 +69,7 @@ class TestVisualizer(TestCase):
         visualizer.get_image()
 
         # test save_dir
+        # Warning should be raised since no backend is initialized.
         with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             Visualizer()
 

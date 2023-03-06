@@ -111,6 +111,7 @@ class TestEvaluator(TestCase):
         # Test empty results
         cfg = dict(type='ToyMetric', dummy_metrics=dict(accuracy=1.0))
         evaluator = Evaluator(cfg)
+        # Warning should be raised if the results are empty
         with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             evaluator.evaluate(0)
 
@@ -187,8 +188,9 @@ class TestEvaluator(TestCase):
     def test_prefix(self):
         cfg = dict(type='NonPrefixedMetric')
         logger = MMLogger.get_current_instance()
+        # Warning should be raised if prefix is not set.
         with self.assertLogs(logger, 'WARNING'):
-            _ = Evaluator(cfg)
+            Evaluator(cfg)
 
     def test_get_metric_value(self):
 
