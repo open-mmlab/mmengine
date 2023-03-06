@@ -2,7 +2,7 @@
 
 ## Runner and model
 
-As mentioned in [basic dataflow](./runner.md#bassic-dataflow), the dataflow between DataLoader, model and evaluator follows some rules. Don't remember clearly? Let's review it:
+As mentioned in [basic dataflow](./runner.md#basic-dataflow), the dataflow between DataLoader, model and evaluator follows some rules. Don't remember clearly? Let's review it:
 
 ```python
 # Training process

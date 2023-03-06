@@ -243,7 +243,7 @@ As shown in the above example, `OptimWrapperDict` exports learning rates and mom
 
 ### Configure the OptimWapper in [Runner](runner.md)
 
-We first need to configure the `optimizer` for the OptimWrapper. MMEngine automatically adds all optimizers in PyTorch to the `OPTIMIZERS` registry, and users can specify the optimizers they need in the form of a `dict`. All supported optimizers in PyTorch are listed [here](https://pytorch.org/docs/stable/optim.html#algorithms).
+We first need to configure the `optimizer` for the OptimWrapper. MMEngine automatically adds all optimizers in PyTorch to the `OPTIMIZERS` registry, and users can specify the optimizers they need in the form of a `dict`. All supported optimizers in PyTorch are listed [here](https://pytorch.org/docs/stable/optim.html#algorithms). In addition, `DAdaptAdaGrad`, `DAdaptAdam`, and `DAdaptSGD` can be used by installing [dadaptation](https://github.com/facebookresearch/dadaptation). `Lion` optimizer can used by install [lion-pytorch](https://github.com/lucidrains/lion-pytorch)。
 
 Now we take setting up a SGD OptimWrapper as an example.
 
@@ -426,7 +426,7 @@ Each field in `custom_keys` is defined as follows.
 
 ### Customize optimizer construction policies
 
-Like other modules in MMEngine, the optimizer wrapper constructor is also managed by the [registry](../advanced_tutorial/registry.md). We can customize the hyperparameter policies by implementing custom optimizer wrapper constructors.
+Like other modules in MMEngine, the optimizer wrapper constructor is also managed by the [registry](../advanced_tutorials/registry.md). We can customize the hyperparameter policies by implementing custom optimizer wrapper constructors.
 
 For example, we can implement an optimizer wrapper constructor called `LayerDecayOptimWrapperConstructor` that automatically set decreasing learning rates for layers of different depths of the model.
 

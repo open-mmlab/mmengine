@@ -262,7 +262,7 @@ class TestLogProcessor:
         loop = log_processor._get_cur_loop(self.runner, 'test')
         assert len(loop.dataloader) == 5
 
-    def setup(self):
+    def setup_method(self):
         runner = MagicMock()
         runner.epoch = 1
         runner.max_epochs = 10

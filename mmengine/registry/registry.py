@@ -7,6 +7,9 @@ from contextlib import contextmanager
 from importlib import import_module
 from typing import Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
+from rich.console import Console
+from rich.table import Table
+
 from mmengine.config.utils import MODULE2PACKAGE
 from mmengine.utils import is_seq_of
 from .default_scope import DefaultScope
@@ -68,7 +71,7 @@ class Registry:
         >>> fasterrcnn = DETECTORS.build(dict(type='det.MaskRCNN'))
 
     More advanced usages can be found at
-    https://mmengine.readthedocs.io/en/latest/tutorials/registry.html.
+    https://mmengine.readthedocs.io/en/latest/advanced_tutorials/registry.html.
     """
 
     def __init__(self,
@@ -120,10 +123,18 @@ class Registry:
         return self.get(key) is not None
 
     def __repr__(self):
-        format_str = self.__class__.__name__ + \
-                     f'(name={self._name}, ' \
-                     f'items={self._module_dict})'
-        return format_str
+        table = Table(title=f'Registry of {self._name}')
+        table.add_column('Names', justify='left', style='cyan')
+        table.add_column('Objects', justify='left', style='green')
+
+        for name, obj in sorted(self._module_dict.items()):
+            table.add_row(name, str(obj))
+
+        console = Console()
+        with console.capture() as capture:
+            console.print(table, end='')
+
+        return capture.get()
 
     @staticmethod
     def infer_scope() -> str:
@@ -142,15 +153,31 @@ class Registry:
             >>>     pass
             >>> # The scope of ``ResNet`` will be ``mmdet``.
         """
+        from ..logging import print_log
+
         # `sys._getframe` returns the frame object that many calls below the
         # top of the stack. The call stack for `infer_scope` can be listed as
         # follow:
         # frame-0: `infer_scope` itself
         # frame-1: `__init__` of `Registry` which calls the `infer_scope`
         # frame-2: Where the `Registry(...)` is called
-        filename = inspect.getmodule(sys._getframe(2)).__name__  # type: ignore
-        split_filename = filename.split('.')
-        return split_filename[0]
+        module = inspect.getmodule(sys._getframe(2))
+        if module is not None:
+            filename = module.__name__
+            split_filename = filename.split('.')
+            scope = split_filename[0]
+        else:
+            # use "mmengine" to handle some cases which can not infer the scope
+            # like initializing Registry in interactive mode
+            scope = 'mmengine'
+            print_log(
+                'set scope as "mmengine" when scope can not be inferred. You '
+                'can silence this warning by passing a "scope" argument to '
+                'Registry like `Registry(name, scope="toy")`',
+                logger='current',
+                level=logging.WARNING)
+
+        return scope
 
     @staticmethod
     def split_scope_key(key: str) -> Tuple[Optional[str], str]:
@@ -397,7 +424,7 @@ class Registry:
             >>> # hierarchical registry
             >>> DETECTORS = Registry('detector', parent=MODELS, scope='det')
             >>> # `ResNet` does not exist in `DETECTORS` but `get` method
-            >>> # will try to search from its parenet or ancestors
+            >>> # will try to search from its parents or ancestors
             >>> resnet_cls = DETECTORS.get('ResNet')
             >>> CLASSIFIER = Registry('classifier', parent=MODELS, scope='cls')
             >>> @CLASSIFIER.register_module()
@@ -578,7 +605,7 @@ class Registry:
             name (str or list of str, optional): The module name to be
                 registered. If not specified, the class name will be used.
             force (bool): Whether to override an existing class with the same
-                name. Default to False.
+                name. Defaults to False.
             module (type, optional): Module class or function to be registered.
                 Defaults to None.
 

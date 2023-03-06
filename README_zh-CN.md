@@ -38,41 +38,42 @@
 
 ## 简介
 
-MMEngine 是一个基于 PyTorch 用于深度学习模型训练的基础库，支持在 Linux、Windows、macOS 上运行。它具有如下三个亮点：
+MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的基础库。它为开发人员提供了坚实的工程基础，以此避免在工作流上编写冗余代码。作为 OpenMMLab 所有代码库的训练引擎，其在不同研究领域支持了上百个算法。此外，MMEngine 也可以用于非 OpenMMLab 项目中。
 
-1. 通用：MMEngine 实现了一个高级的通用训练器，它能够：
+主要特性：
 
-   - 支持用少量代码训练不同的任务，例如仅使用 80 行代码就可以训练 imagenet（原始pytorch example 400 行）
-   - 轻松兼容流行的算法库 (如 TIMM、TorchVision 和 Detectron2 ) 中的模型
+1. **通用且强大的执行器**：
 
-2. 统一：MMEngine 设计了一个接口统一的开放架构，使得:
+   - 支持用少量代码训练不同的任务，例如仅使用 80 行代码就可以训练 ImageNet（原始 PyTorch 示例需要 400 行）。
+   - 轻松兼容流行的算法库（如 TIMM、TorchVision 和 Detectron2）中的模型。
 
-   - 用户可以仅依赖一份代码实现所有任务的轻量化，例如 MMRazor 1.x 相比 MMRazor 0.x 优化了 40% 的代码量
+2. **接口统一的开放架构**：
+
+   - 使用统一的接口处理不同的算法任务，例如，实现一个方法并应用于所有的兼容性模型。
    - 上下游的对接更加统一便捷，在为上层算法库提供统一抽象的同时，支持多种后端设备。目前 MMEngine 支持 Nvidia CUDA、Mac MPS、AMD、MLU 等设备进行模型训练。
 
-3. 灵活：MMEngine 实现了“乐高”式的训练流程，支持了:
+3. **可定制的训练流程**：
 
-   - 根据迭代数、 loss 和评测结果等动态调整的训练流程、优化策略和数据增强策略，例如早停（early stopping）机制等
-   - 任意形式的模型权重平均，如 Exponential Momentum Average (EMA) 和 Stochastic Weight Averaging (SWA)
-   - 训练过程中针对任意数据和任意节点的灵活可视化和日志控制
-   - 对神经网络模型中各个层的优化配置进行细粒度调整
-   - 混合精度训练的灵活控制
+   - 定义了“乐高”式的训练流程。
+   - 提供了丰富的组件和策略。
+   - 使用不同等级的 API 控制训练过程。
 
 ## 最近进展
 
-最新版本 v0.5.0 在 2023.01.20 发布。
+最新版本 v0.6.0 在 2023.02.24 发布。
 
 亮点：
 
-- 新增 `BaseInferencer` 以提供通用的推理接口
-- 新增 `ReduceOnPlateauParamScheduler` 以实现根据 metric 变化自动调整学习率或动量
-- MMEngine 不再维护对 Python3.6 的支持
+- 新增 `ApexOptimWrapper` 支持 `Apex` 的混合精度训练功能
+- 支持计算模型复杂度
+- 新增 Lion 优化器
+- 支持在配置文件使用环境变量
 
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v050-01202023)
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v060-02242023)
 
 ## 安装
 
-在安装 MMengine 之前，请确保 PyTorch 已成功安装在环境中，可以参考 [PyTorch 官方安装文档](https://pytorch.org/get-started/locally/)。
+在安装 MMEngine 之前，请确保 PyTorch 已成功安装在环境中，可以参考 [PyTorch 官方安装文档](https://pytorch.org/get-started/locally/)。
 
 安装 MMEngine
 
@@ -87,7 +88,7 @@ mim install mmengine
 python -c 'from mmengine.utils.dl_utils import collect_env;print(collect_env())'
 ```
 
-更多安装方式请阅读[安装文档](https://mmengine.readthedocs.io/zh_CN/latest/get_started/installation.html)
+更多安装方式请阅读[安装文档](https://mmengine.readthedocs.io/zh_CN/latest/get_started/installation.html)。
 
 ## 快速上手
 
@@ -96,7 +97,10 @@ python -c 'from mmengine.utils.dl_utils import collect_env;print(collect_env())'
 <details>
 <summary>构建模型</summary>
 
-首先，我们需要构建一个**模型**，在 MMEngine 中，我们约定这个模型应当继承 `BaseModel`，并且其 `forward` 方法除了接受来自数据集的若干参数外，还需要接受额外的参数 `mode`：对于训练，我们需要 `mode` 接受字符串 "loss"，并返回一个包含 "loss" 字段的字典；对于验证，我们需要 `mode` 接受字符串 "predict"，并返回同时包含预测信息和真实信息的结果。
+首先，我们需要构建一个**模型**，在 MMEngine 中，我们约定这个模型应当继承 `BaseModel`，并且其 `forward` 方法除了接受来自数据集的若干参数外，还需要接受额外的参数 `mode`。
+
+- 对于训练，我们需要 `mode` 接受字符串 "loss"，并返回一个包含 "loss" 字段的字典。
+- 对于验证，我们需要 `mode` 接受字符串 "predict"，并返回同时包含预测信息和真实信息的结果。
 
 ```python
 import torch.nn.functional as F
@@ -121,8 +125,7 @@ class MMResNet50(BaseModel):
 <details>
 <summary>构建数据集</summary>
 
-其次，我们需要构建训练和验证所需要的**数据集 (Dataset)**和**数据加载器 (DataLoader)**。
-对于基础的训练和验证功能，我们可以直接使用符合 PyTorch 标准的数据加载器和数据集。
+其次，我们需要构建训练和验证所需要的**数据集（Dataset）**和**数据加载器（DataLoader）**。在该示例中，我们使用 TorchVision 支持的方式构建数据集。
 
 ```python
 import torchvision.transforms as transforms
@@ -183,29 +186,22 @@ class Accuracy(BaseMetric):
 <details>
 <summary>构建执行器</summary>
 
-最后，我们利用构建好的**模型**，**数据加载器**，**评测指标**构建一个**执行器 (Runner)**，同时在其中配置
-**优化器**、**工作路径**、**训练与验证配置**等选项
+最后，我们利用构建好的`模型`，`数据加载器`，`评测指标`构建一个**执行器（Runner）**，并伴随其他的配置信息，如下所示。
 
 ```python
 from torch.optim import SGD
 from mmengine.runner import Runner
 
 runner = Runner(
-    # 用以训练和验证的模型，需要满足特定的接口需求
     model=MMResNet50(),
-    # 工作路径，用以保存训练日志、权重文件信息
     work_dir='./work_dir',
-    # 训练数据加载器，需要满足 PyTorch 数据加载器协议
     train_dataloader=train_dataloader,
     # 优化器包装，用于模型优化，并提供 AMP、梯度累积等附加功能
     optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
-    # 训练配置，用于指定训练周期、验证间隔等信息
+    # 训练配置，例如 epoch 等
     train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
-    # 验证数据加载器，需要满足 PyTorch 数据加载器协议
     val_dataloader=val_dataloader,
-    # 验证配置，用于指定验证所需要的额外参数
     val_cfg=dict(),
-    # 用于验证的评测器，这里使用默认评测器，并评测指标
     val_evaluator=dict(type=Accuracy),
 )
 ```
@@ -226,16 +222,12 @@ runner.train()
 <details>
 <summary>入门教程</summary>
 
-- [注册器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/registry.html)
-- [配置](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/config.html)
 - [执行器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/runner.html)
-- [钩子](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/hook.html)
 - [数据集与数据加载器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/dataset.html)
 - [模型](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/model.html)
-- [评测指标和评测器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/evaluation.html)
-- [优化器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/optim_wrapper.html)
+- [模型精度评测](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/evaluation.html)
+- [优化器封装](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/optim_wrapper.html)
 - [优化器参数调整策略](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/param_scheduler.html)
-- [数据变换](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/data_transform.html)
 - [钩子](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/hook.html)
 
 </details>
@@ -243,47 +235,59 @@ runner.train()
 <details>
 <summary>进阶教程</summary>
 
-- [注册器](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/registry.html)
-- [配置](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/config.html)
+- [注册器](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/registry.html)
+- [配置](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/config.html)
 - [数据集基类](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/basedataset.html)
-- [抽象数据接口](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/data_element.html)
-- [数据变换](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/data_transform.html)
+- [数据变换](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/data_transform.html)
 - [权重初始化](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/initialize.html)
 - [可视化](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/visualization.html)
 - [抽象数据接口](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/data_element.html)
 - [分布式通信原语](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/distributed.html)
 - [记录日志](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/logging.html)
 - [文件读写](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/fileio.html)
-- [辅助类](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/utils.html)
-- [全局管理器](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/manager_mixin.html)
+- [全局管理器 (ManagerMixin)](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/manager_mixin.html)
 - [跨库调用模块](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/cross_library.html)
+- [测试时增强](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/test_time_augmentation.html)
 
 </details>
 
 <details>
 <summary>示例</summary>
-- [恢复训练](https://mmengine.readthedocs.io/zh_CN/latest/examples/resume_training.html)
-- [加速训练](https://mmengine.readthedocs.io/zh_CN/latest/examples/speed_up_training.html)
-- [节省显存](https://mmengine.readthedocs.io/zh_CN/latest/examples/save_gpu_memory.html)
-- [跨库调用模块](https://mmengine.readthedocs.io/zh_CN/latest/examples/cross_library.html)
+
 - [训练生成对抗网络](https://mmengine.readthedocs.io/zh_CN/latest/examples/train_a_gan.html)
 
 </details>
+
+<details>
+<summary>常用功能</summary>
+
+- [恢复训练](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/resume_training.html)
+- [加速训练](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/speed_up_training.html)
+- [节省显存](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/save_gpu_memory.html)
+
+</details>
+
 <details>
 <summary>架构设计</summary>
-- [钩子的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/hook.html)
-- [执行器的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/runner.html)
-- [模型精度评测的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/evaluation.html)
-- [可视化的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/visualization.html)
-- [日志系统的设计](https://mmengine.readthedocs.io/zh_CN/latest/design/logging.html)
+
+- [钩子](https://mmengine.readthedocs.io/zh_CN/latest/design/hook.html)
+- [执行器](https://mmengine.readthedocs.io/zh_CN/latest/design/runner.html)
+- [模型精度评测](https://mmengine.readthedocs.io/zh_CN/latest/design/evaluation.html)
+- [可视化](https://mmengine.readthedocs.io/zh_CN/latest/design/visualization.html)
+- [日志系统](https://mmengine.readthedocs.io/zh_CN/latest/design/logging.html)
+- [推理接口](https://mmengine.readthedocs.io/zh_CN/latest/design/infer.html)
+
 </details>
+
 <details>
 <summary>迁移指南</summary>
+
 - [迁移 MMCV 执行器到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/runner.html)
 - [迁移 MMCV 钩子到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/hook.html)
 - [迁移 MMCV 模型到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/model.html)
 - [迁移 MMCV 参数调度器到 MMEngine](https://mmengine.readthedocs.io/zh_CN/latest/migration/param_scheduler.html)
 - [数据变换类的迁移](https://mmengine.readthedocs.io/zh_CN/latest/migration/transform.html)
+
 </details>
 
 ## 贡献指南

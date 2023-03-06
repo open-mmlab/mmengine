@@ -4,7 +4,7 @@
 
 TTA 的核心实现通常分为两个部分：
 
-1. 测试时的数据增强：测试时数据增强主要在 MMCV 中实现，可以参考 [TestTimeAug 的 API 文档](mmcv.transform.TestTimeAug)，本文档不再赘述。
+1. 测试时的数据增强：测试时数据增强主要在 MMCV 中实现，可以参考 [TestTimeAug 的 API 文档](mmcv.transforms.TestTimeAug)，本文档不再赘述。
 2. 模型推理以及结果融合：`BaseTTAModel` 的主要功能就是实现这一部分，`BaseTTAModel.test_step` 会解析测试时增强后的数据并进行推理。用户继承 `BaseTTAModel` 后只需实现相应的融合策略即可。
 
 ## 快速上手
@@ -100,18 +100,20 @@ cfg.test_dataloader.dataset.pipeline = cfg.tta_pipeline
 ```python
 image1  = dict(
     inputs=[data_1_1, data_1_2],
-    data_sample=[data_sample1_1, data_sample1_2])
-）
+    data_sample=[data_sample1_1, data_sample1_2]
+)
 
 image2  = dict(
     inputs=[data_2_1, data_2_2],
-    data_sample=[data_sample2_1, data_sample2_2])
-）
+    data_sample=[data_sample2_1, data_sample2_2]
+)
+
 
 image3  = dict(
     inputs=[data_3_1, data_3_2],
-    data_sample=[data_sample3_1, data_sample3_2])
-）
+    data_sample=[data_sample3_1, data_sample3_2]
+)
+
 ```
 
 其中 `data_{i}_{j}` 为增强后的数据，`data_sample_{i}_{j}` 为增强后数据的标签信息。

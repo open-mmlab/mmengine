@@ -10,6 +10,7 @@ import torch
 import torch.nn as nn
 
 from mmengine import VISBACKENDS, Config
+from mmengine.logging import MMLogger
 from mmengine.visualization import Visualizer
 
 
@@ -68,10 +69,8 @@ class TestVisualizer(TestCase):
         visualizer.get_image()
 
         # test save_dir
-        with pytest.warns(
-                Warning,
-                match='`Visualizer` backend is not initialized '
-                'because save_dir is None.'):
+        # Warning should be raised since no backend is initialized.
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             Visualizer()
 
         visualizer = Visualizer(
@@ -183,7 +182,7 @@ class TestVisualizer(TestCase):
         with pytest.raises(TypeError):
             visualizer.draw_points(positions=[1, 2])
         with pytest.raises(AssertionError):
-            visualizer.draw_points(positions=np.array([1, 2, 3]))
+            visualizer.draw_points(positions=np.array([1, 2, 3], dtype=object))
         # test color
         visualizer.draw_points(
             positions=torch.tensor([[1, 1], [3, 3]]),
