@@ -1848,6 +1848,9 @@ class TestRunner(TestCase):
             self.assertIn(predictions[0].dtype,
                           (torch.float16, torch.bfloat16))
 
+    @skipIf(
+        not hasattr(torch, 'compile'),
+        reason='torch.compile is not valid, please install PyTorch>=2.0.0')
     def test_test_with_compile(self):
         # 1. test with simple configuration
         cfg = copy.deepcopy(self.epoch_based_cfg)
