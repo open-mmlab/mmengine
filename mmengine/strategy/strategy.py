@@ -33,6 +33,17 @@ class Strategy(ABC):
     optim: Optional[OptimType] = None
     scheduler: Optional[SchedulerType] = None
 
+    # class attributes, each new model_wrapper or optim_wrapper in MMEngine
+    # should be declared here
+    builtin_model_wrappers: tuple = (
+        'MMDistributedDataParallel', 'MMSeparateDistributedDataParallel',
+        'MMFullyShardedDataParallel'
+    )
+    builtin_optim_wrappers: tuple = (
+        'OptimWraper', 'AmpOptimWrapper', 'OptimWrapperDict',
+        'ZeroRedundancyOptimizer'
+    )
+
     def __init__(self):
         self._base_is_initialized = True
         self._base_is_setup = False
