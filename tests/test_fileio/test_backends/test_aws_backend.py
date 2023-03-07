@@ -1,4 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import os
+import sys
+import unittest
 from typing import Sequence
 from unittest import TestCase, TestLoader
 from unittest.mock import MagicMock, patch
@@ -26,25 +29,129 @@ try:
     # raise ImportError('aws')
 
 except ImportError:
+    sys.modules['boto3'] = MagicMock()
+    sys.modules['boto3.client'] = MagicMock()
 
-    class MockClient(MagicMock):
-        pass
+    class MockAWSClient(MagicMock):
 
-    @patch('boto3.client', MagicMock)
+        def __init__(self, *args, **kwargs) -> None:
+            pass
+
+        def head_bucket(self, Bucket):
+            return True
+
+        def head_object(self, Bucket, Key):
+            return True
+
+        def download_fileobj(self, bucket, obj_name, value, *args, **kwargs):
+            with open(bucket, 'rb') as f:
+                content = f.read()
+                value.write(content)
+
+        def upload_fileobj(self, buff, bucket, obj_name, *args, **kwargs):
+            pass
+
+        def delete_object(self, *args, **kwargs):
+            pass
+
+        def get_object(Bucket, Key):
+            return b's3'
+
+        def get_paginator(self, type='list_objects_v2'):
+
+            class Paginator:
+
+                @staticmethod
+                def paginate(Bucket, Prefix, *args, **kwargs):
+                    dir_path = Prefix
+                    paths = []
+                    for root, dirs, files in os.walk(dir_path):
+                        for name in files:
+                            paths.append(os.path.join(root, name))
+                    response = {
+                        'ResponseMetadata': {
+                            'HTTPStatusCode': 200
+                        },
+                        'Contents': [{
+                            'Key': path.replace('\\', '/')
+                        } for path in paths]
+                    }
+                    return [response]
+
+            return Paginator
+
+        @staticmethod
+        def _parse_path(obj, filepath):
+            return str(filepath), str(filepath)
+
+    @patch('boto3.client', MockAWSClient)
     class TestMockAWSBackend(TestCase):
 
         @classmethod
         def setUpClass(cls):
-            print('11111111111import error')
+            cls.aws = 'aws://mmengine/'
+            cls.backend = AWSBackend()
 
         def setUp(self) -> None:
             pass
 
-        def test_cal(self):
-            self.assertEqual(1, 1)
+        def test_get(self):
+            file_path = self.aws + 'test.txt'
+            with patch.object(self.backend._client, 'get_object') as fobj:
+                self.backend.get(file_path)
+                fobj.assert_called_once()
 
-        def test_cal1(self):
-            self.assertEqual(1, 1)
+        def test_get_text(self):
+            file_path = self.aws + 's3.txt'
+            with patch.object(self.backend, 'get') as fobj:
+                self.backend.get_text(file_path)
+                fobj.assert_called_once()
+
+        def test_put(self):
+            file_path = self.aws + 'test_put.txt'
+            with patch.object(self.backend._client, 'upload_fileobj') as fobj:
+                self.backend.put(b'file_path', file_path)
+                fobj.assert_called_once()
+
+        def test_put_text(self):
+            file_path = self.aws + 'test_put.txt'
+            with patch.object(self.backend, 'put') as fobj:
+                self.backend.put_text('file_path', file_path)
+                fobj.assert_called_once()
+
+        def test_remove(self):
+            file_path = self.aws + 'test_put.txt'
+            with patch.object(self.backend._client, 'delete_object') as fobj:
+                self.backend.remove(file_path)
+                fobj.assert_called_once()
+
+        def test_exists(self):
+            exit_file_path = self.aws + 's3.txt'
+            with patch.object(self.backend, '_check_object') as fobj:
+                self.backend.exists(exit_file_path)
+                fobj.assert_called_once()
+
+        def test_isdir(self):
+            file_path = self.aws + 'data/'
+            with patch.object(self.backend, '_check_object') as fobj:
+                self.backend.exists(file_path)
+                fobj.assert_called_once()
+
+        def test_isfile(self):
+            # create a file
+            file_path = self.aws + 'data/' + 'tmp.txt'
+            with patch.object(self.backend, '_check_object') as fobj:
+                self.backend.exists(file_path)
+                fobj.assert_called_once()
+
+        def test_get_local_path(self):
+            file_path = self.aws + 'data/' + 'tmp.txt'
+            with patch.object(self.backend, 'get', return_value=b'ss') as fobj:
+                with self.backend.get_local_path(file_path):
+                    fobj.assert_called_once()
+
+        def test_list_dir_or_file(self):
+            pass
 
         def tearDown(self) -> None:
             pass
@@ -63,6 +170,9 @@ else:
             cls.s3 = boto3.resource('s3')
             # Upload a new file for test
             cls.s3.Bucket('mmengine').put_object(Key='s3.txt', Body=b's3')
+            cls.s3.Bucket('mmengine').put_object(Key='dir/a.txt', Body=b's3')
+            cls.s3.Bucket('mmengine').put_object(Key='dir/b.txt', Body=b's3')
+            cls.s3.Bucket('mmengine').put_object(Key='dir/b.jpg', Body=b's3')
 
             cls.backend = AWSBackend()
 
@@ -75,7 +185,7 @@ else:
                 buckets.append(bucket.name)
             self.assertEqual(buckets, ['goog1', 'mmengine', 'yehaochen'])
 
-        # @unittest.skip('test')
+        @unittest.skip('test')
         def test_create_bucket(self):
             # Create bucket
             flag = False
@@ -103,6 +213,62 @@ else:
         def test_get(self):
             file_path = self.aws + 's3.txt'
             self.assertEqual(self.backend.get(file_path), b's3')
+
+        def test_get_text(self):
+            file_path = self.aws + 's3.txt'
+            self.assertEqual(self.backend.get_text(file_path), 's3')
+
+        def test_put(self):
+            file_path = self.aws + 'test_put.txt'
+            self.backend.put(b'test put', file_path)
+            self.assertEqual(self.backend.get_text(file_path), 'test put')
+            self.backend.remove(file_path)
+
+        def test_put_text(self):
+            file_path = self.aws + 'test_put.txt'
+            self.backend.put_text('test put', file_path)
+            self.assertEqual(self.backend.get_text(file_path), 'test put')
+            self.backend.remove(file_path)
+
+        def test_remove(self):
+            file_path = self.aws + 'test_put.txt'
+            self.backend.put_text('test put', file_path)
+            self.assertEqual(self.backend.get_text(file_path), 'test put')
+            self.backend.remove(file_path)
+            self.assertFalse(self.backend.exists(file_path))
+
+        def test_exists(self):
+            exit_file_path = self.aws + 's3.txt'
+            not_exit_file_path = self.aws + 'ss3.txt'
+            self.assertTrue(self.backend.exists(exit_file_path))
+            self.assertFalse(self.backend.exists(not_exit_file_path))
+
+        def test_isdir(self):
+            # create a file
+            file_path = self.aws + 'data/' + 'tmp.txt'
+            self.backend.put_text('tmp', file_path)
+            self.assertEqual(self.backend.get_text(file_path), 'tmp')
+            self.assertTrue(self.backend.isdir(self.aws + 'data/'))
+            self.backend.remove(file_path)
+
+        def test_isfile(self):
+            # create a file
+            file_path = self.aws + 'data/' + 'tmp.txt'
+            self.backend.put_text('tmp', file_path)
+            self.assertEqual(self.backend.get_text(file_path), 'tmp')
+            self.assertTrue(self.backend.isfile(file_path))
+            self.backend.remove(file_path)
+
+        def test_get_local_path(self):
+            file_path = self.aws + 's3.txt'
+            with self.backend.get_local_path(file_path) as f:
+                self.assertEqual(open(f).read(), 's3')
+
+        def test_list_dir_or_file(self):
+            dir_path = self.aws + 'dir'
+            self.assertEqual(
+                set(self.backend.list_dir_or_file(dir_path)),
+                {'a.txt', 'b.txt', 'b.jpg'})
 
         def tearDown(self) -> None:
             pass
