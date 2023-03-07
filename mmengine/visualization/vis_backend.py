@@ -660,7 +660,7 @@ class MLflowVisBackend(BaseVisBackend):
                  tracking_uri: Optional[str] = None,
                  log_artifact: bool = False,
                  artifact_suffix: SUFFIX_TYPE = ('.json', '.log', '.py',
-                                                 'yaml', '')):
+                                                 'yaml')):
         super().__init__(save_dir)
         self._exp_name = exp_name
         self._run_name = run_name
