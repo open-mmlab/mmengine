@@ -145,7 +145,7 @@ class LogProcessor:
         lr_str_list = []
         for key, value in tag.items():
             if key.endswith('lr'):
-                key = self._remove_prefix(mode, key)
+                key = self._remove_prefix(key, f'{mode}/')
                 log_tag.pop(key)
                 lr_str_list.append(f'{key}: '
                                    f'{value:.{self.num_digits}e}')
@@ -253,7 +253,7 @@ class LogProcessor:
         custom_cfg_copy = copy.deepcopy(self.custom_cfg)
         # remove prefix
         custom_keys = [
-            self._remove_prefix(mode, cfg['data_src'])
+            self._remove_prefix(cfg['data_src'], f'{mode}/')
             for cfg in self.custom_cfg
         ]
 
@@ -308,7 +308,7 @@ class LogProcessor:
         log_items = []
         for name, val in chain(tag.items(), non_scalar_tag.items()):
             if name in ('time', 'data_time'):
-                name = self._remove_prefix(mode, name)
+                name = self._remove_prefix(name, f'{mode}/')
             if isinstance(val, float):
                 val = f'{val:.{self.num_digits}f}'
             if isinstance(val, (torch.Tensor, np.ndarray)):
@@ -352,7 +352,7 @@ class LogProcessor:
         for prefix_key, log_buffer in history_scalars.items():
             if prefix_key.startswith(mode):
                 if not reserve_prefix:
-                    key = self._remove_prefix(mode, prefix_key)
+                    key = self._remove_prefix(prefix_key, f'{mode}/')
                 else:
                     key = prefix_key
                 mode_history_scalars[key] = log_buffer
@@ -398,14 +398,14 @@ class LogProcessor:
                 if self.log_with_hierarchy:
                     key = prefix_key
                 else:
-                    key = self._remove_prefix(mode, prefix_key)
+                    key = self._remove_prefix(prefix_key, f'{mode}/')
                 mode_infos[key] = value
         return mode_infos
 
     def _remove_prefix(self, string: str, prefix: str):
         """Remove the prefix ``train``, ``val`` and ``test`` of the key."""
         if string.startswith(prefix):
-            return string[len(prefix) + 1:]
+            return string[len(prefix):]
         else:
             return string
 
