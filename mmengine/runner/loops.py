@@ -281,7 +281,6 @@ class IterBasedTrainLoop(BaseLoop):
             if (self.runner.val_loop is not None
                     and self._iter >= self.val_begin
                     and self._iter % self.val_interval == 0):
-                self.runner.call_hook('after_train_epoch')
                 self.runner.val_loop.run()
 
         self.runner.call_hook('after_train_epoch')
