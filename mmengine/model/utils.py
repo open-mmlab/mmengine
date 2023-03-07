@@ -211,9 +211,8 @@ def revert_sync_batchnorm(module: nn.Module) -> nn.Module:
 def convert_sync_batchnorm(module: nn.Module,
                            implementation='torch') -> nn.Module:
     """Helper function to convert all `BatchNorm` layers in the model to
-    `SyncBatchNorm` (SyncBN) or `mmcv.ops.sync_bn.SyncBatchNorm`(MMSyncBN)
-    layers. Adapted from <https://pytorch.org/docs/stable/generated/torch.nn.Sy
-    ncBatchNorm.html#torch.nn.SyncBatchNorm.convert_sync_batchnorm>_.
+    `SyncBatchNorm` (SyncBN) or `mmcv.ops.sync_bn.SyncBatchNorm` (MMSyncBN)
+    layers. Adapted from `PyTorch convert sync batchnorm`_.
 
     Args:
         module (nn.Module): The module containing `SyncBatchNorm` layers.
@@ -224,6 +223,9 @@ def convert_sync_batchnorm(module: nn.Module,
 
     Returns:
         nn.Module: The converted module with `SyncBatchNorm` layers.
+
+    .. _PyTorch convert sync batchnorm:
+       https://pytorch.org/docs/stable/generated/torch.nn.SyncBatchNorm.html#torch.nn.SyncBatchNorm.convert_sync_batchnorm
     """  # noqa: E501
     module_output = module
 

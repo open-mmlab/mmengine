@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from contextlib import contextmanager
+from typing import Union
 
 import torch
 import torch.nn as nn
@@ -38,7 +39,17 @@ class AmpOptimWrapper(OptimWrapper):
             - float: Initialize GradScaler with ``init_scale``.
             - dict: Initialize GradScaler with more detail configuration.
 
+        dtype (str or torch.dtype, optional): The data type to autocast in amp.
+            If a ``str`` is given, it will be converted to ``torch.dtype``.
+            Valid ``str`` format are `'float16'`, `'bfloat16'`, `'float32'` and
+            `'float64'`. If set to ``None``, the default data type will be used.
+            Defaults to None.
+            `New in version 0.6.1.`
         **kwargs: Keyword arguments passed to OptimWrapper.
+
+    Warnings:
+        ``dtype`` argument is only available with PyTorch version >= 1.10.0. If
+        you use PyTorch of an older version, it will be ignored.
 
     Note:
         If you use ``IterBasedRunner`` and enable gradient accumulation,
@@ -46,7 +57,12 @@ class AmpOptimWrapper(OptimWrapper):
         ``accumulative_counts``.
     """
 
-    def __init__(self, loss_scale='dynamic', **kwargs):
+    valid_dtypes = ('float16', 'bfloat16', 'float32', 'float64')
+
+    def __init__(self,
+                 loss_scale: str = 'dynamic',
+                 dtype: Union[str, torch.dtype] = None,
+                 **kwargs):
         assert digit_version(TORCH_VERSION) >= digit_version('1.6.0'), (
             '`torch.cuda.amp` is only available when pytorch version >= 1.6')
         assert is_cuda_available() or is_npu_available(), (
@@ -67,6 +83,16 @@ class AmpOptimWrapper(OptimWrapper):
         else:
             raise TypeError('loss_scale must be of type float, dict, or '
                             f'"dynamic", but got {loss_scale}')
+
+        # convert string value to torch.dtype
+        if isinstance(dtype, str):
+            assert dtype in self.valid_dtypes, (
+                f'dtype should be any of {self.valid_dtypes}, got {dtype}')
+            dtype = getattr(torch, dtype)
+
+        assert dtype is None or isinstance(dtype, torch.dtype), (
+            f'dtype should be None or instance of torch.dtype, got {dtype}')
+        self.cast_dtype = dtype
 
     def backward(self, loss: torch.Tensor, **kwargs):
         """Perform gradient back propagation with :attr:`loss_scaler`.
@@ -133,5 +159,5 @@ class AmpOptimWrapper(OptimWrapper):
             model (nn.Module): The training model.
         """
         from mmengine.runner.amp import autocast
-        with super().optim_context(model), autocast():
+        with super().optim_context(model), autocast(dtype=self.cast_dtype):
             yield

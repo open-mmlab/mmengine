@@ -1,11 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import datetime
+import logging
 import os.path as osp
 from typing import Optional
 
 from mmengine.fileio import dump
 from mmengine.logging import print_log
 from . import root
+from .default_scope import DefaultScope
 from .registry import Registry
 
 
@@ -15,7 +17,7 @@ def traverse_registry_tree(registry: Registry, verbose: bool = True) -> list:
 
     Args:
         registry (Registry): a registry node in the registry tree.
-        verbose (bool): Whether to print log. Default: True
+        verbose (bool): Whether to print log. Defaults to True
 
     Returns:
         list: Statistic results of all modules in each node of the registry
@@ -90,3 +92,28 @@ def count_registered_modules(save_path: Optional[str] = None,
         dump(scan_data, json_path, indent=2)
         print_log(f'Result has been saved to {json_path}', logger='current')
     return scan_data
+
+
+def init_default_scope(scope: str) -> None:
+    """Initialize the given default scope.
+
+    Args:
+        scope (str): The name of the default scope.
+    """
+    never_created = DefaultScope.get_current_instance(
+    ) is None or not DefaultScope.check_instance_created(scope)
+    if never_created:
+        DefaultScope.get_instance(scope, scope_name=scope)
+        return
+    current_scope = DefaultScope.get_current_instance()  # type: ignore
+    if current_scope.scope_name != scope:  # type: ignore
+        print_log(
+            'The current default scope '  # type: ignore
+            f'"{current_scope.scope_name}" is not "{scope}", '
+            '`init_default_scope` will force set the current'
+            f'default scope to "{scope}".',
+            logger='current',
+            level=logging.WARNING)
+        # avoid name conflict
+        new_instance_name = f'{scope}-{datetime.datetime.now()}'
+        DefaultScope.get_instance(new_instance_name, scope_name=scope)

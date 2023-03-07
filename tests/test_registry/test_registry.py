@@ -473,15 +473,9 @@ class TestRegistry:
         class Munchkin:
             pass
 
-        repr_str = 'Registry(name=cat, items={'
-        repr_str += (
-            "'BritishShorthair': <class 'test_registry.TestRegistry.test_repr."
-            "<locals>.BritishShorthair'>, ")
-        repr_str += (
-            "'Munchkin': <class 'test_registry.TestRegistry.test_repr."
-            "<locals>.Munchkin'>")
-        repr_str += '})'
-        assert repr(CATS) == repr_str
+        assert 'Registry of cat' in repr(CATS)
+        assert 'BritishShorthair' in repr(CATS)
+        assert 'Munchkin' in repr(CATS)
 
 
 @pytest.mark.parametrize('cfg_type', [dict, ConfigDict, Config])

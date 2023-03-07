@@ -58,6 +58,10 @@ runner = Runner(default_hooks=default_hooks, custom_hooks=custom_hooks, ...)
 runner.train()
 ```
 
+### LoggerHook
+
+[LoggerHook](mmengine.hooks.LoggerHook) collects logs from different components of `Runner` and write them to terminal, JSON file, tensorboard and wandb, etc.
+
 ### CheckpointHook
 
 [CheckpointHook](mmengine.hooks.CheckpointHook) saves the checkpoints at a given interval. In the case of distributed training, only the master process will save the checkpoints. The main features of `CheckpointHook` is as follows.
@@ -228,9 +232,9 @@ We simply pass the hook config to the `custom_hooks` parameter of the Runner, wh
 
 ```python
 from mmengine.runner import Runner
-custom_hooks = dict(
+custom_hooks = [
     dict(type='CheckInvalidLossHook', interval=50)
-)
+]
 runner = Runner(custom_hooks=custom_hooks, ...)
 runner.train()  # start training
 ```
@@ -240,9 +244,9 @@ Then the loss value are checked after iteration.
 Note that the priority of the custom hook is `NORMAL (50)` by default, if you want to change the priority of the hook, then you can set the priority key in the config.
 
 ```python
-custom_hooks = dict(
+custom_hooks = [
     dict(type='CheckInvalidLossHook', interval=50, priority='ABOVE_NORMAL')
-)
+]
 ```
 
 You can also set priority when defining classes.

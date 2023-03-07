@@ -139,7 +139,7 @@ runner = Runner(
 runner.train()
 ```
 
-In MMEngine, users can customize their model based on `BaseModel`, which implements the same logic as `OptimizerHook` in `train_step`. For high-level tasks, `train_step` will be called in [train loop](mmengine.runner.loop) with specific arguments, and users do not need to care about the optimization process. For low-level tasks, users can override the `train_step` to customize the optimization process.
+In MMEngine, users can customize their model based on `BaseModel`, which implements the same logic as `OptimizerHook` in `train_step`. For high-level tasks, `train_step` will be called in [EpochBasedTrainLoop](mmengine.runner.EpochBasedTrainLoop) or [IterBasedTrainLoop](mmengine.runner.IterBasedTrainLoop) with specific arguments, and users do not need to care about the optimization process. For low-level tasks, users can override the `train_step` to customize the optimization process.
 
 <table class="docutils">
 <thead>

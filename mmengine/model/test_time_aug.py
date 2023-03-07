@@ -1,12 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from abc import abstractmethod
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 import torch
 import torch.nn as nn
 
-from mmengine import MODELS
+from mmengine.registry import MODELS
 from mmengine.structures import BaseDataElement
+from .base_model import BaseModel
 
 # multi-batch inputs processed by different augmentations from the same batch.
 EnhancedBatchInputs = List[Union[torch.Tensor, List[torch.Tensor]]]
@@ -20,7 +21,7 @@ MergedDataSamples = List[BaseDataElement]
 
 
 @MODELS.register_module()
-class BaseTTAModel(nn.Module):
+class BaseTTAModel(BaseModel):
     """Base model for inference with test-time augmentation.
 
     ``BaseTTAModel`` is a wrapper for inference given multi-batch data.
@@ -69,15 +70,28 @@ class BaseTTAModel(nn.Module):
         :meth:`merge_preds` is an abstract method, all subclasses should
         implement it.
 
+    Warning:
+        If ``data_preprocessor`` is not None, it will overwrite the model's
+        ``data_preprocessor``.
+
     Args:
         module (dict or nn.Module): Tested model.
+        data_preprocessor (dict or :obj:`BaseDataPreprocessor`, optional):
+            If model does not define ``data_preprocessor``, it will be the
+            default value for model.
     """
 
-    def __init__(self, module: Union[dict, nn.Module]):
+    def __init__(
+        self,
+        module: Union[dict, nn.Module],
+        data_preprocessor: Union[dict, nn.Module, None] = None,
+    ):
         super().__init__()
         if isinstance(module, nn.Module):
             self.module = module
         elif isinstance(module, dict):
+            if data_preprocessor is not None:
+                module['data_preprocessor'] = data_preprocessor
             self.module = MODELS.build(module)
         else:
             raise TypeError('The type of module should be a `nn.Module` '
@@ -98,7 +112,7 @@ class BaseTTAModel(nn.Module):
             List[BaseDataElement]: Merged prediction.
         """
 
-    def test_step(self, data: DATA_BATCH) -> MergedDataSamples:
+    def test_step(self, data):
         """Get predictions of each enhanced data, a multiple predictions.
 
         Args:
@@ -125,3 +139,13 @@ class BaseTTAModel(nn.Module):
         for data in data_list:  # type: ignore
             predictions.append(self.module.test_step(data))
         return self.merge_preds(list(zip(*predictions)))  # type: ignore
+
+    def forward(self,
+                inputs: torch.Tensor,
+                data_samples: Optional[list] = None,
+                mode: str = 'tensor') -> Union[Dict[str, torch.Tensor], list]:
+        """``BaseTTAModel.forward`` should not be called."""
+        raise NotImplementedError(
+            '`BaseTTAModel.forward` will not be called during training or'
+            'testing. Please call `test_step` instead. If you want to use'
+            '`BaseTTAModel.forward`, please implement this method')

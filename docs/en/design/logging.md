@@ -10,7 +10,7 @@
 
 ![image](https://user-images.githubusercontent.com/57566630/163441489-47999f3a-3259-44ab-949c-77a8a599faa5.png)
 
-Each scalar (losses, learning rates, etc.) during training is encapsulated by HistoryBuffer, managed by MessageHub in key-value pairs, formatted by LogProcessor and then exported to various visualization backends by [LoggerHook](mmengine.hook.LoggerHook). **In most cases, statistical methods of these scalars can be configured through the LogProcessor without understanding the data flow.**  Before diving into the design of the logging system, please read through [logging tutorial](../advanced_tutorials/logging.md) first for familiarizing basic use cases.
+Each scalar (losses, learning rates, etc.) during training is encapsulated by HistoryBuffer, managed by MessageHub in key-value pairs, formatted by LogProcessor and then exported to various visualization backends by [LoggerHook](mmengine.hooks.LoggerHook). **In most cases, statistical methods of these scalars can be configured through the LogProcessor without understanding the data flow.**  Before diving into the design of the logging system, please read through [logging tutorial](../advanced_tutorials/logging.md) first for familiarizing basic use cases.
 
 ## HistoryBuffer
 

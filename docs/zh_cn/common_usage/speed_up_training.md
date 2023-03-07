@@ -61,7 +61,7 @@ MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环�
 
 ## 混合精度训练
 
-Nvidia 在 Volta 和 Turing 架构中引入 Tensor Core 单元，来支持 FP32 和 FP16 混合精度计算。开启自动混合精度训练后，部分算子的操作精度是 FP16，其余算子的操作精度是 FP32。这样在不改变模型、不降低模型训练精度的前提下，可以缩短训练时间，降低存储需求，因而能支持更大的 batch size、更大模型和尺寸更大的输入的训练。
+Nvidia 在 Volta 和 Turing 架构中引入 Tensor Core 单元，来支持 FP32 和 FP16 混合精度计算。在 Ampere 架构中，他们进一步支持了 BF16 计算。开启自动混合精度训练后，部分算子的操作精度是 FP16/BF16，其余算子的操作精度是 FP32。这样在不改变模型、不降低模型训练精度的前提下，可以缩短训练时间，降低存储需求，因而能支持更大的 batch size、更大模型和尺寸更大的输入的训练。
 
 [PyTorch 从 1.6 开始官方支持 amp](https://pytorch.org/blog/accelerating-training-on-nvidia-gpus-with-pytorch-automatic-mixed-precision/)。如果你对自动混合精度的实现感兴趣，可以阅读 [torch.cuda.amp: 自动混合精度详解](https://zhuanlan.zhihu.com/p/348554267)。
 
@@ -72,8 +72,16 @@ runner = Runner(
     model=ResNet18(),
     work_dir='./work_dir',
     train_dataloader=train_dataloader_cfg,
-    optim_wrapper=dict(type='AmpOptimWrapper', optimizer=dict(type='SGD', lr=0.001, momentum=0.9)),
+    optim_wrapper=dict(
+        type='AmpOptimWrapper',
+        # 如果你想要使用 BF16，请取消下面一行的代码注释
+        # dtype='bfloat16',  # 可用值： ('float16', 'bfloat16', None)
+        optimizer=dict(type='SGD', lr=0.001, momentum=0.9)),
     train_cfg=dict(by_epoch=True, max_epochs=3),
 )
 runner.train()
+```
+
+```{warning}
+截止到 PyTorch 1.13 版本，在 `Convolution` 中直接使用 `torch.bfloat16` 性能低下，必须手动设置环境变量 `TORCH_CUDNN_V8_API_ENABLED=1` 以启用 CuDNN 版本的 BF16 Convolution。相关讨论见 [PyTorch Issue](https://github.com/pytorch/pytorch/issues/57707#issuecomment-1166656767)
 ```

@@ -4,7 +4,7 @@
 
 ## 灵活的日志统计方式
 
-我们可以通过在构建执行器时候配置[日志处理器](mmengine.logging.LogProcessor)，来灵活地选择日志统计方式。如果不为执行器配置日志处理器，则会按照日志处理器的默认参数构建实例，效果等价于：
+我们可以通过在构建执行器时候配置[日志处理器](mmengine.runner.LogProcessor)，来灵活地选择日志统计方式。如果不为执行器配置日志处理器，则会按照日志处理器的默认参数构建实例，效果等价于：
 
 ```python
 log_processor = dict(window_size=10, by_epoch=True, custom_cfg=None, num_digits=4)
@@ -53,12 +53,12 @@ runner.train()
 以训练阶段为例，日志处理器默认会按照以下方式统计执行器输出的日志：
 
 - 日志前缀：
-  - Epoch 模式（`by_epoch=True`）: `Epoch(train) [{当前epoch次数}][{当前迭代次数}/{Dataloader 总长度}]`
+  - Epoch 模式（`by_epoch=True`）：`Epoch(train) [{当前epoch次数}][{当前迭代次数}/{Dataloader 总长度}]`
   - Iter 模式（`by_epoch=False`）： `Iter(train) [{当前迭代次数}/{总迭代次数}]`
 - 学习率（`lr`）：统计最近一次迭代，参数更新的学习率
 - 时间
-  - 迭代时间（`time`）：最近 `window_size`（日志处理器参数） 次迭代，处理一个 batch 数据（包括数据加载和模型前向推理）的平局时间
-  - 数据时间（`data_time`）：最近 `window_size` 次迭代，加载一个 batch 数据的平局时间
+  - 迭代时间（`time`）：最近 `window_size`（日志处理器参数） 次迭代，处理一个 batch 数据（包括数据加载和模型前向推理）的平均时间
+  - 数据时间（`data_time`）：最近 `window_size` 次迭代，加载一个 batch 数据的平均时间
   - 剩余时间（`eta`）：根据总迭代次数和历次迭代时间计算出来的总剩余时间，剩余时间随着迭代次数增加逐渐趋于稳定
 - 损失：模型前向推理得到的各种字段的损失，默认统计最近 `window_size` 次迭代的平均损失。
 
@@ -187,7 +187,7 @@ runner.train()
 08/21 03:17:26 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0024  data_time: 0.0010  loss1: 0.5464  loss2: 0.7251  loss: 1.2715  loss1_local_max: 2.8872  loss1_global_max: 2.8872
 ```
 
-更多配置规则见[日志处理器文档](mmengine.logging.LogProcessor)
+更多配置规则见[日志处理器文档](mmengine.runner.LogProcessor)
 
 ## 自定义统计内容
 
@@ -271,7 +271,7 @@ runner.train()
 此外，分布式训练时，`DEBUG` 模式还会分进程存储日志。单机多卡，或者多机多卡但是共享存储的情况下，导出的分布式日志路径如下
 
 ```text
-#  共享存储
+# 共享存储
 ./tmp
 ├── tmp.log
 ├── tmp_rank1.log
@@ -289,7 +289,7 @@ runner.train()
 
 ```text
 # 独立存储
-# 设备0：
+# 设备 0：
 work_dir/
 └── exp_name_logs
     ├── exp_name.log
@@ -299,7 +299,7 @@ work_dir/
     ...
     └── exp_name_rank7.log
 
-# 设备7：
+# 设备 7：
 work_dir/
 └── exp_name_logs
     ├── exp_name_rank56.log

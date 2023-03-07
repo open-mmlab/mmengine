@@ -1,9 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import copy
 import logging
+import os.path as osp
+import tempfile
 from unittest import TestCase
 
 import torch
 from torch import nn
+from torch.nn.init import constant_
 
 from mmengine.logging.logger import MMLogger
 from mmengine.model import BaseModule, ModuleDict, ModuleList, Sequential
@@ -90,6 +94,7 @@ class FooModel(BaseModule):
 class TestBaseModule(TestCase):
 
     def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
         self.BaseModule = BaseModule()
         self.model_cfg = dict(
             type='FooModel',
@@ -110,6 +115,7 @@ class TestBaseModule(TestCase):
         self.logger = MMLogger.get_instance(self._testMethodName)
 
     def tearDown(self) -> None:
+        self.temp_dir.cleanup()
         logging.shutdown()
         MMLogger._instance_dict.clear()
         return super().tearDown()
@@ -176,6 +182,45 @@ class TestBaseModule(TestCase):
                            torch.full(self.model.reg.weight.shape, 1.0))
         assert torch.equal(self.model.reg.bias,
                            torch.full(self.model.reg.bias.shape, 2.0))
+
+        # Test build model from Pretrained weights
+
+        class CustomLinear(BaseModule):
+
+            def __init__(self, init_cfg=None):
+                super().__init__(init_cfg)
+                self.linear = nn.Linear(1, 1)
+
+            def init_weights(self):
+                constant_(self.linear.weight, 1)
+                constant_(self.linear.bias, 2)
+
+        @FOOMODELS.register_module()
+        class PratrainedModel(FooModel):
+
+            def __init__(self,
+                         component1=None,
+                         component2=None,
+                         component3=None,
+                         component4=None,
+                         init_cfg=None) -> None:
+                super().__init__(component1, component2, component3,
+                                 component4, init_cfg)
+                self.linear = CustomLinear()
+
+        checkpoint_path = osp.join(self.temp_dir.name, 'test.pth')
+        torch.save(self.model.state_dict(), checkpoint_path)
+        model_cfg = copy.deepcopy(self.model_cfg)
+        model_cfg['type'] = 'PratrainedModel'
+        model_cfg['init_cfg'] = dict(
+            type='Pretrained', checkpoint=checkpoint_path)
+        model = FOOMODELS.build(model_cfg)
+        ori_layer_weight = model.linear.linear.weight.clone()
+        ori_layer_bias = model.linear.linear.bias.clone()
+        model.init_weights()
+
+        self.assertTrue((ori_layer_weight != model.linear.linear.weight).any())
+        self.assertTrue((ori_layer_bias != model.linear.linear.bias).any())
 
     def test_dump_init_info(self):
         import os

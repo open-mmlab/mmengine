@@ -3,7 +3,7 @@
 projects.
 
 More datails can be found at
-https://mmengine.readthedocs.io/en/latest/tutorials/registry.html.
+https://mmengine.readthedocs.io/en/latest/advanced_tutorials/registry.html.
 """
 
 from .build_functions import (build_model_from_cfg, build_runner_from_cfg,
@@ -56,3 +56,6 @@ VISBACKENDS = Registry('vis_backend')
 
 # manage logprocessor
 LOG_PROCESSORS = Registry('log_processor')
+
+# manage inferencer
+INFERENCERS = Registry('inferencer')

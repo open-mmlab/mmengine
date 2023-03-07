@@ -1,13 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import bisect
 import copy
+import logging
 import math
-import warnings
 from collections import defaultdict
 from typing import List, Sequence, Tuple, Union
 
 from torch.utils.data.dataset import ConcatDataset as _ConcatDataset
 
+from mmengine.logging import print_log
 from mmengine.registry import DATASETS
 from .base_dataset import BaseDataset, force_full_init
 
@@ -148,8 +149,11 @@ class ConcatDataset(_ConcatDataset):
 
     def __getitem__(self, idx):
         if not self._fully_initialized:
-            warnings.warn('Please call `full_init` method manually to '
-                          'accelerate the speed.')
+            print_log(
+                'Please call `full_init` method manually to '
+                'accelerate the speed.',
+                logger='current',
+                level=logging.WARNING)
             self.full_init()
         dataset_idx, sample_idx = self._get_ori_dataset_idx(idx)
         return self.datasets[dataset_idx][sample_idx]
@@ -263,8 +267,11 @@ class RepeatDataset:
 
     def __getitem__(self, idx):
         if not self._fully_initialized:
-            warnings.warn('Please call `full_init` method manually to '
-                          'accelerate the speed.')
+            print_log(
+                'Please call `full_init` method manually to accelerate the '
+                'speed.',
+                logger='current',
+                level=logging.WARNING)
             self.full_init()
 
         sample_idx = self._get_ori_dataset_idx(idx)
@@ -470,9 +477,12 @@ class ClassBalancedDataset:
         return self.dataset.get_data_info(sample_idx)
 
     def __getitem__(self, idx):
-        warnings.warn('Please call `full_init` method manually to '
-                      'accelerate the speed.')
         if not self._fully_initialized:
+            print_log(
+                'Please call `full_init` method manually to accelerate '
+                'the speed.',
+                logger='current',
+                level=logging.WARNING)
             self.full_init()
 
         ori_index = self._get_ori_dataset_idx(idx)

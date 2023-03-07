@@ -22,3 +22,7 @@ mmengine.hooks
    IterTimerHook
    SyncBuffersHook
    EmptyCacheHook
+   ProfilerHook
+   NPUProfilerHook
+   PrepareTTAHook
+   EarlyStoppingHook
