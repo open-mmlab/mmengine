@@ -232,9 +232,9 @@ We simply pass the hook config to the `custom_hooks` parameter of the Runner, wh
 
 ```python
 from mmengine.runner import Runner
-custom_hooks = dict(
+custom_hooks = [
     dict(type='CheckInvalidLossHook', interval=50)
-)
+]
 runner = Runner(custom_hooks=custom_hooks, ...)
 runner.train()  # start training
 ```
@@ -244,9 +244,9 @@ Then the loss value are checked after iteration.
 Note that the priority of the custom hook is `NORMAL (50)` by default, if you want to change the priority of the hook, then you can set the priority key in the config.
 
 ```python
-custom_hooks = dict(
+custom_hooks = [
     dict(type='CheckInvalidLossHook', interval=50, priority='ABOVE_NORMAL')
-)
+]
 ```
 
 You can also set priority when defining classes.

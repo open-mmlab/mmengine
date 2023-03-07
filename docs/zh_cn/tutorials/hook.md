@@ -236,9 +236,9 @@ class CheckInvalidLossHook(Hook):
 ```python
 from mmengine.runner import Runner
 
-custom_hooks = dict(
+custom_hooks = [
     dict(type='CheckInvalidLossHook', interval=50)
-)
+]
 runner = Runner(custom_hooks=custom_hooks, ...)  # 实例化执行器，主要完成环境的初始化以及各种模块的构建
 runner.train()  # 执行器开始训练
 ```
@@ -248,9 +248,9 @@ runner.train()  # 执行器开始训练
 注意，自定义钩子的优先级默认为 `NORMAL (50)`，如果想改变钩子的优先级，则可以在配置中设置 priority 字段。
 
 ```python
-custom_hooks = dict(
+custom_hooks = [
     dict(type='CheckInvalidLossHook', interval=50, priority='ABOVE_NORMAL')
-)
+]
 ```
 
 也可以在定义类时给定优先级
