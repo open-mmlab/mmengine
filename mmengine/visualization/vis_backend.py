@@ -645,8 +645,6 @@ class MLflowVisBackend(BaseVisBackend):
         params (dict, optional): The params to be added to the experiment.
             Default to None.
         tracking_uri (str, optional): The tracking uri. Default to None.
-        log_artifact (bool, optional): Whether to log the artifact.
-            Default to False.
         artifact_suffix (Tuple[str] or str, optional): The artifact suffix.
             Default to ('.json', '.log', '.py', 'yaml').
     """
