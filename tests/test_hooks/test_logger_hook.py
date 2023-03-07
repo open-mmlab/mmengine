@@ -148,7 +148,7 @@ class TestLoggerHook:
         args = {'step': ANY, 'file_path': ANY}
         # expect visualizer log `time` and `metric` respectively
         runner.visualizer.add_scalars.assert_called_with({'acc': 0.8}, **args)
-        MagicMock.assert_has_calls
+
         # Test when `log_metric_by_epoch` is False
         logger_hook = LoggerHook(log_metric_by_epoch=False)
         runner.log_processor.get_log_after_epoch = MagicMock(
