@@ -6,8 +6,9 @@ from pathlib import Path
 from typing import Any, Generator, Iterator, Optional, Tuple, Union
 
 from mmengine.utils import is_filepath
-from .backends import (BaseStorageBackend, HTTPBackend, LmdbBackend,
-                       LocalBackend, MemcachedBackend, PetrelBackend)
+from .backends import (AWSBackend, BaseStorageBackend, HTTPBackend,
+                       LmdbBackend, LocalBackend, MemcachedBackend,
+                       PetrelBackend)
 
 
 class HardDiskBackend(LocalBackend):
@@ -76,6 +77,7 @@ class FileClient:
         'petrel': PetrelBackend,
         'http': HTTPBackend,
         'https': HTTPBackend,
+        'aws': AWSBackend,
     }
 
     _instances: dict = {}
