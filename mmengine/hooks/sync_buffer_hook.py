@@ -25,7 +25,7 @@ class SyncBuffersHook(Hook):
             if not self.called_in_train:
                 all_reduce_params(runner.model.buffers(), op='mean')
             self.called_in_train = False
-                
+
     def after_train_epoch(self, runner) -> None:
         """All-reduce model buffers at the end of each epoch.
 
