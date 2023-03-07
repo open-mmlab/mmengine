@@ -272,13 +272,6 @@ class LogProcessor:
                 val = f'\n{val}\n'
             log_items.append(f'{name}: {val}')
         log_str += '  '.join(log_items)
-
-        # If cuda is available, the max memory occupied should be calculated.
-        if is_cuda_available():
-            max_memory = self._get_max_memory(runner)
-            log_str += f'memory: {max_memory}  '
-            tag['memory'] = max_memory
-
         if with_non_scalar:
             tag.update(non_scalar_tag)
         return tag, log_str
