@@ -2330,3 +2330,5 @@ class Runner:
         # Compile the model.forward
         self.model.forward = torch.compile(self.model.forward, **compile_cfg)
         self._is_compiled = True
+        self.logger.info('Model has been "compiled". The first few iterations'
+                         ' will be slow, please be patient.')
