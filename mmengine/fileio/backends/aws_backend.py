@@ -6,7 +6,6 @@ import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator, Iterator, Optional, Tuple, Union
-from urllib.request import urlopen
 
 from .base import BaseStorageBackend
 
@@ -38,11 +37,11 @@ class AWSBackend(BaseStorageBackend):
             raise ImportError('Please install boto3 to enable '
                               'AWS_Backend.')
 
-        self._client = boto3.resource('s3')
+        self._client = boto3.client('s3')
         assert isinstance(path_mapping, dict) or path_mapping is None
         self.path_mapping = path_mapping
         # Use to parse bucket and obj_name
-        self.parse_bucket = re.compile('s3://(.+?)/(.+)')
+        self.parse_bucket = re.compile('aws://(.+?)/(.+)')
         self.check_exception = ClientError
 
     def _map_path(self, filepath: Union[str, Path]) -> str:
@@ -129,13 +128,14 @@ class AWSBackend(BaseStorageBackend):
             bytes: Expected bytes object.
 
         Examples:
-            >>> backend = HTTPBackend()
+            >>> backend = AWSBackend()
             >>> backend.get('aws://bucket/file')
             b'hello world'
         """
         bucket, obj_name = self._parse_path(filepath)
         self._check_bucket(bucket)
-        return urlopen(filepath).read()
+        return self._client.get_object(
+            Bucket=bucket, Key=obj_name)['Body'].read()
 
     def get_text(self, filepath, encoding='utf-8') -> str:
         """Read text from a given ``filepath``.
@@ -149,12 +149,11 @@ class AWSBackend(BaseStorageBackend):
             str: Expected text reading from ``filepath``.
 
         Examples:
-            >>> backend = HTTPBackend()
-            >>> backend.get_text('http://path/of/file')
+            >>> backend = AWSBackend()
+            >>> backend.get_text('aws://bucket/file')
             'hello world'
         """
-        bucket, obj_name = self._parse_path(filepath)
-        return urlopen(filepath).read().decode(encoding)
+        return self.get(filepath).decode('utf-8')
 
     def put(self, obj: bytes, filepath: Union[str, Path]) -> None:
         """Save data to a given ``filepath``.
@@ -234,23 +233,6 @@ class AWSBackend(BaseStorageBackend):
             return True
         return False
 
-    def join_path(self, filepath: Union[str, Path],
-                  *filepaths: Union[str, Path]) -> str:
-        """Concatenate all file paths.
-
-        Args:
-            filepath (str or Path): Path to be concatenated.
-        Returns:
-            str: The result after concatenation.
-        """
-        filepath = self._format_path(self._map_path(filepath))
-        if filepath.endswith('/'):
-            filepath = filepath[:-1]
-        formatted_paths = [filepath]
-        for path in filepaths:
-            formatted_paths.append(self._format_path(self._map_path(path)))
-        return '/'.join(formatted_paths)
-
     @contextmanager
     def get_local_path(
             self, filepath: str) -> Generator[Union[str, Path], None, None]:
@@ -268,10 +250,10 @@ class AWSBackend(BaseStorageBackend):
             Iterable[str]: Only yield one temporary path.
 
         Examples:
-            >>> backend = HTTPBackend()
+            >>> backend = AWSBackend()
             >>> # After existing from the ``with`` clause,
             >>> # the path will be removed
-            >>> with backend.get_local_path('http://path/of/file') as path:
+            >>> with backend.get_local_path('aws://path/of/file') as path:
             ...     # do something here
         """
         try:
