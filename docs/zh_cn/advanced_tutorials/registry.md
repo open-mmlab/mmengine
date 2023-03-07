@@ -190,7 +190,7 @@ MMEngine 的注册器支持层级注册，利用该功能可实现跨项目调�
 - VISBACKENDS: 存储训练日志的后端，如 `LocalVisBackend`, `TensorboardVisBackend`
 - LOG_PROCESSORS: 控制日志的统计窗口和统计方法，默认使用 `LogProcessor`，如有特殊需求可自定义 `LogProcessor`
 - FUNCTIONS: 注册了各种函数，如 Dataloader 中传入的 `collate_fn`
-- INFERENCERS: 注册了各种任务的推理器，如 `DetInferencer` 可用于不同任务的推理
+- INFERENCERS: 注册了各种任务的推理器，如 `DetInferencer`，负责检测任务的推理
 
 ### 调用父节点的模块
 
