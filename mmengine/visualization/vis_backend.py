@@ -667,7 +667,6 @@ class MLflowVisBackend(BaseVisBackend):
         self._tags = tags
         self._params = params
         self._tracking_uri = tracking_uri
-        self._log_artifact = log_artifact
         self._artifact_suffix = artifact_suffix
 
     def _init_env(self):
