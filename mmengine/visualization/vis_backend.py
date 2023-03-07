@@ -648,7 +648,7 @@ class MLflowVisBackend(BaseVisBackend):
         log_artifact (bool, optional): Whether to log the artifact.
             Default to False.
         artifact_suffix (Tuple[str] or str, optional): The artifact suffix.
-            Default to ('.json', '.log', '.py', 'yaml', '').
+            Default to ('.json', '.log', '.py', 'yaml').
     """
 
     def __init__(self,
