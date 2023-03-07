@@ -117,10 +117,10 @@ MMengine 中提供了 2 种内置的 `collate_fn`：
 - `pseudo_collate`，缺省时的默认参数。它不会将数据沿着 `batch` 的维度合并。详细说明可以参考 [pseudo_collate](mmengine.dataset.pseudo_collate)
 - `default_collate`，与 PyTorch 中的 `default_collate` 行为几乎完全一致，会将数据转化为 `Tensor` 并沿着 `batch` 维度合并。一些细微不同和详细说明可以参考 [default_collate](mmengine.dataset.default_collate)
 
-如果你想要使用自定义的 `collate_fn`，你也可以将它注册到 `COLLATE_FUNCTIONS` 根注册器中来使用
+如果你想要使用自定义的 `collate_fn`，你也可以将它注册到 `FUNCTIONS` 根注册器中来使用
 
 ```python
-@COLLATE_FUNCTIONS.register_module()
+@FUNCTIONS.register_module()
 def my_collate_func(data_batch: Sequence) -> Any:
     pass
 

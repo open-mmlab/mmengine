@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 
 import mmengine
 from mmengine.config import Config, ConfigDict
-from mmengine.dataset import COLLATE_FUNCTIONS, worker_init_fn
+from mmengine.dataset import worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
                            is_distributed, master_only)
@@ -31,10 +31,10 @@ from mmengine.model import (MMDistributedDataParallel, convert_sync_batchnorm,
                             is_model_wrapper, revert_sync_batchnorm)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
-from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
-                               LOG_PROCESSORS, LOOPS, MODEL_WRAPPERS, MODELS,
-                               OPTIM_WRAPPERS, PARAM_SCHEDULERS, RUNNERS,
-                               VISUALIZERS, DefaultScope)
+from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, FUNCTIONS,
+                               HOOKS, LOG_PROCESSORS, LOOPS, MODEL_WRAPPERS,
+                               MODELS, OPTIM_WRAPPERS, PARAM_SCHEDULERS,
+                               RUNNERS, VISUALIZERS, DefaultScope)
 from mmengine.utils import digit_version, get_git_hash, is_seq_of
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
                                      set_multi_processing)
@@ -1402,7 +1402,7 @@ class Runner:
         collate_fn_cfg = dataloader_cfg.pop('collate_fn',
                                             dict(type='pseudo_collate'))
         collate_fn_type = collate_fn_cfg.pop('type')
-        collate_fn = COLLATE_FUNCTIONS.get(collate_fn_type)
+        collate_fn = FUNCTIONS.get(collate_fn_type)
         collate_fn = partial(collate_fn, **collate_fn_cfg)  # type: ignore
         data_loader = DataLoader(
             dataset=dataset,
