@@ -345,7 +345,7 @@ class CheckpointHook(Hook):
                 raise RuntimeError(xxx)
             self._publish_model(runner, best_ckpt)
 
-    def _publish_model(self, runner, out_file) -> None:
+    def _publish_model(self, runner, out_file: str) -> None:
         import subprocess
 
         import torch
