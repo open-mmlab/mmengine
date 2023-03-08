@@ -351,16 +351,17 @@ class CheckpointHook(Hook):
         if published_keys is None:
             return
         checkpoint = runner.load_checkpoint(out_file)
-        ckpt_keys = list(checkpoint.keys())
-        published_keys = self.published_keys
-        for k in ckpt_keys:
-            if k not in published_keys:
-                print_log(
-                    f'Key `{k}` will be removed because it is not in '
-                    f'save_keys. If you want to keep it, '
-                    f'please set `{k}` in published_keys',
-                    logger='current')
+        removed_keys = []
+        for key in checkpoint.keys():
+            if key not in self.published_keys:
+                removed_keys.append(key)
                 checkpoint.pop(k)
+        if removed_keys:     
+            print_log(
+                f'Key {removed_keys} will be removed because they are not '
+                'found in published_keys. If you want to keep them, '
+                f'please set `{removed_keys}` in published_keys',
+                logger='current')
         out_file_name = osp.splitext(out_file)[0]
         tmp_out_file_name = out_file + '.pth'
         torch.save(checkpoint, tmp_out_file_name)
