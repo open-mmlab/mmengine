@@ -332,7 +332,7 @@ class CheckpointHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
-        if not self.published_keys:
+        if self.published_keys is None:
             return
 
         if self.save_last:
