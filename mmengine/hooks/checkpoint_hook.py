@@ -342,9 +342,12 @@ class CheckpointHook(Hook):
             self._publish_model(runner, last_ckpt)
 
         if self.save_best is not None:
-            if not self.best_ckpt_path:
-                raise RuntimeError(xxx)
-            self._publish_model(runner, best_ckpt)
+            if len(self.key_indicators) == 1:
+                if self.best_ckpt_path is not None:
+                    self._publish_model(runner, self.best_ckpt_path)
+            else:
+                for key, best_ckpt in self.best_ckpt_path_dict.items():
+                    self._publish_model(runner, best_ckpt)
 
     def _publish_model(self, runner, out_file: str) -> None:
 
