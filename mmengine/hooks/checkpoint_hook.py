@@ -84,7 +84,9 @@ class CheckpointHook(Hook):
         backend_args (dict, optional): Arguments to instantiate the
             prefix of uri corresponding backend. Defaults to None.
             New in v0.2.0.
-
+        published_keys (str, List[str], optional): If ``save_last`` is ``True``
+            or ``save_best`` is not ``None``, it will automatically
+            publish model with keys in list after train. Defaults to None.
     Examples:
         >>> # Save best based on single metric
         >>> CheckpointHook(interval=2, by_epoch=True, save_best='acc',
@@ -95,6 +97,9 @@ class CheckpointHook(Hook):
         >>> # Save best based on multi metrics with different comparison rule
         >>> CheckpointHook(interval=2, by_epoch=True,
         >>>                save_best=['FID', 'IS'], rule=['less', 'greater'])
+        >>> # Save best based on single metric and publish model after train
+        >>> CheckpointHook(interval=2, by_epoch=True, save_best='acc',
+        >>>                rule='less', published_keys=['meta', 'state_dict'])
     """
     out_dir: str
 
@@ -128,6 +133,7 @@ class CheckpointHook(Hook):
                  file_client_args: Optional[dict] = None,
                  filename_tmpl: Optional[str] = None,
                  backend_args: Optional[dict] = None,
+                 published_keys: Union[str, List[str], None] = None,
                  **kwargs) -> None:
         self.interval = interval
         self.by_epoch = by_epoch
@@ -218,6 +224,21 @@ class CheckpointHook(Hook):
             else:
                 self.best_ckpt_path_dict: Dict = dict()
 
+        # published keys
+        assert (isinstance(published_keys, str)
+                or is_list_of(published_keys, str)
+                or (published_keys is None)), (
+                    '"published_keys" should be a str or list of str or None, '
+                    f'but got {type(published_keys)}')
+
+        if isinstance(published_keys, list):
+            assert len(published_keys) == len(set(published_keys)), (
+                'Find duplicate element in "published_keys".')
+        else:
+            if published_keys is not None:
+                published_keys = [published_keys]
+        self.published_keys = published_keys
+
     def before_train(self, runner) -> None:
         """Finish all operations, related to checkpoint.
 
@@ -303,6 +324,62 @@ class CheckpointHook(Hook):
             return
 
         self._save_best_checkpoint(runner, metrics)
+
+    def after_train(self, runner) -> None:
+        """Publish the checkpoint after train epoch.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
+        if not self.published_keys:
+            return
+
+        if self.save_last:
+            last_ckpt = runner.message_hub.get_info('last_ckpt')
+            if not last_ckpt:
+                assert ('Did not find last_checkpoint to be resumed.')
+            self._publish_model(runner, last_ckpt)
+
+        if self.save_best is not None:
+            best_ckpt = self.best_ckpt_path
+            if not best_ckpt:
+                assert ('Did not find best_checkpoint to be resumed.')
+            self._publish_model(runner, best_ckpt)
+
+    def _publish_model(self, runner, out_file) -> None:
+        import subprocess
+
+        import torch
+
+        checkpoint = runner.load_checkpoint(out_file)
+        ckpt_keys = list(checkpoint.keys())
+        published_keys = self.published_keys
+        for k in ckpt_keys:
+            if k not in published_keys:
+                print_log(
+                    f'Key `{k}` will be removed because it is not in '
+                    f'save_keys. If you want to keep it, '
+                    f'please set `{k}` in published_keys',
+                    logger='current')
+                checkpoint.pop(k, None)
+        if out_file.endswith('.pth'):
+            out_file_name = out_file[:-4]
+        else:
+            out_file_name = out_file
+        tmp_out_file_name = out_file + '.pth'
+        if torch.__version__ >= '1.6':
+            torch.save(
+                checkpoint,
+                tmp_out_file_name,
+                _use_new_zipfile_serialization=False)
+        else:
+            torch.save(checkpoint, tmp_out_file_name)
+        sha = subprocess.check_output(['sha256sum',
+                                       tmp_out_file_name]).decode()
+        final_file = out_file_name + f'-{sha[:8]}.pth'
+        subprocess.Popen(['mv', tmp_out_file_name, final_file])
+        print_log(
+            f'The published model is saved at {final_file}.', logger='current')
 
     def _save_checkpoint(self, runner) -> None:
         """Save the current checkpoint and delete outdated checkpoint.

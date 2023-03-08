@@ -70,6 +70,7 @@ runner.train()
 - Save the most recent checkpoints
 - Save the best checkpoints
 - Specify the path to save the checkpoints
+- Automatically publish the best and the last checkpoints
 
 For more features, please read the [CheckpointHook API documentation](mmengine.hooks.CheckpointHook).
 
@@ -118,6 +119,14 @@ The four features mentioned above are described below.
 
   ```python
   default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, out_dir='/path/of/directory'))
+  ```
+  
+- Automatically publish the best and the last checkpoints
+
+  If you want to publish the best and the last checkpoints after train, you can set the `published_keys` parameter. You can select any keys in checkpoint to be published.
+
+  ```python
+  default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=1, save_best='accuracy', rule='less', published_keys=['meta', 'state_dict']))
   ```
 
 [LoggerHook](mmengine.hooks.LoggerHook) collects logs from different components of `Runner` and write them to terminal, JSON file, tensorboard and wandb .etc.
