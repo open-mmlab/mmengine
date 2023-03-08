@@ -225,11 +225,12 @@ class CheckpointHook(Hook):
                 self.best_ckpt_path_dict: Dict = dict()
 
         # published keys
-        assert (isinstance(published_keys, str)
+        if not (isinstance(published_keys, str)
                 or is_list_of(published_keys, str)
                 or (published_keys is None)), (
                     '"published_keys" should be a str or list of str or None, '
-                    f'but got {type(published_keys)}')
+                    f'but got {type(published_keys)}'):
+                    raise TypeError(...)
 
         if isinstance(published_keys, list):
             assert len(published_keys) == len(set(published_keys)), (
