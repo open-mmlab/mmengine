@@ -71,6 +71,7 @@ runner.train()
 - 保存最新的多个权重
 - 保存最优权重
 - 指定保存权重的路径
+- 自动发布最好的和最后的权重
 
 如需了解其他功能，请阅读 [CheckpointHook API 文档](mmengine.hooks.CheckpointHook)。
 
@@ -119,6 +120,14 @@ runner.train()
 
   ```python
   default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, out_dir='/path/of/directory'))
+  ```
+
+- 自动发布最好的和最后的权重
+
+  如果你想在训练后发布最好的和最后的权重，你可以设置`published_keys`参数。 通过这个参数，您可以选择要发布权重中所要保存的键。
+
+  ```python
+  default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=1, save_best='accuracy', rule='less', published_keys=['meta', 'state_dict']))
   ```
 
 ### LoggerHook
