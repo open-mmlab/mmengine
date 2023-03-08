@@ -363,10 +363,7 @@ class CheckpointHook(Hook):
                     f'please set `{k}` in published_keys',
                     logger='current')
                 checkpoint.pop(k)
-        if out_file.endswith('.pth'):
-            out_file_name = out_file[:-4]
-        else:
-            out_file_name = out_file
+        out_file_name = osp.splitext(out_file)[0]
         tmp_out_file_name = out_file + '.pth'
         if torch.__version__ >= '1.6':
             torch.save(
