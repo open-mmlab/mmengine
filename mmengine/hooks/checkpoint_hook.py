@@ -350,8 +350,6 @@ class CheckpointHook(Hook):
 
     def _publish_model(self, runner, out_file: str) -> None:
 
-        if published_keys is None:
-            return
         checkpoint = runner.load_checkpoint(out_file)
         removed_keys = []
         for key in checkpoint.keys():
