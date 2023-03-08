@@ -365,13 +365,7 @@ class CheckpointHook(Hook):
                 checkpoint.pop(k)
         out_file_name = osp.splitext(out_file)[0]
         tmp_out_file_name = out_file + '.pth'
-        if torch.__version__ >= '1.6':
-            torch.save(
-                checkpoint,
-                tmp_out_file_name,
-                _use_new_zipfile_serialization=False)
-        else:
-            torch.save(checkpoint, tmp_out_file_name)
+        torch.save(checkpoint, tmp_out_file_name)
         sha = subprocess.check_output(['sha256sum',
                                        tmp_out_file_name]).decode()
         final_file = out_file_name + f'-{sha[:8]}.pth'
