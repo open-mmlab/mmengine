@@ -197,7 +197,9 @@ class LogProcessor:
 
         # If cuda is available, the max memory occupied should be calculated.
         if is_cuda_available():
-            log_str += f'memory: {self._get_max_memory(runner)}  '
+            max_memory = self._get_max_memory(runner)
+            log_str += f'memory: {max_memory}  '
+            tag['memory'] = max_memory
         # Loop left keys to fill `log_str`.
         if mode in ('train', 'val'):
             log_items = []
