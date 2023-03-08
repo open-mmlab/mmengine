@@ -2327,8 +2327,11 @@ class Runner:
         assert isinstance(compile_cfg, dict), (
             f'`compile` should be a dict or bool, got {type(compile_cfg)}')
 
-        # Compile the model.forward
-        self.model.forward = torch.compile(self.model.forward, **compile_cfg)
+        # Compile the model's train_step, val_step and test_step
+        for target in ('train_step', 'val_step', 'test_step'):
+            func = getattr(self.model, target)
+            compiled_func = torch.compile(func, **compile_cfg)
+            setattr(self.model, target, compiled_func)
         self._is_compiled = True
         self.logger.info('Model has been "compiled". The first few iterations'
                          ' will be slow, please be patient.')
