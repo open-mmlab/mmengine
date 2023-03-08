@@ -328,7 +328,7 @@ class CheckpointHook(Hook):
         self._save_best_checkpoint(runner, metrics)
 
     def after_train(self, runner) -> None:
-        """Publish the checkpoint after train epoch.
+        """Publish the checkpoint after training.
 
         Args:
             runner (Runner): The runner of the training process.
