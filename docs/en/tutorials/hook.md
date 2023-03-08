@@ -120,7 +120,7 @@ The four features mentioned above are described below.
   ```python
   default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, out_dir='/path/of/directory'))
   ```
-  
+
 - Automatically publish the best and the last checkpoints
 
   If you want to publish the best and the last checkpoints after train, you can set the `published_keys` parameter. You can select any keys in checkpoint to be published.
