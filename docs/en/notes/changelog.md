@@ -251,7 +251,7 @@ A total of 16 developers contributed to this release. Thanks [@BayMaxBHL](https:
 - [@BIGWangYuDong](https://github.com/BIGWangYuDong) made their first contribution in https://github.com/open-mmlab/mmengine/pull/556
 - [@zengyh1900](https://github.com/zengyh1900) made their first contribution in https://github.com/open-mmlab/mmengine/pull/659
 
-## v0.2.0 (11/10/2022)
+## v0.2.0 (10/11/2022)
 
 ### New Features & Enhancements
 
