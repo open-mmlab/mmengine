@@ -88,7 +88,7 @@ class CheckpointHook(Hook):
             New in v0.2.0.
         published_keys (str, List[str], optional): If ``save_last`` is ``True``
             or ``save_best`` is not ``None``, it will automatically
-            publish model with keys in list after train. Defaults to None.
+            publish model with keys in the list after training. Defaults to None.
     Examples:
         >>> # Save best based on single metric
         >>> CheckpointHook(interval=2, by_epoch=True, save_best='acc',
