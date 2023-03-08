@@ -354,6 +354,8 @@ class CheckpointHook(Hook):
         checkpoint = runner.load_checkpoint(out_file)
         ckpt_keys = list(checkpoint.keys())
         published_keys = self.published_keys
+        if not isinstance(published_keys, list):
+            return
         for k in ckpt_keys:
             if k not in published_keys:
                 print_log(
