@@ -21,6 +21,8 @@ from mmengine.fileio import dump, load
 from mmengine.logging import print_log
 from mmengine.utils import (check_file_exist, get_installed_path,
                             import_modules_from_strings, is_installed)
+from .lazy import LazyAttr, LazyModule
+from .lazy_ast import Transform, import_to_lazymodule
 from .utils import (RemoveAssignFromAST, _get_external_cfg_base_path,
                     _get_external_cfg_path, _get_package_and_cfg_path)
 
@@ -186,6 +188,71 @@ class Config:
             cfg_text=cfg_text,
             filename=filename,
             env_variables=env_variables)
+
+    @classmethod
+    def _parse_lazy_import(cls, filepath):
+        with open(filepath) as f:
+            global_dict = {'LazyModule': LazyModule}
+            base_dict = {}
+
+            code = ast.parse(f.read())
+            base_code = []
+            for inst in code.body:
+                if (isinstance(inst, ast.Assign)
+                        and isinstance(inst.targets[0], ast.Name)
+                        and inst.targets[0].id == cls.base_key):
+                    base_code.append(inst)
+            variable_dict: dict = {}
+            base_code = ast.Module(body=base_code, type_ignores=[])
+            exec(
+                compile(base_code, '', mode='exec'), variable_dict,
+                variable_dict)
+            base_modules = variable_dict.get('_base_', [])
+            if not isinstance(base_modules, list):
+                base_modules = [base_modules]
+            for base_module in base_modules:
+                # from .xxx import xxx
+                # fron mmdet.config.xxx import xxx
+                level = len(re.match(r'\.*', base_module).group())
+                if level > 0:
+                    # Relative import
+                    base_dir = osp.dirname(filepath)
+                    module_path = osp.join(
+                        base_dir,
+                        *(['..'] * (level - 1)),
+                        f'{base_module[level:].replace(".", "/")}.py')
+                else:
+                    # Absolute import
+                    module_list = base_module.split('.')
+                    if len(module_list) == 1:
+                        # TODO
+                        ...
+                        # module_path = osp.abspath(f'{module_list[0]}.py')
+                    else:
+                        package = module_list[0]
+                        root_path = get_installed_path(package)
+                        module_path = f'{osp.join(root_path, *module_list[1:])}.py'
+                base_cfg = cls._parse(module_path)
+                base_dict[base_module] = base_cfg
+            # TODO only support relative import now.
+            transform = Transform(
+                global_dict=global_dict,
+                base_dict=base_dict)
+            modified_code = transform.visit(code)
+            modified_code = import_to_lazymodule(modified_code)
+            modified_code = ast.fix_missing_locations(modified_code)
+            exec(
+                compile(modified_code, filepath, mode='exec'), global_dict,
+                global_dict)
+
+            ret = {}
+            for key, value in global_dict.items():
+                if key.startswith('__') or key in ['LazyModule']:
+                    continue
+                ret[key] = value
+
+            cfg_dict = Config._to_config_dict(ret)
+            return cls(cfg_dict, global_dict=global_dict)
 
     @staticmethod
     def fromstring(cfg_str: str, file_format: str) -> 'Config':
@@ -891,10 +958,16 @@ class Config:
         return len(self._cfg_dict)
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._cfg_dict, name)
+        output = getattr(self._cfg_dict, name)
+        if isinstance(output, (LazyModule, LazyAttr)):
+            output = output.build()
+        return output
 
     def __getitem__(self, name):
-        return self._cfg_dict.__getitem__(name)
+        output = self._cfg_dict.__getitem__(name)
+        if isinstance(output, (LazyModule, LazyAttr)):
+            output = output.build()
+        return output
 
     def __setattr__(self, name, value):
         if isinstance(value, dict):
