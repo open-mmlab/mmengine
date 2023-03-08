@@ -232,12 +232,12 @@ class CheckpointHook(Hook):
                     f'but got {type(published_keys)}'):
                     raise TypeError(...)
 
-        if isinstance(published_keys, list):
+        if isinstace(published_keys, str):
+            published_keys = [published_keys]    
+        elif isinstance(published_keys, list):
             assert len(published_keys) == len(set(published_keys)), (
                 'Find duplicate element in "published_keys".')
-        else:
-            if published_keys is not None:
-                published_keys = [published_keys]
+        self.published_keys = published_keys
         self.published_keys = published_keys
 
     def before_train(self, runner) -> None:
