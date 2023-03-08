@@ -2,6 +2,7 @@
 import os
 import sys
 import unittest
+import warnings
 from typing import Sequence
 from unittest import TestCase, TestLoader
 from unittest.mock import MagicMock, patch
@@ -28,8 +29,9 @@ try:
 
     # raise ImportError('aws')
 
-except ImportError:
+except ModuleNotFoundError:
     sys.modules['boto3'] = MagicMock()
+    sys.modules['botocore.exceptions'] = MagicMock()
     sys.modules['boto3.client'] = MagicMock()
 
     class MockAWSClient(MagicMock):
@@ -89,6 +91,7 @@ except ImportError:
 
         @classmethod
         def setUpClass(cls):
+            warnings.simplefilter('ignore', ResourceWarning)
             cls.aws = 'aws://mmengine/'
             cls.backend = AWSBackend()
 
