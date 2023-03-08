@@ -1,5 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
+import subprocess
+import torch
 import os.path as osp
 from math import inf
 from pathlib import Path
@@ -238,7 +240,6 @@ class CheckpointHook(Hook):
             assert len(published_keys) == len(set(published_keys)), (
                 'Find duplicate element in "published_keys".')
         self.published_keys = published_keys
-        self.published_keys = published_keys
 
     def before_train(self, runner) -> None:
         """Finish all operations, related to checkpoint.
@@ -346,9 +347,6 @@ class CheckpointHook(Hook):
             self._publish_model(runner, best_ckpt)
 
     def _publish_model(self, runner, out_file: str) -> None:
-        import subprocess
-
-        import torch
 
         if published_keys is None:
             return
