@@ -229,10 +229,10 @@ class CheckpointHook(Hook):
         # published keys
         if not (isinstance(published_keys, str)
                 or is_list_of(published_keys, str)
-                or (published_keys is None)), (
-                    '"published_keys" should be a str or list of str or None, '
-                    f'but got {type(published_keys)}'):
-                    raise TypeError(...)
+                or published_keys is None):
+            raise TypeError(
+                '"published_keys" should be a str or list of str or None, '
+                f'but got {type(published_keys)}'):
 
         if isinstace(published_keys, str):
             published_keys = [published_keys]    
