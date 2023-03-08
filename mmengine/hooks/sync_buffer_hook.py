@@ -16,7 +16,9 @@ class SyncBuffersHook(Hook):
         self.called_in_train = False
 
     def before_val_epoch(self, runner) -> None:
-        """All-reduce model buffers before each validation epoch.
+        """All-reduce model buffers before each validation epoch. Sync the
+        buffer before each validation if it has not been synced at the end of
+        previous training epoch.
 
         Args:
             runner (Runner): The runner of the training process.
