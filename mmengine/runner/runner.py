@@ -421,9 +421,6 @@ class Runner:
         self.logger.info(f'Hooks will be executed in the following '
                          f'order:\n{self.get_hooks_info()}')
 
-        # whether model has been compiled by torch.compile
-        self._is_compiled = False
-
         # dump `cfg` to `work_dir`
         self.dump_config()
 
@@ -1696,7 +1693,7 @@ class Runner:
 
         # Maybe compile the model according to options in self.cfg.compile
         # This must be called **AFTER** model has been wrapped.
-        self._maybe_compile()
+        self._maybe_compile('train_step')
 
         model = self.train_loop.run()  # type: ignore
         self.call_hook('after_run')
@@ -1723,7 +1720,7 @@ class Runner:
 
         # Maybe compile the model according to options in self.cfg.compile
         # This must be called **AFTER** model has been wrapped.
-        self._maybe_compile()
+        self._maybe_compile('val_step')
 
         metrics = self.val_loop.run()  # type: ignore
         self.call_hook('after_run')
@@ -1750,7 +1747,7 @@ class Runner:
 
         # Maybe compile the model according to options in self.cfg.compile
         # This must be called **AFTER** model has been wrapped.
-        self._maybe_compile()
+        self._maybe_compile('test_step')
 
         metrics = self.test_loop.run()  # type: ignore
         self.call_hook('after_run')
@@ -2304,12 +2301,8 @@ class Runner:
                          dash_line + '\n')
         self.logger.info(f'Config:\n{self.cfg.pretty_text}')
 
-    def _maybe_compile(self) -> None:
+    def _maybe_compile(self, target: str) -> None:
         """Use `torch.compile` to optimize model/wrapped_model."""
-        if self._is_compiled:
-            # won't recompile
-            return
-
         compile_cfg = self.cfg.get('compile', None)
         if compile_cfg is None:
             # no compile options given, won't compile
@@ -2327,11 +2320,8 @@ class Runner:
         assert isinstance(compile_cfg, dict), (
             f'`compile` should be a dict or bool, got {type(compile_cfg)}')
 
-        # Compile the model's train_step, val_step and test_step
-        for target in ('train_step', 'val_step', 'test_step'):
-            func = getattr(self.model, target)
-            compiled_func = torch.compile(func, **compile_cfg)
-            setattr(self.model, target, compiled_func)
-        self._is_compiled = True
+        func = getattr(self.model, target)
+        compiled_func = torch.compile(func, **compile_cfg)
+        setattr(self.model, target, compiled_func)
         self.logger.info('Model has been "compiled". The first few iterations'
                          ' will be slow, please be patient.')
