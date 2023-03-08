@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
-import subprocess
 import torch
 import os.path as osp
 from math import inf
@@ -12,6 +11,7 @@ from mmengine.fileio import FileClient, get_file_backend
 from mmengine.logging import print_log
 from mmengine.registry import HOOKS
 from mmengine.utils import is_list_of, is_seq_of
+from mmengine.runner.checkpoint import _load_checkpoint
 from .hook import Hook
 
 DATA_BATCH = Optional[Union[dict, tuple, list]]
@@ -350,7 +350,7 @@ class CheckpointHook(Hook):
 
     def _publish_model(self, runner, out_file: str) -> None:
 
-        checkpoint = runner.load_checkpoint(out_file)
+        checkpoint = _load_checkpoint(out_file)
         removed_keys = []
         for key in checkpoint.keys():
             if key not in self.published_keys:
@@ -362,13 +362,9 @@ class CheckpointHook(Hook):
                 'found in published_keys. If you want to keep them, '
                 f'please set `{removed_keys}` in published_keys',
                 logger='current')
-        out_file_name = osp.splitext(out_file)[0]
-        tmp_out_file_name = out_file + '.pth'
-        torch.save(checkpoint, tmp_out_file_name)
-        sha = subprocess.check_output(['sha256sum',
-                                       tmp_out_file_name]).decode()
-        final_file = out_file_name + f'-{sha[:8]}.pth'
-        subprocess.Popen(['mv', tmp_out_file_name, final_file])
+        print(runner.timestamp)
+        final_file = osp.splitext(out_file)[0] + f'-{runner.timestamp}.pth'
+        torch.save(checkpoint, final_file)
         print_log(
             f'The published model is saved at {final_file}.', logger='current')
 
