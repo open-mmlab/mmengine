@@ -13,6 +13,8 @@ class SyncBuffersHook(Hook):
 
     def __init__(self) -> None:
         self.distributed = is_distributed()
+        # A flag to mark whether synchronization has been done in
+        # after_train_epoch
         self.called_in_train = False
 
     def before_val_epoch(self, runner) -> None:
