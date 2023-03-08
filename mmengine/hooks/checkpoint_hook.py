@@ -341,9 +341,8 @@ class CheckpointHook(Hook):
             self._publish_model(runner, last_ckpt)
 
         if self.save_best is not None:
-            best_ckpt = self.best_ckpt_path
-            if not best_ckpt:
-                assert ('Did not find best_checkpoint to be resumed.')
+            if not self.best_ckpt_path:
+                raise RuntimeError(xxx)
             self._publish_model(runner, best_ckpt)
 
     def _publish_model(self, runner, out_file) -> None:
