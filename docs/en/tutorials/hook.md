@@ -123,7 +123,7 @@ The four features mentioned above are described below.
 
 - Automatically publish the best and the last checkpoints
 
-  If you want to publish the best and the last checkpoints after train, you can set the `published_keys` parameter. You can select any keys in checkpoint to be published.
+  If you want to publish the best and the last checkpoints after training, you can set the `published_keys` parameter. You can select any keys in checkpoint to be published.
 
   ```python
   default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=1, save_best='accuracy', rule='less', published_keys=['meta', 'state_dict']))
