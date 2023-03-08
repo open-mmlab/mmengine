@@ -13,8 +13,8 @@ def test_setup_multi_processes():
     sys_start_mehod = mp.get_start_method(allow_none=True)
     sys_cv_threads = cv2.getNumThreads()
     # pop and temp save system env vars
-    sys_omp_threads = os.environ.pop('OMP_NUM_THREADS', None)
-    sys_mkl_threads = os.environ.pop('MKL_NUM_THREADS', None)
+    sys_omp_threads = os.environ.pop('OMP_NUM_THREADS', default=None)
+    sys_mkl_threads = os.environ.pop('MKL_NUM_THREADS', default=None)
 
     # test distributed
     set_multi_processing(distributed=True)

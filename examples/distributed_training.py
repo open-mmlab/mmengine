@@ -93,7 +93,7 @@ def main():
         val_cfg=dict(),
         val_evaluator=dict(type=Accuracy),
         launcher=args.launcher,
-        log_level='DEBUG')
+    )
     runner.train()
 
 
