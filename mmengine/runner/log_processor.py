@@ -272,6 +272,7 @@ class LogProcessor:
                 val = f'\n{val}\n'
             log_items.append(f'{name}: {val}')
         log_str += '  '.join(log_items)
+
         if with_non_scalar:
             tag.update(non_scalar_tag)
         return tag, log_str
