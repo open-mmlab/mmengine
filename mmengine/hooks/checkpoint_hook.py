@@ -99,7 +99,7 @@ class CheckpointHook(Hook):
         >>> # Save best based on multi metrics with different comparison rule
         >>> CheckpointHook(interval=2, by_epoch=True,
         >>>                save_best=['FID', 'IS'], rule=['less', 'greater'])
-        >>> # Save best based on single metric and publish model after train
+        >>> # Save best based on single metric and publish model after training
         >>> CheckpointHook(interval=2, by_epoch=True, save_best='acc',
         >>>                rule='less', published_keys=['meta', 'state_dict'])
     """
