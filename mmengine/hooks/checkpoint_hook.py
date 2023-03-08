@@ -232,9 +232,9 @@ class CheckpointHook(Hook):
                 or published_keys is None):
             raise TypeError(
                 '"published_keys" should be a str or list of str or None, '
-                f'but got {type(published_keys)}'):
+                f'but got {type(published_keys)}')
 
-        if isinstace(published_keys, str):
+        if isinstance(published_keys, str):
             published_keys = [published_keys]    
         elif isinstance(published_keys, list):
             assert len(published_keys) == len(set(published_keys)), (
