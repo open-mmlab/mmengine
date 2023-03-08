@@ -337,8 +337,7 @@ class CheckpointHook(Hook):
 
         if self.save_last:
             last_ckpt = runner.message_hub.get_info('last_ckpt')
-            if not last_ckpt:
-                assert ('Did not find last_checkpoint to be resumed.')
+            assert last_ckpt ('Did not find last_checkpoint to be resumed.')
             self._publish_model(runner, last_ckpt)
 
         if self.save_best is not None:
