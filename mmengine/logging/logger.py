@@ -326,9 +326,9 @@ def _get_device_id():
         # TODO: return device id of npu and mlu.
         if not torch.cuda.is_available():
             return local_rank
-        num_device = torch.cuda.device_count()
         cuda_visible_devices = os.getenv('CUDA_VISIBLE_DEVICES', None)
         if cuda_visible_devices is None:
+            num_device = torch.cuda.device_count()
             cuda_visible_devices = list(range(num_device))
         else:
             cuda_visible_devices = cuda_visible_devices.split(',')
