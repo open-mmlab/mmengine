@@ -138,8 +138,8 @@ class MMLogger(Logger, ManagerMixin):
             If `logger_name` is not defined, defaults to 'mmengine'.
         log_file (str, optional): The log filename. If specified, a
             ``FileHandler`` will be added to the logger. Defaults to None.
-        log_level (str): The log level of the handler and logger. Defaults to
-            "NOTSET".
+        log_level (str or int): The log level of the handler.
+            Defaults to "INFO".
         file_mode (str): The file mode used to open log file. Defaults to 'w'.
         distributed (bool): Whether to save distributed logs, Defaults to
             false.
@@ -149,13 +149,14 @@ class MMLogger(Logger, ManagerMixin):
                  name: str,
                  logger_name='mmengine',
                  log_file: Optional[str] = None,
-                 log_level: str = 'INFO',
+                 log_level: Union[int, str] = 'INFO',
                  file_mode: str = 'w',
                  distributed=False):
         Logger.__init__(self, logger_name)
         ManagerMixin.__init__(self, name)
         # Get rank in DDP mode.
-
+        if isinstance(log_level, str):
+            log_level = logging._nameToLevel[log_level]
         global_rank = _get_rank()
         device_id = _get_device_id()
 
@@ -175,7 +176,7 @@ class MMLogger(Logger, ManagerMixin):
 
         if log_file is not None:
             if global_rank != 0 or \
-               logging._nameToLevel[log_level] <= logging.DEBUG or distributed:
+               log_level <= logging.DEBUG or distributed:
                 filename, suffix = osp.splitext(osp.basename(log_file))
                 hostname = _get_host_info()
                 if hostname:
@@ -189,7 +190,7 @@ class MMLogger(Logger, ManagerMixin):
             # Save multi-ranks logs if distributed is True. The logs of rank0
             # will always be saved.
             if global_rank == 0 or distributed or \
-               logging._nameToLevel[log_level] <= logging.DEBUG:
+               log_level <= logging.DEBUG:
                 # Here, the default behaviour of the official logger is 'a'.
                 # Thus, we provide an interface to change the file mode to
                 # the default behaviour. `FileHandler` is not supported to
