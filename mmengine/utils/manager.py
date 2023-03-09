@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import inspect
 import threading
+import warnings
 from collections import OrderedDict
 from typing import Type, TypeVar
 
@@ -109,7 +110,7 @@ class ManagerMixin(metaclass=ManagerMeta):
             instance = cls(name=name, **kwargs)  # type: ignore
             instance_dict[name] = instance  # type: ignore
         else:
-            assert not kwargs, (
+            warnings.warn(
                 f'{cls} instance named of {name} has been created, the method '
                 '`get_instance` should not access any other arguments')
         # Get latest instantiated instance or root instance.
