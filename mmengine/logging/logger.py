@@ -175,7 +175,7 @@ class MMLogger(Logger, ManagerMixin):
         self.handlers.append(stream_handler)
 
         if log_file is not None:
-            if (global_rank != 0 or log_level <= logging.DEBUG or distributed):
+            if global_rank != 0 or log_level <= logging.DEBUG or distributed:
                 filename, suffix = osp.splitext(osp.basename(log_file))
                 hostname = _get_host_info()
                 if hostname:
@@ -188,7 +188,7 @@ class MMLogger(Logger, ManagerMixin):
                 log_file = osp.join(osp.dirname(log_file), filename)
             # Save multi-ranks logs if distributed is True. The logs of rank0
             # will always be saved.
-            if (global_rank == 0 or distributed or log_level <= logging.DEBUG):
+            if global_rank == 0 or distributed or log_level <= logging.DEBUG:
                 # Here, the default behaviour of the official logger is 'a'.
                 # Thus, we provide an interface to change the file mode to
                 # the default behaviour. `FileHandler` is not supported to
