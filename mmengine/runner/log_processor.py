@@ -254,13 +254,30 @@ class LogProcessor:
         cur_loop = self._get_cur_loop(runner, mode)
         dataloader_len = len(cur_loop.dataloader)
 
+        # By epoch:
+        #     Epoch(val) [10][1000/1000]  ...
+        #     Epoch(test) [1000/1000] ...
+        # By iteration:
+        #     Iteration(val) [1000/1000]  ...
+        #     Iteration(test) [1000/1000]  ...
+        if self.by_epoch:
+            if mode == 'val':
+                cur_epoch = self._get_epoch(runner, mode)
+                log_str = (f'Epoch({mode}) [{cur_epoch}][{dataloader_len}/'
+                           f'{dataloader_len}]  ')
+            else:
+                log_str = (
+                    f'Epoch({mode}) [{dataloader_len}/{dataloader_len}]  ')
+
+        else:
+            log_str = (f'Iter({mode}) [{dataloader_len}/{dataloader_len}]  ')
+
         custom_cfg_copy = copy.deepcopy(self.custom_cfg)
         # remove prefix
         custom_keys = [
             self._remove_prefix(cfg['data_src'], f'{mode}/')
             for cfg in custom_cfg_copy
         ]
-
         # Count the averaged time and data_time by epoch
         if 'time' not in custom_keys:
             custom_cfg_copy.append(
@@ -289,30 +306,9 @@ class LogProcessor:
                 time_tag[key] = value
             else:
                 tag[key] = value
-
-        # By epoch:
-        #     Epoch(val) [10][1000/1000]  ...
-        #     Epoch(test) [1000/1000] ...
-        # By iteration:
-        #     Iteration(val) [1000/1000]  ...
-        #     Iteration(test) [1000/1000]  ...
-        if self.by_epoch:
-            if mode == 'val':
-                cur_epoch = self._get_epoch(runner, mode)
-                log_str = (f'Epoch({mode}) [{cur_epoch}][{dataloader_len}/'
-                           f'{dataloader_len}]  ')
-            else:
-                log_str = (
-                    f'Epoch({mode}) [{dataloader_len}/{dataloader_len}]  ')
-
-        else:
-            log_str = (f'Iter({mode}) [{dataloader_len}/{dataloader_len}]  ')
-        # `time` and `data_time` will not be recorded in after epoch log
-        # message.
+        # Log other messages.
         log_items = []
         for name, val in chain(tag.items(), non_scalar_tag.items()):
-            if name in ('time', 'data_time'):
-                name = self._remove_prefix(name, f'{mode}/')
             if isinstance(val, float):
                 val = f'{val:.{self.num_digits}f}'
             if isinstance(val, (torch.Tensor, np.ndarray)):
