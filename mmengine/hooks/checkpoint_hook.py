@@ -340,13 +340,11 @@ class CheckpointHook(Hook):
             last_ckpt = runner.message_hub.get_info('last_ckpt')
             self._publish_model(runner, last_ckpt)
 
-        if self.save_best is not None:
-            if len(self.key_indicators) == 1:
-                if self.best_ckpt_path is not None:
-                    self._publish_model(runner, self.best_ckpt_path)
-            else:
-                for key, best_ckpt in self.best_ckpt_path_dict.items():
-                    self._publish_model(runner, best_ckpt)
+        if getattr(self, 'best_ckpt_path', None) is not None:
+            self._publish_model(runner, self.best_ckpt_path)
+        if getattr(self, 'best_ckpt_path_dict', None) is not None:
+            for key, best_ckpt in self.best_ckpt_path_dict.items():
+                self._publish_model(runner, best_ckpt)
 
     def _publish_model(self, runner, out_file: str) -> None:
 
