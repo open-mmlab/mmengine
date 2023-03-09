@@ -167,7 +167,9 @@ class MMLogger(Logger, ManagerMixin):
         stream_handler.setFormatter(
             MMFormatter(color=True, datefmt='%m/%d %H:%M:%S'))
         # Only rank0 `StreamHandler` will log messages below error level.
-        stream_handler.setLevel(log_level) if global_rank == 0 else \
+        if global_rank == 0:
+            stream_handler.setLevel(log_level)
+        else:
             stream_handler.setLevel(logging.ERROR)
         self.handlers.append(stream_handler)
 
@@ -175,8 +177,13 @@ class MMLogger(Logger, ManagerMixin):
             if global_rank != 0 or log_level == 'DEBUG' or distributed:
                 filename, suffix = osp.splitext(osp.basename(log_file))
                 hostname = _get_host_info()
-                filename = f'{filename}_{hostname}_device{device_id}_' \
-                           f'rank{global_rank}{suffix}'
+                if hostname:
+                    filename = f'{filename}_{hostname}_device{device_id}_' \
+                               f'rank{global_rank}{suffix}'
+                else:
+                    # Omit hostname if it is empty
+                    filename = f'{filename}_device{device_id}_' \
+                               f'rank{global_rank}{suffix}'
                 log_file = osp.join(osp.dirname(log_file), filename)
             # Save multi-ranks logs if distributed is True. The logs of rank0
             # will always be saved.
