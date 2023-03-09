@@ -26,10 +26,10 @@ runner = Runner(
 runner.train()
 ```
 
-However, there may still be some differences between any two experiments, even with the random number set and the deterministic algorithms chosen. The core reason is that the atomic operations in CUDA are unordered and random during parallel training. 
+However, there may still be some differences between any two experiments, even with the random number set and the deterministic algorithms chosen. The core reason is that the atomic operations in CUDA are unordered and random during parallel training.
 
 The CUDA implementation of some operators sometimes inevitably performs atomic operations such as adding, subtracting, multiplying, and dividing the same memory address multiple times in different CUDA kernels. In particular, during the `backward` process, the use of `atomicAdd` is very common. These atomic operations are unordered and random when computed. Therefore, when performing atomic operations at the same memory address multiple times, let's say adding multiple gradients at the same address, the order in which they are performed is uncertain, and even if each number is the same, the order in which the numbers are added will be different.
 
 The randomness of the summing order leads to another problem, that is, since the summed values are generally floating point numbers that have the problem of precision loss, there will be a slight difference in the final result.
 
-So, by setting random seeds and deterministic to `True`, we can make sure that the initialization weights and even the forward outputs of the model are identical for each experiment, and the loss values are also identical. However, there may be subtle differences after one back-propagation, and the final performance of the trained models will be slightly different.
+Therefore, by setting random seeds and deterministic to `True`, we can make sure that the initialization weights and even the forward outputs of the model are identical for each experiment, and the loss values are also identical. However, there may be subtle differences after one back-propagation, and the final performance of the trained models will be slightly different.
