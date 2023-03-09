@@ -561,6 +561,9 @@ class Config:
                             and isinstance(c.targets[0], ast.Name)
                             and c.targets[0].id == BASE_KEY)
 
+                # To resolve https://github.com/open-mmlab/mmengine/issues/758,
+                # We need to execute the code line by line to get the base
+                # file.
                 base_code = []
                 for c in codes:
                     base_code.append(c)
