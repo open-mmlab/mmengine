@@ -174,7 +174,8 @@ class MMLogger(Logger, ManagerMixin):
         self.handlers.append(stream_handler)
 
         if log_file is not None:
-            if global_rank != 0 or log_level == 'DEBUG' or distributed:
+            if global_rank != 0 or \
+               logging._nameToLevel[log_level] <= logging.DEBUG or distributed:
                 filename, suffix = osp.splitext(osp.basename(log_file))
                 hostname = _get_host_info()
                 if hostname:
@@ -325,12 +326,12 @@ def _get_device_id():
         if not torch.cuda.is_available():
             return local_rank
         num_device = torch.cuda.device_count()
-        cuda_visible_device = os.getenv('CUDA_VISIBLE_DEVICES', None)
-        if cuda_visible_device is None:
-            cuda_visible_device = list(range(num_device))
+        cuda_visible_devices = os.getenv('CUDA_VISIBLE_DEVICES', None)
+        if cuda_visible_devices is None:
+            cuda_visible_devices = list(range(num_device))
         else:
-            cuda_visible_device = cuda_visible_device.split(',')
-        return int(cuda_visible_device[local_rank])
+            cuda_visible_devices = cuda_visible_devices.split(',')
+        return int(cuda_visible_devices[local_rank])
 
 
 def _get_host_info() -> str:
