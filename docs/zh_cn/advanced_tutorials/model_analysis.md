@@ -119,7 +119,7 @@ TestNet(
 )
 ```
 
-## 用法示例2: 通过 mmengine 构建的模型
+## 用法示例2: 基于 BaseModel（来自 MMEngine）构建的模型
 
 ### 代码
 
