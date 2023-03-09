@@ -336,7 +336,7 @@ class CheckpointHook(Hook):
         if self.published_keys is None:
             return
 
-        if self.save_last and 'last_ckpt' in self.runtime_info:
+        if self.save_last and 'last_ckpt' in runner.message_hub.runtime_info:
             last_ckpt = runner.message_hub.get_info('last_ckpt')
             self._publish_model(runner, last_ckpt)
 
@@ -362,7 +362,6 @@ class CheckpointHook(Hook):
                 'found in published_keys. If you want to keep them, '
                 f'please set `{removed_keys}` in published_keys',
                 logger='current')
-        print(runner.timestamp)
         final_file = osp.splitext(out_file)[0] + f'-published-{runner.timestamp}.pth'
         torch.save(checkpoint, final_file)
         print_log(
