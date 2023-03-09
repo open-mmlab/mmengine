@@ -15,7 +15,7 @@ from torch.optim import SGD, Adam
 from torch.utils.data import DataLoader, Dataset
 
 from mmengine.config import Config
-from mmengine.dataset import COLLATE_FUNCTIONS, DefaultSampler, pseudo_collate
+from mmengine.dataset import DefaultSampler, pseudo_collate
 from mmengine.evaluator import BaseMetric, Evaluator
 from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
                             IterTimerHook, LoggerHook, ParamSchedulerHook,
@@ -24,10 +24,11 @@ from mmengine.logging import MessageHub, MMLogger
 from mmengine.model import BaseDataPreprocessor, BaseModel, ImgDataPreprocessor
 from mmengine.optim import (DefaultOptimWrapperConstructor, MultiStepLR,
                             OptimWrapper, OptimWrapperDict, StepLR)
-from mmengine.registry import (DATASETS, EVALUATOR, HOOKS, LOG_PROCESSORS,
-                               LOOPS, METRICS, MODEL_WRAPPERS, MODELS,
-                               OPTIM_WRAPPER_CONSTRUCTORS, OPTIM_WRAPPERS,
-                               PARAM_SCHEDULERS, RUNNERS, Registry)
+from mmengine.registry import (DATASETS, EVALUATOR, FUNCTIONS, HOOKS,
+                               LOG_PROCESSORS, LOOPS, METRICS, MODEL_WRAPPERS,
+                               MODELS, OPTIM_WRAPPER_CONSTRUCTORS,
+                               OPTIM_WRAPPERS, PARAM_SCHEDULERS, RUNNERS,
+                               Registry)
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              LogProcessor, Runner, TestLoop, ValLoop)
 from mmengine.runner.loops import _InfiniteDataloaderIterator
@@ -37,7 +38,6 @@ from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.visualization import Visualizer
 
 
-@MODELS.register_module()
 class ToyModel(BaseModel):
 
     def __init__(self, data_preprocessor=None):
@@ -63,14 +63,12 @@ class ToyModel(BaseModel):
             return outputs
 
 
-@MODELS.register_module()
 class ToyModel1(ToyModel):
 
     def __init__(self):
         super().__init__()
 
 
-@MODELS.register_module()
 class ToySyncBNModel(BaseModel):
 
     def __init__(self):
@@ -95,7 +93,6 @@ class ToySyncBNModel(BaseModel):
             return outputs
 
 
-@MODELS.register_module()
 class ToyGANModel(BaseModel):
 
     def __init__(self):
@@ -127,7 +124,6 @@ class ToyGANModel(BaseModel):
         return loss
 
 
-@MODEL_WRAPPERS.register_module()
 class CustomModelWrapper(nn.Module):
 
     def __init__(self, module):
@@ -135,7 +131,6 @@ class CustomModelWrapper(nn.Module):
         self.model = module
 
 
-@OPTIM_WRAPPER_CONSTRUCTORS.register_module()
 class ToyMultipleOptimizerConstructor:
 
     def __init__(self, optim_wrapper_cfg, paramwise_cfg=None):
@@ -163,7 +158,6 @@ class ToyMultipleOptimizerConstructor:
         return OptimWrapperDict(**optimizers)
 
 
-@DATASETS.register_module()
 class ToyDataset(Dataset):
     METAINFO = dict()  # type: ignore
     data = torch.randn(12, 2)
@@ -180,7 +174,6 @@ class ToyDataset(Dataset):
         return dict(inputs=self.data[index], data_sample=self.label[index])
 
 
-@DATASETS.register_module()
 class ToyDatasetNoMeta(Dataset):
     data = torch.randn(12, 2)
     label = torch.ones(12)
@@ -192,7 +185,6 @@ class ToyDatasetNoMeta(Dataset):
         return dict(inputs=self.data[index], data_sample=self.label[index])
 
 
-@METRICS.register_module()
 class ToyMetric1(BaseMetric):
 
     def __init__(self, collect_device='cpu', dummy_metrics=None):
@@ -207,7 +199,6 @@ class ToyMetric1(BaseMetric):
         return dict(acc=1)
 
 
-@METRICS.register_module()
 class ToyMetric2(BaseMetric):
 
     def __init__(self, collect_device='cpu', dummy_metrics=None):
@@ -222,12 +213,10 @@ class ToyMetric2(BaseMetric):
         return dict(acc=1)
 
 
-@OPTIM_WRAPPERS.register_module()
 class ToyOptimWrapper(OptimWrapper):
     ...
 
 
-@HOOKS.register_module()
 class ToyHook(Hook):
     priority = 'Lowest'
 
@@ -235,7 +224,6 @@ class ToyHook(Hook):
         pass
 
 
-@HOOKS.register_module()
 class ToyHook2(Hook):
     priority = 'Lowest'
 
@@ -243,7 +231,6 @@ class ToyHook2(Hook):
         pass
 
 
-@LOOPS.register_module()
 class CustomTrainLoop(BaseLoop):
 
     def __init__(self, runner, dataloader, max_epochs):
@@ -254,7 +241,6 @@ class CustomTrainLoop(BaseLoop):
         pass
 
 
-@LOOPS.register_module()
 class CustomValLoop(BaseLoop):
 
     def __init__(self, runner, dataloader, evaluator):
@@ -270,7 +256,6 @@ class CustomValLoop(BaseLoop):
         pass
 
 
-@LOOPS.register_module()
 class CustomTestLoop(BaseLoop):
 
     def __init__(self, runner, dataloader, evaluator):
@@ -286,7 +271,6 @@ class CustomTestLoop(BaseLoop):
         pass
 
 
-@LOG_PROCESSORS.register_module()
 class CustomLogProcessor(LogProcessor):
 
     def __init__(self, window_size=10, by_epoch=True, custom_cfg=None):
@@ -296,7 +280,6 @@ class CustomLogProcessor(LogProcessor):
         self._check_custom_cfg()
 
 
-@RUNNERS.register_module()
 class CustomRunner(Runner):
 
     def __init__(self,
@@ -333,7 +316,6 @@ class CustomRunner(Runner):
         pass
 
 
-@EVALUATOR.register_module()
 class ToyEvaluator(Evaluator):
 
     def __init__(self, metrics):
@@ -344,7 +326,6 @@ def collate_fn(data_batch):
     return pseudo_collate(data_batch)
 
 
-@COLLATE_FUNCTIONS.register_module()
 def custom_collate(data_batch, pad_value):
     return pseudo_collate(data_batch)
 
@@ -352,6 +333,28 @@ def custom_collate(data_batch, pad_value):
 class TestRunner(TestCase):
 
     def setUp(self):
+        MODELS.register_module(module=ToyModel, force=True)
+        MODELS.register_module(module=ToyModel1, force=True)
+        MODELS.register_module(module=ToySyncBNModel, force=True)
+        MODELS.register_module(module=ToyGANModel, force=True)
+        MODEL_WRAPPERS.register_module(module=CustomModelWrapper, force=True)
+        OPTIM_WRAPPER_CONSTRUCTORS.register_module(
+            module=ToyMultipleOptimizerConstructor, force=True)
+        DATASETS.register_module(module=ToyDataset, force=True)
+        DATASETS.register_module(module=ToyDatasetNoMeta, force=True)
+        METRICS.register_module(module=ToyMetric1, force=True)
+        METRICS.register_module(module=ToyMetric2, force=True)
+        OPTIM_WRAPPERS.register_module(module=ToyOptimWrapper, force=True)
+        HOOKS.register_module(module=ToyHook, force=True)
+        HOOKS.register_module(module=ToyHook2, force=True)
+        LOOPS.register_module(module=CustomTrainLoop, force=True)
+        LOOPS.register_module(module=CustomValLoop, force=True)
+        LOOPS.register_module(module=CustomTestLoop, force=True)
+        LOG_PROCESSORS.register_module(module=CustomLogProcessor, force=True)
+        RUNNERS.register_module(module=CustomRunner, force=True)
+        EVALUATOR.register_module(module=ToyEvaluator, force=True)
+        FUNCTIONS.register_module(module=custom_collate, force=True)
+
         self.temp_dir = tempfile.mkdtemp()
         epoch_based_cfg = dict(
             model=dict(type='ToyModel'),
@@ -413,6 +416,28 @@ class TestRunner(TestCase):
     def tearDown(self):
         # `FileHandler` should be closed in Windows, otherwise we cannot
         # delete the temporary directory
+        MODELS.module_dict.pop('ToyModel')
+        MODELS.module_dict.pop('ToyModel1')
+        MODELS.module_dict.pop('ToySyncBNModel')
+        MODELS.module_dict.pop('ToyGANModel')
+        MODEL_WRAPPERS.module_dict.pop('CustomModelWrapper')
+        OPTIM_WRAPPER_CONSTRUCTORS.module_dict.pop(
+            'ToyMultipleOptimizerConstructor')
+        OPTIM_WRAPPERS.module_dict.pop('ToyOptimWrapper')
+        DATASETS.module_dict.pop('ToyDataset')
+        DATASETS.module_dict.pop('ToyDatasetNoMeta')
+        METRICS.module_dict.pop('ToyMetric1')
+        METRICS.module_dict.pop('ToyMetric2')
+        HOOKS.module_dict.pop('ToyHook')
+        HOOKS.module_dict.pop('ToyHook2')
+        LOOPS.module_dict.pop('CustomTrainLoop')
+        LOOPS.module_dict.pop('CustomValLoop')
+        LOOPS.module_dict.pop('CustomTestLoop')
+        LOG_PROCESSORS.module_dict.pop('CustomLogProcessor')
+        RUNNERS.module_dict.pop('CustomRunner')
+        EVALUATOR.module_dict.pop('ToyEvaluator')
+        FUNCTIONS.module_dict.pop('custom_collate')
+
         logging.shutdown()
         MMLogger._instance_dict.clear()
         shutil.rmtree(self.temp_dir)
@@ -782,7 +807,7 @@ class TestRunner(TestCase):
         TOY_SCHEDULERS = Registry(
             'parameter scheduler', parent=PARAM_SCHEDULERS, scope='toy')
 
-        @TOY_SCHEDULERS.register_module()
+        @TOY_SCHEDULERS.register_module(force=True)
         class ToyScheduler(MultiStepLR):
 
             def __init__(self, *args, **kwargs):
@@ -863,7 +888,7 @@ class TestRunner(TestCase):
             cfg.model_wrapper_cfg = dict(type='CustomModelWrapper')
             runner.from_cfg(cfg)
 
-            @MODELS.register_module()
+            @MODELS.register_module(force=True)
             class ToyBN(BaseModel):
 
                 def __init__(self):
@@ -1349,7 +1374,7 @@ class TestRunner(TestCase):
         val_epoch_results = []
         val_epoch_targets = [i for i in range(2, 4)]
 
-        @HOOKS.register_module()
+        @HOOKS.register_module(force=True)
         class TestEpochHook(Hook):
 
             def before_train_epoch(self, runner):
@@ -1394,7 +1419,7 @@ class TestRunner(TestCase):
         val_iter_targets = [i for i in range(4, 12)]
         val_batch_idx_targets = [i for i in range(4)] * 2
 
-        @HOOKS.register_module()
+        @HOOKS.register_module(force=True)
         class TestIterHook(Hook):
 
             def before_train_epoch(self, runner):
@@ -1454,10 +1479,8 @@ class TestRunner(TestCase):
         cfg.train_cfg = dict(
             by_epoch=False, max_iters=12, val_interval=4, val_begin=4)
         runner = Runner.from_cfg(cfg)
-        with self.assertWarnsRegex(
-                Warning,
-                'Reach the end of the dataloader, it will be restarted and '
-                'continue to iterate.'):
+        # Warning should be raised since the sampler is not InfiniteSampler.
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             runner.train()
 
         assert isinstance(runner.train_loop, IterBasedTrainLoop)
@@ -1487,7 +1510,7 @@ class TestRunner(TestCase):
         val_interval_results = []
         val_interval_targets = [5] * 10 + [2] * 2
 
-        @HOOKS.register_module()
+        @HOOKS.register_module(force=True)
         class TestIterDynamicIntervalHook(Hook):
 
             def before_val(self, runner):
@@ -1524,7 +1547,7 @@ class TestRunner(TestCase):
         val_interval_results = []
         val_interval_targets = [5] * 10 + [2] * 2
 
-        @HOOKS.register_module()
+        @HOOKS.register_module(force=True)
         class TestEpochDynamicIntervalHook(Hook):
 
             def before_val_epoch(self, runner):
@@ -1553,7 +1576,7 @@ class TestRunner(TestCase):
             self.assertEqual(result, target)
 
         # 7. test init weights
-        @MODELS.register_module()
+        @MODELS.register_module(force=True)
         class ToyModel2(ToyModel):
 
             def __init__(self):
@@ -1654,7 +1677,7 @@ class TestRunner(TestCase):
             runner.train()
 
         # 12.1 Test train with model, which does not inherit from BaseModel
-        @MODELS.register_module()
+        @MODELS.register_module(force=True)
         class ToyModel3(nn.Module):
 
             def __init__(self):
@@ -1901,7 +1924,7 @@ class TestRunner(TestCase):
 
     def test_custom_loop(self):
         # test custom loop with additional hook
-        @LOOPS.register_module()
+        @LOOPS.register_module(force=True)
         class CustomTrainLoop2(IterBasedTrainLoop):
             """Custom train loop with additional warmup stage."""
 
@@ -1942,7 +1965,7 @@ class TestRunner(TestCase):
         before_warmup_iter_results = []
         after_warmup_iter_results = []
 
-        @HOOKS.register_module()
+        @HOOKS.register_module(force=True)
         class TestWarmupHook(Hook):
             """test custom train loop."""
 
@@ -2049,11 +2072,8 @@ class TestRunner(TestCase):
         # ckpt_modified['meta']['seed'] = 123
         path_modified = osp.join(self.temp_dir, 'modified.pth')
         torch.save(ckpt_modified, path_modified)
-        with self.assertWarnsRegex(
-                Warning, 'The dataset metainfo from the resumed checkpoint is '
-                'different from the current training dataset, please '
-                'check the correctness of the checkpoint or the training '
-                'dataset.'):
+        # Warning should be raised since dataset_meta is not matched
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             runner.resume(path_modified)
 
         # 1.3.3 test resume with unmatched seed
@@ -2061,8 +2081,8 @@ class TestRunner(TestCase):
         ckpt_modified['meta']['seed'] = 123
         path_modified = osp.join(self.temp_dir, 'modified.pth')
         torch.save(ckpt_modified, path_modified)
-        with self.assertWarnsRegex(
-                Warning, 'The value of random seed in the checkpoint'):
+        # Warning should be raised since seed is not matched
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             runner.resume(path_modified)
 
         # 1.3.3 test resume with no seed and dataset meta
@@ -2279,7 +2299,7 @@ class TestRunner(TestCase):
                               MultiStepLR)
         self.assertIsInstance(runner.param_schedulers['linear2'][0], StepLR)
 
-        # 2.7.3 test `resume` 2 optimizers and 0 sheduler list.
+        # 2.7.3 test `resume` 2 optimizers and 0 scheduler list.
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_checkpoint18'
         cfg.optim_wrapper = optim_cfg
@@ -2306,3 +2326,19 @@ class TestRunner(TestCase):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_runner2'
         assert isinstance(RUNNERS.build(cfg), Runner)
+
+    def test_get_hooks_info(self):
+        # test get_hooks_info() function
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_get_hooks_info_from_test_runner_py'
+        cfg.runner_type = 'Runner'
+        runner = RUNNERS.build(cfg)
+        self.assertIsInstance(runner, Runner)
+        target_str = ('after_train_iter:\n'
+                      '(VERY_HIGH   ) RuntimeInfoHook                    \n'
+                      '(NORMAL      ) IterTimerHook                      \n'
+                      '(BELOW_NORMAL) LoggerHook                         \n'
+                      '(LOW         ) ParamSchedulerHook                 \n'
+                      '(VERY_LOW    ) CheckpointHook                     \n')
+        self.assertIn(target_str, runner.get_hooks_info(),
+                      'target string is not in logged hooks information.')

@@ -20,6 +20,7 @@ Optimizer
    :template: classtemplate.rst
 
     AmpOptimWrapper
+    ApexOptimWrapper
     OptimWrapper
     OptimWrapperDict
     DefaultOptimWrapperConstructor
@@ -63,3 +64,6 @@ Scheduler
    StepLR
    StepMomentum
    StepParamScheduler
+   ReduceOnPlateauLR
+   ReduceOnPlateauMomentum
+   ReduceOnPlateauParamScheduler

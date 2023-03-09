@@ -27,7 +27,7 @@ def calc_dynamic_intervals(
 
     Returns:
         Tuple[List[int], List[int]]: a list of milestone and its corresponding
-            intervals.
+        intervals.
     """
     if dynamic_interval_list is None:
         return [0], [start_interval]
@@ -53,9 +53,9 @@ def set_random_seed(seed: Optional[int] = None,
         deterministic (bool): Whether to set the deterministic option for
             CUDNN backend, i.e., set `torch.backends.cudnn.deterministic`
             to True and `torch.backends.cudnn.benchmark` to False.
-            Default: False.
+            Defaults to False.
         diff_rank_seed (bool): Whether to add rank number to the random seed to
-            have different random seed in different threads. Default: False.
+            have different random seed in different threads. Defaults to False.
     """
     if seed is None:
         seed = sync_random_seed()

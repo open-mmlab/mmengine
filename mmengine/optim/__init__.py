@@ -1,7 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .optimizer import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
-                        AmpOptimWrapper, DefaultOptimWrapperConstructor,
-                        OptimWrapper, OptimWrapperDict, build_optim_wrapper)
+                        AmpOptimWrapper, ApexOptimWrapper,
+                        DefaultOptimWrapperConstructor, OptimWrapper,
+                        OptimWrapperDict, ZeroRedundancyOptimizer,
+                        build_optim_wrapper)
 # yapf: disable
 from .scheduler import (ConstantLR, ConstantMomentum, ConstantParamScheduler,
                         CosineAnnealingLR, CosineAnnealingMomentum,
@@ -11,8 +13,10 @@ from .scheduler import (ConstantLR, ConstantMomentum, ConstantParamScheduler,
                         MultiStepLR, MultiStepMomentum,
                         MultiStepParamScheduler, OneCycleLR,
                         OneCycleParamScheduler, PolyLR, PolyMomentum,
-                        PolyParamScheduler, StepLR, StepMomentum,
-                        StepParamScheduler, _ParamScheduler)
+                        PolyParamScheduler, ReduceOnPlateauLR,
+                        ReduceOnPlateauMomentum, ReduceOnPlateauParamScheduler,
+                        StepLR, StepMomentum, StepParamScheduler,
+                        _ParamScheduler)
 
 # yapf: enable
 __all__ = [
@@ -23,7 +27,9 @@ __all__ = [
     'MultiStepMomentum', 'StepMomentum', 'ConstantParamScheduler',
     'CosineAnnealingParamScheduler', 'ExponentialParamScheduler',
     'LinearParamScheduler', 'MultiStepParamScheduler', 'StepParamScheduler',
-    '_ParamScheduler', 'OptimWrapper', 'AmpOptimWrapper', 'OptimWrapperDict',
-    'OneCycleParamScheduler', 'OneCycleLR', 'PolyLR', 'PolyMomentum',
-    'PolyParamScheduler'
+    '_ParamScheduler', 'OptimWrapper', 'AmpOptimWrapper', 'ApexOptimWrapper',
+    'OptimWrapperDict', 'OneCycleParamScheduler', 'OneCycleLR', 'PolyLR',
+    'PolyMomentum', 'PolyParamScheduler', 'ReduceOnPlateauLR',
+    'ReduceOnPlateauMomentum', 'ReduceOnPlateauParamScheduler',
+    'ZeroRedundancyOptimizer'
 ]

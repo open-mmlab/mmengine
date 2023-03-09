@@ -91,8 +91,10 @@ def _get_file_backend(prefix: str, backend_args: dict):
     """
     # backend name has a higher priority
     if 'backend' in backend_args:
-        backend_name = backend_args.pop('backend')
-        backend = backends[backend_name](**backend_args)
+        # backend_args should not be modified
+        backend_args_bak = backend_args.copy()
+        backend_name = backend_args_bak.pop('backend')
+        backend = backends[backend_name](**backend_args_bak)
     else:
         backend = prefix_to_backends[prefix](**backend_args)
     return backend
@@ -340,10 +342,10 @@ def join_path(
     *filepaths: Union[str, Path],
     backend_args: Optional[dict] = None,
 ) -> Union[str, Path]:
-    """Concatenate all file paths.
+    r"""Concatenate all file paths.
 
     Join one or more filepath components intelligently. The return value
-    is the concatenation of filepath and any members of *filepaths.
+    is the concatenation of filepath and any members of \*filepaths.
 
     Args:
         filepath (str or Path): Path to be concatenated.
@@ -774,8 +776,8 @@ def generate_presigned_url(
     Args:
         url (str): Url of video stream.
         client_method (str): Method of client, 'get_object' or
-            'put_object'. Default: 'get_object'.
-        expires_in (int): expires, in seconds. Default: 3600.
+            'put_object'. Defaults to 'get_object'.
+        expires_in (int): expires, in seconds. Defaults to 3600.
         backend_args (dict, optional): Arguments to instantiate the
             corresponding backend. Defaults to None.
 
@@ -811,7 +813,7 @@ def load(file,
             Defaults to None. It will be deprecated in future. Please use
             ``backend_args`` instead.
         backend_args (dict, optional): Arguments to instantiate the
-            preifx of uri corresponding backend. Defaults to None.
+            prefix of uri corresponding backend. Defaults to None.
             New in v0.2.0.
 
     Examples:
@@ -884,7 +886,7 @@ def dump(obj,
             Defaults to None. It will be deprecated in future. Please use
             ``backend_args`` instead.
         backend_args (dict, optional): Arguments to instantiate the
-            preifx of uri corresponding backend. Defaults to None.
+            prefix of uri corresponding backend. Defaults to None.
             New in v0.2.0.
 
     Examples:

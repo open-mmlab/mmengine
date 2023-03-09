@@ -43,7 +43,7 @@ class OptimWrapper:
               ``'inf'`` for infinity norm.
             - error_if_nonfinite (bool): If True, an error is thrown if
               the total norm of the gradients from :attr:`parameters` is
-              ``nan``, ``inf``, or ``-inf``. Default: False (will switch
+              ``nan``, ``inf``, or ``-inf``. Defaults to False (will switch
               to True in the future)
 
             If the key ``type`` is set to "value", the accepted keys are as
@@ -161,20 +161,33 @@ class OptimWrapper:
         # the loss factor will always be the same as `_accumulative_counts`.
         self._remainder_counts = -1
 
-    def update_params(self, loss: torch.Tensor) -> None:
+    def update_params(self,
+                      loss: torch.Tensor,
+                      step_kwargs: Optional[Dict] = None,
+                      zero_kwargs: Optional[Dict] = None) -> None:
         """Update parameters in :attr:`optimizer`.
 
         Args:
             loss (torch.Tensor): A tensor for back propagation.
+            step_kwargs (dict): Arguments for optimizer.step.
+                Defaults to None.
+                New in version v0.4.0.
+            zero_kwargs (dict): Arguments for optimizer.zero_grad.
+                Defaults to None.
+                New in version v0.4.0.
         """
+        if step_kwargs is None:
+            step_kwargs = {}
+        if zero_kwargs is None:
+            zero_kwargs = {}
         loss = self.scale_loss(loss)
         self.backward(loss)
         # Update parameters only if `self._inner_count` is divisible by
         # `self._accumulative_counts` or `self._inner_count` equals to
         # `self._max_counts`
         if self.should_update():
-            self.step()
-            self.zero_grad()
+            self.step(**step_kwargs)
+            self.zero_grad(**zero_kwargs)
 
     def backward(self, loss: torch.Tensor, **kwargs) -> None:
         """Perform gradient back propagation.

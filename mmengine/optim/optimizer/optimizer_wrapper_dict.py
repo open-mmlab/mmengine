@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from contextlib import contextmanager
-from typing import Dict, Iterator, List, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -46,13 +46,16 @@ class OptimWrapperDict(OptimWrapper):
                 f'but got {key}: {type(value)}')
         self.optim_wrappers = optim_wrapper_dict
 
-    def update_params(self, loss: torch.Tensor) -> None:
+    def update_params(self,
+                      loss: torch.Tensor,
+                      step_kwargs: Optional[Dict] = None,
+                      zero_kwargs: Optional[Dict] = None) -> None:
         """Update all optimizer wrappers would lead to a duplicate backward
         errors, and OptimWrapperDict does not know which optimizer wrapper
         should be updated.
 
         Therefore, this method is not implemented. The optimizer wrapper of
-        OptimWrapperDict should be accessed and call its `update_params.
+        OptimWrapperDict should be accessed and call its `update_params`.
         """
         raise NotImplementedError('`update_params` should be called by each '
                                   'optimizer separately`')
@@ -63,7 +66,7 @@ class OptimWrapperDict(OptimWrapper):
         different :obj:AmpOptimWrapper), this method is not implemented.
 
         The optimizer wrapper of OptimWrapperDict should be accessed and call
-        its `backward.
+        its `backward`.
         """
         raise NotImplementedError('`backward` should be called by each '
                                   'optimizer separately`')

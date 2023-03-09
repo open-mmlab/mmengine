@@ -4,7 +4,7 @@
 
 随着支持的深度学习任务越来越多，用户的需求不断增加，我们对 MMCV 已有的执行器（Runner）的灵活性和通用性有了更高的要求。
 因此，MMEngine 在 MMCV 的基础上，实现了一个更加通用灵活的执行器以支持更多复杂的模型训练流程。
-MMEngine 中的执行器扩大了作用域，也承担了更多的功能；我们抽象出了[训练循环控制器（EpochBasedTrainLoop/IterBasedTrainLoop）](mmengine.runner.EpochBasedLoop)、[验证循环控制器（ValLoop）](mmengine.runner.ValLoop)和[测试循环控制器（TestLoop）](mmengine.runner.TestLoop)来方便用户灵活拓展模型的执行流程。
+MMEngine 中的执行器扩大了作用域，也承担了更多的功能；我们抽象出了[训练循环控制器（EpochBasedTrainLoop/IterBasedTrainLoop）](mmengine.runner.EpochBasedTrainLoop)、[验证循环控制器（ValLoop）](mmengine.runner.ValLoop)和[测试循环控制器（TestLoop）](mmengine.runner.TestLoop)来方便用户灵活拓展模型的执行流程。
 
 我们将首先介绍算法库的执行入口该如何从 MMCV 迁移到 MMEngine， 以最大程度地简化和统一执行入口的代码。
 然后我们将详细介绍在 MMCV 和 MMEngine 中构造执行器及其内部组件进行训练的差异。
@@ -19,15 +19,14 @@ MMEngine 中的执行器扩大了作用域，也承担了更多的功能；我�
 <table class="docutils">
 <thead>
   <tr>
-    <th></th>
     <th>基于 MMCV 执行器的配置文件概览 </th>
     <th>基于 MMEngine 执行器的配置文件概览</th>
 <tbody>
 <tr>
-  <td> default_runtime.py </td>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# default_runtime.py
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
@@ -51,10 +50,12 @@ mp_start_method = 'fork'
 auto_scale_lr = dict(enable=False, base_batch_size=16)
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# default_runtime.py
 default_scope = 'mmdet'
 
 default_hooks = dict(
@@ -81,13 +82,15 @@ load_from = None
 resume = False
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 <tr>
-  <td> scheduler.py </td>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# schedule.py
+
 # optimizer
 optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=None)
@@ -101,10 +104,13 @@ lr_config = dict(
 runner = dict(type='EpochBasedRunner', max_epochs=12)
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# scheduler.py
+
 # training schedule for 1x
 train_cfg = dict(type='EpochBasedTrainLoop', max_epochs=12, val_interval=1)
 val_cfg = dict(type='ValLoop')
@@ -135,13 +141,15 @@ optim_wrapper = dict(
 auto_scale_lr = dict(enable=False, base_batch_size=16)
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 <tr>
-<td> coco_detection.py </td>
-<td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# coco_detection.py
+
 # dataset settings
 dataset_type = 'CocoDataset'
 data_root = 'data/coco/'
@@ -193,11 +201,13 @@ data = dict(
 evaluation = dict(interval=1, metric='bbox')
 ```
 
-</td>
-
-<td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# coco_detection.py
+
 # dataset settings
 dataset_type = 'CocoDataset'
 data_root = 'data/coco/'
@@ -257,14 +267,15 @@ val_evaluator = dict(
 test_evaluator = val_evaluator
 ```
 
-</td>
+</div>
+  </td>
 
 </tr>
 </thead>
 </table>
 
 MMEngine 中的执行器提供了更多可自定义的部分，包括训练、验证、测试过程和数据加载器的配置，因此配置文件和之前相比会长一些。
-为了方便用户的理解和阅读，我们遵循所见即所得的原则，重新调整了各个组件配置的层次，使得大部分一级字段都对应着执行器中关键属性的配置，例如数据加载器、评测器、流程配置、钩子配置等。
+为了方便用户的理解和阅读，我们遵循所见即所得的原则，重新调整了各个组件配置的层次，使得大部分一级字段都对应着执行器中关键属性的配置，例如数据加载器、评测器、钩子配置等。
 这些配置在 OpenMMLab 2.0 算法库中都有默认配置，因此用户很多时候无需关心其中的大部分参数。
 
 ### 启动脚本的迁移
@@ -274,15 +285,15 @@ MMEngine 中的执行器提供了更多可自定义的部分，包括训练、�
 <table class="docutils">
 <thead>
   <tr>
-    <th></th>
     <th>基于 MMCV 执行器的训练启动脚本 </th>
     <th>基于 MMEngine 执行器的训练启动脚本</th>
 <tbody>
 <tr>
-  <td> tools/train.py </td>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# tools/train.py
+
 args = parse_args()
 
 cfg = Config.fromfile(args.config)
@@ -403,10 +414,13 @@ train_detector(
     meta=meta)
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
+# tools/train.py
+
 args = parse_args()
 
 # register all modules in mmdet into the registries
@@ -470,11 +484,11 @@ else:
 runner.train()
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 <tr>
-  <td> apis/train.py </td>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 def init_random_seed(...):
@@ -594,7 +608,8 @@ def train_detector(model,
     runner.run(data_loaders, cfg.workflow)
 ```
 
-</td>
+</div>
+  </td>
   <td valign="top">
 
 ```python
@@ -615,17 +630,18 @@ OpenMMLab 1.x 中的算法库都实现了一套 runner 的构建和训练流程�
 本节主要介绍 MMCV 执行器和 MMEngine 执行器在训练、验证、测试流程上的区别。
 在使用 MMCV 执行器和 MMEngine 执行器训练、测试模型时，以下流程有着明显的不同：
 
-01. [准备logger](准备logger)
-02. [设置随机种子](设置随机种子)
-03. [初始化环境变量](初始化训练环境)
-04. [准备数据](准备数据)
-05. [准备模型](准备模型)
-06. [准备优化器](准备优化器)
-07. [准备钩子](准备训练钩子)
-08. [准备验证/测试模块](准备验证模块)
-09. [构建执行器](构建执行器)
-10. [开始训练](执行器训练流程)、[开始测试](执行器测试流程)
-11. [迁移自定义训练流程](迁移自定义执行流程)
+01. [准备logger](#准备logger)
+02. [设置随机种子](#设置随机种子)
+03. [初始化环境变量](#初始化训练环境)
+04. [准备数据](#准备数据)
+05. [准备模型](#准备模型)
+06. [准备优化器](#准备优化器)
+07. [准备钩子](#准备训练钩子)
+08. [准备验证/测试模块](#准备验证模块)
+09. [构建执行器](#构建执行器)
+10. [执行器加载检查点](#执行器加载检查点)
+11. [开始训练](#执行器训练流程)、[开始测试](#执行器测试流程)
+12. [迁移自定义训练流程](#迁移自定义执行流程)
 
 后续的教程中，我们会对每个流程的差异进行详细介绍。
 
@@ -690,7 +706,7 @@ set_random_seed(seed, deterministic=args.deterministic)
     <th>MMEngine 配置</th>
 <tbody>
   <tr>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 seed = 1
@@ -698,8 +714,9 @@ deterministic=False
 diff_seed=False
 ```
 
-</td>
-  <td>
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 randomness=dict(seed=1,
@@ -707,7 +724,8 @@ randomness=dict(seed=1,
                 diff_rank_seed=False)
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -750,22 +768,24 @@ MMEngine 通过配置 `env_cfg` 来选择多进程启动方式和多进程通信
     <th>MMEngine 配置</th>
 <tbody>
   <tr>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 launcher = 'pytorch'  # 开启分布式训练
 dist_params = dict(backend='nccl')  # 选择多进程通信后端
 ```
 
-</td>
-  <td>
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 launcher = 'pytorch'
 env_cfg = dict(dist_cfg=dict(backend='nccl'))
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -810,7 +830,7 @@ val_dataloader = DataLoader(
     <th>MMEngine 配置</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 data = dict(
@@ -833,8 +853,9 @@ data = dict(
         pipeline=test_pipeline))
 ```
 
-</td>
-  <td>
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 train_dataloader = dict(
@@ -871,7 +892,8 @@ val_dataloader = dict(
 test_dataloader = val_dataloader
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -880,7 +902,7 @@ test_dataloader = val_dataloader
 
 ### 准备模型
 
-详见[迁移 MMCV 模型至 MMEngine](./migrate_model_from_mmcv.md)
+详见[迁移 MMCV 模型至 MMEngine](../migration/model.md)
 
 ```python
 import torch.nn as nn
@@ -976,7 +998,7 @@ optimizer = build_optimizer(model, optimizer_cfg)
     <th>MMEngine 配置</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 optimizer = dict(
@@ -990,13 +1012,14 @@ optimizer = dict(
         'decay_type': 'layer_wise',
         'num_layers': 6
     })
-# MMEngine 还需要配置 `optim_config`
+# MMCV 还需要配置 `optim_config`
 # 来构建优化器钩子，而 MMEngine 不需要
 optimizer_config = dict(grad_clip=None)
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 optim_wrapper = dict(
@@ -1014,12 +1037,13 @@ optim_wrapper = dict(
     })
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
 
-```{note}:
+```{note}
 对于检测、分类一类的上层任务（High level）MMCV 需要配置 `optim_config` 来构建优化器钩子，而 MMEngine 不需要。
 ```
 
@@ -1071,19 +1095,19 @@ MMEngine 执行器将 MMCV 常用的训练钩子配置成默认钩子：
 - [RuntimeInfoHook](mmengine.hooks.RuntimeInfoHook)
 - [IterTimerHook](mmengine.hooks.IterTimerHook)
 - [DistSamplerSeedHook](mmengine.hooks.DistSamplerSeedHook)
-- [LoggerHook](mmedge.hooks.LoggerHook)
+- [LoggerHook](mmengine.hooks.LoggerHook)
 - [CheckpointHook](mmengine.hooks.CheckpointHook)
 - [ParamSchedulerHook](mmengine.hooks.ParamSchedulerHook)
 
 对比上例中 MMCV 配置的训练钩子：
 
-- `LrUpdaterHook` 对应 MMEngine 中的 `ParamSchedulerHook`，二者对应关系详见[迁移 `scheduler` 文档](./migrate_param_scheduler_from_mmcv.md)
-- MMEngine 在模型的 [train_step](mmengine.BaseModel.train_step) 时更新参数，因此不需要配置优化器钩子（`OptimizerHook`）
+- `LrUpdaterHook` 对应 MMEngine 中的 `ParamSchedulerHook`，二者对应关系详见[迁移 `scheduler` 文档](./param_scheduler.md)
+- MMEngine 在模型的 [train_step](mmengine.model.BaseModel.train_step) 时更新参数，因此不需要配置优化器钩子（`OptimizerHook`）
 - MMEngine 自带 `CheckPointHook`，可以使用默认配置
 - MMEngine 自带 `LoggerHook`，可以使用默认配置
 
-因此我们只需要配置执行器[优化器参数调整策略（param_scheduler）](../tutorials/param_scheduler.md)，就能达到和配置 `lr_config` 一样的效果。
-MMEngine 也支持注册自定义钩子，具体教程详见[执行器教程](../tutorials/runner.md#通过配置文件使用执行器) 和[迁移 `hook` 文档](./migrate_hook_from_mmcv.md)。
+因此我们只需要配置执行器[优化器参数调整策略（param_scheduler）](../tutorials/param_scheduler.md)，就能达到和 MMCV 示例一样的效果。
+MMEngine 也支持注册自定义钩子，具体教程详见[钩子教程](../tutorials/hook.md#自定义钩子) 和[迁移 `hook` 文档](../migration/hook.md)。
 
 <table class="docutils">
 <thead>
@@ -1092,7 +1116,7 @@ MMEngine 也支持注册自定义钩子，具体教程详见[执行器教程](..
     <th>MMEngine 默认钩子</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 # MMCV 零散的配置训练钩子
@@ -1119,8 +1143,9 @@ log_config = dict(  # LoggerHook
 checkpoint_config = dict(interval=1)  # CheckPointHook
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 # 配置参数调度器
@@ -1146,7 +1171,8 @@ default_hooks = dict(
     visualization=dict(type='DetVisualizationHook'))
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -1165,7 +1191,7 @@ param_scheduler = dict(type='MultiStepLR', milestones=[2, 3], gamma=0.1)
 
 ### 准备验证模块
 
-MMCV 借助 `EvalHook` 实现验证流程，受限于篇幅，这里不做进一步展开。MMEngine 通过[验证循环控制器（ValLoop）](../tutorials/runner.md#自定义执行流程) 和[评测器（Evaluator）](../tutorials/metric_and_evaluator.md)实现执行流程，如果我们想基于自定义的评价指标完成验证流程，则需要定义一个 `Metric`，并将其注册至 `METRICS` 注册器：
+MMCV 借助 `EvalHook` 实现验证流程，受限于篇幅，这里不做进一步展开。MMEngine 通过[验证循环控制器（ValLoop）](mmengine.runner.ValLoop) 和[评测器（Evaluator）](../tutorials/evaluation.md)实现执行流程，如果我们想基于自定义的评价指标完成验证流程，则需要定义一个 `Metric`，并将其注册至 `METRICS` 注册器：
 
 ```python
 import torch
@@ -1187,7 +1213,7 @@ class ToyAccuracyMetric(BaseMetric):
         return dict(Accuracy=acc / num_sample)
 ```
 
-实现自定义 `Metric` 后，我们还需在执行器的构造参数中配置评测器和[验证循环控制器](../tutorials/runner.md#自定义执行流程)，本教程中示例配置如下：
+实现自定义 `Metric` 后，我们还需在执行器的构造参数中配置评测器和[验证循环控制器](mmengine.runner.ValLoop)，本教程中示例配置如下：
 
 ```python
 val_evaluator = dict(type='ToyAccuracyMetric')
@@ -1201,7 +1227,7 @@ val_cfg = dict(type='ValLoop')
     <th>MMEngine 配置验证流程</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 eval_cfg = cfg.get('evaluation', {})
@@ -1211,8 +1237,9 @@ runner.register_hook(
     eval_hook(val_dataloader, **eval_cfg), priority='LOW')  # 注册 EvalHook
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 val_dataloader = val_dataloader  # 配置验证数据
@@ -1220,7 +1247,8 @@ val_evaluator = dict(type='ToyAccuracyMetric')  # 配置评测器
 val_cfg = dict(type='ValLoop')  # 配置验证循环控制器
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -1243,7 +1271,7 @@ runner = EpochBasedRunner(
 
 `MMEngine` 执行器的作用域比 MMCV 更广，将设置随机种子、启动分布式训练等流程参数化。除了前几节提到的参数，上例中出现的`EpochBasedRunner`，`max_epochs`，`val_iterval` 现在由 `train_cfg` 配置：
 
-- `by_epoch`: `True` 时相当于 MMCV 的 `EpochBasedRunner`，False 时相当于 `IterBasedRunner`。
+- `by_epoch`: `True` 时相当于 MMCV 的 ``` EpochBasedRunner``，False ``` 时相当于 `IterBasedRunner`。
 - `max_epoch`/`max_iters`: 同 MMCV 执行器的配置
 - `val_iterval`: 同 `EvalHook` 的 `interval` 参数
 
@@ -1293,45 +1321,46 @@ runner = Runner(
 <table class="docutils">
 <thead>
   <tr>
-    <th></th>
     <th>MMCV 加载检查点配置</th>
     <th>MMEngine 加载检查点配置</th>
 <tbody>
 <tr>
-  <td> 加载检查点 </td>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 load_from = 'path/to/ckpt'
 ```
 
-</td>
-  <td>
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 load_from = 'path/to/ckpt'
 resume = False
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 <tr>
-  <td> 恢复检查点 </td>
-  <td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 resume_from = 'path/to/ckpt'
 ```
 
-</td>
-  <td>
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper' width="50%"><div style="overflow-x: auto">
 
 ```python
 load_from = 'path/to/ckpt'
 resume = True
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
@@ -1362,7 +1391,7 @@ runner.train()
 
 ### 执行器测试流程
 
-MMCV 的执行器没有测试功能，因此需要自行实现测试脚本。MMEngine 的执行器只需要在构建时配置 `test_dataloader`、`test_cfg` 和 `test_evaluator`，然后再调用 `runner.test()` 执行测试流程。
+MMCV 的执行器没有测试功能，因此需要自行实现测试脚本。MMEngine 的执行器只需要在构建时配置 `test_dataloader`、`test_cfg` 和 `test_evaluator`，然后再调用 `runner.test()` 就能完成测试流程。
 
 **`work_dir` 和训练时一致，无需手动加载 checkpoint:**
 
@@ -1409,7 +1438,7 @@ runner = Runner(
 runner.test()
 ```
 
-## 迁移自定义执行流程
+### 迁移自定义执行流程
 
 使用 MMCV 执行器时，我们可能会重载 `runner.train/runner.val` 或者 `runner.run_iter` 实现自定义的训练、测试流程。以重载 `runner.train` 为例，假设我们想对每个批次的图片训练两遍，我们可以这样重载 MMCV 的执行器：
 

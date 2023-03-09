@@ -1,6 +1,8 @@
 # 优化器封装（OptimWrapper）
 
-MMEngine 实现了优化器封装，为用户提供了统一的优化器访问接口。优化器封装支持不同的训练策略，包括混合精度训练、梯度累加和梯度截断。用户可以根据需求选择合适的训练策略。优化器封装还定义了一套标准的参数更新流程，用户可以基于这一套流程，实现同一套代码，不同训练策略的切换。
+在[执行器教程](./runner.md)和[模型教程](./model.md)中，我们或多或少地提到了优化器封装（OptimWrapper）的概念，但是却没有介绍为什么我们需要优化器封装，相比于 Pytorch 原生的优化器，优化器封装又有怎样的优势，这些问题会在本教程中得到一一解答。我们将通过对比的方式帮助大家理解，优化器封装的优势，以及如何使用它。
+
+优化器封装顾名思义，是 Pytorch 原生优化器（Optimizer）高级抽象，它在增加了更多功能的同时，提供了一套统一的接口。优化器封装支持不同的训练策略，包括混合精度训练、梯度累加和梯度截断。我们可以根据需求选择合适的训练策略。优化器封装还定义了一套标准的参数更新流程，用户可以基于这一套流程，实现同一套代码，不同训练策略的切换。
 
 ## 优化器封装 vs 优化器
 
@@ -239,11 +241,9 @@ print(optim_dict.get_momentum())  # {'gen.momentum': [0], 'disc.momentum': [0]}
 
 如上例所示，`OptimWrapperDict` 可以非常方便的导出所有优化器封装的学习率和动量，同样的，优化器封装也能够导出/加载所有优化器封装的状态字典。
 
-## 在[执行器](./runner.md)中配置优化器封装
+### 在[执行器](./runner.md)中配置优化器封装
 
-### 简单配置
-
-优化器封装需要接受 `optimizer` 参数，因此我们首先需要为优化器封装配置 `optimizer`。MMEngine 会自动将 PyTorch 中的所有优化器都添加进 `OPTIMIZERS` 注册表中，用户可以用字典的形式来指定优化器，所有支持的优化器见 [PyTorch 优化器列表](https://pytorch.org/docs/stable/optim.html#algorithms)。
+优化器封装需要接受 `optimizer` 参数，因此我们首先需要为优化器封装配置 `optimizer`。MMEngine 会自动将 PyTorch 中的所有优化器都添加进 `OPTIMIZERS` 注册表中，用户可以用字典的形式来指定优化器，所有支持的优化器见 [PyTorch 优化器列表](https://pytorch.org/docs/stable/optim.html#algorithms)。另外，可以通过安装 [dadaptation](https://github.com/facebookresearch/dadaptation) 使用 `DAdaptAdaGrad`、`DAdaptAdam` 和 `DAdaptSGD` 3 个优化器。也可以通过安装 [lion-pytorch](https://github.com/lucidrains/lion-pytorch) 使用 `Lion` 优化器。
 
 以配置一个 SGD 优化器封装为例：
 
@@ -266,7 +266,16 @@ optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
 optim_wrapper = dict(type='AmpOptimWrapper', optimizer=optimizer, accumulative_counts=2)
 ```
 
-### 进阶配置
+```{note}
+如果你是第一次阅读 MMEngine 的教程文档，并且尚未了解[配置类](../advanced_tutorials/config.md)、[注册器](../advanced_tutorials/registry.md) 等概念，建议可以先跳过以下进阶教程，先去阅读其他文档。当然了，如果你已经具备了这些储备知识，我们强烈建议阅读进阶教程，在进阶教程中，我们将学会：
+
+1. 如何在配置文件中定制化地在优化器中配置模型参数的学习率、衰减系数等。
+2. 如何自定义一个优化器构造策略，实现真正意义上的“优化器配置自由”。
+
+除了配置类和注册器等前置知识，我们建议在开始进阶教程之前，先深入了解 Pytorch 原生优化器构造时的 params 参数。
+```
+
+## 进阶配置
 
 PyTorch 的优化器支持对模型中的不同参数设置不同的超参数，例如对一个分类模型的骨干（backbone）和分类头（head）设置不同的学习率：
 
@@ -285,7 +294,7 @@ optimizer = SGD([{'params': model.backbone.parameters()},
 
 在 MMEngine 中，我们通过优化器封装构造器（optimizer wrapper constructor），让用户能够直接通过设置优化器封装配置文件中的 `paramwise_cfg` 字段而非修改代码来实现对模型的不同部分设置不同的超参。
 
-#### 为不同类型的参数设置不同的超参系数
+### 为不同类型的参数设置不同的超参系数
 
 MMEngine 提供的默认优化器封装构造器支持对模型中不同类型的参数设置不同的超参系数。例如，我们可以在 `paramwise_cfg` 中设置 `norm_decay_mult=0`，从而将正则化层（normalization layer）的权重（weight）和偏置（bias）的权值衰减系数（weight decay）设置为 0，来实现 [Bag of Tricks](https://arxiv.org/abs/1812.01187) 论文中提到的不对正则化层进行权值衰减的技巧。
 
@@ -329,19 +338,21 @@ optimizer = build_optim_wrapper(ToyModel(), optim_wrapper)
 
 `decay_mult`：所有参数的衰减系数
 
-`bias_lr_mult`：偏置的学习率系数（不包括正则化层的偏置以及可变形卷积的 offset），默认值为 1
+`bias_lr_mult`：偏置的学习率系数（不包括正则化层的偏置以及可变形卷积的 offset）
 
-`bias_decay_mult`：偏置的权值衰减系数（不包括正则化层的偏置以及可变形卷积的 offset），默认值为 1
+`bias_decay_mult`：偏置的权值衰减系数（不包括正则化层的偏置以及可变形卷积的 offset）
 
-`norm_decay_mult`：正则化层权重和偏置的权值衰减系数，默认值为 1
+`norm_decay_mult`：正则化层权重和偏置的权值衰减系数
 
-`dwconv_decay_mult`：Depth-wise 卷积的权值衰减系数，默认值为 1
+`flat_decay_mult`：一维参数的权值衰减系数
+
+`dwconv_decay_mult`：Depth-wise 卷积的权值衰减系数
 
 `bypass_duplicate`：是否跳过重复的参数，默认为 `False`
 
-`dcn_offset_lr_mult`：可变形卷积（Deformable Convolution）的学习率系数，默认值为 1
+`dcn_offset_lr_mult`：可变形卷积（Deformable Convolution）的学习率系数
 
-#### 为模型不同部分的参数设置不同的超参系数
+### 为模型不同部分的参数设置不同的超参系数
 
 此外，与上文 PyTorch 的示例一样，在 MMEngine 中我们也同样可以对模型中的任意模块设置不同的超参，只需要在 `paramwise_cfg` 中设置 `custom_keys` 即可。
 
@@ -414,7 +425,7 @@ custom_keys 中每一个字段的含义如下：
 
 ### 自定义优化器构造策略
 
-与 MMEngine 中的其他模块一样，优化器封装构造器也同样由[注册表](./param_scheduler.md)管理。我们可以通过实现自定义的优化器封装构造器来实现自定义的超参设置策略。
+与 MMEngine 中的其他模块一样，优化器封装构造器也同样由[注册表](../advanced_tutorials/registry.md)管理。我们可以通过实现自定义的优化器封装构造器来实现自定义的超参设置策略。
 
 例如，我们想实现一个叫做 `LayerDecayOptimWrapperConstructor` 的优化器封装构造器，能够对模型不同深度的层自动设置递减的学习率：
 
@@ -476,7 +487,7 @@ optimizer = build_optim_wrapper(model, optim_wrapper)
 08/23 22:20:26 - mmengine - INFO - linear.bias : lr=0.005
 ```
 
-`add_params` 被第一次调用时，`params` 参数为空列表（`list`），`module` 为模型（`model`）。详细的重载规则参[考优化器封装构造器文档](mmengine.optim.DefaultOptimWrapperConstructor)。
+`add_params` 被第一次调用时，`params` 参数为空列表（`list`），`module` 为模型（`model`）。详细的重载规则参考[优化器封装构造器文档](mmengine.optim.DefaultOptimWrapperConstructor)。
 
 类似地，如果想构造多个优化器，也需要实现自定义的构造器：
 

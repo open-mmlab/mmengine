@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from mmengine.logging import print_log
 from mmengine.utils.dl_utils import mmcv_full_available
 
 
@@ -192,7 +193,17 @@ def revert_sync_batchnorm(module: nn.Module) -> nn.Module:
         if hasattr(module, 'qconfig'):
             module_output.qconfig = module.qconfig
     for name, child in module.named_children():
-        module_output.add_module(name, revert_sync_batchnorm(child))
+        # Some custom modules or 3rd party implemented modules may raise an
+        # error when calling `add_module`. Therefore, try to catch the error
+        # and do not raise it. See https://github.com/open-mmlab/mmengine/issues/638 # noqa: E501
+        # for more details.
+        try:
+            module_output.add_module(name, revert_sync_batchnorm(child))
+        except Exception:
+            print_log(
+                F'Failed to convert {child} from SyncBN to BN!',
+                logger='current',
+                level=logging.WARNING)
     del module
     return module_output
 
@@ -200,9 +211,8 @@ def revert_sync_batchnorm(module: nn.Module) -> nn.Module:
 def convert_sync_batchnorm(module: nn.Module,
                            implementation='torch') -> nn.Module:
     """Helper function to convert all `BatchNorm` layers in the model to
-    `SyncBatchNorm` (SyncBN) or `mmcv.ops.sync_bn.SyncBatchNorm`(MMSyncBN)
-    layers. Adapted from <https://pytorch.org/docs/stable/generated/torch.nn.Sy
-    ncBatchNorm.html#torch.nn.SyncBatchNorm.convert_sync_batchnorm>_.
+    `SyncBatchNorm` (SyncBN) or `mmcv.ops.sync_bn.SyncBatchNorm` (MMSyncBN)
+    layers. Adapted from `PyTorch convert sync batchnorm`_.
 
     Args:
         module (nn.Module): The module containing `SyncBatchNorm` layers.
@@ -213,6 +223,9 @@ def convert_sync_batchnorm(module: nn.Module,
 
     Returns:
         nn.Module: The converted module with `SyncBatchNorm` layers.
+
+    .. _PyTorch convert sync batchnorm:
+       https://pytorch.org/docs/stable/generated/torch.nn.SyncBatchNorm.html#torch.nn.SyncBatchNorm.convert_sync_batchnorm
     """  # noqa: E501
     module_output = module
 

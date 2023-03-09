@@ -19,24 +19,20 @@ OpenMMLab 2.0 数据集格式规范规定，标注文件必须为 `json` 或 `ya
 ```json
 
 {
-    'metainfo':
+    "metainfo":
         {
-            'classes': ('cat', 'dog'),
-            ...
+            "classes": ["cat", "dog"]
         },
-    'data_list':
+    "data_list":
         [
             {
-                'img_path': "xxx/xxx_0.jpg",
-                'img_label': 0,
-                ...
+                "img_path": "xxx/xxx_0.jpg",
+                "img_label": 0
             },
             {
-                'img_path': "xxx/xxx_1.jpg",
-                'img_label': 1,
-                ...
-            },
-            ...
+                "img_path": "xxx/xxx_1.jpg",
+                "img_label": 1
+            }
         ]
 }
 ```
@@ -57,7 +53,9 @@ data
 
 数据集基类的初始化流程如下图所示：
 
-![image](https://user-images.githubusercontent.com/26813582/201585974-1360e2b5-f95f-4273-8cbf-6024e33204ab.png)
+<div align="center">
+  <img src="https://user-images.githubusercontent.com/26813582/201585974-1360e2b5-f95f-4273-8cbf-6024e33204ab.png" height="500"/>
+</div>
 
 1. `load metainfo`：获取数据集的元信息，元信息有三种来源，优先级从高到低为：
 

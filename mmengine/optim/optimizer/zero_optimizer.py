@@ -39,6 +39,10 @@ class ZeroRedundancyOptimizer(_ZeroRedundancyOptimizer):
     Warnings:
         ``ZeroRedundancyOptimizer`` requires PyTorch >= 1.8.
 
+    Warnings:
+        ``ZeroRedundancyOptimizer`` requires PyTorch >= 1.12 to enable param
+        groups.
+
     Args:
         params (``Iterable``): an ``Iterable`` of :class:`torch.Tensor` s
             or :class:`dict` s giving all parameters, which will be sharded
@@ -53,6 +57,15 @@ class ZeroRedundancyOptimizer(_ZeroRedundancyOptimizer):
             '`torch.distributed.optim.ZeroReundancyOptimizer` is only '
             'available when pytorch version >= 1.8.')
         assert is_available(), 'torch.distributed.rpc is not available.'
+        # Avoid the generator becoming empty after the following check
+        params = list(params)
+        assert (
+            all(isinstance(p, torch.Tensor) for p in params)
+            or digit_version(TORCH_VERSION) >= digit_version('1.12.0')), (
+                'PyTorch ZeroRedundancyOptimizer started to support param '
+                'groups since 1.12.0. Please update your pytorch version to '
+                'enable this feature, or disable param groups by deleting '
+                '`paramwise_cfg` filed in config file.')
         optimizer_class = getattr(torch.optim, optimizer_type)
         # TODO: Register a DDP communication hook for `overlap_with_ddp=True`.
         # Currently only `overlap_with_ddp=False` is supported. For more

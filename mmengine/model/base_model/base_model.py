@@ -155,9 +155,9 @@ class BaseModel(BaseModule):
 
         Returns:
             tuple[Tensor, dict]: There are two elements. The first is the
-            loss tensor passed to optim_wrapper which may be a weighted sum of
-            all losses, and the second is log_vars which will be sent to the
-            logger.
+            loss tensor passed to optim_wrapper which may be a weighted sum
+            of all losses, and the second is log_vars which will be sent to
+            the logger.
         """
         log_vars = []
         for loss_name, loss_value in losses.items():
@@ -177,23 +177,29 @@ class BaseModel(BaseModule):
 
         return loss, log_vars  # type: ignore
 
-    def to(self,
-           device: Optional[Union[int, str, torch.device]] = None,
-           *args,
-           **kwargs) -> nn.Module:
+    def to(self, *args, **kwargs) -> nn.Module:
         """Overrides this method to call :meth:`BaseDataPreprocessor.to`
         additionally.
-
-        Args:
-            device (int, str or torch.device, optional): the desired device
-                of the parameters and buffers in this module.
 
         Returns:
             nn.Module: The model itself.
         """
+
+        # Since Torch has not officially merged
+        # the npu-related fields, using the _parse_to function
+        # directly will cause the NPU to not be found.
+        # Here, the input parameters are processed to avoid errors.
+        if args and isinstance(args[0], str) and 'npu' in args[0]:
+            args = tuple(
+                [list(args)[0].replace('npu', torch.npu.native_device)])
+        if kwargs and 'npu' in str(kwargs.get('device', '')):
+            kwargs['device'] = kwargs['device'].replace(
+                'npu', torch.npu.native_device)
+
+        device = torch._C._nn._parse_to(*args, **kwargs)[0]
         if device is not None:
             self._set_device(torch.device(device))
-        return super().to(device)
+        return super().to(*args, **kwargs)
 
     def cuda(
         self,
@@ -244,7 +250,7 @@ class BaseModel(BaseModule):
 
         Args:
             device (torch.device): the desired device of the parameters and
-                    buffers in this module.
+                buffers in this module.
         """
 
         def apply_fn(module):
@@ -291,7 +297,7 @@ class BaseModel(BaseModule):
                 - ``loss``: Called by ``train_step`` and return loss ``dict``
                   used for logging
                 - ``predict``: Called by ``val_step`` and ``test_step``
-                  and return list of `results used for computing metric.
+                  and return list of results used for computing metric.
                 - ``tensor``: Called by custom use to get ``Tensor`` type
                   results.
 
@@ -302,7 +308,7 @@ class BaseModel(BaseModule):
                 - If ``mode == predict``, return a ``list`` of inference
                   results.
                 - If ``mode == tensor``, return a tensor or ``tuple`` of tensor
-                  or ``dict of tensor for custom use.
+                  or ``dict`` of tensor for custom use.
         """
 
     def _run_forward(self, data: Union[dict, tuple, list],

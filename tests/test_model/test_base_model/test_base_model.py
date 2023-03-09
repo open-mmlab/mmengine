@@ -1,15 +1,29 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import itertools
 import unittest
 from unittest import TestCase
 
 import torch
 import torch.nn as nn
+from parameterized import parameterized
 from torch.optim import SGD
 
 from mmengine.model import BaseDataPreprocessor, BaseModel
 from mmengine.optim import OptimWrapper
 from mmengine.registry import MODELS
 from mmengine.testing import assert_allclose
+
+dtypes_to_test = [torch.float16, torch.float32, torch.float64, torch.half]
+
+cpu_devices = ['cpu', torch.device('cpu')]
+cuda_devices = ['cuda', 0, torch.device('cuda')]
+devices_to_test = cpu_devices
+if torch.cuda.is_available():
+    devices_to_test += cuda_devices
+
+
+def list_product(*args):
+    return list(itertools.product(*args))
 
 
 @MODELS.register_module()
@@ -158,3 +172,32 @@ class TestBaseModel(TestCase):
         self.assertEqual(model.data_preprocessor._device, torch.device('cuda'))
         self.assertEqual(model.toy_model.data_preprocessor._device,
                          torch.device('cuda'))
+
+    @parameterized.expand(list_product(devices_to_test))
+    def test_to_device(self, device):
+        model = ToyModel().to(device)
+        self.assertTrue(
+            all(p.device.type == torch.device(device).type
+                for p in model.parameters())
+            and model.data_preprocessor._device == torch.device(device))
+
+    @parameterized.expand(list_product(dtypes_to_test))
+    def test_to_dtype(self, dtype):
+        model = ToyModel().to(dtype)
+        self.assertTrue(all(p.dtype == dtype for p in model.parameters()))
+
+    @parameterized.expand(
+        list_product(devices_to_test, dtypes_to_test,
+                     ['args', 'kwargs', 'hybrid']))
+    def test_to_device_and_dtype(self, device, dtype, mode):
+        if mode == 'args':
+            model = ToyModel().to(device, dtype)
+        elif mode == 'kwargs':
+            model = ToyModel().to(device=device, dtype=dtype)
+        elif mode == 'hybrid':
+            model = ToyModel().to(device, dtype=dtype)
+        self.assertTrue(
+            all(p.dtype == dtype for p in model.parameters())
+            and model.data_preprocessor._device == torch.device(device)
+            and all(p.device.type == torch.device(device).type
+                    for p in model.parameters()))

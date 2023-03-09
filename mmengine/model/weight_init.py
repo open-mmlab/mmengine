@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from mmengine.logging import MMLogger, print_log
+from mmengine.logging import print_log
 from mmengine.registry import WEIGHT_INITIALIZERS, build_from_cfg
 
 
@@ -198,7 +198,9 @@ class ConstantInit(BaseInit):
 @WEIGHT_INITIALIZERS.register_module(name='Xavier')
 class XavierInit(BaseInit):
     r"""Initialize module parameters with values according to the method
-    described in `Understanding the difficulty of training deep feedforward
+    described in the paper below.
+
+    `Understanding the difficulty of training deep feedforward
     neural networks - Glorot, X. & Bengio, Y. (2010).
     <http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf>`_
 
@@ -381,7 +383,9 @@ class UniformInit(BaseInit):
 @WEIGHT_INITIALIZERS.register_module(name='Kaiming')
 class KaimingInit(BaseInit):
     r"""Initialize module parameters with the values according to the method
-    described in `Delving deep into rectifiers: Surpassing human-level
+    described in the paper below.
+
+    `Delving deep into rectifiers: Surpassing human-level
     performance on ImageNet classification - He, K. et al. (2015).
     <https://www.cv-foundation.org/openaccess/content_iccv_2015/
     papers/He_Delving_Deep_into_ICCV_2015_paper.pdf>`_
@@ -481,22 +485,21 @@ class PretrainedInit:
         from mmengine.runner.checkpoint import (_load_checkpoint_with_prefix,
                                                 load_checkpoint,
                                                 load_state_dict)
-        logger = MMLogger.get_instance('mmengine')
         if self.prefix is None:
-            print_log(f'load model from: {self.checkpoint}', logger=logger)
+            print_log(f'load model from: {self.checkpoint}', logger='current')
             load_checkpoint(
                 module,
                 self.checkpoint,
                 map_location=self.map_location,
                 strict=False,
-                logger=logger)
+                logger='current')
         else:
             print_log(
                 f'load {self.prefix} in model from: {self.checkpoint}',
-                logger=logger)
+                logger='current')
             state_dict = _load_checkpoint_with_prefix(
                 self.prefix, self.checkpoint, map_location=self.map_location)
-            load_state_dict(module, state_dict, strict=False, logger=logger)
+            load_state_dict(module, state_dict, strict=False, logger='current')
 
         if hasattr(module, '_params_init_info'):
             update_init_info(module, init_info=self._get_init_info())

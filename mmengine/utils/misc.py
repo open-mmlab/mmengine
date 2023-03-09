@@ -46,7 +46,7 @@ def import_modules_from_strings(imports, allow_failed_imports=False):
     Args:
         imports (list | str | None): The given module names to be imported.
         allow_failed_imports (bool): If True, the failed imports will return
-            None. Otherwise, an ImportError is raise. Default: False.
+            None. Otherwise, an ImportError is raise. Defaults to False.
 
     Returns:
         list[module] | module | None: The imported modules.
