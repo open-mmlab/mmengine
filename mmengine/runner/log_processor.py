@@ -53,8 +53,8 @@ class LogProcessor:
         num_digits (int): The number of significant digit shown in the
             logging message.
         log_with_hierarchy (bool): Whether to log with hierarchy. If it is
-            True. The information is written to visualizer backend such as
-            :obj:`LocalVisBackend` and :obj:`TensorboardBackend` will be logged
+            True, the information is written to visualizer backend such as
+            :obj:`LocalVisBackend` and :obj:`TensorboardBackend`
             with hierarchy. For example, ``loss`` will be saved as
             ``train/loss``, and accuracy will be saved as ``val/accuracy``.
             Defaults to False.
@@ -106,7 +106,7 @@ class LogProcessor:
                  by_epoch=True,
                  custom_cfg: Optional[List[dict]] = None,
                  num_digits: int = 4,
-                 log_with_hierarchy=False):
+                 log_with_hierarchy: bool = False):
         self.window_size = window_size
         self.by_epoch = by_epoch
         self.custom_cfg = custom_cfg if custom_cfg else []
@@ -138,9 +138,13 @@ class LogProcessor:
         # If `self.log_with_hierarchy` is False, the tag is the same as
         # log_tag. Otherwise, each key in tag starts with prefix `train`,
         # `test` or `val`
-        tag = self._collect_scalars(parsed_cfg, runner, mode,
-                                    self.log_with_hierarchy)
         log_tag = self._collect_scalars(parsed_cfg, runner, mode)
+
+        if not self.log_with_hierarchy:
+            tag = copy.deepcopy(log_tag)
+        else:
+            tag = self._collect_scalars(parsed_cfg, runner, mode, True)
+
         # Record learning rate.
         lr_str_list = []
         for key, value in tag.items():
@@ -254,7 +258,7 @@ class LogProcessor:
         # remove prefix
         custom_keys = [
             self._remove_prefix(cfg['data_src'], f'{mode}/')
-            for cfg in self.custom_cfg
+            for cfg in custom_cfg_copy
         ]
 
         # Count the averaged time and data_time by epoch
