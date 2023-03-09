@@ -5,8 +5,6 @@ assign:
   scedule:
     '*/1 * * * *'
   assignees:
-    - HAOCHENYE
     - zhouzaida
-    - C1rN09
-    - ice-tong
     - HAOCHENYE
+    - C1rN09

@@ -38,8 +38,8 @@ def test_get_config():
 
     # Test load mmpose
     get_config(
-        'mmpose::face/2d_kpt_sview_rgb_img/deeppose/wflw/res50_wflw_256x256'
-        '.py')
+        'mmpose::face_2d_keypoint/topdown_heatmap/wflw/td-hm_hrnetv2-w18_8xb64-60e_wflw-256x256.py'  # noqa E501
+    )
 
 
 @pytest.mark.skipif(

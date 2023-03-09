@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 
 import mmengine
 from mmengine.config import Config, ConfigDict
-from mmengine.dataset import COLLATE_FUNCTIONS, worker_init_fn
+from mmengine.dataset import worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
                            is_distributed, master_only)
@@ -31,10 +31,10 @@ from mmengine.model import (MMDistributedDataParallel, convert_sync_batchnorm,
                             is_model_wrapper, revert_sync_batchnorm)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
-from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
-                               LOG_PROCESSORS, LOOPS, MODEL_WRAPPERS, MODELS,
-                               OPTIM_WRAPPERS, PARAM_SCHEDULERS, RUNNERS,
-                               VISUALIZERS, DefaultScope)
+from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, FUNCTIONS,
+                               HOOKS, LOG_PROCESSORS, LOOPS, MODEL_WRAPPERS,
+                               MODELS, OPTIM_WRAPPERS, PARAM_SCHEDULERS,
+                               RUNNERS, VISUALIZERS, DefaultScope)
 from mmengine.utils import apply_to, digit_version, get_git_hash, is_seq_of
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
                                      set_multi_processing)
@@ -1386,8 +1386,11 @@ class Runner:
         # `persistent_workers` requires pytorch version >= 1.7
         if ('persistent_workers' in dataloader_cfg
                 and digit_version(TORCH_VERSION) < digit_version('1.7.0')):
-            warnings.warn('`persistent_workers` is only available when '
-                          'pytorch version >= 1.7')
+            print_log(
+                '`persistent_workers` is only available when '
+                'pytorch version >= 1.7',
+                logger='current',
+                level=logging.WARNING)
             dataloader_cfg.pop('persistent_workers')
 
         # The default behavior of `collat_fn` in dataloader is to
@@ -1398,7 +1401,7 @@ class Runner:
         collate_fn_cfg = dataloader_cfg.pop('collate_fn',
                                             dict(type='pseudo_collate'))
         collate_fn_type = collate_fn_cfg.pop('type')
-        collate_fn = COLLATE_FUNCTIONS.get(collate_fn_type)
+        collate_fn = FUNCTIONS.get(collate_fn_type)
         collate_fn = partial(collate_fn, **collate_fn_cfg)  # type: ignore
         data_loader = DataLoader(
             dataset=dataset,
@@ -1955,10 +1958,13 @@ class Runner:
         current_seed = self._randomness_cfg.get('seed')
         if resumed_seed is not None and resumed_seed != current_seed:
             if current_seed is not None:
-                warnings.warn(f'The value of random seed in the '
-                              f'checkpoint "{resumed_seed}" is '
-                              f'different from the value in '
-                              f'`randomness` config "{current_seed}"')
+                print_log(
+                    f'The value of random seed in the '
+                    f'checkpoint "{resumed_seed}" is '
+                    f'different from the value in '
+                    f'`randomness` config "{current_seed}"',
+                    logger='current',
+                    level=logging.WARNING)
             self._randomness_cfg.update(seed=resumed_seed)
             self.set_randomness(**self._randomness_cfg)
 
@@ -1969,11 +1975,13 @@ class Runner:
         # np.ndarray, which cannot be directly judged as equal or not,
         # therefore we just compared their dumped results.
         if pickle.dumps(resumed_dataset_meta) != pickle.dumps(dataset_meta):
-            warnings.warn(
+            print_log(
                 'The dataset metainfo from the resumed checkpoint is '
                 'different from the current training dataset, please '
                 'check the correctness of the checkpoint or the training '
-                'dataset.')
+                'dataset.',
+                logger='current',
+                level=logging.WARNING)
 
         self.message_hub.load_state_dict(checkpoint['message_hub'])
 
@@ -2081,7 +2089,7 @@ class Runner:
             by_epoch (bool): Whether the scheduled momentum is updated by
                 epochs. Defaults to True.
             backend_args (dict, optional): Arguments to instantiate the
-                preifx of uri corresponding backend. Defaults to None.
+                prefix of uri corresponding backend. Defaults to None.
                 New in v0.2.0.
         """
         if meta is None:

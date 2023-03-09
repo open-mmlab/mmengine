@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import logging
-import warnings
 from abc import ABCMeta
 from collections import defaultdict
 from logging import FileHandler
@@ -139,8 +138,11 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                 initialize(self, pretrained_cfg)
             self._is_init = True
         else:
-            warnings.warn(f'init_weights of {self.__class__.__name__} has '
-                          f'been called more than once.')
+            print_log(
+                f'init_weights of {self.__class__.__name__} has '
+                f'been called more than once.',
+                logger='current',
+                level=logging.WARNING)
 
         if is_top_level_module:
             # self._dump_init_info(logger_name)

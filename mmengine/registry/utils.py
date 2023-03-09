@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import datetime
+import logging
 import os.path as osp
-import warnings
 from typing import Optional
 
 from mmengine.fileio import dump
@@ -107,10 +107,13 @@ def init_default_scope(scope: str) -> None:
         return
     current_scope = DefaultScope.get_current_instance()  # type: ignore
     if current_scope.scope_name != scope:  # type: ignore
-        warnings.warn('The current default scope '  # type: ignore
-                      f'"{current_scope.scope_name}" is not "{scope}", '
-                      '`init_default_scope` will force set the current'
-                      f'default scope to "{scope}".')
+        print_log(
+            'The current default scope '  # type: ignore
+            f'"{current_scope.scope_name}" is not "{scope}", '
+            '`init_default_scope` will force set the current'
+            f'default scope to "{scope}".',
+            logger='current',
+            level=logging.WARNING)
         # avoid name conflict
         new_instance_name = f'{scope}-{datetime.datetime.now()}'
         DefaultScope.get_instance(new_instance_name, scope_name=scope)

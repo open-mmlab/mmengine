@@ -15,7 +15,7 @@ from torch.optim import SGD, Adam
 from torch.utils.data import DataLoader, Dataset
 
 from mmengine.config import Config
-from mmengine.dataset import COLLATE_FUNCTIONS, DefaultSampler, pseudo_collate
+from mmengine.dataset import DefaultSampler, pseudo_collate
 from mmengine.evaluator import BaseMetric, Evaluator
 from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
                             IterTimerHook, LoggerHook, ParamSchedulerHook,
@@ -24,10 +24,11 @@ from mmengine.logging import MessageHub, MMLogger
 from mmengine.model import BaseDataPreprocessor, BaseModel, ImgDataPreprocessor
 from mmengine.optim import (DefaultOptimWrapperConstructor, MultiStepLR,
                             OptimWrapper, OptimWrapperDict, StepLR)
-from mmengine.registry import (DATASETS, EVALUATOR, HOOKS, LOG_PROCESSORS,
-                               LOOPS, METRICS, MODEL_WRAPPERS, MODELS,
-                               OPTIM_WRAPPER_CONSTRUCTORS, OPTIM_WRAPPERS,
-                               PARAM_SCHEDULERS, RUNNERS, Registry)
+from mmengine.registry import (DATASETS, EVALUATOR, FUNCTIONS, HOOKS,
+                               LOG_PROCESSORS, LOOPS, METRICS, MODEL_WRAPPERS,
+                               MODELS, OPTIM_WRAPPER_CONSTRUCTORS,
+                               OPTIM_WRAPPERS, PARAM_SCHEDULERS, RUNNERS,
+                               Registry)
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              LogProcessor, Runner, TestLoop, ValLoop)
 from mmengine.runner.loops import _InfiniteDataloaderIterator
@@ -352,7 +353,7 @@ class TestRunner(TestCase):
         LOG_PROCESSORS.register_module(module=CustomLogProcessor, force=True)
         RUNNERS.register_module(module=CustomRunner, force=True)
         EVALUATOR.register_module(module=ToyEvaluator, force=True)
-        COLLATE_FUNCTIONS.register_module(module=custom_collate, force=True)
+        FUNCTIONS.register_module(module=custom_collate, force=True)
 
         self.temp_dir = tempfile.mkdtemp()
         epoch_based_cfg = dict(
@@ -435,7 +436,7 @@ class TestRunner(TestCase):
         LOG_PROCESSORS.module_dict.pop('CustomLogProcessor')
         RUNNERS.module_dict.pop('CustomRunner')
         EVALUATOR.module_dict.pop('ToyEvaluator')
-        COLLATE_FUNCTIONS.module_dict.pop('custom_collate')
+        FUNCTIONS.module_dict.pop('custom_collate')
 
         logging.shutdown()
         MMLogger._instance_dict.clear()
@@ -1478,10 +1479,8 @@ class TestRunner(TestCase):
         cfg.train_cfg = dict(
             by_epoch=False, max_iters=12, val_interval=4, val_begin=4)
         runner = Runner.from_cfg(cfg)
-        with self.assertWarnsRegex(
-                Warning,
-                'Reach the end of the dataloader, it will be restarted and '
-                'continue to iterate.'):
+        # Warning should be raised since the sampler is not InfiniteSampler.
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             runner.train()
 
         assert isinstance(runner.train_loop, IterBasedTrainLoop)
@@ -2073,11 +2072,8 @@ class TestRunner(TestCase):
         # ckpt_modified['meta']['seed'] = 123
         path_modified = osp.join(self.temp_dir, 'modified.pth')
         torch.save(ckpt_modified, path_modified)
-        with self.assertWarnsRegex(
-                Warning, 'The dataset metainfo from the resumed checkpoint is '
-                'different from the current training dataset, please '
-                'check the correctness of the checkpoint or the training '
-                'dataset.'):
+        # Warning should be raised since dataset_meta is not matched
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             runner.resume(path_modified)
 
         # 1.3.3 test resume with unmatched seed
@@ -2085,8 +2081,8 @@ class TestRunner(TestCase):
         ckpt_modified['meta']['seed'] = 123
         path_modified = osp.join(self.temp_dir, 'modified.pth')
         torch.save(ckpt_modified, path_modified)
-        with self.assertWarnsRegex(
-                Warning, 'The value of random seed in the checkpoint'):
+        # Warning should be raised since seed is not matched
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             runner.resume(path_modified)
 
         # 1.3.3 test resume with no seed and dataset meta

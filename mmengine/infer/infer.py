@@ -16,12 +16,12 @@ from rich.progress import track
 
 from mmengine.config import Config, ConfigDict
 from mmengine.config.utils import MODULE2PACKAGE
-from mmengine.dataset import COLLATE_FUNCTIONS, pseudo_collate
+from mmengine.dataset import pseudo_collate
 from mmengine.device import get_device
 from mmengine.fileio import (get_file_backend, isdir, join_path,
                              list_dir_or_file, load)
 from mmengine.logging import print_log
-from mmengine.registry import MODELS, VISUALIZERS, DefaultScope
+from mmengine.registry import FUNCTIONS, MODELS, VISUALIZERS, DefaultScope
 from mmengine.runner.checkpoint import (_load_checkpoint,
                                         _load_checkpoint_to_model)
 from mmengine.structures import InstanceData
@@ -522,8 +522,7 @@ class BaseInferencer(metaclass=InferencerMeta):
             Callable: Collate function.
         """
         try:
-            with COLLATE_FUNCTIONS.switch_scope_and_registry(
-                    self.scope) as registry:
+            with FUNCTIONS.switch_scope_and_registry(self.scope) as registry:
                 collate_fn = registry.get(cfg.test_dataloader.collate_fn)
         except AttributeError:
             collate_fn = pseudo_collate

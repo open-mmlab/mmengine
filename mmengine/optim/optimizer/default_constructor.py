@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import warnings
+import logging
 from typing import List, Optional, Union
 
 import torch
@@ -205,8 +205,11 @@ class DefaultOptimWrapperConstructor:
         for name, param in module.named_parameters(recurse=False):
             param_group = {'params': [param]}
             if bypass_duplicate and self._is_in(param_group, params):
-                warnings.warn(f'{prefix} is duplicate. It is skipped since '
-                              f'bypass_duplicate={bypass_duplicate}')
+                print_log(
+                    f'{prefix} is duplicate. It is skipped since '
+                    f'bypass_duplicate={bypass_duplicate}',
+                    logger='current',
+                    level=logging.WARNING)
                 continue
             if not param.requires_grad:
                 params.append(param_group)
