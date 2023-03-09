@@ -138,8 +138,9 @@ class MMLogger(Logger, ManagerMixin):
             If `logger_name` is not defined, defaults to 'mmengine'.
         log_file (str, optional): The log filename. If specified, a
             ``FileHandler`` will be added to the logger. Defaults to None.
-        log_level (str or int): The log level of the handler.
-            Defaults to "INFO".
+        log_level (str): The log level of the handler. Defaults to
+            "INFO". If log level is "DEBUG", distributed logs will be saved
+            during distributed training.
         file_mode (str): The file mode used to open log file. Defaults to 'w'.
         distributed (bool): Whether to save distributed logs, Defaults to
             false.
@@ -175,7 +176,9 @@ class MMLogger(Logger, ManagerMixin):
         self.handlers.append(stream_handler)
 
         if log_file is not None:
-            if global_rank != 0 or log_level <= logging.DEBUG or distributed:
+            world_size = _get_world_size()
+            if (global_rank != 0 or log_level == 'DEBUG'
+                    or distributed and world_size > 1):
                 filename, suffix = osp.splitext(osp.basename(log_file))
                 hostname = _get_host_info()
                 if hostname:
@@ -300,6 +303,17 @@ def print_log(msg,
         raise TypeError(
             '`logger` should be either a logging.Logger object, str, '
             f'"silent", "current" or None, but got {type(logger)}')
+
+
+def _get_world_size():
+    """Support using logging module without torch."""
+    try:
+        # requires torch
+        from mmengine.dist import get_world_size
+    except ImportError:
+        return 1
+    else:
+        return get_world_size()
 
 
 def _get_rank():
