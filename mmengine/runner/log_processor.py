@@ -143,7 +143,7 @@ class LogProcessor:
         if not self.log_with_hierarchy:
             tag = copy.deepcopy(log_tag)
         else:
-            tag = self._collect_scalars(parsed_cfg, runner, mode, False)
+            tag = self._collect_scalars(parsed_cfg, runner, mode, True)
 
         # Record learning rate.
         lr_str_list = []
@@ -295,7 +295,7 @@ class LogProcessor:
                                               custom_cfg_copy)
         # tag is used to write log information to different backends.
         ori_tag = self._collect_scalars(parsed_cfg, runner, mode,
-                                        not self.log_with_hierarchy)
+                                        self.log_with_hierarchy)
         non_scalar_tag = self._collect_non_scalars(runner, mode)
         # move `time` or `data_time` to the end of the log
         tag = OrderedDict()
@@ -329,7 +329,7 @@ class LogProcessor:
                          custom_cfg: List[dict],
                          runner,
                          mode: str,
-                         remove_prefix: bool = True) -> dict:
+                         reserve_prefix: bool = False) -> dict:
         """Collect log information to compose a dict according to mode.
 
         Args:
@@ -338,7 +338,7 @@ class LogProcessor:
             runner (Runner): The runner of the training/testing/validation
                 process.
             mode (str): Current mode of runner.
-            remove_prefix (bool): Whether to remove the prefix of the key.
+            reserve_prefix (bool): Whether to reserve the prefix of the key.
 
         Returns:
             dict: Statistical values of logs.
@@ -352,7 +352,7 @@ class LogProcessor:
         # according to mode.
         for prefix_key, log_buffer in history_scalars.items():
             if prefix_key.startswith(mode):
-                if remove_prefix:
+                if not reserve_prefix:
                     key = self._remove_prefix(prefix_key, f'{mode}/')
                 else:
                     key = prefix_key
