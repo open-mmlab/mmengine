@@ -112,7 +112,7 @@ class ManagerMixin(metaclass=ManagerMeta):
         elif kwargs:
             warnings.warn(
                 f'{cls} instance named of {name} has been created, '
-                'the method `get_instance` should not access any other '
+                'the method `get_instance` should not accept any other '
                 'arguments')
         # Get latest instantiated instance or root instance.
         _release_lock()
