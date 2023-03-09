@@ -205,13 +205,23 @@ class TestLogger:
 def test_get_device_id():
 
     @contextmanager
-    def patch_env(local_rank, cuda_visible_device):
-        ori = os.environ.copy()
+    def patch_env(local_rank, cuda_visible_devices):
+        ori_local_rank = os.getenv('LOCAL_RANK', None)
+        ori_cuda_visible_devices = os.getenv('CUDA_VISIBLE_DEVICES', None)
+
         if local_rank is not None:
-            os.environ['LOCAL_RANK'] = str(local_rank)
-        os.environ['CUDA_VISIBLE_DEVICES'] = cuda_visible_device
+            os.environ['LOCAL_RANK'] = local_rank
+        if cuda_visible_devices is not None:
+            os.environ['CUDA_VISIBLE_DEVICES'] = cuda_visible_devices
         yield
-        os.environ = ori
+        if ori_local_rank is not None:
+            os.environ['LOCAL_RANK'] = ori_local_rank
+        elif 'LOCAL_RANK' in os.environ:
+            os.environ.pop('LOCAL_RANK')
+        if ori_cuda_visible_devices is not None:
+            os.environ['CUDA_VISIBLE_DEVICES'] = ori_cuda_visible_devices
+        elif 'CUDA_VISIBLE_DEVICES' in os.environ:
+            os.environ.pop('CUDA_VISIBLE_DEVICES')
 
     # cuda is not available and local_rank is not set
     with patch('torch.cuda.is_available', lambda: False), \
@@ -235,10 +245,10 @@ def test_get_device_id():
 
     # cuda is available and local_rank is set
     with patch('torch.cuda.is_available', lambda: True), \
-         patch_env(2, '0,1,2,3'):
+         patch_env('2', '0,1,2,3'):
         assert _get_device_id() == 2
 
     # CUDA_VISIBLE_DEVICES worked
     with patch('torch.cuda.is_available', lambda: True), \
-         patch_env(2, '0,1,3,5'):
+         patch_env('2', '0,1,3,5'):
         assert _get_device_id() == 3
