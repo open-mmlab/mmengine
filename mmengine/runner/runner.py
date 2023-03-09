@@ -1718,10 +1718,6 @@ class Runner:
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
 
-        # Maybe compile the model according to options in self.cfg.compile
-        # This must be called **AFTER** model has been wrapped.
-        self._maybe_compile('val_step')
-
         metrics = self.val_loop.run()  # type: ignore
         self.call_hook('after_run')
         return metrics
@@ -1744,10 +1740,6 @@ class Runner:
 
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
-
-        # Maybe compile the model according to options in self.cfg.compile
-        # This must be called **AFTER** model has been wrapped.
-        self._maybe_compile('test_step')
 
         metrics = self.test_loop.run()  # type: ignore
         self.call_hook('after_run')
