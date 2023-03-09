@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 
 from mmengine.logging import MMLogger, print_log
-from mmengine.logging.logger import _get_device_id, _get_host_info
+from mmengine.logging.logger import _get_device_id
 
 
 class TestLogger:
@@ -94,18 +94,9 @@ class TestLogger:
         instance_name = f'test_file_{log_level}'
         logger = MMLogger.get_instance(
             instance_name, log_level=log_level, log_file=tmp_file)
-        hostname = _get_host_info()
         logger.log(level=log_level, msg='welcome')
 
-        if log_level <= logging.DEBUG:
-            if hostname:
-                saved_file = tmp_path / f'tmp_file_{hostname}' \
-                                        '_device0_rank0.log'
-            else:
-                saved_file = tmp_path / 'tmp_file_device0_rank0.log'
-        else:
-            saved_file = tmp_path / 'tmp_file.log'
-
+        saved_file = tmp_path / 'tmp_file.log'
         with open(saved_file) as f:
             log_text = f.read()
             match = re.fullmatch(
