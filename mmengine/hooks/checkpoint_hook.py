@@ -352,7 +352,7 @@ class CheckpointHook(Hook):
 
         checkpoint = _load_checkpoint(out_file)
         removed_keys = []
-        for key in checkpoint.keys():
+        for key in list(checkpoint.keys()):
             if key not in self.published_keys:
                 removed_keys.append(key)
                 checkpoint.pop(k)
