@@ -283,12 +283,12 @@ class LogProcessor:
         # move `time` or `data_time` to the end of the log
         tag = OrderedDict()
         time_tag = OrderedDict()
-        # pop `time` and `data_time` to log them at last.
         for key, value in ori_tag.items():
-            if 'time' not in key:
-                tag[key] = value
-            else:
+            if key in (f'{mode}/time', f'{mode}/data_time', 'time',
+                       'data_time'):
                 time_tag[key] = value
+            else:
+                tag[key] = value
 
         # By epoch:
         #     Epoch(val) [10][1000/1000]  ...
