@@ -6,11 +6,9 @@ import os.path as osp
 import pickle
 import platform
 import time
-import traceback
 import warnings
 from collections import OrderedDict
 from functools import partial
-from sys import stderr
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
 import torch
@@ -1746,12 +1744,13 @@ class Runner:
         for hook in self._hooks:
             # support adding additional custom hook methods
             if hasattr(hook, fn_name):
+                logger = MMLogger.get_current_instance()
                 try:
                     getattr(hook, fn_name)(self, **kwargs)
-                except TypeError as e:
-                    trace_msg = traceback.format_exc()
-                    print(f'\033[31m{trace_msg}\033[0m', file=stderr)
-                    raise TypeError(f'{e} in {hook}') from None
+                except Exception as e:
+                    logger.error(
+                        f'{e}, {e.__class__.__name__} raised in hook {hook}!')
+                    raise e
 
     def register_hook(
             self,
