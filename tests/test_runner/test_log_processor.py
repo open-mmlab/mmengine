@@ -69,12 +69,16 @@ class TestLogProcessor:
         with pytest.raises(TypeError):
             log_processor._parse_windows_size(self.runner, 1, custom_cfg)
 
-    @pytest.mark.parametrize('by_epoch,mode',
-                             ([True, 'train'], [False, 'train'], [True, 'val'],
-                              [False, 'val'], [True, 'test'], [False, 'test']))
-    def test_get_log_after_iter(self, by_epoch, mode):
+    @pytest.mark.parametrize(
+        'by_epoch,mode,log_with_hierarchy',
+        ([True, 'train', True], [True, 'train', False], [False, 'train', True],
+         [False, 'train', False], [True, 'val', True], [True, 'val', False],
+         [False, 'val', True], [False, 'val', False], [True, 'test', True],
+         [True, 'test', False], [False, 'test', True], [False, 'test', False]))
+    def test_get_log_after_iter(self, by_epoch, mode, log_with_hierarchy):
         # Prepare LoggerHook
-        log_processor = LogProcessor(by_epoch=by_epoch)
+        log_processor = LogProcessor(
+            by_epoch=by_epoch, log_with_hierarchy=log_with_hierarchy)
         log_processor._get_max_memory = MagicMock(return_value='100')
         eta = 40
         self.runner.message_hub.update_info('eta', eta)
@@ -138,11 +142,13 @@ class TestLogProcessor:
             assert out == log_str
 
     @pytest.mark.parametrize(
-        'by_epoch,mode',
-        ([True, 'val'], [False, 'val'], [True, 'test'], [False, 'test']))
-    def test_log_val(self, by_epoch, mode):
+        'by_epoch,mode,log_with_hierarchy',
+        ([True, 'val', True], [True, 'val', False], [False, 'val', True],
+         [False, 'val', False], [True, 'test', True], [False, 'test', False]))
+    def test_log_val(self, by_epoch, mode, log_with_hierarchy):
         # Prepare LoggerHook
-        log_processor = LogProcessor(by_epoch=by_epoch)
+        log_processor = LogProcessor(
+            by_epoch=by_epoch, log_with_hierarchy=log_with_hierarchy)
         # Prepare validation information.
         scalar_logs = dict(accuracy=0.9, data_time=1.0)
         non_scalar_logs = dict(
