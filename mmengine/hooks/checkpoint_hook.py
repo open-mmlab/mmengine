@@ -363,7 +363,7 @@ class CheckpointHook(Hook):
                 f'please set `{removed_keys}` in published_keys',
                 logger='current')
         print(runner.timestamp)
-        final_file = osp.splitext(out_file)[0] + f'-{runner.timestamp}.pth'
+        final_file = osp.splitext(out_file)[0] + f'-published-{runner.timestamp}.pth'
         torch.save(checkpoint, final_file)
         print_log(
             f'The published model is saved at {final_file}.', logger='current')
