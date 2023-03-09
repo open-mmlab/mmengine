@@ -90,12 +90,11 @@ def main():
         optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
         train_cfg=dict(by_epoch=True, max_epochs=2, val_interval=1),
         val_dataloader=val_dataloader,
-        val_cfg=dict(),
         log_processor=dict(log_with_hierarchy=True),
         val_evaluator=dict(type=Accuracy),
         launcher=args.launcher,
     )
-    runner.val()
+    runner.train()
 
 
 if __name__ == '__main__':
