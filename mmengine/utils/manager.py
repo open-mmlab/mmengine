@@ -109,10 +109,11 @@ class ManagerMixin(metaclass=ManagerMeta):
         if name not in instance_dict:
             instance = cls(name=name, **kwargs)  # type: ignore
             instance_dict[name] = instance  # type: ignore
-        else:
+        elif kwargs:
             warnings.warn(
-                f'{cls} instance named of {name} has been created, the method '
-                '`get_instance` should not access any other arguments')
+                f'{cls} instance named of {name} has been created, '
+                'the method `get_instance` should not access any other '
+                'arguments')
         # Get latest instantiated instance or root instance.
         _release_lock()
         return instance_dict[name]
