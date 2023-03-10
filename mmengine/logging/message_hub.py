@@ -296,13 +296,15 @@ class MessageHub(ManagerMixin):
                            f'instance name is: {MessageHub.instance_name}')
         return self.log_scalars[key]
 
-    def get_info(self, key: str, default: OrderedDict) -> Any:
-        """Get runtime information by key. if.
+    def get_info(self, key: str, default: Optional[OrderedDict] = None) -> Any:
+        """Get runtime information by key. if key does not exists, this method
+        will return default information.
 
         Args:
             key (str): Key of runtime information.
-            default (OrderedDict): When key input 'unknown',
-                display default information.
+            default (OrderedDict, optional): Each key in the dictionary is the
+            name of the information. Defaults to None.
+
         Returns:
             Any: A copy of corresponding runtime information if the key exists.
         """
