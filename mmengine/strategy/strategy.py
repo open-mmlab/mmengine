@@ -25,7 +25,7 @@ class Strategy(ABC):
 
     # These are actually instance attributes. Place them here to improve user
     # experience with IDE
-    cfg: Optional[ConfigType] = None
+    cfg: ConfigType = dict()
     model_cfg: Optional[ConfigType] = None
     optim_cfg: Optional[ConfigType] = None
     scheduler_cfg: Optional[ConfigType] = None

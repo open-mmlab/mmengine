@@ -10,7 +10,7 @@ from mmengine.model import (MMDistributedDataParallel, convert_sync_batchnorm,
                             is_model_wrapper)
 from mmengine.logging import print_log
 from mmengine.registry import MODEL_WRAPPERS, MODELS, OPTIM_WRAPPERS
-from .strategy import ConfigType, Strategy
+from .strategy import ConfigType, _ConfigType, Strategy
 
 
 class DDPStrategy(Strategy):
@@ -34,6 +34,7 @@ class DDPStrategy(Strategy):
             # Passed to torch.DistributedDataParallel
             **ddp_kwargs):
         super().__init__()
+        assert isinstance(amp, (bool, dict))
         if isinstance(amp, dict):
             self._check_amp_config(amp)
         self.amp = amp
@@ -42,19 +43,19 @@ class DDPStrategy(Strategy):
         self.detect_anomalous_params = detect_anomalous_params
         self.ddp_kwargs = ddp_kwargs
 
-        # Compatible with existing use cases, where `model_wrapper_cfg` is None
+        # Compat with existing use cases, where `model_wrapper_cfg` is None
         # and `find_unused_parameters` is set in `cfg`
-        arg_name = 'find_unused_parameters'  # name too long, use var instead
-        arg1 = self.cfg.get(arg_name, None)
-        arg2 = self.ddp_kwargs.get(arg_name, None)
+        arg1 = self.cfg.get('find_unused_parameters', None)
+        arg2 = self.ddp_kwargs.get('find_unused_parameters', None)
         if arg1 is not None or arg2 is not None:
             consistent = arg1 is None or arg2 is None or arg1 == arg2
             if not consistent:
                 raise ValueError(
-                    f'Inconsistent configuration: cfg.{arg_name} = {arg1}, '
-                    f'strategy.{arg_name} = {arg2}')
+                    f'Inconsistent configuration: '
+                    f'cfg.find_unused_parameters = {arg1}, '
+                    f'strategy.find_unused_parameters = {arg2}')
             if arg2 is None:
-                self.ddp_kwargs[arg_name] = arg1
+                self.ddp_kwargs['find_unused_parameters'] = arg1
 
     def setup(self,
               model: Any,
@@ -88,19 +89,22 @@ class DDPStrategy(Strategy):
         # model has been built, do not rebuild
         if self.model is not None:
             return
-        # some built optimizers may hide in optim_wrapper_cfg, find them out
+
+        # optimizer instances may hide in `optim_wrapper_cfg`, find them out
         def dfs_search_config(cfg: Any, memo: set):
             # be aware of loop config
             if cfg in memo:
                 return False
             memo.add(cfg)
-            if isinstance(cfg, ConfigType):
+            if isinstance(cfg, _ConfigType):
                 return any(dfs_search_config(c, memo) for _, c in cfg.items())
             else:
                 return isinstance(cfg, Optimizer)
         has_optimizer = dfs_search_config(self.optim_cfg, set())
         assert self.optim is None and not has_optimizer, (
                 'Optimizer cannot be built before Model')
+
+        assert self.model_cfg is not None
         self.model = MODELS.build(self.model_cfg)
         # DDP should use sync_bn if specified
         sync_bn = self.cfg.get('sync_bn', None)
@@ -115,12 +119,14 @@ class DDPStrategy(Strategy):
                 raise e
 
     def _maybe_wrap_model(self) -> None:
-        assert self.model is not None, 'Model should be built before wrap'
+        assert self.model is not None, (
+                'Model should have been built before wrap')
         # model has been wrapped, do not re-wrap
         if is_model_wrapper(self.model):
             return
 
         model_wrapper_cfg: dict = self.cfg.get('model_wrapper_cfg', dict())
+        wrapper_args = deepcopy(model_wrapper_cfg)
         # use type given by user; otherwise use DDPStrategy's default
         wrapper_type = wrapper_args.pop('type', 'MMDistributedDataParallel')
         wrapper_cls = MODEL_WRAPPERS.get(wrapper_type)
@@ -171,6 +177,7 @@ class DDPStrategy(Strategy):
                     f'Detected non-builtin ModelWrapper: {wrapper_type} '
                     'in MMEngine. Following arguments in `strategy` will '
                     f'be dropped: {self.ddp_kwargs}')
+
         self.model = wrapper_cls(
             module=self.model,
             device_ids=[int(os.environ['LOCAL_RANK'])],
@@ -181,45 +188,71 @@ class DDPStrategy(Strategy):
         # optim has been built, do not rebuild
         if self.optim is not None:
             return
+
         assert self.model is not None, (
             'Model must have been built before Optimizer')
         assert self.scheduler is None, (
             'ParamScheduler cannot be built before Optimizer')
-        if isinstance(self.optim, _ConfigType):
-            # optimizer must be defined for single optimizer training.
-            optimizer = self.optim.get('optimizer', None)
 
-            # If optimizer is a built `Optimizer` instance, the optimizer
-            # wrapper should be built by `OPTIM_WRAPPERS` registry.
-            if isinstance(optimizer, Optimizer):
-                self.optim.setdefault('type', 'OptimWrapper')
-                return OPTIM_WRAPPERS.build(optim_wrapper)  # type: ignore
+        assert self.optim_cfg is not None
+        wrapper_args = deepcopy(self.optim_cfg)
+        constructor_type = wrapper_args.get('constructor', None)
+        is_builtin_constructor = (
+                constructor_type is None or
+                constructor_type == 'DefaultOptimWrapperConstructor')
 
-            # If `optimizer` is not None or `constructor` is defined, it means,
-            # optimizer wrapper will be built by optimizer wrapper
-            # constructor. Therefore, `build_optim_wrapper` should be called.
-            if optimizer is not None or 'constructor' in optim_wrapper:
-                return build_optim_wrapper(self.model, optim_wrapper)
-            else:
-                # if `optimizer` is not defined, it should be the case of
-                # training with multiple optimizers. If `constructor` is not
-                # defined either, each value of `optim_wrapper` must be an
-                # `OptimWrapper` instance since `DefaultOptimizerConstructor`
-                # will not handle the case of training with multiple
-                # optimizers. `build_optim_wrapper` will directly build the
-                # `OptimWrapperDict` instance from `optim_wrapper.`
-                optim_wrappers = OrderedDict()
-                for name, optim in optim_wrapper.items():
-                    if not isinstance(optim, OptimWrapper):
-                        raise ValueError(
-                            'each item mush be an optimizer object when '
-                            '"type" and "constructor" are not in '
-                            f'optimizer, but got {name}={optim}')
-                    optim_wrappers[name] = optim
-                return OptimWrapperDict(**optim_wrappers)
+        if not is_builtin_constructor:
+            # We cannot infer what keys are used in optim_cfg in user-defined
+            # OptimWrapperConstructor. In this case, we cannot check & update
+            # wrapper_args with params in strategy. Just use raw config
+            # and give warnings to users.
+            default_values = dict(accumulative_counts=1,
+                                  clip_grad=None,
+                                  amp=False)
+            ignored_configs = dict()
+            for key, value in default_values.items():
+                if getattr(self, key) != value:
+                    ignored_configs[key] = getattr(self, key)
+            if len(ignored_configs) > 0:
+                print_log('Non-builtin OptimWrapperConstructor detected: '
+                          f'{constructor_type}, the following params in '
+                          f'DDPStrategy will be lost: {ignored_configs}',
+                          logger='current',
+                          level=logging.WARNING)
         else:
-            raise TypeError('optimizer wrapper should be an OptimWrapper '
-                            f'object or dict, but got {optim_wrapper}')
+            # Merge configs in strategy to optim_wrapper_cfg as long as they
+            # are consistent
+            strategy_args = dict(accumulative_counts=self.accumulative_counts,
+                                 clip_grad=self.clip_grad)
+            if isinstance(self.amp, dict):
+                amp_configs = deepcopy(self.amp)
+                type_mapping = dict(pytorch='AmpOptimWrapper',
+                                    apex='ApexOptimWrapper')
+                amp_configs['type'] = type_mapping[amp_configs['type']]
+            strategy_args.update(amp_configs)
+            keys = self._find_inconsistency(strategy_args, wrapper_args)
+            if len(keys) > 0:
+                a = {k: wrapper_args[k] for k in keys}
+                b = {k: strategy_args[k] for k in keys}
+                # TODO: more friendly error message for amp related configs
+                raise ValueError(
+                    f'Inconsistent configurations: optim_wrapper_cfg = {a}, '
+                    f'strategy = {b}')
+            wrapper_args.update(strategy_args)
+
+        # There are basically 4 cases in building optim_wrapper:
+        #   1) `constructor` != None. Deliver everything to `constructor`,
+        #      refer to `build_optim_wrapper`.
+        #      NOTE: No optimizer instance should exist in this case.
+        #   2) `constructor` == None, 'optimizer' not in optim_cfg. This is
+        #      the case where all values in optim_cfg are OptimWrapper. All
+        #      of them are composed to a single OptimWrapperDict.
+        #   3) `constructor` == None, optim_cfg.optimizer is Optimizer.
+        #      Directly build optim_wrapper with OPTIM_WRAPPERS.build
+        #   4) `constructor` == None, optim_cfg.optimizer is Config. Build
+        #      optimizer according to DefaultOptimWrapperConstructor, then
+        #      build optim_wrapper with OPTIM_WRAPPERS.build. This is part
+        #      of the original `build_optim_wrapper` implementation.
 
     def _maybe_build_scheduler(self) -> None:
         # scheduler has been built, do not rebuild
