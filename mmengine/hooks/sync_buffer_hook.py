@@ -41,3 +41,14 @@ class SyncBuffersHook(Hook):
         if self.distributed:
             all_reduce_params(runner.model.buffers(), op='mean')
             self.called_in_train = True
+
+    def before_test_epoch(self, runner) -> None:
+        """All-reduce model buffers before each test epoch.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
+        if self.distributed:
+            if not self.called_in_train:
+                all_reduce_params(runner.model.buffers(), op='mean')
+            self.called_in_train = False
