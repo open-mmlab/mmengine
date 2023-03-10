@@ -186,7 +186,7 @@ class TestLogger:
         assert 'WARNING' in out
 
     def test_filter(self, capsys):
-        logger = MMLogger.get_instance('test_set_level')
+        logger = MMLogger.get_instance('test_filter')
         logger.warning('hello')
         out, _ = capsys.readouterr()
         assert 'WARNING' in out

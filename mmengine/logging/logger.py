@@ -194,8 +194,7 @@ class MMLogger(Logger, ManagerMixin):
         # Only rank0 `StreamHandler` will log messages below error level.
         stream_handler.setLevel(log_level) if rank == 0 else \
             stream_handler.setLevel(logging.ERROR)
-        warning_filter = UniqueWarningFilter(logger_name)
-        stream_handler.addFilter(warning_filter)
+        stream_handler.addFilter(UniqueWarningFilter(logger_name))
         self.handlers.append(stream_handler)
 
         if log_file is not None:
@@ -223,7 +222,7 @@ class MMLogger(Logger, ManagerMixin):
                 file_handler.setFormatter(
                     MMFormatter(color=False, datefmt='%Y/%m/%d %H:%M:%S'))
                 file_handler.setLevel(log_level)
-                file_handler.addFilter(warning_filter)
+                file_handler.addFilter(UniqueWarningFilter(logger_name))
                 self.handlers.append(file_handler)
 
     @classmethod
