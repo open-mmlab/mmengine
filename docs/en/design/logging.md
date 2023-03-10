@@ -444,12 +444,12 @@ work_dir/20230228_141908
 
 # node 7：
 work_dir/20230228_141908
-├── 20230306_183634_${hostname}_device0_rank0.log
-├── 20230306_183634_${hostname}_device1_rank1.log
-├── 20230306_183634_${hostname}_device2_rank2.log
-├── 20230306_183634_${hostname}_device3_rank3.log
-├── 20230306_183634_${hostname}_device4_rank4.log
-├── 20230306_183634_${hostname}_device5_rank5.log
-├── 20230306_183634_${hostname}_device6_rank6.log
-├── 20230306_183634_${hostname}_device7_rank7.log
+├── 20230306_183634_${hostname}_device0_rank56.log
+├── 20230306_183634_${hostname}_device1_rank57.log
+├── 20230306_183634_${hostname}_device2_rank58.log
+├── 20230306_183634_${hostname}_device3_rank59.log
+├── 20230306_183634_${hostname}_device4_rank60.log
+├── 20230306_183634_${hostname}_device5_rank61.log
+├── 20230306_183634_${hostname}_device6_rank62.log
+├── 20230306_183634_${hostname}_device7_rank63.log
 ```
