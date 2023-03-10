@@ -20,7 +20,7 @@ class UniqueWarningFilter(logging.Filter):
 
     def __init__(self, name: str = 'mmengine'):
         super().__init__(name)
-        self.record_dict: set = set()
+        self.seen: set = set()
 
     def filter(self, record: LogRecord) -> bool:
         """Filter the repeated warning message.
@@ -35,8 +35,8 @@ class UniqueWarningFilter(logging.Filter):
             return True
 
         msg = record.msg
-        if msg not in self.record_dict:
-            self.record_dict.add(msg)
+        if msg not in self.seen:
+            self.seen.add(msg)
             return True
         return False
 
