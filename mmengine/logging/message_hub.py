@@ -301,7 +301,7 @@ class MessageHub(ManagerMixin):
 
         Args:
             key (str): Key of runtime information.
-            default (Sequence): When key input 'unknown',
+            default (OrderedDict): When key input 'unknown',
                 display default information.
         Returns:
             Any: A copy of corresponding runtime information if the key exists.
