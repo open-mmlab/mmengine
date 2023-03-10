@@ -18,9 +18,9 @@ class UniqueWarningFilter(logging.Filter):
         name (str): name of the filter.
     """
 
-    def __init__(self, name='mmengine'):
+    def __init__(self, name: str = 'mmengine'):
         super().__init__(name)
-        self.record_dict = set()
+        self.record_dict: set = set()
 
     def filter(self, record: LogRecord) -> bool:
         """Filter the repeated warning message.
