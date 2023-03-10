@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
-import torch
 import os.path as osp
 from math import inf
 from pathlib import Path
@@ -10,8 +9,9 @@ from mmengine.dist import is_main_process
 from mmengine.fileio import FileClient, get_file_backend
 from mmengine.logging import print_log
 from mmengine.registry import HOOKS
-from mmengine.utils import is_list_of, is_seq_of
+from mmengine.runner import save_checkpoint
 from mmengine.runner.checkpoint import _load_checkpoint
+from mmengine.utils import is_list_of, is_seq_of
 from .hook import Hook
 
 DATA_BATCH = Optional[Union[dict, tuple, list]]
@@ -88,7 +88,8 @@ class CheckpointHook(Hook):
             New in v0.2.0.
         published_keys (str, List[str], optional): If ``save_last`` is ``True``
             or ``save_best`` is not ``None``, it will automatically
-            publish model with keys in the list after training. Defaults to None.
+            publish model with keys in the list after training.
+            Defaults to None.
     Examples:
         >>> # Save best based on single metric
         >>> CheckpointHook(interval=2, by_epoch=True, save_best='acc',
@@ -228,14 +229,13 @@ class CheckpointHook(Hook):
 
         # published keys
         if not (isinstance(published_keys, str)
-                or is_list_of(published_keys, str)
-                or published_keys is None):
+                or is_list_of(published_keys, str) or published_keys is None):
             raise TypeError(
                 '"published_keys" should be a str or list of str or None, '
                 f'but got {type(published_keys)}')
 
         if isinstance(published_keys, str):
-            published_keys = [published_keys]    
+            published_keys = [published_keys]
         elif isinstance(published_keys, list):
             assert len(published_keys) == len(set(published_keys)), (
                 'Find duplicate elements in "published_keys".')
@@ -347,21 +347,28 @@ class CheckpointHook(Hook):
                 self._publish_model(runner, best_ckpt)
 
     def _publish_model(self, runner, out_file: str) -> None:
+        """Publish the checkpoint.
 
+        Args:
+            runner (Runner): The runner of the training process.
+            out_file (str): The checkpoint path that ought to be published.
+        """
         checkpoint = _load_checkpoint(out_file)
+        published_keys = self.published_keys
         removed_keys = []
         for key in list(checkpoint.keys()):
-            if key not in self.published_keys:
+            if key not in published_keys:
                 removed_keys.append(key)
-                checkpoint.pop(k)
-        if removed_keys:     
+                checkpoint.pop(key)
+        if removed_keys:
             print_log(
                 f'Key {removed_keys} will be removed because they are not '
                 'found in published_keys. If you want to keep them, '
                 f'please set `{removed_keys}` in published_keys',
                 logger='current')
-        final_file = osp.splitext(out_file)[0] + f'-published-{runner.timestamp}.pth'
-        torch.save(checkpoint, final_file)
+        final_file = osp.splitext(
+            out_file)[0] + f'-published-{runner.timestamp}.pth'
+        save_checkpoint(checkpoint, final_file)
         print_log(
             f'The published model is saved at {final_file}.', logger='current')
 
