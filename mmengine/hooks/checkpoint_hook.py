@@ -346,14 +346,14 @@ class CheckpointHook(Hook):
             for key, best_ckpt in self.best_ckpt_path_dict.items():
                 self._publish_model(runner, best_ckpt)
 
-    def _publish_model(self, runner, out_file: str) -> None:
-        """Publish the checkpoint.
+    def _publish_model(self, runner, ckpt_path: str) -> None:
+        """Remove unnecessary keys from ckpt_path and save the new checkpoint.
 
         Args:
             runner (Runner): The runner of the training process.
-            out_file (str): The checkpoint path that ought to be published.
+            ckpt_path (str): The checkpoint path that ought to be published.
         """
-        checkpoint = _load_checkpoint(out_file)
+        checkpoint = _load_checkpoint(ckpt_path)
         published_keys = self.published_keys
         removed_keys = []
         for key in list(checkpoint.keys()):
@@ -366,11 +366,11 @@ class CheckpointHook(Hook):
                 'found in published_keys. If you want to keep them, '
                 f'please set `{removed_keys}` in published_keys',
                 logger='current')
-        final_file = osp.splitext(
-            out_file)[0] + f'-published-{runner.timestamp}.pth'
-        save_checkpoint(checkpoint, final_file)
+        final_path = osp.splitext(
+            ckpt_path)[0] + f'-published-{runner.timestamp}.pth'
+        save_checkpoint(checkpoint, final_path)
         print_log(
-            f'The published model is saved at {final_file}.', logger='current')
+            f'The published model is saved at {final_path}.', logger='current')
 
     def _save_checkpoint(self, runner) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
