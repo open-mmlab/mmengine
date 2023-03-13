@@ -294,6 +294,19 @@ runner.train()
 
 我们感谢所有的贡献者为改进和提升 MMEngine 所作出的努力。请参考[贡献指南](CONTRIBUTING_zh-CN.md)来了解参与项目贡献的相关指引。
 
+## 引用
+
+如果您觉得 MMEngine 对您的研究有所帮助，请考虑引用它：
+
+```
+@article{mmengine2022,
+  title   = {{MMEngine}: OpenMMLab Foundational Library for Training Deep Learning Models},
+  author  = {MMEngine Contributors},
+  howpublished = {\url{https://github.com/open-mmlab/mmengine}},
+  year={2022}
+}
+```
+
 ## 开源许可证
 
 该项目采用 [Apache 2.0 license](LICENSE) 开源许可证。
