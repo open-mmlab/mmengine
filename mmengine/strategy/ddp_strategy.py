@@ -10,7 +10,7 @@ from mmengine.model import (MMDistributedDataParallel, convert_sync_batchnorm,
                             is_model_wrapper)
 from mmengine.logging import print_log
 from mmengine.registry import MODEL_WRAPPERS, MODELS, OPTIM_WRAPPERS
-from .strategy import ConfigType, _ConfigType, Strategy
+from .strategy import Strategy
 
 
 class DDPStrategy(Strategy):
@@ -25,6 +25,7 @@ class DDPStrategy(Strategy):
 
     def __init__(
             self,
+            *,
             # OptimWrapper related kwargs
             amp: Union[bool, Dict] = False,
             accumulative_counts: int = 1,
@@ -58,11 +59,12 @@ class DDPStrategy(Strategy):
                 self.ddp_kwargs['find_unused_parameters'] = arg1
 
     def setup(self,
-              model: Any,
+              model: Any = None,
               optim: Any = None,
               scheduler: Any = None,
+              *,
               cfg: Any = None):
-        super().setup(model, optim=optim, scheduler=scheduler, cfg=cfg)
+        self._store_config_or_instance(model, optim, scheduler, cfg=cfg)
         assert self.model is not None or self.model_cfg is not None, (
             'A model must be provided to Strategy, got None')
         self._maybe_build_model()
@@ -91,12 +93,14 @@ class DDPStrategy(Strategy):
             return
 
         # optimizer instances may hide in `optim_wrapper_cfg`, find them out
-        def dfs_search_config(cfg: Any, memo: set):
-            # be aware of loop config
+        def dfs_search_config(cfg: Optional[Dict], memo: set):
+            if cfg is None:
+                return False
+            # be aware of self-reference dicts, which leads to infinite loop
             if cfg in memo:
                 return False
             memo.add(cfg)
-            if isinstance(cfg, _ConfigType):
+            if isinstance(cfg, dict):
                 return any(dfs_search_config(c, memo) for _, c in cfg.items())
             else:
                 return isinstance(cfg, Optimizer)
@@ -127,7 +131,7 @@ class DDPStrategy(Strategy):
 
         model_wrapper_cfg: dict = self.cfg.get('model_wrapper_cfg', dict())
         wrapper_args = deepcopy(model_wrapper_cfg)
-        # use type given by user; otherwise use DDPStrategy's default
+        # use `type` declared by user; otherwise use DDPStrategy's default
         wrapper_type = wrapper_args.pop('type', 'MMDistributedDataParallel')
         wrapper_cls = MODEL_WRAPPERS.get(wrapper_type)
         if wrapper_type in self.builtin_model_wrappers:
@@ -262,6 +266,6 @@ class DDPStrategy(Strategy):
             'Optimizer must have been built before ParamScheduler')
 
     @staticmethod
-    def _find_inconsistency(x: ConfigType, y: ConfigType):
+    def _find_inconsistency(x: Dict, y: Dict):
         common_keys = set(x.keys()) & set(y.keys())
         return {k for k in common_keys if x[k] != y[k]}
