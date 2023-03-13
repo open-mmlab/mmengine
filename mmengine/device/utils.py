@@ -39,7 +39,8 @@ def is_npu_available() -> bool:
 
         # Enable operator support for dynamic shape and
         # binary operator support on the NPU.
-        torch.npu.set_compile_mode(jit_compile=False)
+        npu_jit_compile=bool(os.getenv('NPUJITCompile', False))
+        torch.npu.set_compile_mode(jit_compile=npu_jit_compile)
     except Exception:
         return False
     return hasattr(torch, 'npu') and torch.npu.is_available()
