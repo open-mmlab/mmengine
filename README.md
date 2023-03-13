@@ -308,6 +308,19 @@ runner.train()
 
 We appreciate all contributions to improve MMEngine. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for the contributing guideline.
 
+## Citation
+
+If you find this project useful in your research, please consider cite:
+
+```
+@article{mmengine2022,
+  title   = {{MMEngine}: OpenMMLab Foundational Library for Training Deep Learning Models},
+  author  = {MMEngine Contributors},
+  howpublished = {\url{https://github.com/open-mmlab/mmengine}},
+  year={2022}
+}
+```
+
 ## License
 
 This project is released under the [Apache 2.0 license](LICENSE).
