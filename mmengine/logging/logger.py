@@ -139,7 +139,7 @@ class MMLogger(Logger, ManagerMixin):
         log_file (str, optional): The log filename. If specified, a
             ``FileHandler`` will be added to the logger. Defaults to None.
         log_level (str): The log level of the handler. Defaults to
-            "INFO". If log level is "DEBUG", distributed logs will be saved
+            'INFO'. If log level is 'DEBUG', distributed logs will be saved
             during distributed training.
         file_mode (str): The file mode used to open log file. Defaults to 'w'.
         distributed (bool): Whether to save distributed logs, Defaults to
@@ -177,8 +177,9 @@ class MMLogger(Logger, ManagerMixin):
 
         if log_file is not None:
             world_size = _get_world_size()
-            if (global_rank != 0 or log_level == 'DEBUG'
-                    or distributed and world_size > 1):
+            is_distributed = (log_level <= logging.DEBUG
+                              or distributed) and world_size > 1
+            if is_distributed:
                 filename, suffix = osp.splitext(osp.basename(log_file))
                 hostname = _get_host_info()
                 if hostname:
@@ -191,7 +192,7 @@ class MMLogger(Logger, ManagerMixin):
                 log_file = osp.join(osp.dirname(log_file), filename)
             # Save multi-ranks logs if distributed is True. The logs of rank0
             # will always be saved.
-            if global_rank == 0 or distributed or log_level <= logging.DEBUG:
+            if global_rank == 0 or is_distributed:
                 # Here, the default behaviour of the official logger is 'a'.
                 # Thus, we provide an interface to change the file mode to
                 # the default behaviour. `FileHandler` is not supported to

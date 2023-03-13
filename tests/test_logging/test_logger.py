@@ -52,6 +52,7 @@ class TestLogger:
 
     @patch('mmengine.logging.logger._get_rank', lambda: 1)
     @patch('mmengine.logging.logger._get_device_id', lambda: 1)
+    @patch('mmengine.logging.logger._get_world_size', lambda: 2)
     @patch('mmengine.logging.logger._get_host_info', lambda: 'test')
     def test_init_rank1(self, tmp_path):
         # If `rank!=1`, the `loglevel` of file_handler is `logging.ERROR`.
@@ -96,8 +97,7 @@ class TestLogger:
             instance_name, log_level=log_level, log_file=tmp_file)
         logger.log(level=log_level, msg='welcome')
 
-        saved_file = tmp_path / 'tmp_file.log'
-        with open(saved_file) as f:
+        with open(tmp_file) as f:
             log_text = f.read()
             match = re.fullmatch(
                 self.file_handler_regex_time +
