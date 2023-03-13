@@ -84,3 +84,32 @@ runner.train()
 ```{warning}
 Up till PyTorch 1.13, `torch.bfloat16` performance on `Convolution` is bad unless manually set environment variable `TORCH_CUDNN_V8_API_ENABLED=1`. More context at [PyTorch issue](https://github.com/pytorch/pytorch/issues/57707#issuecomment-1166656767)
 ```
+
+## Model Compilation
+
+PyTorch introduced [torch.compile](https://pytorch.org/docs/2.0/dynamo/get-started.html) in its 2.0 release. It compiles your model to speedup trainning & validation. This feature can be enabled since MMEngine v0.7.0, by passing to `Runner` an extra `cfg` dict with `compile` keyword:
+
+```python
+runner = Runner(
+    model=ResNet18(),
+    ...  # other arguments you want
+    cfg=dict(compile=True)
+)
+```
+
+For advanced usage, you can also change compile options as illustrated in [torch.compile API Documentation](https://pytorch.org/docs/2.0/generated/torch.compile.html#torch-compile). For example:
+
+```python
+compile_options = dict(backend='inductor', mode='max-autotune')
+runner = Runner(
+    model=ResNet18(),
+    ...  # other arguments you want
+    cfg=dict(compile=compile_options)
+)
+```
+
+This feature is only available for PyTorch >= 2.0.0.
+
+```{warning}
+`torch.compile` is still under development by PyTorch team. Some models may fail compilation. If you encounter errors during compilation, you can refer to [PyTorch Dynamo FAQ](https://pytorch.org/docs/2.0/dynamo/faq.html) for quick fix, or [TorchDynamo Troubleshooting](https://pytorch.org/docs/2.0/dynamo/troubleshooting.html) to post an issue in PyTorch.
+```

@@ -180,6 +180,14 @@ class Runner:
         cfg (dict or Configdict or :obj:`Config`, optional): Full config.
             Defaults to None.
 
+    Note:
+        Since PyTorch 2.0.0, you can enable ``torch.compile`` by passing in
+        `cfg.compile = True`. If you want to control compile options, you
+        can pass a dict, e.g. ``cfg.compile = dict(backend='eager')``.
+        Refer to `PyTorch API Documentation <https://pytorch.org/docs/
+        master/generated/torch.compile.html#torch.compile>`_ for more valid
+        options.
+
     Examples:
         >>> from mmengine.runner import Runner
         >>> cfg = dict(
@@ -1686,6 +1694,10 @@ class Runner:
             self._train_loop.iter,  # type: ignore
             self._train_loop.max_iters)  # type: ignore
 
+        # Maybe compile the model according to options in self.cfg.compile
+        # This must be called **AFTER** model has been wrapped.
+        self._maybe_compile('train_step')
+
         model = self.train_loop.run()  # type: ignore
         self.call_hook('after_run')
         return model
@@ -2288,3 +2300,28 @@ class Runner:
                          '\nRuntime environment:' + runtime_env_info + '\n' +
                          dash_line + '\n')
         self.logger.info(f'Config:\n{self.cfg.pretty_text}')
+
+    def _maybe_compile(self, target: str) -> None:
+        """Use `torch.compile` to optimize model/wrapped_model."""
+        compile_cfg = self.cfg.get('compile', None)
+        if compile_cfg is None:
+            # no compile options given, won't compile
+            return
+
+        if isinstance(compile_cfg, bool):
+            if not compile_cfg:
+                # compile=False, compilation is disabled
+                return
+            # compile=True, use default configurations
+            compile_cfg = dict()
+
+        assert digit_version(TORCH_VERSION) >= digit_version('2.0.0'), (
+            'PyTorch >= 2.0.0 is required to enable torch.compile')
+        assert isinstance(compile_cfg, dict), (
+            f'`compile` should be a dict or bool, got {type(compile_cfg)}')
+
+        func = getattr(self.model, target)
+        compiled_func = torch.compile(func, **compile_cfg)
+        setattr(self.model, target, compiled_func)
+        self.logger.info('Model has been "compiled". The first few iterations'
+                         ' will be slow, please be patient.')
