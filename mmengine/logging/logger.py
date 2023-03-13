@@ -1,8 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
 import os
+import os.path as osp
 import sys
+import warnings
+from getpass import getuser
 from logging import Logger, LogRecord
+from socket import gethostname
 from typing import Optional, Union
 
 from termcolor import colored
@@ -163,8 +167,9 @@ class MMLogger(Logger, ManagerMixin):
             If `logger_name` is not defined, defaults to 'mmengine'.
         log_file (str, optional): The log filename. If specified, a
             ``FileHandler`` will be added to the logger. Defaults to None.
-        log_level (str): The log level of the handler and logger. Defaults to
-            "NOTSET".
+        log_level (str): The log level of the handler. Defaults to
+            'INFO'. If log level is 'DEBUG', distributed logs will be saved
+            during distributed training.
         file_mode (str): The file mode used to open log file. Defaults to 'w'.
         distributed (bool): Whether to save distributed logs, Defaults to
             false.
@@ -174,14 +179,16 @@ class MMLogger(Logger, ManagerMixin):
                  name: str,
                  logger_name='mmengine',
                  log_file: Optional[str] = None,
-                 log_level: str = 'INFO',
+                 log_level: Union[int, str] = 'INFO',
                  file_mode: str = 'w',
                  distributed=False):
         Logger.__init__(self, logger_name)
         ManagerMixin.__init__(self, name)
         # Get rank in DDP mode.
-
-        rank = _get_rank()
+        if isinstance(log_level, str):
+            log_level = logging._nameToLevel[log_level]
+        global_rank = _get_rank()
+        device_id = _get_device_id()
 
         # Config stream_handler. If `rank != 0`. stream_handler can only
         # export ERROR logs.
@@ -191,25 +198,31 @@ class MMLogger(Logger, ManagerMixin):
         stream_handler.setFormatter(
             MMFormatter(color=True, datefmt='%m/%d %H:%M:%S'))
         # Only rank0 `StreamHandler` will log messages below error level.
-        stream_handler.setLevel(log_level) if rank == 0 else \
+        if global_rank == 0:
+            stream_handler.setLevel(log_level)
+        else:
             stream_handler.setLevel(logging.ERROR)
         stream_handler.addFilter(FilterDuplicateWarning(logger_name))
         self.handlers.append(stream_handler)
 
         if log_file is not None:
-            if rank != 0:
-                # rename `log_file` with rank suffix.
-                path_split = log_file.split(os.sep)
-                if '.' in path_split[-1]:
-                    filename_list = path_split[-1].split('.')
-                    filename_list[-2] = f'{filename_list[-2]}_rank{rank}'
-                    path_split[-1] = '.'.join(filename_list)
+            world_size = _get_world_size()
+            is_distributed = (log_level <= logging.DEBUG
+                              or distributed) and world_size > 1
+            if is_distributed:
+                filename, suffix = osp.splitext(osp.basename(log_file))
+                hostname = _get_host_info()
+                if hostname:
+                    filename = (f'{filename}_{hostname}_device{device_id}_'
+                                f'rank{global_rank}{suffix}')
                 else:
-                    path_split[-1] = f'{path_split[-1]}_rank{rank}'
-                log_file = os.sep.join(path_split)
+                    # Omit hostname if it is empty
+                    filename = (f'{filename}_device{device_id}_'
+                                f'rank{global_rank}{suffix}')
+                log_file = osp.join(osp.dirname(log_file), filename)
             # Save multi-ranks logs if distributed is True. The logs of rank0
             # will always be saved.
-            if rank == 0 or distributed:
+            if global_rank == 0 or is_distributed:
                 # Here, the default behaviour of the official logger is 'a'.
                 # Thus, we provide an interface to change the file mode to
                 # the default behaviour. `FileHandler` is not supported to
@@ -223,6 +236,11 @@ class MMLogger(Logger, ManagerMixin):
                 file_handler.setLevel(log_level)
                 file_handler.addFilter(FilterDuplicateWarning(logger_name))
                 self.handlers.append(file_handler)
+        self._log_file = log_file
+
+    @property
+    def log_file(self):
+        return self._log_file
 
     @classmethod
     def get_current_instance(cls) -> 'MMLogger':
@@ -319,6 +337,17 @@ def print_log(msg,
             f'"silent", "current" or None, but got {type(logger)}')
 
 
+def _get_world_size():
+    """Support using logging module without torch."""
+    try:
+        # requires torch
+        from mmengine.dist import get_world_size
+    except ImportError:
+        return 1
+    else:
+        return get_world_size()
+
+
 def _get_rank():
     """Support using logging module without torch."""
     try:
@@ -328,3 +357,38 @@ def _get_rank():
         return 0
     else:
         return get_rank()
+
+
+def _get_device_id():
+    """Get device id of current machine."""
+    try:
+        import torch
+    except ImportError:
+        return 0
+    else:
+        local_rank = int(os.getenv('LOCAL_RANK', '0'))
+        # TODO: return device id of npu and mlu.
+        if not torch.cuda.is_available():
+            return local_rank
+        cuda_visible_devices = os.getenv('CUDA_VISIBLE_DEVICES', None)
+        if cuda_visible_devices is None:
+            num_device = torch.cuda.device_count()
+            cuda_visible_devices = list(range(num_device))
+        else:
+            cuda_visible_devices = cuda_visible_devices.split(',')
+        return int(cuda_visible_devices[local_rank])
+
+
+def _get_host_info() -> str:
+    """Get hostname and username.
+
+    Return empty string if exception raised, e.g. ``getpass.getuser()`` will
+    lead to error in docker container
+    """
+    host = ''
+    try:
+        host = f'{getuser()}@{gethostname()}'
+    except Exception as e:
+        warnings.warn(f'Host or user not found: {str(e)}')
+    finally:
+        return host
