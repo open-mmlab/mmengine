@@ -1,10 +1,10 @@
 # 模型复杂度分析
 
-我们提供了一个工具来帮助分析网络的复杂性。我们借鉴了 [fvcore](https://github.com/facebookresearch/fvcore) 的实现思路来构建这个工具，并计划在未来支持更多的自定义算子。目前的工具提供了用于计算给定模型的浮点运算量（flop）、激活量（activation）和参数量（parameter）的接口，并支持以网络结构或表格的形式逐层打印相关信息，同时提供了算子级别（operator）和模块级别（Module）的统计。如果您对统计运算符 flop 的实现细节感兴趣，请参考 [Flop Count](https://github.com/facebookresearch/fvcore/blob/main/docs/flop_count.md)。
+我们提供了一个工具来帮助分析网络的复杂性。我们借鉴了 [fvcore](https://github.com/facebookresearch/fvcore) 的实现思路来构建这个工具，并计划在未来支持更多的自定义算子。目前的工具提供了用于计算给定模型的浮点运算量（FLOPs）、激活量（Activations）和参数量（Parameters）的接口，并支持以网络结构或表格的形式逐层打印相关信息，同时提供了算子级别（operator）和模块级别（Module）的统计。如果您对统计浮点运算量的实现细节感兴趣，请参考 [Flop Count](https://github.com/facebookresearch/fvcore/blob/main/docs/flop_count.md)。
 
 ## 定义
 
-模型复杂度有 3 个指标，分别是浮点运算量（flop）、激活量（activation）以及参数量（parameter），它们的定义如下：
+模型复杂度有 3 个指标，分别是浮点运算量（FLOPs）、激活量（Activations）以及参数量（Parameters），它们的定义如下：
 
 - 浮点运算量
 
