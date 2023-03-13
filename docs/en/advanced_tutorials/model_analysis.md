@@ -18,7 +18,7 @@ The model complexity has three indicators, namely floating-point operations (FLO
 
   The parameter count of a model.
 
-For example, given an input size of `inputs = torch.randn((1, 3, 10, 10))` and a convolutional layer `conv = nn.Conv2d(in_channels=3, out_channels=10, kernel_size=3)`, if the output feature map size is `(1, 10, 8, 8)`, then its FLOPs are `17280 = 10*8*8*3*3*3` (where 10*8*8 represents the output feature map size, and 3*3*3 represents the computation for each output), activations are `640 = 10*8*8`, and the parameter count is `280 = 3*10*3*3 + 10` (where 3*10*3*3 represents the size of weights, and 10 represents the size of bias).
+For example, given an input size of `inputs = torch.randn((1, 3, 10, 10))` and a convolutional layer `conv = nn.Conv2d(in_channels=3, out_channels=10, kernel_size=3)`, if the output feature map size is `(1, 10, 8, 8)`, then its FLOPs are `17280 = 10*8*8*3*3*3` (where `10*8*8` represents the output feature map size, and `3*3*3` represents the computation for each output), activations are `640 = 10*8*8`, and the parameter count is `280 = 3*10*3*3 + 10` (where `3*10*3*3` represents the size of weights, and 10 represents the size of bias).
 
 ## Usage
 
