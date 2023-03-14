@@ -225,6 +225,8 @@ workflows:
             - minimum_version_cpu
       - hold_integration_test:
           type: approval
+          requires:
+            - lint
       - build_integration_test:
           name: integration_test
           torch: 1.13.0
@@ -233,6 +235,8 @@ workflows:
             - hold_integration_test
       - hold:
           type: approval
+          requires:
+            - lint
       - build_cuda:
           name: mainstream_version_gpu
           torch: 1.8.1
