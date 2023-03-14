@@ -25,6 +25,9 @@ class ProgressBar:
         if start:
             self.start()
 
+    def __del__(self):
+        self.bar.stop()
+
     def write(self, msg):
         self.console.print(msg, style=self.color)
 
@@ -188,7 +191,8 @@ def track_iter_progress(tasks, description='Process', color='blue'):
     Args:
         tasks (list or tuple[Iterable, int]): A list of tasks or
             (tasks, total num).
-        bar_width (int): Width of progress bar.
+        description (str): The description of progress bar.
+        color (str): The color of progress bar.
 
     Yields:
         list: The task results.
