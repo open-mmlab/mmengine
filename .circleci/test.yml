@@ -136,41 +136,34 @@ jobs:
 
   build_integration_test:
     parameters:
-      # The python version must match available image tags in
-      # https://circleci.com/developer/images/image/cimg/python
-      python:
-        type: string
       torch:
         type: string
-      torchvision:
+      cuda:
         type: string
-    docker:
-      - image: cimg/python:<< parameters.python >>
-    resource_class: large
+      cudnn:
+        type: integer
+        default: 7
+    machine:
+      image: ubuntu-2004-cuda-11.4:202110-01
+      docker_layer_caching: true
+    resource_class: gpu.nvidia.small
     steps:
       - checkout
       - run:
-          name: Install Libraries
+          name: Build Docker image
           command: |
-            sudo apt-get update
-            sudo apt-get install -y ninja-build libglib2.0-0 libsm6 libxrender-dev libxext6 libgl1-mesa-glx libjpeg-dev zlib1g-dev libtinfo-dev libncurses5
-      - run:
-          name: Configure Python & pip
-          command: |
-            pip install --upgrade pip
-            pip install wheel
-      - run:
-          name: Install PyTorch
-          command: pip install torch==<< parameters.torch >>+cpu torchvision==<< parameters.torchvision >>+cpu -f https://download.pytorch.org/whl/torch_stable.html
+            docker build .circleci/docker -t mmengine:gpu --build-arg PYTORCH=<< parameters.torch >> --build-arg CUDA=<< parameters.cuda >> --build-arg CUDNN=<< parameters.cudnn >>
+            docker run --gpus all -t -d -v /home/circleci/project:/mmengine -w /mmengine --name mmengine mmengine:gpu
       - run:
           name: Build MMEngine from source
-          command: pip install -e . -v
+          command: |
+            docker exec mmengine pip install -e . -v
       - run:
           name: Install unit tests dependencies
           command: |
-            pip install -r requirements/tests.txt
-            pip install openmim
-            mim install 'mmcv>=2.0.0rc1'
+            docker exec mmengine pip install -r requirements/tests.txt
+            docker exec mmengine pip install openmim
+            docker exec mmengine mim install 'mmcv>=2.0.0rc1'
       - run:
           name: Install down stream repositories
           command: |
@@ -183,7 +176,7 @@ jobs:
           name: Install down stream repositories from source
           # TODO: Switch to master branch
           command: |
-            pip uninstall mmdet
+            pip uninstall mmdet -y
             git clone -b 3.x https://github.com/open-mmlab/mmdetection.git ../mmdetection
             pip install -e ../mmdetection
       - run:
@@ -232,19 +225,14 @@ workflows:
             - minimum_version_cpu
       - hold_integration_test:
           type: approval
-          requires:
-            - maximum_version_cpu
       - build_integration_test:
           name: integration_test
           torch: 1.13.0
-          torchvision: 0.14.0
-          python: 3.9.0
+          cuda: "11.1"
           requires:
             - hold_integration_test
       - hold:
           type: approval
-          requires:
-            - maximum_version_cpu
       - build_cuda:
           name: mainstream_version_gpu
           torch: 1.8.1
