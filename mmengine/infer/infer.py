@@ -421,7 +421,7 @@ class BaseInferencer(metaclass=InferencerMeta):
             mim_dir = osp.join(package_path, '.mim')
             if not osp.exists(osp.join(mim_dir, 'configs')):
                 raise FileNotFoundError(
-                    f'Cannot find Configs directory in {package_path}!, '
+                    f'Cannot find `configs` directory in {package_path}!, '
                     f'please check the completeness of the {scope}.')
             return mim_dir
 

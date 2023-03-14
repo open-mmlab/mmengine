@@ -178,7 +178,7 @@ jobs:
           command: |
             docker exec mmengine pip uninstall mmdet -y
             docker exec mmengine apt install git -y
-            docker exec mkdir downstream_repos
+            docker exec mmengine mkdir downstream_repos
             docker exec mmengine git clone -b 3.x https://github.com/open-mmlab/mmdetection.git ./downstream_repos/mmdetection
       - run:
           name: Run inferencer tests
