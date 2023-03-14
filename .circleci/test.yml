@@ -178,11 +178,12 @@ jobs:
           command: |
             docker exec mmengine pip uninstall mmdet -y
             docker exec mmengine apt install git -y
-            docker exec mmengine git clone -b 3.x https://github.com/open-mmlab/mmdetection.git ../mmdetection
+            docker exec mkdir downstream_repos
+            docker exec mmengine git clone -b 3.x https://github.com/open-mmlab/mmdetection.git ./downstream_repos/mmdetection
       - run:
           name: Run inferencer tests
           command: |
-            docker exec mmengine bash -c "PYTHONPATH=$PWD/../mmdetection:$PYTHONPATH && pytest tests/test_infer/test_infer.py"
+            docker exec -e PYTHONPATH=$PWD/downstream_repos/mmdetection mmengine pytest tests/test_infer/test_infer.py
 
 workflows:
   pr_stage_lint:
