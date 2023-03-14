@@ -167,22 +167,22 @@ jobs:
       - run:
           name: Install down stream repositories
           command: |
-            docker exec mim install 'mmdet>=3.0.0rc0'
+            docker exec mmengine mim install 'mmdet>=3.0.0rc0'
       - run:
           name: Run integration tests
           command: |
-            docker exec pytest tests/test_infer/test_infer.py
+            docker exec mmengine pytest tests/test_infer/test_infer.py
       - run:
           name: Install down stream repositories from source
           # TODO: Switch to master branch
           command: |
-            docker exec pip uninstall mmdet -y
-            docker exec git clone -b 3.x https://github.com/open-mmlab/mmdetection.git ../mmdetection
-            docker exec pip install -e ../mmdetection
+            docker exec mmengine pip uninstall mmdet -y
+            docker exec mmengine git clone -b 3.x https://github.com/open-mmlab/mmdetection.git ../mmdetection
+            docker exec mmengine pip install -e ../mmdetection
       - run:
           name: Run inferencer tests
           command: |
-            docker exec pytest test tests/test_infer/test_infer.py
+            docker exec mmengine pytest test tests/test_infer/test_infer.py
 
 workflows:
   pr_stage_lint:
