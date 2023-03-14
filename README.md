@@ -78,8 +78,8 @@ v0.7.0 was released on 2023-03-15.
 
 Highlights:
 
-- Supports PyTorch 2.0! Compile models for accelerated training.
-- Add `EarlyStoppingHook` to stop training when the metric does not get better.
+- Supports PyTorch 2.0! Compile models for accelerated training
+- Add `EarlyStoppingHook` to stop training when the metric does not get better
 
 Read [Changelog](./docs/en/notes/changelog.md#v070-03152023) for more details.
 
