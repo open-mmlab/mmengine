@@ -177,6 +177,7 @@ jobs:
           # TODO: Switch to master branch
           command: |
             docker exec mmengine pip uninstall mmdet -y
+            docker exec mmengine apt install git -y
             docker exec mmengine git clone -b 3.x https://github.com/open-mmlab/mmdetection.git ../mmdetection
       - run:
           name: Run inferencer tests
