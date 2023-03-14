@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
-import sys
 from typing import Any, Iterator, Optional, Tuple, Type, Union
 
 import numpy as np
@@ -309,7 +308,16 @@ class BaseDataElement:
         Returns:
             list: Contains all keys in data_fields.
         """
-        return list(self._data_fields)
+        # We assume that the name of the attribute related to property is
+        # '_' + the name of the property. We use this rule to filter out
+        # private keys.
+        # TODO: Use a more robust way to solve this problem
+        private_keys = {
+            '_' + key
+            for key in self._data_fields
+            if isinstance(getattr(type(self), key, None), property)
+        }
+        return list(self._data_fields - private_keys)
 
     def metainfo_keys(self) -> list:
         """
@@ -466,12 +474,7 @@ class BaseDataElement:
                 raise AttributeError(
                     f'Cannot set {name} to be a field of data '
                     f'because {name} is already a metainfo field')
-            # The name only added to `data_fields` when it is not the
-            # attribute related to property(methods decorated by @property).
-            if not isinstance(
-                    getattr(type(self),
-                            sys._getframe(1).f_code.co_name, None), property):
-                self._data_fields.add(name)
+            self._data_fields.add(name)
         super().__setattr__(name, value)
 
     # Tensor-like methods
