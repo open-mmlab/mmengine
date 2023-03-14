@@ -74,16 +74,14 @@ Major features:
 
 ## What's New
 
-v0.6.0 was released on 2023-02-24.
+v0.7.0 was released on 2023-03-15.
 
 Highlights:
 
-- Support `Apex` with `ApexOptimWrapper`
-- Support analyzing model complexity
-- Add `Lion` optimizer
-- Support using environment variables in the config file
+- Supports PyTorch 2.0! Compile models for accelerated training.
+- Add `EarlyStoppingHook` to stop training when the metric does not get better.
 
-Read [Changelog](./docs/en/notes/changelog.md#v060-02242023) for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v070-03152023) for more details.
 
 ## Installation
 
