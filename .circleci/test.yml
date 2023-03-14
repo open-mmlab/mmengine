@@ -183,7 +183,7 @@ jobs:
       - run:
           name: Run inferencer tests
           command: |
-            docker exec -e PYTHONPATH=$PWD/downstream_repos/mmdetection mmengine pytest tests/test_infer/test_infer.py
+            docker exec -e PYTHONPATH=./downstream_repos/mmdetection mmengine pytest tests/test_infer/test_infer.py
 
 workflows:
   pr_stage_lint:
