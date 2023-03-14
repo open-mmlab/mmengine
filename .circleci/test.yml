@@ -134,6 +134,57 @@ jobs:
           command: |
             docker exec mmengine python -m pytest tests/
 
+  build_integration_test:
+    parameters:
+      torch:
+        type: string
+      cuda:
+        type: string
+      cudnn:
+        type: integer
+        default: 7
+    machine:
+      image: ubuntu-2004-cuda-11.4:202110-01
+      docker_layer_caching: true
+    resource_class: gpu.nvidia.small
+    steps:
+      - checkout
+      - run:
+          name: Build Docker image
+          command: |
+            docker build .circleci/docker -t mmengine:gpu --build-arg PYTORCH=<< parameters.torch >> --build-arg CUDA=<< parameters.cuda >> --build-arg CUDNN=<< parameters.cudnn >>
+            docker run --gpus all -t -d -v /home/circleci/project:/mmengine -w /mmengine --name mmengine mmengine:gpu
+      - run:
+          name: Build MMEngine from source
+          command: |
+            docker exec mmengine pip install -e . -v
+      - run:
+          name: Install unit tests dependencies
+          command: |
+            docker exec mmengine pip install -r requirements/tests.txt
+            docker exec mmengine pip install openmim
+            docker exec mmengine mim install 'mmcv>=2.0.0rc1'
+      - run:
+          name: Install down stream repositories
+          command: |
+            docker exec mmengine mim install 'mmdet>=3.0.0rc0'
+      - run:
+          name: Run integration tests
+          command: |
+            docker exec mmengine pytest tests/test_infer/test_infer.py
+      - run:
+          name: Install down stream repositories from source
+          # TODO: Switch to master branch
+          command: |
+            docker exec mmengine pip uninstall mmdet -y
+            docker exec mmengine apt install git -y
+            docker exec mmengine mkdir downstream_repos
+            docker exec mmengine git clone -b 3.x https://github.com/open-mmlab/mmdetection.git ./downstream_repos/mmdetection
+      - run:
+          name: Run inferencer tests
+          command: |
+            docker exec -e PYTHONPATH=./downstream_repos/mmdetection mmengine pytest tests/test_infer/test_infer.py
+
 workflows:
   pr_stage_lint:
     when: << pipeline.parameters.lint_only >>
@@ -173,10 +224,20 @@ workflows:
           python: 3.9.0
           requires:
             - minimum_version_cpu
+      - hold_integration_test:
+          type: approval
+          requires:
+            - lint
+      - build_integration_test:
+          name: integration_test
+          torch: 1.8.1
+          cuda: "10.2"
+          requires:
+            - hold_integration_test
       - hold:
           type: approval
           requires:
-            - maximum_version_cpu
+            - lint
       - build_cuda:
           name: mainstream_version_gpu
           torch: 1.8.1
