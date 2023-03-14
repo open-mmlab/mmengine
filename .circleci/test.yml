@@ -134,6 +134,63 @@ jobs:
           command: |
             docker exec mmengine python -m pytest tests/
 
+  build_integration_test:
+    parameters:
+      # The python version must match available image tags in
+      # https://circleci.com/developer/images/image/cimg/python
+      python:
+        type: string
+      torch:
+        type: string
+      torchvision:
+        type: string
+    docker:
+      - image: cimg/python:<< parameters.python >>
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Install Libraries
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y ninja-build libglib2.0-0 libsm6 libxrender-dev libxext6 libgl1-mesa-glx libjpeg-dev zlib1g-dev libtinfo-dev libncurses5
+      - run:
+          name: Configure Python & pip
+          command: |
+            pip install --upgrade pip
+            pip install wheel
+      - run:
+          name: Install PyTorch
+          command: pip install torch==<< parameters.torch >>+cpu torchvision==<< parameters.torchvision >>+cpu -f https://download.pytorch.org/whl/torch_stable.html
+      - run:
+          name: Build MMEngine from source
+          command: pip install -e . -v
+      - run:
+          name: Install unit tests dependencies
+          command: |
+            pip install -r requirements/tests.txt
+            pip install openmim
+            mim install 'mmcv>=2.0.0rc1'
+      - run:
+          name: Install down stream repositories
+          command: |
+            mim install 'mmdet>=3.0.0rc0'
+      - run:
+          name: Run integration tests
+          command: |
+            pytest tests/test_infer/test_infer.py
+      - run:
+          name: Install down stream repositories from source
+          # TODO: Switch to master branch
+          command: |
+            pip uninstall mmdet
+            git clone -b 3.x https://github.com/open-mmlab/mmdetection.git ../mmdetection
+            pip install -e ../mmdetection
+      - run:
+          name: Run inferencer tests
+          command: |
+            pytest test tests/test_infer/test_infer.py
+
 workflows:
   pr_stage_lint:
     when: << pipeline.parameters.lint_only >>
@@ -173,6 +230,14 @@ workflows:
           python: 3.9.0
           requires:
             - minimum_version_cpu
+      - hold_integration_test:
+          type: approval
+          requires:
+            - maximum_version_cpu
+      - build_integration_test:
+        name: integration_test
+        requires:
+          - hold_integration_test
       - hold:
           type: approval
           requires:
