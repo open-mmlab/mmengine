@@ -229,8 +229,8 @@ workflows:
             - lint
       - build_integration_test:
           name: integration_test
-          torch: 1.13.0
-          cuda: "11.1"
+          torch: 1.8.1
+          cuda: "10.2"
           requires:
             - hold_integration_test
       - hold:
