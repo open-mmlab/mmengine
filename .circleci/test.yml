@@ -235,9 +235,9 @@ workflows:
           requires:
             - maximum_version_cpu
       - build_integration_test:
-        name: integration_test
-        requires:
-          - hold_integration_test
+          name: integration_test
+          requires:
+            - hold_integration_test
       - hold:
           type: approval
           requires:
