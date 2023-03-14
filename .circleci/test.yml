@@ -236,6 +236,9 @@ workflows:
             - maximum_version_cpu
       - build_integration_test:
           name: integration_test
+          torch: 1.13.0
+          torchvision: 0.14.0
+          python: 3.9.0
           requires:
             - hold_integration_test
       - hold:
