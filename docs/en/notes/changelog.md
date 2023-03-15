@@ -4,8 +4,8 @@
 
 ### Highlights
 
-- Supports PyTorch 2.0! Compile models for accelerated training.
-- Add `EarlyStoppingHook` to stop training when the metric does not get better.
+- Support PyTorch 2.0! Accelerate training by compiling models. See the tutorial [Model Compilation](https://mmengine.readthedocs.io/en/latest/common_usage/speed_up_training.html#model-compilation) for details
+- Add `EarlyStoppingHook` to stop training when the metric does not improve
 
 ### New Features & Enhancements
 
@@ -16,13 +16,13 @@
 - Save the "memory" field to visualization backends by [@enkilee](https://github.com/enkilee) in https://github.com/open-mmlab/mmengine/pull/974
 - Enable bf16 in `AmpOptimWrapper` by [@C1rN09](https://github.com/C1rN09) in https://github.com/open-mmlab/mmengine/pull/960
 - Support writing data to `vis_backend` with prefix by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/972
-- Support export logs of different ranks in debug mode by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/968
+- Support exporting logs of different ranks in debug mode by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/968
 - Silence error when `ManagerMixin` built instance with duplicate name. by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/990
 
 ### Bug fixes
 
-- Fix optim_wrapper unittest for pytorch \< 1.10.0 by [@C1rN09](https://github.com/C1rN09) in https://github.com/open-mmlab/mmengine/pull/975
-- Support calculate the flops of `matmul` with single dimension matrix by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/970
+- Fix optim_wrapper unittest for `pytorch < 1.10.0` by [@C1rN09](https://github.com/C1rN09) in https://github.com/open-mmlab/mmengine/pull/975
+- Support calculating the flops of `matmul` with single dimension matrix by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/970
 - Fix repeated warning by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/992
 - Fix lint by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/993
 - Fix AMP in Ascend and support using NPUJITCompile environment by [@luomaoling](https://github.com/luomaoling) in https://github.com/open-mmlab/mmengine/pull/994
@@ -31,7 +31,7 @@
 ### Docs
 
 - Translate "Debug Tricks" to English by [@enkilee](https://github.com/enkilee) in https://github.com/open-mmlab/mmengine/pull/953
-- Translate model analysis document to English by [@enkilee](https://github.com/enkilee) in https://github.com/open-mmlab/mmengine/pull/956
+- Translate "Model Analysis" document to English by [@enkilee](https://github.com/enkilee) in https://github.com/open-mmlab/mmengine/pull/956
 - Translate "Model Complexity Analysis" to Chinese. by [@VoyagerXvoyagerx](https://github.com/VoyagerXvoyagerx) in https://github.com/open-mmlab/mmengine/pull/969
 - Add a document about setting interval by [@YuetianW](https://github.com/YuetianW) in https://github.com/open-mmlab/mmengine/pull/964
 - Translate "how to set random seed" by [@xin-li-67](https://github.com/xin-li-67) in https://github.com/open-mmlab/mmengine/pull/930

@@ -65,9 +65,9 @@ MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的�
 亮点：
 
 - 支持 PyTorch 2.0！通过编译模型实现训练加速
-- 新增 `EarlyStoppingHook`，当评价指标不再提升时，自动停止训练
+- 新增 `EarlyStoppingHook`，当监控的指标不再提升时，自动停止训练
 
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v060-03152023)
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v070-03152023)
 
 ## 安装
 
