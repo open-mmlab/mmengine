@@ -535,6 +535,9 @@ class OSSBackend(BaseStorageBackend):
                 suffix='.txt'):
             ...     print(file_path)
         """
+        if not self.isdir(dir_path):
+            raise TypeError(
+                '`dir_path` not exist or format error, please check!')
 
         endpoint, bucket_name, obj_name = self._parse_path(dir_path)
         bucket = self._bucket_instance(endpoint, bucket_name)
@@ -543,8 +546,6 @@ class OSSBackend(BaseStorageBackend):
                 '`list_dir` should be False when `suffix` is not None')
 
         root_path = obj_name
-        if self.isdir(root_path):
-            raise TypeError('`dir_path` must endswith "/" ')
 
         def __list_dir_or_file(bucket, obj_name, list_dir, list_file, suffix,
                                recursive):
