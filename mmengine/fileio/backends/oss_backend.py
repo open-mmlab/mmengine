@@ -30,7 +30,7 @@ class OSSBackend(BaseStorageBackend):
             ``filepath`` will be replaced by ``dst``. Defaults to None.
 
     Examples:
-        >>> backend = OSSBackend()
+        >>> backend = OSSBackend(access_key_id, access_key_secret)
         >>> filepath1 = 'oss://endpoint/bucket/file'
         >>> backend.get(filepath1)  # get data from default cluster
     """
@@ -125,7 +125,7 @@ class OSSBackend(BaseStorageBackend):
             bytes: Return bytes read from filepath.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> filepath = 'oss://endpoint/bucket/file'
             >>> backend.get(filepath)
             b'hello world'
@@ -151,7 +151,7 @@ class OSSBackend(BaseStorageBackend):
             str: Expected text reading from ``filepath``.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> filepath = 'oss://endpoint/bucket/file'
             >>> backend.get_text(filepath)
             'hello world'
@@ -166,7 +166,7 @@ class OSSBackend(BaseStorageBackend):
             filepath (str or Path): Path to write data.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> filepath = 'oss://endpoint/bucket/file'
             >>> backend.put(b'hello world', filepath)
         """
@@ -189,7 +189,7 @@ class OSSBackend(BaseStorageBackend):
                 Defaults to 'utf-8'.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> filepath = 'oss://endpoint/bucket/file'
             >>> backend.put_text('hello world', filepath)
         """
@@ -205,7 +205,7 @@ class OSSBackend(BaseStorageBackend):
             bool: Return ``True`` if ``filepath`` exists, ``False`` otherwise.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> filepath = 'oss://endpoint/bucket/file'
             >>> backend.exists(filepath)
             True
@@ -230,7 +230,7 @@ class OSSBackend(BaseStorageBackend):
             ``False`` otherwise.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> filepath = 'oss://endpoint/bucket/file/
             >>> backend.isdir(filepath)
             True
@@ -252,7 +252,7 @@ class OSSBackend(BaseStorageBackend):
             otherwise.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> filepath = 'oss://endpoint/bucket/file'
             >>> backend.isfile(filepath)
             True
@@ -277,7 +277,7 @@ class OSSBackend(BaseStorageBackend):
             str: The result after concatenation.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> filepath = 'oss://endpoint/bucket/dir'
             >>> backend.join_path(filepath, 'another/path')
             'oss://endpoint/bucket/dir/another/path'
@@ -311,7 +311,7 @@ class OSSBackend(BaseStorageBackend):
             Iterable[str]: Only yield one temporary path.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> # After existing from the ``with`` clause,
             >>> # the path will be removed
             >>> filepath = 'oss://endpoint/bucket/file'
@@ -352,14 +352,14 @@ class OSSBackend(BaseStorageBackend):
                 will be raised.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> # copy in the same bucket.
             >>> src = 'oss://endpoint/bucket/file'
             >>> dst = 'oss://endpoint/bucket/file1'
             >>> backend.copyfile(src, dst)
             'oss://endpoint/bucket/file1'
 
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> # copy in different bucket.
             >>> src = 'oss://endpoint/bucket/file'
             >>> dst = 'oss://endpoint/bucket1/file1'
@@ -406,14 +406,14 @@ class OSSBackend(BaseStorageBackend):
                 will be raised.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> # copy in the same bucket.
             >>> src = 'oss://endpoint/bucket/file'
             >>> dst = 'oss://endpoint/bucket/file1'
             >>> backend.copyfile(src, dst)
             'oss://endpoint/bucket/file1'
 
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> # copy in different bucket.
             >>> src = 'oss://endpoint/bucket/file'
             >>> dst = 'oss://endpoint/bucket1/file1'
@@ -508,7 +508,7 @@ class OSSBackend(BaseStorageBackend):
             Iterable[str]: A relative path to ``dir_path``.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> dir_path = 'oss://endpoint/bucket/file/'
             >>> # list those files and directories in current directory
             >>> for file_path in backend.list_dir_or_file(dir_path):
@@ -589,7 +589,7 @@ class OSSBackend(BaseStorageBackend):
             using the base filename from src.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> # dst is a file
             >>> src = 'path/of/your/file'
             >>> dst = 'oss://endpoint/bucket/file1'
@@ -629,7 +629,7 @@ class OSSBackend(BaseStorageBackend):
                 be raised.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> src = 'path/of/your/dir'
             >>> dst = 'oss://endpoint/bucket/dir1'
             >>> backend.copytree_from_local(src, dst)
@@ -669,7 +669,7 @@ class OSSBackend(BaseStorageBackend):
             using the base filename from src.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> # dst is a file
             >>> src = 'oss://endpoint/bucket/file'
             >>> dst = 'path/of/your/file'
@@ -711,7 +711,7 @@ class OSSBackend(BaseStorageBackend):
             str: The destination directory.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> src = 'oss://endpoint/bucket/file/'
             >>> dst = 'path/of/your/dir'
             >>> backend.copytree_to_local(src, dst)
@@ -737,7 +737,7 @@ class OSSBackend(BaseStorageBackend):
                 will be raised.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> filepath = 'oss://endpoint/bucket/file'
             >>> backend.remove(filepath)
         """
@@ -761,7 +761,7 @@ class OSSBackend(BaseStorageBackend):
             dir_path (str or Path): A directory to be removed.
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> dir_path = 'oss://endpoint/bucket/src'
             >>> backend.rmtree(dir_path)
         """
@@ -786,7 +786,7 @@ class OSSBackend(BaseStorageBackend):
             bool: Return True if link successfully. otherwise False
 
         Examples:
-            >>> backend = OSSBackend()
+            >>> backend = OSSBackend(access_key_id, access_key_secret)
             >>> src = 'oss://endpoint/bucket/file'
             >>> dst = 'oss://endpoint/bucket/file2'
             >>> backend.symlink(src, dst)
