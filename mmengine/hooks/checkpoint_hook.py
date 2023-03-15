@@ -371,6 +371,13 @@ class CheckpointHook(Hook):
         save_checkpoint(checkpoint, final_path)
         print_log(
             f'The published model is saved at {final_path}.', logger='current')
+        if 'publish_ckpt_names' not in runner.message_hub.runtime_info:
+            runner.message_hub.update_info('publish_ckpt_names', [final_path])
+        else:
+            ckpt_path_list = runner.message_hub.get_info('publish_ckpt_names')
+            ckpt_path_list.append(final_path)
+            runner.message_hub.update_info('publish_ckpt_names',
+                                           ckpt_path_list)
 
     def _save_checkpoint(self, runner) -> None:
         """Save the current checkpoint and delete outdated checkpoint.

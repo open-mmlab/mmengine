@@ -465,7 +465,10 @@ class TestCheckpointHook:
             type='CheckpointHook',
             interval=save_interval,
             filename_tmpl=tmpl,
-            by_epoch=True)
+            by_epoch=True,
+            save_best='test/acc',
+            rule='less',
+            published_keys=['meta', 'state_dict'])
         runner = Runner(
             model=ToyModel(),
             work_dir=work_dir,
@@ -491,4 +494,6 @@ class TestCheckpointHook:
             if epoch % save_interval != 0 or epoch == 0:
                 continue
             path = osp.join(work_dir, tmpl.format(epoch))
+            assert osp.isfile(path=path)
+        for path in runner.message_hub.get_info('publish_ckpt_names'):
             assert osp.isfile(path=path)
