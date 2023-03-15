@@ -17,6 +17,7 @@ from mmengine.optim import OptimWrapper
 from mmengine.runner import Runner
 from mmengine.runner.checkpoint import _load_checkpoint
 
+
 class ToyModel(BaseModel):
 
     def __init__(self):

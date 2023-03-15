@@ -339,7 +339,7 @@ class CheckpointHook(Hook):
             self._publish_model(runner, last_ckpt)
 
         if getattr(self, 'best_ckpt_path', None) is not None:
-            self._publish_model(runner, self.best_ckpt_path)
+            self._publish_model(runner, str(self.best_ckpt_path))
         if getattr(self, 'best_ckpt_path_dict', None) is not None:
             for key, best_ckpt in self.best_ckpt_path_dict.items():
                 self._publish_model(runner, best_ckpt)
@@ -357,7 +357,8 @@ class CheckpointHook(Hook):
         published_keys = self.published_keys
         removed_keys = []
         for key in list(checkpoint.keys()):
-            if key not in published_keys:
+            if published_keys is not None and\
+                    key not in published_keys:
                 removed_keys.append(key)
                 checkpoint.pop(key)
         if removed_keys:
