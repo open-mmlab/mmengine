@@ -15,7 +15,7 @@ from mmengine.logging import MessageHub
 from mmengine.model import BaseModel
 from mmengine.optim import OptimWrapper
 from mmengine.runner import Runner
-
+from mmengine.runner.checkpoint import _load_checkpoint
 
 class ToyModel(BaseModel):
 
@@ -496,4 +496,7 @@ class TestCheckpointHook:
             path = osp.join(work_dir, tmpl.format(epoch))
             assert osp.isfile(path=path)
         for path in runner.message_hub.get_info('publish_ckpt_names'):
+            checkpoint = _load_checkpoint(path)
             assert osp.isfile(path=path)
+            for key in list(checkpoint.keys()):
+                assert key in list(checkpoint_cfg['published_keys'])
