@@ -205,8 +205,10 @@ except ImportError:
 
         def test_isdir(self):
             exist_directory = os.path.join(f'{self.oss_dir}', 'data')
-            with self.assertRaises(NotImplementedError):
-                self.backend.isdir(exist_directory)
+            with patch.object(
+                    self.backend.oss2, 'ObjectIteratorV2', return_value=[1,
+                                                                         2]):
+                self.assertTrue(self.backend.isdir(exist_directory))
 
         def test_isfile(self):
             exist_img_path = os.path.join(f'{self.oss_dir}', 'img.txt')
@@ -266,39 +268,41 @@ except ImportError:
         def test_list_dir_or_file(self):
             base_dir = f'{self.oss_dir}'
             dir_path = f'{self.oss_dir}dir2/'
-            self.assertEqual(
-                set(self.backend.list_dir_or_file(base_dir)),
-                {'dir2/', 'text1.txt', 'text2.txt', 'dir1/'})
+            with patch.object(self.backend, 'isdir', return_value=True):
+                self.assertEqual(
+                    set(self.backend.list_dir_or_file(base_dir)),
+                    {'dir2/', 'text1.txt', 'text2.txt', 'dir1/'})
 
-            self.assertEqual(
-                set(self.backend.list_dir_or_file(dir_path)),
-                {'dir3/', 'img.jpg'})
+                self.assertEqual(
+                    set(self.backend.list_dir_or_file(dir_path)),
+                    {'dir3/', 'img.jpg'})
 
-            self.assertEqual(
-                set(self.backend.list_dir_or_file(dir_path, list_dir=False)),
-                {'img.jpg'})
+                self.assertEqual(
+                    set(
+                        self.backend.list_dir_or_file(
+                            dir_path, list_dir=False)), {'img.jpg'})
 
-            self.assertEqual(
-                set(self.backend.list_dir_or_file(dir_path, list_file=False)),
-                {'dir3/'})
+                self.assertEqual(
+                    set(
+                        self.backend.list_dir_or_file(
+                            dir_path, list_file=False)), {'dir3/'})
 
-            self.assertEqual(
-                set(
+                self.assertEqual(
+                    set(
+                        self.backend.list_dir_or_file(
+                            dir_path, list_dir=False, suffix='.jpg')),
+                    {'img.jpg'})
+
+                # test recursive
+                self.assertEqual(
+                    set(
+                        self.backend.list_dir_or_file(
+                            dir_path, recursive=True)),
+                    {'img.jpg', 'dir3/', 'dir3/text4.txt'})
+
+                with self.assertRaises(TypeError):
                     self.backend.list_dir_or_file(
-                        dir_path, list_dir=False, suffix='.jpg')), {'img.jpg'})
-
-            # test recursive
-            self.assertEqual(
-                set(self.backend.list_dir_or_file(dir_path, recursive=True)),
-                {'img.jpg', 'dir3/', 'dir3/text4.txt'})
-
-            with self.assertRaises(TypeError):
-                self.backend.list_dir_or_file(
-                    dir_path, list_file=False, suffix='.txt')
-
-            with self.assertRaises(TypeError):
-                dir_path = f'{self.oss_dir}dir2'
-                self.backend.list_dir_or_file(dir_path, recursive=True)
+                        dir_path, list_file=False, suffix='.txt')
 
         def test_copyfile_from_local(self):
 
@@ -466,9 +470,8 @@ else:
             self.assertFalse(self.backend.exists(not_existed_path))
 
         def test_isdir(self):
-            exist_directory = os.path.join(f'{self.oss_dir}', 'data')
-            with self.assertRaises(NotImplementedError):
-                self.backend.isdir(exist_directory)
+            exist_directory = os.path.join(f'{self.oss_dir}', 'data/')
+            self.assertTrue(self.backend.isdir(exist_directory))
 
         def test_isfile(self):
             exist_img_path = os.path.join(f'{self.oss_dir}', 'img.jpg')
