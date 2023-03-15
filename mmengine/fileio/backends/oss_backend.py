@@ -45,6 +45,15 @@ class OSSBackend(BaseStorageBackend):
         except ImportError:
             raise ImportError('Please install OSS_client to enable '
                               'OSSBackend.')
+        access_key_id = access_key_id or os.getenv(
+            'MMENGINE_OSS_ACCESS_KEY_ID')
+        if access_key_id is None:
+            raise ValueError('access_key_id should be specified!')
+        access_key_secret = access_key_secret or os.getenv(
+            'MMENGINE_OSS_ACCESS_KEY_SECRET', None)
+        if access_key_secret is None:
+            raise ValueError('access_key_secret should be specified!')
+
         self._auth = self.oss2.Auth(
             access_key_id=access_key_id, access_key_secret=access_key_secret)
 
@@ -196,7 +205,7 @@ class OSSBackend(BaseStorageBackend):
         self.put(bytes(obj, encoding=encoding), filepath)
 
     def exists(self, filepath: Union[str, Path]) -> bool:
-        """Check whether a file path exists.
+        """Check whether a file path or directory exists.
 
         Args:
             filepath (str or Path): Path to be checked whether exists.
@@ -211,15 +220,10 @@ class OSSBackend(BaseStorageBackend):
             True
         """
 
-        endpoint, bucket_name, obj_name = self._parse_path(filepath)
-        bucket = self._bucket_instance(endpoint, bucket_name)
-        return bucket.object_exists(obj_name)
+        return self.isdir(filepath) or self.isfile(filepath)
 
     def isdir(self, filepath: Union[str, Path]) -> bool:
         """Check whether a file path is a directory.
-        note: Current version of oss2 Python SDK has not supported
-        to judge whether a directory exists, latter version may support.
-
 
         Args:
             filepath (str or Path): Path to be checked
@@ -236,10 +240,14 @@ class OSSBackend(BaseStorageBackend):
             True
         """
 
-        raise NotImplementedError(
-            'Current version of oss2 Python SDK has not supported'
-            'the `isdir` method, it may add latter.')
-        return self.exists(filepath)
+        endpoint, bucket_name, obj_name = self._parse_path(filepath)
+        if not obj_name.endswith('/'):
+            obj_name = f'{obj_name}/'
+
+        bucket = self._bucket_instance(endpoint, bucket_name)
+        for obj in self.oss2.ObjectIteratorV2(bucket, prefix=obj_name):
+            return True
+        return False
 
     def isfile(self, filepath: Union[str, Path]) -> bool:
         """Check whether a file path is a file.
@@ -257,8 +265,9 @@ class OSSBackend(BaseStorageBackend):
             >>> backend.isfile(filepath)
             True
         """
-
-        return self.exists(filepath)
+        endpoint, bucket_name, obj_name = self._parse_path(filepath)
+        bucket = self._bucket_instance(endpoint, bucket_name)
+        return bucket.object_exists(obj_name)
 
     def join_path(
         self,
@@ -534,7 +543,7 @@ class OSSBackend(BaseStorageBackend):
                 '`list_dir` should be False when `suffix` is not None')
 
         root_path = obj_name
-        if root_path and not root_path.endswith('/'):
+        if self.isdir(root_path):
             raise TypeError('`dir_path` must endswith "/" ')
 
         def __list_dir_or_file(bucket, obj_name, list_dir, list_file, suffix,
