@@ -9,8 +9,6 @@ from mmengine.dist import is_main_process
 from mmengine.fileio import FileClient, get_file_backend
 from mmengine.logging import print_log
 from mmengine.registry import HOOKS
-from mmengine.runner import save_checkpoint
-from mmengine.runner.checkpoint import _load_checkpoint
 from mmengine.utils import is_list_of, is_seq_of
 from .hook import Hook
 
@@ -353,6 +351,8 @@ class CheckpointHook(Hook):
             runner (Runner): The runner of the training process.
             ckpt_path (str): The checkpoint path that ought to be published.
         """
+        from mmengine.runner import save_checkpoint
+        from mmengine.runner.checkpoint import _load_checkpoint
         checkpoint = _load_checkpoint(ckpt_path)
         published_keys = self.published_keys
         removed_keys = []
