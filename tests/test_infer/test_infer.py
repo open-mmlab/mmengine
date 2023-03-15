@@ -10,8 +10,16 @@ import torch
 from mmengine.infer import BaseInferencer
 from mmengine.registry import VISUALIZERS, DefaultScope
 from mmengine.testing import RunnerTestCase
-from mmengine.utils import is_installed, is_list_of
+from mmengine.utils import is_list_of
 from mmengine.visualization import Visualizer
+
+
+def is_imported(package):
+    try:
+        __import__(package)
+        return True
+    except ImportError:
+        return False
 
 
 class ToyInferencer(BaseInferencer):
@@ -98,7 +106,7 @@ class TestBaseInferencer(RunnerTestCase):
             ToyInferencer([self.epoch_based_cfg], self.ckpt_path)
 
         # Pass model as model name defined in metafile
-        if is_installed('mmdet'):
+        if is_imported('mmdet'):
             from mmdet.utils import register_all_modules
 
             register_all_modules()
@@ -126,7 +134,7 @@ class TestBaseInferencer(RunnerTestCase):
         inferencer(img_paths)
 
     @pytest.mark.skipif(
-        not is_installed('mmdet'), reason='mmdet is not installed')
+        not is_imported('mmdet'), reason='mmdet is not installed')
     def test_load_model_from_meta(self):
         from mmdet.utils import register_all_modules
 
@@ -210,7 +218,7 @@ class TestBaseInferencer(RunnerTestCase):
             self.assertTrue(is_list_of(data, torch.Tensor))
 
     @pytest.mark.skipif(
-        not is_installed('mmdet'), reason='mmdet is not installed')
+        not is_imported('mmdet'), reason='mmdet is not installed')
     def test_list_models(self):
         model_list = BaseInferencer.list_models('mmdet')
         self.assertTrue(len(model_list) > 0)
