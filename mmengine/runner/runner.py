@@ -1971,13 +1971,10 @@ class Runner:
         current_seed = self._randomness_cfg.get('seed')
         if resumed_seed is not None and resumed_seed != current_seed:
             if current_seed is not None:
-                print_log(
-                    f'The value of random seed in the '
-                    f'checkpoint "{resumed_seed}" is '
-                    f'different from the value in '
-                    f'`randomness` config "{current_seed}"',
-                    logger='current',
-                    level=logging.WARNING)
+                self.logger.warning(f'The value of random seed in the '
+                                    f'checkpoint "{resumed_seed}" is '
+                                    f'different from the value in '
+                                    f'`randomness` config "{current_seed}"')
             self._randomness_cfg.update(seed=resumed_seed)
             self.set_randomness(**self._randomness_cfg)
 
@@ -1988,13 +1985,11 @@ class Runner:
         # np.ndarray, which cannot be directly judged as equal or not,
         # therefore we just compared their dumped results.
         if pickle.dumps(resumed_dataset_meta) != pickle.dumps(dataset_meta):
-            print_log(
+            self.logger.warning(
                 'The dataset metainfo from the resumed checkpoint is '
                 'different from the current training dataset, please '
                 'check the correctness of the checkpoint or the training '
-                'dataset.',
-                logger='current',
-                level=logging.WARNING)
+                'dataset.')
 
         self.message_hub.load_state_dict(checkpoint['message_hub'])
 
@@ -2006,11 +2001,9 @@ class Runner:
 
         # resume param scheduler
         if resume_param_scheduler and self.param_schedulers is None:
-            print_log(
+            self.logger.warning(
                 '`resume_param_scheduler` is True but `self.param_schedulers` '
-                'is None, so skip resuming parameter schedulers',
-                logger='current',
-                level=logging.WARNING)
+                'is None, so skip resuming parameter schedulers')
             resume_param_scheduler = False
         if 'param_schedulers' in checkpoint and resume_param_scheduler:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
@@ -2167,11 +2160,9 @@ class Runner:
 
         # save param scheduler state dict
         if save_param_scheduler and self.param_schedulers is None:
-            print_log(
+            self.logger.warning(
                 '`save_param_scheduler` is True but `self.param_schedulers` '
-                'is None, so skip saving parameter schedulers',
-                logger='current',
-                level=logging.WARNING)
+                'is None, so skip saving parameter schedulers')
             save_param_scheduler = False
         if save_param_scheduler:
             if isinstance(self.param_schedulers, dict):
