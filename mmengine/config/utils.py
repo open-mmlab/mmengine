@@ -26,6 +26,7 @@ MODULE2PACKAGE = {
     'mmrotate': 'mmrotate',
     'mmselfsup': 'mmselfsup',
     'mmyolo': 'mmyolo',
+    'mmpretrain': 'mmpretrain',
 }
 
 # PKG2PROJECT is not a proper name to represent the mapping between module name
