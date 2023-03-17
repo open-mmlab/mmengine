@@ -377,8 +377,6 @@ class CheckpointHook(Hook):
         else:
             ckpt_path_list = runner.message_hub.get_info('publish_ckpt_names')
             ckpt_path_list.append(final_path)
-            runner.message_hub.update_info('publish_ckpt_names',
-                                           ckpt_path_list)
 
     def _save_checkpoint(self, runner) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
