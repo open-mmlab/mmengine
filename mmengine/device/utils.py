@@ -62,7 +62,7 @@ def is_mps_available() -> bool:
     return hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
 
 
-DEVICE = 'none'
+DEVICE = 'cpu'
 if is_npu_available():
     DEVICE = 'npu'
 elif is_cuda_available():
@@ -71,8 +71,6 @@ elif is_mlu_available():
     DEVICE = 'mlu'
 elif is_mps_available():
     DEVICE = 'mps'
-else:
-    DEVICE = 'cpu'
 
 
 def get_device() -> str:
