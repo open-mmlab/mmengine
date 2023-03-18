@@ -95,15 +95,12 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
             for sub_module in self.modules():
                 sub_module._params_init_info = self._params_init_info
 
-        logger = MMLogger.get_current_instance()
-        logger_name = logger.instance_name
-
         module_name = self.__class__.__name__
         if not self._is_init:
             if self.init_cfg:
                 print_log(
                     f'initialize {module_name} with init_cfg {self.init_cfg}',
-                    logger=logger_name,
+                    logger='current',
                     level=logging.DEBUG)
 
                 init_cfgs = self.init_cfg
@@ -145,7 +142,6 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                 level=logging.WARNING)
 
         if is_top_level_module:
-            # self._dump_init_info(logger_name)
             self._dump_init_info()
 
             for sub_module in self.modules():
@@ -154,14 +150,9 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
     @master_only
     def _dump_init_info(self):
         """Dump the initialization information to a file named
-        `initialization.log.json` in workdir.
-
-        Args:
-            logger_name (str): The name of logger.
-        """
+        `initialization.log.json` in workdir."""
 
         logger = MMLogger.get_current_instance()
-        logger_name = logger.instance_name
         with_file_handler = False
         # dump the information to the logger file if there is a `FileHandler`
         for handler in logger.handlers:
@@ -176,10 +167,9 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                 with_file_handler = True
         if not with_file_handler:
             for name, param in self.named_parameters():
-                print_log(
+                logger.info(
                     f'\n{name} - {param.shape}: '
-                    f"\n{self._params_init_info[param]['init_info']} \n ",
-                    logger=logger_name)
+                    f"\n{self._params_init_info[param]['init_info']} \n ")
 
     def __repr__(self):
         s = super().__repr__()

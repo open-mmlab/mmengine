@@ -5,7 +5,7 @@ import os
 import os.path as osp
 import shutil
 import tempfile
-from unittest import TestCase
+from unittest import TestCase, skipIf
 
 import numpy as np
 import torch
@@ -15,7 +15,7 @@ from torch.optim import SGD, Adam
 from torch.utils.data import DataLoader, Dataset
 
 from mmengine.config import Config
-from mmengine.dataset import COLLATE_FUNCTIONS, DefaultSampler, pseudo_collate
+from mmengine.dataset import DefaultSampler, pseudo_collate
 from mmengine.evaluator import BaseMetric, Evaluator
 from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
                             IterTimerHook, LoggerHook, ParamSchedulerHook,
@@ -24,10 +24,11 @@ from mmengine.logging import MessageHub, MMLogger
 from mmengine.model import BaseDataPreprocessor, BaseModel, ImgDataPreprocessor
 from mmengine.optim import (DefaultOptimWrapperConstructor, MultiStepLR,
                             OptimWrapper, OptimWrapperDict, StepLR)
-from mmengine.registry import (DATASETS, EVALUATOR, HOOKS, LOG_PROCESSORS,
-                               LOOPS, METRICS, MODEL_WRAPPERS, MODELS,
-                               OPTIM_WRAPPER_CONSTRUCTORS, OPTIM_WRAPPERS,
-                               PARAM_SCHEDULERS, RUNNERS, Registry)
+from mmengine.registry import (DATASETS, EVALUATOR, FUNCTIONS, HOOKS,
+                               LOG_PROCESSORS, LOOPS, METRICS, MODEL_WRAPPERS,
+                               MODELS, OPTIM_WRAPPER_CONSTRUCTORS,
+                               OPTIM_WRAPPERS, PARAM_SCHEDULERS, RUNNERS,
+                               Registry)
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              LogProcessor, Runner, TestLoop, ValLoop)
 from mmengine.runner.loops import _InfiniteDataloaderIterator
@@ -352,7 +353,7 @@ class TestRunner(TestCase):
         LOG_PROCESSORS.register_module(module=CustomLogProcessor, force=True)
         RUNNERS.register_module(module=CustomRunner, force=True)
         EVALUATOR.register_module(module=ToyEvaluator, force=True)
-        COLLATE_FUNCTIONS.register_module(module=custom_collate, force=True)
+        FUNCTIONS.register_module(module=custom_collate, force=True)
 
         self.temp_dir = tempfile.mkdtemp()
         epoch_based_cfg = dict(
@@ -435,7 +436,7 @@ class TestRunner(TestCase):
         LOG_PROCESSORS.module_dict.pop('CustomLogProcessor')
         RUNNERS.module_dict.pop('CustomRunner')
         EVALUATOR.module_dict.pop('ToyEvaluator')
-        COLLATE_FUNCTIONS.module_dict.pop('custom_collate')
+        FUNCTIONS.module_dict.pop('custom_collate')
 
         logging.shutdown()
         MMLogger._instance_dict.clear()
@@ -1704,6 +1705,24 @@ class TestRunner(TestCase):
         with self.assertRaisesRegex(AssertionError, 'If you want to validate'):
             runner.train()
 
+    @skipIf(
+        not hasattr(torch, 'compile'),
+        reason='torch.compile is not valid, please install PyTorch>=2.0.0')
+    def test_train_with_compile(self):
+        # 1. test with simple configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_train_compile_simple'
+        cfg.compile = True
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+
+        # 2. test with advanced configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_train_compile_advanced'
+        cfg.compile = dict(backend='inductor', mode='default')
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+
     def test_val(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_val1'
@@ -1755,6 +1774,24 @@ class TestRunner(TestCase):
             runner.val()
             self.assertIn(predictions[0].dtype,
                           (torch.float16, torch.bfloat16))
+
+    @skipIf(
+        not hasattr(torch, 'compile'),
+        reason='torch.compile is not valid, please install PyTorch>=2.0.0')
+    def test_val_with_compile(self):
+        # 1. test with simple configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_val_compile_simple'
+        cfg.compile = True
+        runner = Runner.from_cfg(cfg)
+        runner.val()
+
+        # 2. test with advanced configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_val_compile_advanced'
+        cfg.compile = dict(backend='inductor', mode='default')
+        runner = Runner.from_cfg(cfg)
+        runner.val()
 
     def test_test(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1809,6 +1846,24 @@ class TestRunner(TestCase):
             runner.test()
             self.assertIn(predictions[0].dtype,
                           (torch.float16, torch.bfloat16))
+
+    @skipIf(
+        not hasattr(torch, 'compile'),
+        reason='torch.compile is not valid, please install PyTorch>=2.0.0')
+    def test_test_with_compile(self):
+        # 1. test with simple configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_test_compile_simple'
+        cfg.compile = True
+        runner = Runner.from_cfg(cfg)
+        runner.test()
+
+        # 2. test with advanced configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_test_compile_advanced'
+        cfg.compile = dict(backend='inductor', mode='default')
+        runner = Runner.from_cfg(cfg)
+        runner.test()
 
     def test_register_hook(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)

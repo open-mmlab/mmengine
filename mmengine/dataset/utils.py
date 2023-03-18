@@ -8,10 +8,12 @@ import torch
 from torch.utils.data._utils.collate import \
     default_collate as torch_default_collate
 
-from mmengine.registry import Registry
+from mmengine.registry import FUNCTIONS
 from mmengine.structures import BaseDataElement
 
-COLLATE_FUNCTIONS = Registry('Collate Functions')
+# FUNCTIONS is new in MMEngine v0.7.0. Reserve the `COLLATE_FUNCTIONS` to keep
+# the compatibility.
+COLLATE_FUNCTIONS = FUNCTIONS
 
 
 def worker_init_fn(worker_id: int,
@@ -39,7 +41,7 @@ def worker_init_fn(worker_id: int,
         warnings.simplefilter('ignore')
 
 
-@COLLATE_FUNCTIONS.register_module()
+@FUNCTIONS.register_module()
 def pseudo_collate(data_batch: Sequence) -> Any:
     """Convert list of data sampled from dataset into a batch of data, of which
     type consistent with the type of each data_itement in ``data_batch``.
@@ -97,7 +99,7 @@ def pseudo_collate(data_batch: Sequence) -> Any:
         return data_batch
 
 
-@COLLATE_FUNCTIONS.register_module()
+@FUNCTIONS.register_module()
 def default_collate(data_batch: Sequence) -> Any:
     """Convert list of data sampled from dataset into a batch of data, of which
     type consistent with the type of each data_itement in ``data_batch``.

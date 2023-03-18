@@ -402,27 +402,29 @@ Since distributed applications will create multiple log files, we add a director
 
 ### Export logs in distributed training
 
-When training with pytorch distributed methods, users can set `distributed=True` in config file to export multiple logs from all processes. If not specified, only master process will export log file.
+When training with pytorch distributed methods, users can set `distributed=True` or `log_level='DEBUG'` in config file to export multiple logs from all processes. If not specified, only master process will export log file.
 
 ```python
 logger = MMLogger.get_instance('mmengine', log_file='tmp.log', distributed=True, log_level='INFO')
+# or
+# logger = MMLogger.get_instance('mmengine', log_file='tmp.log', log_level='DEBUG')
 ```
 
 In the case of multiple processes in a single node, or multiple processes in multiple nodes with shared storage, the exported log files have the following hierarchy
 
 ```text
 #  shared storage case
-./tmp
-├── tmp.log
-├── tmp_rank1.log
-├── tmp_rank2.log
-├── tmp_rank3.log
-├── tmp_rank4.log
-├── tmp_rank5.log
-├── tmp_rank6.log
-└── tmp_rank7.log
+work_dir/20230228_141908
+├── 20230306_183634_${hostname}_device0_rank0.log
+├── 20230306_183634_${hostname}_device1_rank1.log
+├── 20230306_183634_${hostname}_device2_rank2.log
+├── 20230306_183634_${hostname}_device3_rank3.log
+├── 20230306_183634_${hostname}_device4_rank4.log
+├── 20230306_183634_${hostname}_device5_rank5.log
+├── 20230306_183634_${hostname}_device6_rank6.log
+├── 20230306_183634_${hostname}_device7_rank7.log
 ...
-└── tmp_rank63.log
+├── 20230306_183634_${hostname}_device7_rank63.log
 ```
 
 In the case of multiple processes in multiple nodes without storage, logs are organized as follows
@@ -430,21 +432,24 @@ In the case of multiple processes in multiple nodes without storage, logs are or
 ```text
 # without shared storage
 # node 0：
-work_dir/
-└── exp_name_logs
-    ├── exp_name.log
-    ├── exp_name_rank1.log
-    ├── exp_name_rank2.log
-    ├── exp_name_rank3.log
-    ...
-    └── exp_name_rank7.log
+work_dir/20230228_141908
+├── 20230306_183634_${hostname}_device0_rank0.log
+├── 20230306_183634_${hostname}_device1_rank1.log
+├── 20230306_183634_${hostname}_device2_rank2.log
+├── 20230306_183634_${hostname}_device3_rank3.log
+├── 20230306_183634_${hostname}_device4_rank4.log
+├── 20230306_183634_${hostname}_device5_rank5.log
+├── 20230306_183634_${hostname}_device6_rank6.log
+├── 20230306_183634_${hostname}_device7_rank7.log
 
 # node 7：
-work_dir/
-└── exp_name_logs
-    ├── exp_name_rank56.log
-    ├── exp_name_rank57.log
-    ├── exp_name_rank58.log
-    ...
-    └── exp_name_rank63.log
+work_dir/20230228_141908
+├── 20230306_183634_${hostname}_device0_rank56.log
+├── 20230306_183634_${hostname}_device1_rank57.log
+├── 20230306_183634_${hostname}_device2_rank58.log
+├── 20230306_183634_${hostname}_device3_rank59.log
+├── 20230306_183634_${hostname}_device4_rank60.log
+├── 20230306_183634_${hostname}_device5_rank61.log
+├── 20230306_183634_${hostname}_device6_rank62.log
+├── 20230306_183634_${hostname}_device7_rank63.log
 ```
