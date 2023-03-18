@@ -683,6 +683,11 @@ class MLflowVisBackend(BaseVisBackend):
             )  # type: ignore
         self._mlflow = mlflow
 
+        logger = MMLogger.get_current_instance()
+        for handler in logger.handlers:
+            if handler.stream is None or handler.stream.closed:
+                handler.stream = open(handler.baseFilename, 'a')
+
         if self._tracking_uri is not None:
             self._mlflow.set_tracking_uri(self._tracking_uri)
         else:
