@@ -645,10 +645,8 @@ class MLflowVisBackend(BaseVisBackend):
         params (dict, optional): The params to be added to the experiment.
             Default to None.
         tracking_uri (str, optional): The tracking uri. Default to None.
-        log_artifact (bool, optional): Whether to log the artifact.
-            Default to False.
         artifact_suffix (Tuple[str] or str, optional): The artifact suffix.
-            Default to ('.json', '.log', '.py', 'yaml', '').
+            Default to ('.json', '.log', '.py', 'yaml').
     """
 
     def __init__(self,
@@ -658,16 +656,14 @@ class MLflowVisBackend(BaseVisBackend):
                  tags: Optional[dict] = None,
                  params: Optional[dict] = None,
                  tracking_uri: Optional[str] = None,
-                 log_artifact: bool = False,
                  artifact_suffix: SUFFIX_TYPE = ('.json', '.log', '.py',
-                                                 'yaml', '')):
+                                                 'yaml')):
         super().__init__(save_dir)
         self._exp_name = exp_name
         self._run_name = run_name
         self._tags = tags
         self._params = params
         self._tracking_uri = tracking_uri
-        self._log_artifact = log_artifact
         self._artifact_suffix = artifact_suffix
 
     def _init_env(self):
