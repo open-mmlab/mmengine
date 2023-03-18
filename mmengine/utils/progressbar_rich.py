@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import threading
 import time
 from collections.abc import Iterable
 from multiprocessing import Pool
@@ -126,11 +127,24 @@ def track_single_progress(func,
     for task in tasks:
         results.append(func(task, **kwargs))
         prog_bar.update()
-
     return results
 
 
 def track_multi_progress(funcs, tasks, descriptions, colors, params=None):
+    """Track multi progress of tasks execution with progress bar.
+
+    Tasks are done with a while-loop and a simple for-loop.
+
+    Args:
+        funcs (list): Functions apply for each task.
+        tasks (list): A list of tasks.
+        descriptions (str or list): The descriptions of each progress bar.
+        colors (str or list): The colors of each progress bar.
+        params (list): The funcs` parameters.
+
+    Returns:
+        list: The task results.
+    """
     assert isinstance(funcs, List)
     assert isinstance(tasks, List)
     if params is None:
@@ -163,7 +177,6 @@ def track_multi_progress(funcs, tasks, descriptions, colors, params=None):
     return result
 
 
-# 原本代码在运行中出现问题，debug没有问题
 def init_pool(process_num, initializer=None, initargs=None):
     if initializer is None:
         return Pool(process_num)
@@ -195,6 +208,8 @@ def track_single_parallel_progress(func,
         tasks (list or tuple[Iterable, int]): A list of tasks or
             (tasks, total num).
         nproc (int): Process (worker) number.
+        description (str): The description of progress bar.
+        color (str): The color of progress bar.
         initializer (None or callable): Refer to :class:`multiprocessing.Pool`
             for details.
         initargs (None or tuple): Refer to :class:`multiprocessing.Pool` for
@@ -251,7 +266,8 @@ def track_single_iter_progress(tasks, description='Process..', color='blue'):
     Args:
         tasks (list or tuple[Iterable, int]): A list of tasks or
             (tasks, total num).
-        bar_width (int): Width of progress bar.
+        description (str): The description of progress bar.
+        color (str): The color of progress bar.
 
     Yields:
         list: The task results.
@@ -272,3 +288,78 @@ def track_single_iter_progress(tasks, description='Process..', color='blue'):
     for task in tasks:
         prog_bar.update(0, 1)
         yield task
+
+
+class MultiThread(threading.Thread):
+
+    def __init__(self, task, func, idx, update_func, param=None):
+        super().__init__()
+        self.task = task
+        self.func = func
+        self.idx = idx
+        self.updata_func = update_func
+        self.result = []
+        self.param = param
+
+    def run(self) -> None:
+        for i in range(len(self.task)):
+            self.result.append(self.func(self.task[i], **self.param))
+            self.updata_func(self.idx)
+
+    def get_value(self):
+        return self.result
+
+
+def track_multi_parallel_progress(funcs,
+                                  tasks,
+                                  descriptions,
+                                  colors,
+                                  params=None):
+    """Track multi progress of tasks execution with progress bar and
+    MultiThread.
+
+    After accepting a task, threads will be created based on the number of
+     tasks and tasks will be executed in parallel.
+
+    Args:
+        funcs (list): Functions apply for each task.
+        tasks (list): A list of tasks.
+        descriptions (str or list): The descriptions of each progress bar.
+        colors (str or list): The colors of each progress bar.
+        params (list): The funcs` parameters.
+
+    Returns:
+        list: The task results.
+    """
+    assert isinstance(funcs, List)
+    assert isinstance(tasks, List)
+    if params is None:
+        params = [dict() for i in range(len(funcs))]
+
+    if isinstance(descriptions, str):
+        descriptions = [descriptions] * len(tasks)
+    if isinstance(colors, str):
+        colors = [colors] * len(tasks)
+
+    assert len(funcs) == len(tasks) == len(params) == len(descriptions) == len(
+        colors)
+
+    prog_bar = RichProgressBar()
+    for i in range(len(tasks)):
+        total = len(tasks[i])
+        prog_bar.add_multi_task(total, colors[i], descriptions[i])
+
+    process = []
+    for i in range(len(tasks)):
+        proc = MultiThread(tasks[i], funcs[i], i, prog_bar.update, params[i])
+        proc.start()
+        process.append(proc)
+
+    for i in range(len(process)):
+        process[i].join()
+
+    result = []
+    for i in range(len(process)):
+        result.append(process[i].get_value())
+
+    return result

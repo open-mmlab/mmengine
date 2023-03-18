@@ -68,7 +68,7 @@ def test_track_single_progress_iterator():
     assert ret == [1, 2, 3]
 
 
-def test_track_multi_progress():
+def test_track_single_multi_progress():
     ret = mmengine.track_multi_progress(
         [sleep_1s for i in range(2)], [[1, 2, 3], [1, 2]],
         descriptions=[f'task{i}' for i in range(2)],
@@ -76,14 +76,14 @@ def test_track_multi_progress():
     assert ret[0] == [1, 2, 3] and ret[1] == [1, 2]
 
 
-def test_track_iter_progress():
+def test_track_single_iter_progress():
     ret = []
     for num in mmengine.track_single_iter_progress([1, 2, 3]):
         ret.append(sleep_1s(num))
     assert ret == [1, 2, 3]
 
 
-def test_track_enum_progress():
+def test_track_single_enum_progress():
     ret = []
     count = []
     for i, num in enumerate(mmengine.track_single_iter_progress([1, 2, 3])):
@@ -93,13 +93,21 @@ def test_track_enum_progress():
     assert count == [0, 1, 2]
 
 
-def test_track_parallel_progress_list():
+def test_track_single_parallel_progress_list():
     results = mmengine.track_single_parallel_progress(sleep_1s, [1, 2, 3, 4],
                                                       2)
     assert results == [1, 2, 3, 4]
 
 
-def test_track_parallel_progress_iterator():
+def test_track_single_parallel_progress_iterator():
     results = mmengine.track_single_parallel_progress(
         sleep_1s, ((i for i in [1, 2, 3, 4]), 4), 2)
     assert results == [1, 2, 3, 4]
+
+
+def test_track_multi_parallel_progress():
+    ret = mmengine.track_multi_parallel_progress(
+        [sleep_1s for i in range(2)], [[1, 2, 3], [1, 2]],
+        descriptions=[f'task{i}' for i in range(2)],
+        colors=['red', 'blue'])
+    assert ret[0] == [1, 2, 3] and ret[1] == [1, 2]
