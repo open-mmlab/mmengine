@@ -354,11 +354,10 @@ class CheckpointHook(Hook):
         from mmengine.runner import save_checkpoint
         from mmengine.runner.checkpoint import _load_checkpoint
         checkpoint = _load_checkpoint(ckpt_path)
-        published_keys: Optional[Union[List[str], str]] = self.published_keys
+        assert self.published_keys is not None
         removed_keys = []
         for key in list(checkpoint.keys()):
-            if published_keys is not None and\
-                    key not in published_keys:
+            if key not in self.published_keys:
                 removed_keys.append(key)
                 checkpoint.pop(key)
         if removed_keys:
