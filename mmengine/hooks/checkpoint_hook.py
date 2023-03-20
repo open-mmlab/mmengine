@@ -368,14 +368,12 @@ class CheckpointHook(Hook):
                 logger='current')
         final_path = osp.splitext(
             ckpt_path)[0] + f'-published-{runner.timestamp}.pth'
+        for key in list(checkpoint.keys()):
+            assert key in list(self.published_keys)
         save_checkpoint(checkpoint, final_path)
+        assert self.file_client.isfile(final_path)
         print_log(
             f'The published model is saved at {final_path}.', logger='current')
-        if 'publish_ckpt_names' not in runner.message_hub.runtime_info:
-            runner.message_hub.update_info('publish_ckpt_names', [final_path])
-        else:
-            ckpt_path_list = runner.message_hub.get_info('publish_ckpt_names')
-            ckpt_path_list.append(final_path)
 
     def _save_checkpoint(self, runner) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
