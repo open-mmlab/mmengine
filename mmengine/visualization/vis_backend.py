@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import functools
+import logging
 import os
 import os.path as osp
 import warnings
@@ -13,7 +14,7 @@ import torch
 
 from mmengine.config import Config
 from mmengine.fileio import dump
-from mmengine.logging import MMLogger
+from mmengine.logging import print_log
 from mmengine.registry import VISBACKENDS
 from mmengine.utils.dl_utils import TORCH_VERSION
 
@@ -42,12 +43,13 @@ def force_init_env(old_func: Callable) -> Any:
         # `_env_initialized` is False, call `_init_env` and set
         # `_env_initialized` to True
         if not getattr(obj, '_env_initialized', False):
-            logger = MMLogger.get_current_instance()
-            logger.debug('Attribute `_env_initialized` is not defined in '
-                         f'{type(obj)} or `{type(obj)}._env_initialized is '
-                         'False, `_init_env` will be called and '
-                         f'{type(obj)}._env_initialized will be set to '
-                         'True')
+            print_log(
+                'Attribute `_env_initialized` is not defined in '
+                f'{type(obj)} or `{type(obj)}._env_initialized is '
+                'False, `_init_env` will be called and '
+                f'{type(obj)}._env_initialized will be set to True',
+                logger='current',
+                level=logging.DEBUG)
             obj._init_env()  # type: ignore
             obj._env_initialized = True  # type: ignore
 

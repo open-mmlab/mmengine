@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import logging
 import os
 import os.path as osp
-import warnings
 from collections import OrderedDict
 from pathlib import Path
 from typing import Dict, Optional, Sequence, Union
@@ -12,6 +12,7 @@ import torch
 from mmengine.fileio import FileClient, dump
 from mmengine.fileio.io import get_file_backend
 from mmengine.hooks import Hook
+from mmengine.logging import print_log
 from mmengine.registry import HOOKS
 from mmengine.utils import is_tuple_of, scandir
 
@@ -64,7 +65,7 @@ class LoggerHook(Hook):
             `runner.visualizer.add_scalars`. Otherwise `step` will be
             self.iter. Defaults to True.
         backend_args (dict, optional): Arguments to instantiate the
-            preifx of uri corresponding backend. Defaults to None.
+            prefix of uri corresponding backend. Defaults to None.
             New in v0.2.0.
 
     Examples:
@@ -94,9 +95,11 @@ class LoggerHook(Hook):
         self.out_dir = out_dir
 
         if file_client_args is not None:
-            warnings.warn(
+            print_log(
                 '"file_client_args" will be deprecated in future. '
-                'Please use "backend_args" instead', DeprecationWarning)
+                'Please use "backend_args" instead',
+                logger='current',
+                level=logging.WARNING)
             if backend_args is not None:
                 raise ValueError(
                     '"file_client_args" and "backend_args" cannot be set '
@@ -231,14 +234,8 @@ class LoggerHook(Hook):
             runner, len(runner.val_dataloader), 'val')
         runner.logger.info(log_str)
         if self.log_metric_by_epoch:
-            # when `log_metric_by_epoch` is set to True, it's expected
-            # that validation metric can be logged by epoch rather than
-            # by iter. At the same time, scalars related to time should
-            # still be logged by iter to avoid messy visualized result.
-            # see details in PR #278.
-            metric_tags = {k: v for k, v in tag.items() if 'time' not in k}
             runner.visualizer.add_scalars(
-                metric_tags, step=runner.epoch, file_path=self.json_log_path)
+                tag, step=runner.epoch, file_path=self.json_log_path)
         else:
             runner.visualizer.add_scalars(
                 tag, step=runner.iter, file_path=self.json_log_path)

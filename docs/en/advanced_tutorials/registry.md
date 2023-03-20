@@ -169,7 +169,7 @@ func_res = FUNCTION.build(func_cfg)
 
 The registry in MMEngine supports hierarchical registration, which enables cross-project calls, meaning that modules from one project can be used in another project. Though there are other ways to implement this, the registry provides a much easier solution.
 
-To easily make cross-library calls, MMEngine provides twenty root registries, including:
+To easily make cross-library calls, MMEngine provides twenty two root registries, including:
 
 - RUNNERS: the registry for Runner.
 - RUNNER_CONSTRUCTORS: the constructors for Runner.
@@ -191,6 +191,8 @@ To easily make cross-library calls, MMEngine provides twenty root registries, in
 - VISUALIZERS: the management drawing module that draws prediction boxes on images, such as `DetVisualizer`.
 - VISBACKENDS: the backend for storing training logs, such as `LocalVisBackend`, and `TensorboardVisBackend`.
 - LOG_PROCESSORS: controls the log statistics window and statistics methods, by default we use `LogProcessor`. You may customize `LogProcessor` if you have special needs.
+- FUNCTIONS: registers various functions, such as `collate_fn` in `DataLoader`.
+- INFERENCERS: registers inferencers of different tasks, such as `DetInferencer`, which is used to perform inference on the detection task.
 
 ### Use the module of the parent node
 

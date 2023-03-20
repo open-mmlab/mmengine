@@ -381,7 +381,7 @@ class LocalBackend(BaseStorageBackend):
             src (str or Path): A directory to be copied.
             dst (str or Path): Copy directory to local dst.
             backend_args (dict, optional): Arguments to instantiate the
-                preifx of uri corresponding backend. Defaults to None.
+                prefix of uri corresponding backend. Defaults to None.
 
         Returns:
             str: The destination directory.
