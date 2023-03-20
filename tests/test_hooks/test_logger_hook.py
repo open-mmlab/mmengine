@@ -46,7 +46,8 @@ class TestLoggerHook(RunnerTestCase):
         with self.assertRaisesRegex(ValueError, 'file_client_args'):
             LoggerHook(file_client_args=dict(enable_mc=True))
 
-        with self.assertWarnsRegex(Warning,
+        # test `file_client_args` and `backend_args`
+        with self.assertWarnsRegex(DeprecationWarning,
                                    '"file_client_args" will be deprecated'):
             LoggerHook(
                 out_dir=self.temp_dir.name,
@@ -122,7 +123,12 @@ class TestLoggerHook(RunnerTestCase):
         logger_hook.after_val_epoch(runner)
         args = {'step': ANY, 'file_path': ANY}
         # expect visualizer log `time` and `metric` respectively
-        runner.visualizer.add_scalars.assert_called_with({'acc': 0.8}, **args)
+        runner.visualizer.add_scalars.assert_called_with(
+            {
+                'time': 1,
+                'datatime': 1,
+                'acc': 0.8
+            }, **args)
 
         # Test when `log_metric_by_epoch` is False
         logger_hook = LoggerHook(log_metric_by_epoch=False)
