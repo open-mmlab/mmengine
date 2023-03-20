@@ -681,12 +681,18 @@ class MLflowVisBackend(BaseVisBackend):
             )  # type: ignore
         self._mlflow = mlflow
 
+        # when mlflow is imported, a default logger is created.
+        # at this time, the default logger's stream is None
+        # so the stream is reopened only when the stream is None
+        # or the stream is closed
         logger = MMLogger.get_current_instance()
         for handler in logger.handlers:
             if handler.stream is None or handler.stream.closed:
                 handler.stream = open(handler.baseFilename, 'a')
 
         if self._tracking_uri is not None:
+            logger.warning(
+                'Please make sure that the mlflow server is running.')
             self._mlflow.set_tracking_uri(self._tracking_uri)
         else:
             if os.name == 'nt':
