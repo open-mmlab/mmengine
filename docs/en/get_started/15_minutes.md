@@ -3,10 +3,11 @@
 In this tutorial, we'll take training a ResNet-50 model on CIFAR-10 dataset as an example. We will build a complete and configurable pipeline for both training and validation in only 80 lines of code with `MMEgnine`.
 The whole process includes the following steps:
 
-1. [Build a Model](#build-a-model)
-2. [Build a Dataset and DataLoader](#build-a-dataset-and-dataloader)
-3. [Build a Evaluation Metrics](#build-a-evaluation-metrics)
-4. [Build a Runner and Run the Task](#build-a-runner-and-run-the-task)
+- [15 minutes to get started with MMEngine](#15-minutes-to-get-started-with-mmengine)
+  - [Build a Model](#build-a-model)
+  - [Build a Dataset and DataLoader](#build-a-dataset-and-dataloader)
+  - [Build a Evaluation Metrics](#build-a-evaluation-metrics)
+  - [Build a Runner and Run the Task](#build-a-runner-and-run-the-task)
 
 ## Build a Model
 
@@ -237,5 +238,9 @@ System environment:
 ...
 2022/08/22 15:52:54 - mmengine - INFO - Epoch(val) [1][313/313]  accuracy: 35.7000
 ```
+
+The corresponding implementation of PyTorch and MMEngine:
+
+![output](https://user-images.githubusercontent.com/57566630/203142869-cfe5f855-f391-4fd4-a80c-beecf1bd111f.gif)
 
 In addition to these basic components, you can also use **executor** to easily combine and configure various training techniques, such as enabling mixed-precision training and gradient accumulation (see [OptimWrapper](../tutorials/optim_wrapper.md)), configuring the learning rate decay curve (see [Metrics & Evaluator](../tutorials/evaluation.md)), and etc.

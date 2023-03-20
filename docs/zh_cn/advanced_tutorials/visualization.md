@@ -24,7 +24,9 @@ import torch
 import mmcv
 from mmengine.visualization import Visualizer
 
-image = mmcv.imread('docs/en/_static/image/cat_dog.png', channel_order='rgb')
+# https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/zh_cn/_static/image/cat_and_dog.png
+image = mmcv.imread('docs/en/_static/image/cat_and_dog.png',
+                    channel_order='rgb')
 visualizer = Visualizer(image=image)
 # 绘制单个检测框, xyxy 格式
 visualizer.draw_bboxes(torch.tensor([72, 13, 179, 147]))
@@ -51,7 +53,9 @@ visualizer.show()
 
 ```python
 visualizer.set_image(image=image)
-visualizer.draw_bboxes(torch.tensor([72, 13, 179, 147]), edge_colors='r', line_widths=3)
+visualizer.draw_bboxes(torch.tensor([72, 13, 179, 147]),
+                       edge_colors='r',
+                       line_widths=3)
 visualizer.draw_bboxes(torch.tensor([[33, 120, 209, 220]]),line_styles='--')
 visualizer.show()
 ```
@@ -68,7 +72,8 @@ visualizer.show()
 visualizer.set_image(image=image)
 visualizer.draw_bboxes(torch.tensor([[33, 120, 209, 220], [72, 13, 179, 147]]))
 visualizer.draw_texts("cat and dog",
-                      torch.tensor([10, 20])).draw_circles(torch.tensor([40, 50]), torch.tensor([20]))
+                      torch.tensor([10, 20])).draw_circles(torch.tensor([40, 50]),
+                      torch.tensor([20]))
 visualizer.show()
 ```
 
@@ -82,13 +87,22 @@ visualizer.show()
 
 ```python
 @staticmethod
-def draw_featmap(featmap: torch.Tensor, # 输入格式要求为 CHW
-                 overlaid_image: Optional[np.ndarray] = None, # 如果同时输入了 image 数据，则特征图会叠加到 image 上绘制
-                 channel_reduction: Optional[str] = 'squeeze_mean', # 多个通道压缩为单通道的策略
-                 topk: int = 10, # 可选择激活度最高的 topk 个特征图显示
-                 arrangement: Tuple[int, int] = (5, 2), # 多通道展开为多张图时候布局
-                 resize_shape：Optional[tuple] = None, # 可以指定 resize_shape 参数来缩放特征图
-                 alpha: float = 0.5) -> np.ndarray: # 图片和特征图绘制的叠加比例
+def draw_featmap(
+    # 输入格式要求为 CHW
+    featmap: torch.Tensor,
+    # 如果同时输入了 image 数据，则特征图会叠加到 image 上绘制
+    overlaid_image: Optional[np.ndarray] = None,
+    # 多个通道压缩为单通道的策略
+    channel_reduction: Optional[str] = 'squeeze_mean',
+    # 可选择激活度最高的 topk 个特征图显示
+    topk: int = 10,
+    # 多通道展开为多张图时候布局
+    arrangement: Tuple[int, int] = (5, 2),
+    # 可以指定 resize_shape 参数来缩放特征图
+    resize_shape: Optional[tuple] = None,
+    # 图片和特征图绘制的叠加比例
+    alpha: float = 0.5,
+) -> np.ndarray:
 ```
 
 其功能可以归纳如下
@@ -167,7 +181,8 @@ visualizer.show(drawn_img)
 (2) 利用 `topk=5` 参数选择多通道特征图中激活度最高的 5 个通道并采用 2x3 布局显示
 
 ```python
-drawn_img = visualizer.draw_featmap(feat, image, channel_reduction=None, topk=5, arrangement=(2, 3))
+drawn_img = visualizer.draw_featmap(feat, image, channel_reduction=None,
+                                    topk=5, arrangement=(2, 3))
 visualizer.show(drawn_img)
 ```
 
@@ -178,7 +193,8 @@ visualizer.show(drawn_img)
 用户可以通过 `arrangement` 参数选择自己想要的布局
 
 ```python
-drawn_img = visualizer.draw_featmap(feat, image, channel_reduction=None, topk=5, arrangement=(4, 2))
+drawn_img = visualizer.draw_featmap(feat, image, channel_reduction=None,
+                                    topk=5, arrangement=(4, 2))
 visualizer.show(drawn_img)
 ```
 
@@ -195,8 +211,9 @@ visualizer.show(drawn_img)
 假设存储后端为本地存储
 
 ```python
-visualizer = Visualizer(image=image, vis_backends=[dict(type='LocalVisBackend')], save_dir='temp_dir')
-
+visualizer = Visualizer(image=image,
+                        vis_backends=[dict(type='LocalVisBackend')],
+                        save_dir='temp_dir')
 visualizer.draw_bboxes(torch.tensor([[33, 120, 209, 220], [72, 13, 179, 147]]))
 visualizer.draw_texts("cat and dog", torch.tensor([10, 20]))
 visualizer.draw_circles(torch.tensor([40, 50]), torch.tensor([20]))
@@ -218,16 +235,22 @@ visualizer.add_image('demo', visualizer.get_image(), step=3)
 
 ```python
 # TensorboardVisBackend
-visualizer = Visualizer(image=image, vis_backends=[dict(type='TensorboardVisBackend')], save_dir='temp_dir')
+visualizer = Visualizer(image=image,
+                        vis_backends=[dict(type='TensorboardVisBackend')],
+                        save_dir='temp_dir')
 # 或者 WandbVisBackend
-visualizer = Visualizer(image=image, vis_backends=[dict(type='WandbVisBackend')], save_dir='temp_dir')
+visualizer = Visualizer(image=image,
+                        vis_backends=[dict(type='WandbVisBackend')],
+                        save_dir='temp_dir')
 ```
 
 **(2) 存储特征图**
 
 ```python
-visualizer = Visualizer(vis_backends=[dict(type='LocalVisBackend')], save_dir='temp_dir')
-drawn_img = visualizer.draw_featmap(feat, image, channel_reduction=None, topk=5, arrangement=(2, 3))
+visualizer = Visualizer(vis_backends=[dict(type='LocalVisBackend')],
+                        save_dir='temp_dir')
+drawn_img = visualizer.draw_featmap(feat, image, channel_reduction=None,
+                                    topk=5, arrangement=(2, 3))
 # 会生成 temp_dir/vis_data/vis_image/feat_0.png
 visualizer.add_image('feat', drawn_img)
 ```
@@ -265,8 +288,9 @@ visualizer.add_config(cfg)
 实际上，任何一个可视化器都可以配置任意多个存储后端，可视化器会循环调用配置好的多个存储后端，从而将结果保存到多后端中。
 
 ```python
-visualizer = Visualizer(image=image, vis_backends=[dict(type='TensorboardVisBackend'),
-                                                   dict(type='LocalVisBackend')],
+visualizer = Visualizer(image=image,
+                        vis_backends=[dict(type='TensorboardVisBackend'),
+                                      dict(type='LocalVisBackend')],
                         save_dir='temp_dir')
 # 会生成 temp_dir/vis_data/events.out.tfevents.xxx 文件
 visualizer.draw_bboxes(torch.tensor([[33, 120, 209, 220], [72, 13, 179, 147]]))
@@ -279,10 +303,14 @@ visualizer.add_image('demo', visualizer.get_image())
 注意：如果多个存储后端中存在同一个类的多个后端，那么必须指定 name 字段，否则无法区分是哪个存储后端
 
 ```python
-visualizer = Visualizer(image=image, vis_backends=[dict(type='TensorboardVisBackend', name='tb_1', save_dir='temp_dir_1'),
-                                                   dict(type='TensorboardVisBackend', name='tb_2', save_dir='temp_dir_2'),
-                                                   dict(type='LocalVisBackend', name='local')],
-                        save_dir='temp_dir')
+visualizer = Visualizer(
+    image=image,
+    vis_backends=[
+        dict(type='TensorboardVisBackend', name='tb_1', save_dir='temp_dir_1'),
+        dict(type='TensorboardVisBackend', name='tb_2', save_dir='temp_dir_2'),
+        dict(type='LocalVisBackend', name='local')
+    ],
+    save_dir='temp_dir')
 ```
 
 ## 任意点位进行可视化
@@ -292,7 +320,10 @@ visualizer = Visualizer(image=image, vis_backends=[dict(type='TensorboardVisBack
 
 ```python
 # 在程序初始化时候调用
-visualizer1 = Visualizer.get_instance(name='vis', vis_backends=[dict(type='LocalVisBackend')])
+visualizer1 = Visualizer.get_instance(
+    name='vis',
+    vis_backends=[dict(type='LocalVisBackend')]
+)
 
 # 在任何代码位置都可调用
 visualizer2 = Visualizer.get_current_instance()
@@ -306,10 +337,9 @@ assert id(visualizer1) == id(visualizer2)
 ```python
 from mmengine.registry import VISUALIZERS
 
-visualizer_cfg=dict(
-                type='Visualizer',
-                name='vis_new',
-                vis_backends=[dict(type='LocalVisBackend')])
+visualizer_cfg = dict(type='Visualizer',
+                      name='vis_new',
+                      vis_backends=[dict(type='LocalVisBackend')])
 VISUALIZERS.build(visualizer_cfg)
 ```
 
@@ -321,7 +351,8 @@ VISUALIZERS.build(visualizer_cfg)
 例如 WandB 提供了表格显示的 API 接口，用户可以通过 `experiment`属性获取 WandB 对象，然后调用特定的 API 来将自定义数据保存为表格显示
 
 ```python
-visualizer = Visualizer(image=image, vis_backends=[dict(type='WandbVisBackend')],
+visualizer = Visualizer(image=image,
+                        vis_backends=[dict(type='WandbVisBackend')],
                         save_dir='temp_dir')
 
 # 获取 WandB 对象
@@ -348,7 +379,8 @@ class DemoVisBackend(BaseVisBackend):
     def add_image(self, **kwargs):
         pass
 
-visualizer = Visualizer(vis_backends=[dict(type='DemoVisBackend')], save_dir='temp_dir')
+visualizer = Visualizer(vis_backends=[dict(type='DemoVisBackend')],
+                        save_dir='temp_dir')
 visualizer.add_image('demo',image)
 ```
 
@@ -372,8 +404,9 @@ class DetLocalVisualizer(Visualizer):
                        step: int = 0) -> None:
         pass
 
-visualizer_cfg = dict(
-    type='DetLocalVisualizer', vis_backends=[dict(type='WandbVisBackend')], name='visualizer')
+visualizer_cfg = dict(type='DetLocalVisualizer',
+                      vis_backends=[dict(type='WandbVisBackend')],
+                      name='visualizer')
 
 # 全局初始化
 VISUALIZERS.build(visualizer_cfg)

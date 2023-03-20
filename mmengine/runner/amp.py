@@ -126,6 +126,10 @@ def autocast(device_type: Optional[str] = None,
 
         elif device_type == 'mlu':
             pass
+
+        elif device_type == 'npu':
+            pass
+
         else:
             # Device like MPS does not support fp16 training or testing.
             # If an inappropriate device is set and fp16 is enabled, an error

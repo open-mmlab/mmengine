@@ -31,12 +31,11 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 
 **自定义钩子**
 
-|                名称                 |         用途          |    优先级    |
-| :---------------------------------: | :-------------------: | :----------: |
-|         [EMAHook](#emahook)         | 模型参数指数滑动平均  | NORMAL (50)  |
-|  [EmptyCacheHook](#emptycachehook)  | PyTorch CUDA 缓存清理 | NORMAL (50)  |
-| [SyncBuffersHook](#syncbuffershook) |   同步模型的 buffer   | NORMAL (50)  |
-|       NaiveVisualizationHook        |        可视化         | LOWEST (100) |
+|                名称                 |         用途          |   优先级    |
+| :---------------------------------: | :-------------------: | :---------: |
+|         [EMAHook](#emahook)         | 模型参数指数滑动平均  | NORMAL (50) |
+|  [EmptyCacheHook](#emptycachehook)  | PyTorch CUDA 缓存清理 | NORMAL (50) |
+| [SyncBuffersHook](#syncbuffershook) |   同步模型的 buffer   | NORMAL (50) |
 
 ```{note}
 不建议修改默认钩子的优先级，因为优先级低的钩子可能会依赖优先级高的钩子。例如 CheckpointHook 的优先级需要比 ParamSchedulerHook 低，这样保存的优化器状态才是正确的状态。另外，自定义钩子的优先级默认为 `NORMAL (50)`。
@@ -56,9 +55,7 @@ default_hooks = dict(
     checkpoint=dict(type='CheckpointHook', interval=1),
 )
 
-custom_hooks = [
-    dict(type='NaiveVisualizationHook', priority='LOWEST'),
-]
+custom_hooks = [dict(type='EmptyCacheHook')]
 
 runner = Runner(default_hooks=default_hooks, custom_hooks=custom_hooks, ...)
 runner.train()
@@ -134,7 +131,7 @@ runner.train()
 default_hooks = dict(logger=dict(type='LoggerHook', interval=20))
 ```
 
-如果你对日志的管理感兴趣，可以阅读[记录日志（logging）](logging.md)。
+如果你对日志的管理感兴趣，可以阅读[记录日志（logging）](../advanced_tutorials/logging.md)。
 
 ### ParamSchedulerHook
 
@@ -239,9 +236,9 @@ class CheckInvalidLossHook(Hook):
 ```python
 from mmengine.runner import Runner
 
-custom_hooks = dict(
+custom_hooks = [
     dict(type='CheckInvalidLossHook', interval=50)
-)
+]
 runner = Runner(custom_hooks=custom_hooks, ...)  # 实例化执行器，主要完成环境的初始化以及各种模块的构建
 runner.train()  # 执行器开始训练
 ```
@@ -251,9 +248,9 @@ runner.train()  # 执行器开始训练
 注意，自定义钩子的优先级默认为 `NORMAL (50)`，如果想改变钩子的优先级，则可以在配置中设置 priority 字段。
 
 ```python
-custom_hooks = dict(
+custom_hooks = [
     dict(type='CheckInvalidLossHook', interval=50, priority='ABOVE_NORMAL')
-)
+]
 ```
 
 也可以在定义类时给定优先级
@@ -265,4 +262,4 @@ class CheckInvalidLossHook(Hook):
     priority = 'ABOVE_NORMAL'
 ```
 
-你可能还想阅读[钩子的设计](../design/hook.md)或者[钩子的 API 文档](mmengine.hooks)。
+你可能还想阅读[钩子的设计](../design/hook.md)或者[钩子的 API 文档](../api/hooks)。

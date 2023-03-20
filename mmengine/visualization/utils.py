@@ -1,14 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from typing import Any, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, Union
 
 import cv2
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from matplotlib.backend_bases import CloseEvent
-from matplotlib.backends.backend_agg import FigureCanvasAgg
+
+if TYPE_CHECKING:
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 
 def tensor2ndarray(value: Union[np.ndarray, torch.Tensor]) -> np.ndarray:
@@ -131,6 +130,7 @@ def color_str2rgb(color: str) -> tuple:
     Returns:
         tuple: RGB color.
     """
+    import matplotlib
     rgb_color: tuple = matplotlib.colors.to_rgb(color)
     rgb_color = tuple(int(c * 255) for c in rgb_color)
     return rgb_color
@@ -186,6 +186,8 @@ def wait_continue(figure, timeout: int = 0, continue_key: str = ' ') -> int:
         int: If zero, means time out or the user pressed ``continue_key``,
             and if one, means the user closed the show figure.
     """  # noqa: E501
+    import matplotlib.pyplot as plt
+    from matplotlib.backend_bases import CloseEvent
     is_inline = 'inline' in plt.get_backend()
     if is_inline:
         # If use inline backend, interactive input and timeout is no use.
@@ -226,7 +228,7 @@ def wait_continue(figure, timeout: int = 0, continue_key: str = ' ') -> int:
             return 0  # Quit for continue.
 
 
-def img_from_canvas(canvas: FigureCanvasAgg) -> np.ndarray:
+def img_from_canvas(canvas: 'FigureCanvasAgg') -> np.ndarray:
     """Get RGB image from ``FigureCanvasAgg``.
 
     Args:

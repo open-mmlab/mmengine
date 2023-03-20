@@ -1,13 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import logging
 import os.path as osp
 import re
-import warnings
 from math import inf
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
 from mmengine.dist import is_main_process
 from mmengine.fileio import FileClient, get_file_backend
+from mmengine.logging import print_log
 from mmengine.registry import HOOKS
 from mmengine.utils import is_list_of, is_seq_of
 from .hook import Hook
@@ -82,7 +83,7 @@ class CheckpointHook(Hook):
             Defaults to None, which means "epoch_{}.pth" or "iter_{}.pth"
             accordingly.
         backend_args (dict, optional): Arguments to instantiate the
-            preifx of uri corresponding backend. Defaults to None.
+            prefix of uri corresponding backend. Defaults to None.
             New in v0.2.0.
 
     Examples:
@@ -139,9 +140,11 @@ class CheckpointHook(Hook):
         self.args = kwargs
 
         if file_client_args is not None:
-            warnings.warn(
+            print_log(
                 '"file_client_args" will be deprecated in future. '
-                'Please use "backend_args" instead', DeprecationWarning)
+                'Please use "backend_args" instead',
+                logger='current',
+                level=logging.WARNING)
             if backend_args is not None:
                 raise ValueError(
                     '"file_client_args" and "backend_args" cannot be set '
@@ -294,6 +297,12 @@ class CheckpointHook(Hook):
             runner (Runner): The runner of the training process.
             metrics (dict): Evaluation results of all metrics
         """
+        if len(metrics) == 0:
+            runner.logger.warning(
+                'Since `metrics` is an empty dict, the behavior to save '
+                'the best checkpoint will be skipped in this evaluation.')
+            return
+
         self._save_best_checkpoint(runner, metrics)
 
     def _save_checkpoint(self, runner) -> None:
@@ -372,7 +381,7 @@ class CheckpointHook(Hook):
         # save best logic
         # get score from messagehub
         for key_indicator, rule in zip(self.key_indicators, self.rules):
-            key_score = metrics.get(key_indicator, None)
+            key_score = metrics[key_indicator]
 
             if len(self.key_indicators) == 1:
                 best_score_key = 'best_score'
@@ -405,7 +414,7 @@ class CheckpointHook(Hook):
 
             best_ckpt_name = f'best_{key_indicator}_{ckpt_filename}'
             # Replace illegal characters for filename with `_`
-            best_ckpt_name = re.sub(r'[\\\/]', '_', best_ckpt_name)
+            best_ckpt_name = re.sub('(\\\\|/)', '_', best_ckpt_name)
             if len(self.key_indicators) == 1:
                 self.best_ckpt_path = self.file_client.join_path(  # type: ignore # noqa: E501
                     self.out_dir, best_ckpt_name)

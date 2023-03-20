@@ -27,6 +27,8 @@ class PetrelBackend(BaseStorageBackend):
             ``filepath`` will be replaced by ``dst``. Defaults to None.
         enable_mc (bool, optional): Whether to enable memcached support.
             Defaults to True.
+        conf_path (str, optional): Config path of Petrel client. Default: None.
+            `New in version 0.3.3`.
 
     Examples:
         >>> backend = PetrelBackend()
@@ -38,14 +40,15 @@ class PetrelBackend(BaseStorageBackend):
 
     def __init__(self,
                  path_mapping: Optional[dict] = None,
-                 enable_mc: bool = True):
+                 enable_mc: bool = True,
+                 conf_path: Optional[str] = None):
         try:
             from petrel_client import client
         except ImportError:
             raise ImportError('Please install petrel_client to enable '
                               'PetrelBackend.')
 
-        self._client = client.Client(enable_mc=enable_mc)
+        self._client = client.Client(conf_path=conf_path, enable_mc=enable_mc)
         assert isinstance(path_mapping, dict) or path_mapping is None
         self.path_mapping = path_mapping
 
@@ -248,10 +251,10 @@ class PetrelBackend(BaseStorageBackend):
         filepath: Union[str, Path],
         *filepaths: Union[str, Path],
     ) -> str:
-        """Concatenate all file paths.
+        r"""Concatenate all file paths.
 
         Join one or more filepath components intelligently. The return value
-        is the concatenation of filepath and any members of *filepaths.
+        is the concatenation of filepath and any members of \*filepaths.
 
         Args:
             filepath (str or Path): Path to be concatenated.
@@ -372,7 +375,7 @@ class PetrelBackend(BaseStorageBackend):
             src (str or Path): A directory to be copied.
             dst (str or Path): Copy directory to dst.
             backend_args (dict, optional): Arguments to instantiate the
-                preifx of uri corresponding backend. Defaults to None.
+                prefix of uri corresponding backend. Defaults to None.
 
         Returns:
             str: The destination directory.
@@ -412,7 +415,7 @@ class PetrelBackend(BaseStorageBackend):
             src (str or Path): A local file to be copied.
             dst (str or Path): Copy file to dst.
             backend_args (dict, optional): Arguments to instantiate the
-                preifx of uri corresponding backend. Defaults to None.
+                prefix of uri corresponding backend. Defaults to None.
 
         Returns:
             str: If dst specifies a directory, the file will be copied into dst
@@ -537,7 +540,7 @@ class PetrelBackend(BaseStorageBackend):
             src (str or Path): A directory to be copied.
             dst (str or Path): Copy directory to local dst.
             backend_args (dict, optional): Arguments to instantiate the
-                preifx of uri corresponding backend. Defaults to None.
+                prefix of uri corresponding backend. Defaults to None.
 
         Returns:
             str: The destination directory.
@@ -621,7 +624,7 @@ class PetrelBackend(BaseStorageBackend):
             src (str or Path): A file or directory to be copied.
             dst (str or Path): Copy a file or directory to dst.
             backend_args (dict, optional): Arguments to instantiate the
-                preifx of uri corresponding backend. Defaults to None.
+                prefix of uri corresponding backend. Defaults to None.
 
         Returns:
             bool: Return False because PetrelBackend does not support create

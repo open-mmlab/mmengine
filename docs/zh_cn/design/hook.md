@@ -77,7 +77,7 @@ input: (tensor([[0., 1., 2.]]),)
 output: tensor([[-1.0036]], grad_fn=<AddmmBackward>)
 ```
 
-可以看到注册到 Linear 模块的 `forward_hook_fn` 钩子被调用，在该钩子中打印了 Linear 模块的权重、偏置、模块的输入以及输出。更多关于 PyTorch 钩子的用法可以阅读 [nn.Module](https://pytorch.org/docs/stable/generated/torch.nn.Module.htm)。
+可以看到注册到 Linear 模块的 `forward_hook_fn` 钩子被调用，在该钩子中打印了 Linear 模块的权重、偏置、模块的输入以及输出。更多关于 PyTorch 钩子的用法可以阅读 [nn.Module](https://pytorch.org/docs/stable/generated/torch.nn.Module.html)。
 
 ## MMEngine 中钩子的设计
 
@@ -201,4 +201,4 @@ def main():
 - before_save_checkpoint
 - after_load_checkpoint
 
-你可能还想阅读[钩子的用法](../tutorials/hook.md)或者[钩子的 API 文档](mmengine.hooks)。
+你可能还想阅读[钩子的用法](../tutorials/hook.md)或者[钩子的 API 文档](../api/hooks)。

@@ -1,5 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Dict, Optional, Union
+from typing import Any, Dict, Optional, Union
+
+import numpy as np
+import torch
 
 from mmengine.registry import HOOKS
 from mmengine.utils import get_git_hash
@@ -7,6 +10,24 @@ from mmengine.version import __version__
 from .hook import Hook
 
 DATA_BATCH = Optional[Union[dict, tuple, list]]
+
+
+def _is_scalar(value: Any) -> bool:
+    """Determine the value is a scalar type value.
+
+    Args:
+        value (Any): value of log.
+
+    Returns:
+        bool: whether the value is a scalar type value.
+    """
+    if isinstance(value, np.ndarray):
+        return value.size == 1
+    elif isinstance(value, (int, float)):
+        return True
+    elif isinstance(value, torch.Tensor):
+        return value.numel() == 1
+    return False
 
 
 @HOOKS.register_module()
@@ -112,7 +133,10 @@ class RuntimeInfoHook(Hook):
         """
         if metrics is not None:
             for key, value in metrics.items():
-                runner.message_hub.update_scalar(f'val/{key}', value)
+                if _is_scalar(value):
+                    runner.message_hub.update_scalar(f'val/{key}', value)
+                else:
+                    runner.message_hub.update_info(f'val/{key}', value)
 
     def after_test_epoch(self,
                          runner,
@@ -128,4 +152,7 @@ class RuntimeInfoHook(Hook):
         """
         if metrics is not None:
             for key, value in metrics.items():
-                runner.message_hub.update_scalar(f'test/{key}', value)
+                if _is_scalar(value):
+                    runner.message_hub.update_scalar(f'test/{key}', value)
+                else:
+                    runner.message_hub.update_info(f'test/{key}', value)

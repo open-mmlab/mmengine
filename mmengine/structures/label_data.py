@@ -16,7 +16,7 @@ class LabelData(BaseDataElement):
             onehot (torch.Tensor, optional): The one-hot input. The format
                 of input must be one-hot.
 
-        Return:
+        Returns:
             torch.Tensor: The converted results.
         """
         assert isinstance(onehot, torch.Tensor)
@@ -36,7 +36,7 @@ class LabelData(BaseDataElement):
                 of item must be label-format.
             num_classes (int): The number of classes.
 
-        Return:
+        Returns:
             torch.Tensor: The converted results.
         """
         assert isinstance(label, torch.Tensor)

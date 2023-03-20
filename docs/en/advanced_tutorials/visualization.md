@@ -26,7 +26,9 @@ import torch
 import mmcv
 from mmengine.visualization import Visualizer
 
-image = mmcv.imread('docs/en/_static/image/cat_dog.png', channel_order='rgb')
+# https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/en/_static/image/cat_and_dog.png
+image = mmcv.imread('docs/en/_static/image/cat_and_dog.png',
+                    channel_order='rgb')
 visualizer = Visualizer(image=image)
 # single bbox formatted as [xyxy]
 visualizer.draw_bboxes(torch.tensor([72, 13, 179, 147]))
@@ -53,7 +55,9 @@ You can also customize things like color and width using the parameters in each 
 
 ```python
 visualizer.set_image(image=image)
-visualizer.draw_bboxes(torch.tensor([72, 13, 179, 147]), edge_colors='r', line_widths=3)
+visualizer.draw_bboxes(torch.tensor([72, 13, 179, 147]),
+                       edge_colors='r',
+                       line_widths=3)
 visualizer.draw_bboxes(torch.tensor([[33, 120, 209, 220]]),line_styles='--')
 visualizer.show()
 ```
@@ -70,7 +74,8 @@ These APIs can be called multiple times to get an overlay result.
 visualizer.set_image(image=image)
 visualizer.draw_bboxes(torch.tensor([[33, 120, 209, 220], [72, 13, 179, 147]]))
 visualizer.draw_texts("cat and dog",
-                      torch.tensor([10, 20])).draw_circles(torch.tensor([40, 50]), torch.tensor([20]))
+                      torch.tensor([10, 20])).draw_circles(torch.tensor([40, 50]),
+                      torch.tensor([20]))
 visualizer.show()
 ```
 
@@ -84,13 +89,23 @@ Feature map visualization has many functions. Currently, we only support single 
 
 ```python
 @staticmethod
-def draw_featmap(featmap: torch.Tensor, # input format must be CHW
-                 overlaid_image: Optional[np.ndarray] = None, # if image data is input at the same time, the feature map will be overlaid on the image
-                 channel_reduction: Optional[str] = 'squeeze_mean', # strategy to reduce multiple channels into a single channel
-                 topk: int = 10, # topk feature maps to show
-                 arrangement: Tuple[int, int] = (5, 2), # the layout when multiple channels are expanded into multiple images
-                 resize_shape：Optional[tuple] = None, # scale the feature map
-                 alpha: float = 0.5) -> np.ndarray: # overlay ratio between input image and generated feature map
+def draw_featmap(
+    # input format must be CHW
+    featmap: torch.Tensor,
+    # if image data is input at the same time,
+    # the feature map will be overlaid on the image
+    overlaid_image: Optional[np.ndarray] = None,
+    # strategy to reduce multiple channels into a single channel
+    channel_reduction: Optional[str] = 'squeeze_mean',
+    # topk feature maps to show
+    topk: int = 10,
+    # the layout when multiple channels are expanded into multiple images
+    arrangement: Tuple[int, int] = (5, 2),
+    # scale the feature map
+    resize_shape: Optional[tuple] = None,
+    # overlay ratio between input image and generated feature map
+    alpha: float = 0.5,
+) -> np.ndarray:
 ```
 
 The main features can be concluded as follows:
@@ -169,7 +184,8 @@ visualizer.show(drawn_img)
 2. Select the top five channels with the highest activation in the multi-channel feature map by setting `topk=5`, then format them into a 2x3 layout.
 
 ```python
-drawn_img = visualizer.draw_featmap(feat, image, channel_reduction=None, topk=5, arrangement=(2, 3))
+drawn_img = visualizer.draw_featmap(feat, image, channel_reduction=None,
+                                    topk=5, arrangement=(2, 3))
 visualizer.show(drawn_img)
 ```
 
@@ -180,7 +196,8 @@ visualizer.show(drawn_img)
 Users can set their own desired layout through `arrangement`.
 
 ```python
-drawn_img = visualizer.draw_featmap(feat, image, channel_reduction=None, topk=5, arrangement=(4, 2))
+drawn_img = visualizer.draw_featmap(feat, image, channel_reduction=None,
+                                    topk=5, arrangement=(4, 2))
 visualizer.show(drawn_img)
 ```
 
@@ -197,8 +214,9 @@ Once the drawing is completed, users can choose to display the result directly o
 Suppose you want to save to your local device.
 
 ```python
-visualizer = Visualizer(image=image, vis_backends=[dict(type='LocalVisBackend')], save_dir='temp_dir')
-
+visualizer = Visualizer(image=image,
+                        vis_backends=[dict(type='LocalVisBackend')],
+                        save_dir='temp_dir')
 visualizer.draw_bboxes(torch.tensor([[33, 120, 209, 220], [72, 13, 179, 147]]))
 visualizer.draw_texts("cat and dog", torch.tensor([10, 20]))
 visualizer.draw_circles(torch.tensor([40, 50]), torch.tensor([20]))
@@ -220,16 +238,22 @@ If you want to switch to other backends, you can change the configuration file l
 
 ```python
 # TensorboardVisBackend
-visualizer = Visualizer(image=image, vis_backends=[dict(type='TensorboardVisBackend')], save_dir='temp_dir')
+visualizer = Visualizer(image=image,
+                        vis_backends=[dict(type='TensorboardVisBackend')],
+                        save_dir='temp_dir')
 # WandbVisBackend
-visualizer = Visualizer(image=image, vis_backends=[dict(type='WandbVisBackend')], save_dir='temp_dir')
+visualizer = Visualizer(image=image,
+                        vis_backends=[dict(type='WandbVisBackend')],
+                        save_dir='temp_dir')
 ```
 
 2. Store feature maps
 
 ```python
-visualizer = Visualizer(vis_backends=[dict(type='LocalVisBackend')], save_dir='temp_dir')
-drawn_img = visualizer.draw_featmap(feat, image, channel_reduction=None, topk=5, arrangement=(2, 3))
+visualizer = Visualizer(vis_backends=[dict(type='LocalVisBackend')],
+                        save_dir='temp_dir')
+drawn_img = visualizer.draw_featmap(feat, image, channel_reduction=None,
+                                    topk=5, arrangement=(2, 3))
 # temp_dir/vis_data/vis_image/feat_0.png will be generated
 visualizer.add_image('feat', drawn_img)
 ```
@@ -267,8 +291,9 @@ visualizer.add_config(cfg)
 Any `Visualizer` can be configured with any number of storage backends. `Visualizer` will loop through all the configured backends and save the results to each one.
 
 ```python
-visualizer = Visualizer(image=image, vis_backends=[dict(type='TensorboardVisBackend'),
-                                                   dict(type='LocalVisBackend')],
+visualizer = Visualizer(image=image,
+                        vis_backends=[dict(type='TensorboardVisBackend'),
+                                      dict(type='LocalVisBackend')],
                         save_dir='temp_dir')
 # temp_dir/vis_data/events.out.tfevents.xxx files will be generated
 visualizer.draw_bboxes(torch.tensor([[33, 120, 209, 220], [72, 13, 179, 147]]))
@@ -281,10 +306,14 @@ visualizer.add_image('demo', visualizer.get_image())
 Note: If there are multiple backends used at the same time, the `name` field must be specified. Otherwise, it is impossible to distinguish which backend it is.
 
 ```python
-visualizer = Visualizer(image=image, vis_backends=[dict(type='TensorboardVisBackend', name='tb_1', save_dir='temp_dir_1'),
-                                                   dict(type='TensorboardVisBackend', name='tb_2', save_dir='temp_dir_2'),
-                                                   dict(type='LocalVisBackend', name='local')],
-                        save_dir='temp_dir')
+visualizer = Visualizer(
+    image=image,
+    vis_backends=[
+        dict(type='TensorboardVisBackend', name='tb_1', save_dir='temp_dir_1'),
+        dict(type='TensorboardVisBackend', name='tb_2', save_dir='temp_dir_2'),
+        dict(type='LocalVisBackend', name='local')
+    ],
+    save_dir='temp_dir')
 ```
 
 ## Visualize at Anywhere
@@ -295,7 +324,10 @@ Users only need to instantiate the visualizer through `get_instance` during init
 
 ```python
 # call during the initialization stage
-visualizer1 = Visualizer.get_instance(name='vis', vis_backends=[dict(type='LocalVisBackend')])
+visualizer1 = Visualizer.get_instance(
+    name='vis',
+    vis_backends=[dict(type='LocalVisBackend')]
+)
 
 # call anywhere
 visualizer2 = Visualizer.get_current_instance()
@@ -309,10 +341,9 @@ It can also be initialized globally through the config field.
 ```python
 from mmengine.registry import VISUALIZERS
 
-visualizer_cfg=dict(
-                type='Visualizer',
-                name='vis_new',
-                vis_backends=[dict(type='LocalVisBackend')])
+visualizer_cfg = dict(type='Visualizer',
+                      name='vis_new',
+                      vis_backends=[dict(type='LocalVisBackend')])
 VISUALIZERS.build(visualizer_cfg)
 ```
 
@@ -325,7 +356,8 @@ The storage backend only provides basic functions such as saving configurations 
 For example, WandB provides an API to display tables. Users can obtain the WandB objects through the `experiment` attribute and then call a specific API to save the data as a table to show.
 
 ```python
-visualizer = Visualizer(image=image, vis_backends=[dict(type='WandbVisBackend')],
+visualizer = Visualizer(image=image,
+                        vis_backends=[dict(type='WandbVisBackend')],
                         save_dir='temp_dir')
 
 # get WandB object
@@ -352,7 +384,8 @@ class DemoVisBackend(BaseVisBackend):
     def add_image(self, **kwargs):
         pass
 
-visualizer = Visualizer(vis_backends=[dict(type='DemoVisBackend')], save_dir='temp_dir')
+visualizer = Visualizer(vis_backends=[dict(type='DemoVisBackend')],
+                        save_dir='temp_dir')
 visualizer.add_image('demo',image)
 ```
 
@@ -378,8 +411,9 @@ class DetLocalVisualizer(Visualizer):
                        step: int = 0) -> None:
         pass
 
-visualizer_cfg = dict(
-    type='DetLocalVisualizer', vis_backends=[dict(type='WandbVisBackend')], name='visualizer')
+visualizer_cfg = dict(type='DetLocalVisualizer',
+                      vis_backends=[dict(type='WandbVisBackend')],
+                      name='visualizer')
 
 # global initialize
 VISUALIZERS.build(visualizer_cfg)

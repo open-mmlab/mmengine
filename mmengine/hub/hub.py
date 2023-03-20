@@ -75,6 +75,8 @@ def get_model(cfg_path: str, pretrained: bool = False, **kwargs):
     package = cfg_path.split('::')[0]
     with DefaultScope.overwrite_default_scope(package):  # type: ignore
         cfg = get_config(cfg_path, pretrained)
+        if 'data_preprocessor' in cfg:
+            cfg.model.data_preprocessor = cfg.data_preprocessor
         models_module = importlib.import_module(f'{package}.utils')
         models_module.register_all_modules()  # type: ignore
         model = MODELS.build(cfg.model, default_args=kwargs)

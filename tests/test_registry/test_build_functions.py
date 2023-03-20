@@ -189,7 +189,7 @@ def test_build_model_from_cfg():
 
 
 @pytest.mark.skipif(not is_installed('torch'), reason='tests requires torch')
-def test_build_sheduler_from_cfg():
+def test_build_scheduler_from_cfg():
     import torch.nn as nn
     from torch.optim import SGD
     model = nn.Conv2d(1, 1, 1)
@@ -200,9 +200,9 @@ def test_build_sheduler_from_cfg():
         param_name='lr',
         begin=0,
         end=100)
-    sheduler = PARAM_SCHEDULERS.build(cfg)
-    assert sheduler.begin == 0
-    assert sheduler.end == 100
+    scheduler = PARAM_SCHEDULERS.build(cfg)
+    assert scheduler.begin == 0
+    assert scheduler.end == 100
 
     cfg = dict(
         type='LinearParamScheduler',
@@ -213,6 +213,6 @@ def test_build_sheduler_from_cfg():
         end=100,
         epoch_length=10)
 
-    sheduler = PARAM_SCHEDULERS.build(cfg)
-    assert sheduler.begin == 0
-    assert sheduler.end == 1000
+    scheduler = PARAM_SCHEDULERS.build(cfg)
+    assert scheduler.begin == 0
+    assert scheduler.end == 1000

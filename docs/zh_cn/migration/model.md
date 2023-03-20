@@ -18,7 +18,7 @@ MMCV 早期支持的计算机视觉任务，例如目标检测、物体识别等
 
 ## 优化流程的迁移
 
-### 统一的参数更新流程
+### 常用的参数更新流程
 
 考虑到目标检测、物体识别一类的深度学习任务参数优化的流程基本一致，我们可以通过继承[模型基类](../tutorials/model.md)来完成迁移。
 
@@ -147,7 +147,7 @@ MMEngine 实现了模型基类，模型基类在 `train_step` 里实现了 `Opti
     <th>MMEngine 模型</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
 ```python
 class MMCVToyModel(nn.Module):
@@ -174,8 +174,9 @@ class MMCVToyModel(nn.Module):
         return self(*data, return_loss=False)
 ```
 
-</td>
-  <td valign="top">
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
 ```python
 class MMEngineToyModel(BaseModel):
@@ -193,7 +194,6 @@ class MMEngineToyModel(BaseModel):
         elif mode == 'predict':
             return [_feat for _feat in feat]
         else:
-            # tensor 模式，功能详见模型教程文档： tutorials/model.md
             pass
 
     # 模型基类 `train_step` 等效代码
@@ -203,81 +203,45 @@ class MMEngineToyModel(BaseModel):
     #     loss_dict['loss1'] = loss_dict['loss1'].sum()
     #     loss_dict['loss2'] = loss_dict['loss2'].sum()
     #     loss = (loss_dict['loss1'] + loss_dict['loss2']).sum()
-    # 调用优化器封装更新模型参数
+    #     调用优化器封装更新模型参数
     #     optim_wrapper.update_params(loss)
     #     return loss_dict
 ```
 
-</td>
+</div>
+  </td>
 </tr>
 </thead>
 </table>
 
-关于等效代码中的[数据处理器（data_preprocessor）](mmengine.model.BaseDataPreprocessor) 和[优化器封装（optim_wrapper）](mmengine.optim.OptimWrapper) 的说明，详见[模型教程](../tutorials/model.md#数据处理器（DataPreprocessor）)和[优化器封装教程](../tutorials/optim_wrapper.md)。
+关于等效代码中的[数据处理器（data_preprocessor）](mmengine.model.BaseDataPreprocessor)和[优化器封装（optim_wrapper）](mmengine.optim.OptimWrapper)的说明，详见[模型教程](../tutorials/model.md#数据预处理器datapreprocessor)和[优化器封装教程](../tutorials/optim_wrapper.md)。
 
 模型具体差异如下：
 
 - `MMCVToyModel` 继承自 `nn.Module`，而 `MMEngineToyModel` 继承自 `BaseModel`
 - `MMCVToyModel` 必须实现 `train_step`，且必须返回损失字典，损失字典包含 `loss` 和 `log_vars` 和 `num_samples` 字段。`MMEngineToyModel` 继承自 `BaseModel`，只需要实现 `forward` 接口，并返回损失字典，损失字典的每一个值必须是可微的张量
 - `MMCVToyModel` 和 `MMEngineModel` 的 `forward` 的接口需要匹配 `train_step` 中的调用方式，由于 `MMEngineToyModel` 直接调用基类的 `train_step` 方法，因此 `forward` 需要接受参数 `mode`，具体规则详见[模型教程文档](../tutorials/model.md)
-- `MMEngineModel` 如果没有继承 `BaseModel`，必须实现 `train_step` 方法。
 
 ### 自定义的参数更新流程
 
 以训练生成对抗网络为例，生成器和判别器的优化需要交替进行，且优化流程可能会随着迭代次数的增多发生变化，因此很难使用 `OptimizerHook` 来满足这种需求。在基于 MMCV 训练生成对抗网络时，通常会在模型的 `train_step` 接口中传入 `optimizer`，然后在 `train_step` 里实现自定义的参数更新逻辑。这种训练流程和 MMEngine 非常相似，只不过 MMEngine 在 `train_step` 接口中传入[优化器封装](../tutorials/optim_wrapper.md)，能够更加简单地优化模型。
 
-参考[训练生成对抗网络](../examples/train_a_gan.md)，如果用 MMCV 进行训练，`GAN` 的模型优化接口如下：
-
-```python
-    def train_discriminator(
-            self, inputs, data_sample,
-            optimizer):
-        real_imgs = inputs['inputs']
-        z = torch.randn((real_imgs.shape[0], self.noise_size))
-        with torch.no_grad():
-            fake_imgs = self.generator(z)
-
-        disc_pred_fake = self.discriminator(fake_imgs)
-        disc_pred_real = self.discriminator(real_imgs)
-
-        parsed_losses, log_vars = self.disc_loss(disc_pred_fake,
-                                                 disc_pred_real)
-        parsed_losses.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-        return log_vars
-
-    def train_generator(self, inputs, data_sample, optimizer_wrapper):
-        z = torch.randn(inputs['inputs'].shape[0], self.noise_size)
-
-        fake_imgs = self.generator(z)
-
-        disc_pred_fake = self.discriminator(fake_imgs)
-        parsed_loss, log_vars = self.gen_loss(disc_pred_fake)
-
-        parsed_losses.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-        return log_vars
-```
-
-对比 MMEngine 的实现：
+参考[训练生成对抗网络](../examples/train_a_gan.md)，MMCV 和 MMEngine 的对比实现如下：
 
 <table class="docutils">
 <thead>
   <tr>
-    <th>MMCV 优化 GAN</th>
-    <th>MMEngine 优化 GAN</th>
+    <th>Training gan in MMCV</th>
+    <th>Training gan in MMEngine</th>
 <tbody>
   <tr>
-  <td valign="top">
+  <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
 ```python
-    def train_discriminator(
-            self, inputs, data_sample,
-            optimizer):
+    def train_discriminator(self, inputs, optimizer):
         real_imgs = inputs['inputs']
-        z = torch.randn((real_imgs.shape[0], self.noise_size))
+        z = torch.randn(
+            (real_imgs.shape[0], self.noise_size)).type_as(real_imgs)
         with torch.no_grad():
             fake_imgs = self.generator(z)
 
@@ -291,8 +255,10 @@ class MMEngineToyModel(BaseModel):
         optimizer.zero_grad()
         return log_vars
 
-    def train_generator(self, inputs, data_sample, optimizer_wrapper):
-        z = torch.randn(inputs['inputs'].shape[0], self.noise_size)
+    def train_generator(self, inputs, optimizer_wrapper):
+        real_imgs = inputs['inputs']
+        z = torch.randn(inputs['inputs'].shape[0], self.noise_size).type_as(
+            real_imgs)
 
         fake_imgs = self.generator(z)
 
@@ -306,14 +272,14 @@ class MMEngineToyModel(BaseModel):
 ```
 
 </td>
-  <td valign="top">
+  </div>
+  <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
 ```python
-    def train_discriminator(
-            self, inputs, data_sample,
-            optimizer_wrapper):
+    def train_discriminator(self, inputs, optimizer_wrapper):
         real_imgs = inputs['inputs']
-        z = torch.randn((real_imgs.shape[0], self.noise_size))
+        z = torch.randn(
+            (real_imgs.shape[0], self.noise_size)).type_as(real_imgs)
         with torch.no_grad():
             fake_imgs = self.generator(z)
 
@@ -327,8 +293,9 @@ class MMEngineToyModel(BaseModel):
 
 
 
-    def train_generator(self, inputs, data_sample, optimizer_wrapper):
-        z = torch.randn(inputs['inputs'].shape[0], self.noise_size)
+    def train_generator(self, inputs, optimizer_wrapper):
+        real_imgs = inputs['inputs']
+        z = torch.randn(real_imgs.shape[0], self.noise_size).type_as(real_imgs)
 
         fake_imgs = self.generator(z)
 
@@ -340,11 +307,12 @@ class MMEngineToyModel(BaseModel):
 ```
 
 </td>
+  </div>
 </tr>
 </thead>
 </table>
 
-二者的区别主要在于优化器的使用方式。此外，`train_step` 接口返回值的差异和[上一节](参数更新流程统一的深度学习任务)提到的一致。
+二者的区别主要在于优化器的使用方式。此外，`train_step` 接口返回值的差异和[上一节](#常用的参数更新流程)提到的一致。
 
 ## 验证/测试流程的迁移
 
@@ -372,7 +340,7 @@ MMCV 需要在执行器构建之前,使用 `MMDistributedDataParallel` 对模型
 
 1. **常用训练流程**
 
-   对于[简介](简介)中提到的常用优化流程的训练任务，即一次参数更新可以被拆解成梯度计算、参数优化、梯度清零的任务，使用 Runner 默认的 `MMDistributedDataParallel` 即可满足需求，无需为 runner 其他额外参数。
+   对于[简介](#简介)中提到的常用优化流程的训练任务，即一次参数更新可以被拆解成梯度计算、参数优化、梯度清零的任务，使用 Runner 默认的 `MMDistributedDataParallel` 即可满足需求，无需为 runner 其他额外参数。
 
    <table class="docutils">
     <thead>
@@ -381,55 +349,57 @@ MMCV 需要在执行器构建之前,使用 `MMDistributedDataParallel` 对模型
         <th>MMEngine 分布式训练</th>
     <tbody>
     <tr>
-    <td valign="top">
 
-   ```python
-   model = MMDistributedDataParallel(
-       model,
-       device_ids=[int(os.environ['LOCAL_RANK'])],
-       broadcast_buffers=False,
-       find_unused_parameters=find_unused_parameters)
-   ...
-   runner = Runner(model=model, ...)
-   ```
+<td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
-   </td>
-    <td valign="top">
+```python
+model = MMDistributedDataParallel(
+    model,
+    device_ids=[int(os.environ['LOCAL_RANK'])],
+    broadcast_buffers=False,
+    find_unused_parameters=find_unused_parameters)
+...
+runner = Runner(model=model, ...)
+```
 
-   ```python
-   runner = Runner(
-       model=model,
-       launcher='pytorch', #开启分布式训练
-       ..., # 其他参数
-   )
-   ```
+</div>
+  </td>
+  <td valign="top" class='two-column-table-wrapper'><div style="overflow-x: auto">
 
-   </td>
-    </tr>
-    </thead>
-    </table>
+```python
+runner = Runner(
+    model=model,
+    launcher='pytorch', #开启分布式训练
+    ..., # 其他参数
+)
+```
+
+</div>
+  </td>
+  </tr>
+</thead>
+</table>
 
 &#160;
 
-2. **分模块优化的学习任务**
+2. **以自定义流程分模块优化模型的学习任务**
 
    同样以训练生成对抗网络为例，生成对抗网络有两个需要分别优化的子模块，即生成器和判别器。因此需要使用 `MMSeparateDistributedDataParallel` 对模型进行封装。我们需要在构建执行器时指定：
 
    ```python
-   cfg = dict(model_wrapper_cfg=dict(type='MMSeparateDistributedDataParallel'))
+   cfg = dict(model_wrapper_cfg='MMSeparateDistributedDataParallel')
    runner = Runner(
        model=model,
-       ..., # 其他配置
+       ...,
        launcher='pytorch',
-       cfg=cfg # 模型封装配置
-   )
+       cfg=cfg)
    ```
 
    即可进行分布式训练。
 
 &#160;
 
-3. **单模块优化、自定义流程的深度学习任务**
+3. **以自定义流程优化整个模型的深度学习任务**
 
    有时候我们需要用自定义的优化流程来优化单个模块，这时候我们就不能复用模型基类的 `train_step`，而需要重新实现，例如我们想用同一批图片对模型优化两次，第一次开启批数据增强，第二次关闭：
 
@@ -466,8 +436,8 @@ MMCV 需要在执行器构建之前,使用 `MMDistributedDataParallel` 对模型
    cfg = dict(model_wrapper_cfg=dict(type='CustomDistributedDataParallel'))
    runner = Runner(
        model=model,
-       ..., # 其他配置
+       ...,
        launcher='pytorch',
-       cfg=cfg # 模型封装配置
+       cfg=cfg
    )
    ```

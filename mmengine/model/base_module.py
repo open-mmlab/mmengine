@@ -1,11 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import logging
-import warnings
 from abc import ABCMeta
 from collections import defaultdict
 from logging import FileHandler
-from typing import Iterable, Optional
+from typing import Iterable, List, Optional, Union
 
 import torch.nn as nn
 
@@ -26,11 +25,17 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
     - ``_params_init_info``: Used to track the parameter initialization
       information. This attribute only exists during executing the
       ``init_weights``.
+
+    Note:
+        :obj:`PretrainedInit` has a higher priority than any other
+        initializer. The loaded pretrained weights will overwrite
+        the previous initialized weights.
+
     Args:
-        init_cfg (dict, optional): Initialization config dict.
+        init_cfg (dict or List[dict], optional): Initialization config dict.
     """
 
-    def __init__(self, init_cfg=None):
+    def __init__(self, init_cfg: Union[dict, List[dict], None] = None):
         """Initialize BaseModule, inherited from `torch.nn.Module`"""
 
         # NOTE init_cfg can be defined in different levels, but init_cfg
@@ -90,24 +95,32 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
             for sub_module in self.modules():
                 sub_module._params_init_info = self._params_init_info
 
-        logger = MMLogger.get_current_instance()
-        logger_name = logger.instance_name
-
         module_name = self.__class__.__name__
         if not self._is_init:
             if self.init_cfg:
                 print_log(
                     f'initialize {module_name} with init_cfg {self.init_cfg}',
-                    logger=logger_name,
+                    logger='current',
                     level=logging.DEBUG)
-                initialize(self, self.init_cfg)
+
+                init_cfgs = self.init_cfg
                 if isinstance(self.init_cfg, dict):
-                    # prevent the parameters of
-                    # the pre-trained model
-                    # from being overwritten by
-                    # the `init_weights`
-                    if self.init_cfg['type'] == 'Pretrained':
-                        return
+                    init_cfgs = [self.init_cfg]
+
+                # PretrainedInit has higher priority than any other init_cfg.
+                # Therefore we initialize `pretrained_cfg` last to overwrite
+                # the previous initialized weights.
+                # See details in https://github.com/open-mmlab/mmengine/issues/691 # noqa E501
+                other_cfgs = []
+                pretrained_cfg = []
+                for init_cfg in init_cfgs:
+                    assert isinstance(init_cfg, dict)
+                    if init_cfg['type'] == 'Pretrained':
+                        pretrained_cfg.append(init_cfg)
+                    else:
+                        other_cfgs.append(init_cfg)
+
+                initialize(self, other_cfgs)
 
             for m in self.children():
                 if hasattr(m, 'init_weights'):
@@ -118,14 +131,17 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                         init_info=f'Initialized by '
                         f'user-defined `init_weights`'
                         f' in {m.__class__.__name__} ')
-
+            if self.init_cfg and pretrained_cfg:
+                initialize(self, pretrained_cfg)
             self._is_init = True
         else:
-            warnings.warn(f'init_weights of {self.__class__.__name__} has '
-                          f'been called more than once.')
+            print_log(
+                f'init_weights of {self.__class__.__name__} has '
+                f'been called more than once.',
+                logger='current',
+                level=logging.WARNING)
 
         if is_top_level_module:
-            # self._dump_init_info(logger_name)
             self._dump_init_info()
 
             for sub_module in self.modules():
@@ -134,14 +150,9 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
     @master_only
     def _dump_init_info(self):
         """Dump the initialization information to a file named
-        `initialization.log.json` in workdir.
-
-        Args:
-            logger_name (str): The name of logger.
-        """
+        `initialization.log.json` in workdir."""
 
         logger = MMLogger.get_current_instance()
-        logger_name = logger.instance_name
         with_file_handler = False
         # dump the information to the logger file if there is a `FileHandler`
         for handler in logger.handlers:
@@ -156,10 +167,9 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                 with_file_handler = True
         if not with_file_handler:
             for name, param in self.named_parameters():
-                print_log(
+                logger.info(
                     f'\n{name} - {param.shape}: '
-                    f"\n{self._params_init_info[param]['init_info']} \n ",
-                    logger=logger_name)
+                    f"\n{self._params_init_info[param]['init_info']} \n ")
 
     def __repr__(self):
         s = super().__repr__()
