@@ -1,5 +1,21 @@
 # Changelog of v0.x
 
+## v0.7.1 (03/20/2023)
+
+### Highlights
+
+- Support compiling the model and enabling mixed-precision training at the same time.
+
+### New Features & Enhancements
+
+- Add `mmpretrain` to the `MODULE2PACKAGE`. by @mzr1996 in https://github.com/open-mmlab/mmengine/pull/1002
+- Unify the use of `print_log` and `logger.info(warning)` by @LEFTeyex in https://github.com/open-mmlab/mmengine/pull/997
+- Support using `get_device` in the compiled model by @C1rN09 in https://github.com/open-mmlab/mmengine/pull/1004
+
+### Contributors
+
+A total of 3 developers contributed to this release. Thanks [@LEFTeyex](https://github.com/LEFTeyex), [@mzr1996](https://github.com/mzr1996), [@C1rN09](https://github.com/C1rN09)
+
 ## v0.7.0 (03/16/2023)
 
 ### Highlights

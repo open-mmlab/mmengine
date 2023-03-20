@@ -80,14 +80,13 @@ MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的�
 
 ## 最近进展
 
-最新版本 v0.7.0 在 2023.03.16 发布。
+最新版本 v0.7.1 在 2023.03.20 发布。
 
 亮点：
 
-- 支持 PyTorch 2.0！通过编译模型实现训练加速，参考[编译模型文档](https://mmengine.readthedocs.io/en/latest/common_usage/speed_up_training.html#model-compilation)抢先体验
-- 新增 `EarlyStoppingHook`，当监控的指标不再提升时，自动停止训练
+- 支持在编译模型的同时开启混合精度训练
 
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v070-03162023)
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v071-03202023)
 
 ## 安装
 

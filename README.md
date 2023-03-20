@@ -80,14 +80,13 @@ Major features:
 
 ## What's New
 
-v0.7.0 was released on 2023-03-16.
+v0.7.1 was released on 2023-03-20.
 
 Highlights:
 
-- Support PyTorch 2.0! Accelerate training by compiling models. See the tutorial [Model Compilation](https://mmengine.readthedocs.io/en/latest/common_usage/speed_up_training.html#model-compilation) for details
-- Add `EarlyStoppingHook` to stop training when the metric does not improve
+- Support compiling the model and enabling mixed-precision training at the same time.
 
-Read [Changelog](./docs/en/notes/changelog.md#v070-03162023) for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v071-03202023) for more details.
 
 ## Installation
 
