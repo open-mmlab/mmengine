@@ -8,6 +8,7 @@ import torch.nn as nn
 
 from mmengine.dist import all_gather
 from mmengine.hooks import SyncBuffersHook
+from mmengine.registry import MODELS
 from mmengine.testing._internal import MultiProcessTestCase
 from mmengine.testing.runner_test_case import RunnerTestCase, ToyModel
 
@@ -33,6 +34,7 @@ class TestSyncBuffersHook(MultiProcessTestCase, RunnerTestCase):
         self._spawn_processes()
 
     def prepare_subprocess(self):
+        MODELS.register_module(module=ToyModuleWithNorm, force=True)
         super(MultiProcessTestCase, self).setUp()
 
     def test_sync_buffers_hook(self):
@@ -55,7 +57,7 @@ class TestSyncBuffersHook(MultiProcessTestCase, RunnerTestCase):
     def test_with_runner(self):
         self.setup_dist_env()
         cfg = self.epoch_based_cfg
-        cfg.model = dict(type=ToyModuleWithNorm)
+        cfg.model = dict(type='ToyModuleWithNorm')
         cfg.launch = 'pytorch'
         cfg.custom_hooks = [dict(type='SyncBuffersHook')]
         runner = self.build_runner(cfg)
