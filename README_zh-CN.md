@@ -60,15 +60,14 @@ MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的�
 
 ## 最近进展
 
-最新版本 v0.5.0 在 2023.01.20 发布。
+最新版本 v0.7.0 在 2023.03.16 发布。
 
 亮点：
 
-- 新增 `BaseInferencer` 以提供通用的推理接口
-- 新增 `ReduceOnPlateauParamScheduler` 以实现根据 metric 变化自动调整学习率或动量
-- MMEngine 不再维护对 Python3.6 的支持
+- 支持 PyTorch 2.0！通过编译模型实现训练加速，参考[编译模型文档](https://mmengine.readthedocs.io/en/latest/common_usage/speed_up_training.html#model-compilation)抢先体验
+- 新增 `EarlyStoppingHook`，当监控的指标不再提升时，自动停止训练
 
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v050-01202023)
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v070-03162023)
 
 ## 安装
 
@@ -292,6 +291,19 @@ runner.train()
 ## 贡献指南
 
 我们感谢所有的贡献者为改进和提升 MMEngine 所作出的努力。请参考[贡献指南](CONTRIBUTING_zh-CN.md)来了解参与项目贡献的相关指引。
+
+## 引用
+
+如果您觉得 MMEngine 对您的研究有所帮助，请考虑引用它：
+
+```
+@article{mmengine2022,
+  title   = {{MMEngine}: OpenMMLab Foundational Library for Training Deep Learning Models},
+  author  = {MMEngine Contributors},
+  howpublished = {\url{https://github.com/open-mmlab/mmengine}},
+  year={2022}
+}
+```
 
 ## 开源许可证
 

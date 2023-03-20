@@ -209,13 +209,16 @@ def einsum_flop_jit(inputs: List[Any], outputs: List[Any]) -> Union[int, Any]:
 
 def matmul_flop_jit(inputs: List[Any], outputs: List[Any]) -> Union[int, Any]:
     """Count flops for matmul."""
-    # Inputs should be a list of length 2.
-    # Inputs contains the shapes of two matrices.
-    input_shapes = [get_shape(v) for v in inputs]
-    assert len(input_shapes) == 2, input_shapes
-    assert input_shapes[0][-1] == input_shapes[1][  # type: ignore
-        -2], input_shapes  # type: ignore
-    flop = prod(input_shapes[0]) * input_shapes[-1][-1]  # type: ignore
+    # input_shapes is a list of length 2.
+    input_shapes: list = [get_shape(v) for v in inputs]
+    input1, input2 = input_shapes
+    if len(input1) == 1:
+        input1 = [1, input1[0]]
+    if len(input2) == 1:
+        input2 = [input2[0], 1]
+
+    assert input1[-1] == input2[-2], input_shapes
+    flop = prod(input1) * input2[-1]
     return flop
 
 

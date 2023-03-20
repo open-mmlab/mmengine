@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 
 import mmengine
 from mmengine.config import Config, ConfigDict
-from mmengine.dataset import COLLATE_FUNCTIONS, worker_init_fn
+from mmengine.dataset import worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
                            is_distributed, master_only)
@@ -31,10 +31,10 @@ from mmengine.model import (MMDistributedDataParallel, convert_sync_batchnorm,
                             is_model_wrapper, revert_sync_batchnorm)
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
-from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, HOOKS,
-                               LOG_PROCESSORS, LOOPS, MODEL_WRAPPERS, MODELS,
-                               OPTIM_WRAPPERS, PARAM_SCHEDULERS, RUNNERS,
-                               VISUALIZERS, DefaultScope)
+from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, FUNCTIONS,
+                               HOOKS, LOG_PROCESSORS, LOOPS, MODEL_WRAPPERS,
+                               MODELS, OPTIM_WRAPPERS, PARAM_SCHEDULERS,
+                               RUNNERS, VISUALIZERS, DefaultScope)
 from mmengine.utils import digit_version, get_git_hash, is_seq_of
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
                                      set_multi_processing)
@@ -179,6 +179,14 @@ class Runner:
             Defaults to None.
         cfg (dict or Configdict or :obj:`Config`, optional): Full config.
             Defaults to None.
+
+    Note:
+        Since PyTorch 2.0.0, you can enable ``torch.compile`` by passing in
+        `cfg.compile = True`. If you want to control compile options, you
+        can pass a dict, e.g. ``cfg.compile = dict(backend='eager')``.
+        Refer to `PyTorch API Documentation <https://pytorch.org/docs/
+        master/generated/torch.compile.html#torch.compile>`_ for more valid
+        options.
 
     Examples:
         >>> from mmengine.runner import Runner
@@ -1078,7 +1086,7 @@ class Runner:
             else:
                 # if `optimizer` is not defined, it should be the case of
                 # training with multiple optimizers. If `constructor` is not
-                # defined either, Each value of `optim_wrapper` must be an
+                # defined either, each value of `optim_wrapper` must be an
                 # `OptimWrapper` instance since `DefaultOptimizerConstructor`
                 # will not handle the case of training with multiple
                 # optimizers. `build_optim_wrapper` will directly build the
@@ -1387,8 +1395,11 @@ class Runner:
         # `persistent_workers` requires pytorch version >= 1.7
         if ('persistent_workers' in dataloader_cfg
                 and digit_version(TORCH_VERSION) < digit_version('1.7.0')):
-            warnings.warn('`persistent_workers` is only available when '
-                          'pytorch version >= 1.7')
+            print_log(
+                '`persistent_workers` is only available when '
+                'pytorch version >= 1.7',
+                logger='current',
+                level=logging.WARNING)
             dataloader_cfg.pop('persistent_workers')
 
         # The default behavior of `collat_fn` in dataloader is to
@@ -1399,7 +1410,7 @@ class Runner:
         collate_fn_cfg = dataloader_cfg.pop('collate_fn',
                                             dict(type='pseudo_collate'))
         collate_fn_type = collate_fn_cfg.pop('type')
-        collate_fn = COLLATE_FUNCTIONS.get(collate_fn_type)
+        collate_fn = FUNCTIONS.get(collate_fn_type)
         collate_fn = partial(collate_fn, **collate_fn_cfg)  # type: ignore
         data_loader = DataLoader(
             dataset=dataset,
@@ -1683,6 +1694,10 @@ class Runner:
             self._train_loop.iter,  # type: ignore
             self._train_loop.max_iters)  # type: ignore
 
+        # Maybe compile the model according to options in self.cfg.compile
+        # This must be called **AFTER** model has been wrapped.
+        self._maybe_compile('train_step')
+
         model = self.train_loop.run()  # type: ignore
         self.call_hook('after_run')
         return model
@@ -1956,10 +1971,10 @@ class Runner:
         current_seed = self._randomness_cfg.get('seed')
         if resumed_seed is not None and resumed_seed != current_seed:
             if current_seed is not None:
-                warnings.warn(f'The value of random seed in the '
-                              f'checkpoint "{resumed_seed}" is '
-                              f'different from the value in '
-                              f'`randomness` config "{current_seed}"')
+                self.logger.warning(f'The value of random seed in the '
+                                    f'checkpoint "{resumed_seed}" is '
+                                    f'different from the value in '
+                                    f'`randomness` config "{current_seed}"')
             self._randomness_cfg.update(seed=resumed_seed)
             self.set_randomness(**self._randomness_cfg)
 
@@ -1970,7 +1985,7 @@ class Runner:
         # np.ndarray, which cannot be directly judged as equal or not,
         # therefore we just compared their dumped results.
         if pickle.dumps(resumed_dataset_meta) != pickle.dumps(dataset_meta):
-            warnings.warn(
+            self.logger.warning(
                 'The dataset metainfo from the resumed checkpoint is '
                 'different from the current training dataset, please '
                 'check the correctness of the checkpoint or the training '
@@ -1986,11 +2001,9 @@ class Runner:
 
         # resume param scheduler
         if resume_param_scheduler and self.param_schedulers is None:
-            print_log(
+            self.logger.warning(
                 '`resume_param_scheduler` is True but `self.param_schedulers` '
-                'is None, so skip resuming parameter schedulers',
-                logger='current',
-                level=logging.WARNING)
+                'is None, so skip resuming parameter schedulers')
             resume_param_scheduler = False
         if 'param_schedulers' in checkpoint and resume_param_scheduler:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
@@ -2082,7 +2095,7 @@ class Runner:
             by_epoch (bool): Whether the scheduled momentum is updated by
                 epochs. Defaults to True.
             backend_args (dict, optional): Arguments to instantiate the
-                preifx of uri corresponding backend. Defaults to None.
+                prefix of uri corresponding backend. Defaults to None.
                 New in v0.2.0.
         """
         if meta is None:
@@ -2147,11 +2160,9 @@ class Runner:
 
         # save param scheduler state dict
         if save_param_scheduler and self.param_schedulers is None:
-            print_log(
+            self.logger.warning(
                 '`save_param_scheduler` is True but `self.param_schedulers` '
-                'is None, so skip saving parameter schedulers',
-                logger='current',
-                level=logging.WARNING)
+                'is None, so skip saving parameter schedulers')
             save_param_scheduler = False
         if save_param_scheduler:
             if isinstance(self.param_schedulers, dict):
@@ -2280,3 +2291,28 @@ class Runner:
                          '\nRuntime environment:' + runtime_env_info + '\n' +
                          dash_line + '\n')
         self.logger.info(f'Config:\n{self.cfg.pretty_text}')
+
+    def _maybe_compile(self, target: str) -> None:
+        """Use `torch.compile` to optimize model/wrapped_model."""
+        compile_cfg = self.cfg.get('compile', None)
+        if compile_cfg is None:
+            # no compile options given, won't compile
+            return
+
+        if isinstance(compile_cfg, bool):
+            if not compile_cfg:
+                # compile=False, compilation is disabled
+                return
+            # compile=True, use default configurations
+            compile_cfg = dict()
+
+        assert digit_version(TORCH_VERSION) >= digit_version('2.0.0'), (
+            'PyTorch >= 2.0.0 is required to enable torch.compile')
+        assert isinstance(compile_cfg, dict), (
+            f'`compile` should be a dict or bool, got {type(compile_cfg)}')
+
+        func = getattr(self.model, target)
+        compiled_func = torch.compile(func, **compile_cfg)
+        setattr(self.model, target, compiled_func)
+        self.logger.info('Model has been "compiled". The first few iterations'
+                         ' will be slow, please be patient.')

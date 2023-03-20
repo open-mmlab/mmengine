@@ -140,6 +140,7 @@ def build_from_cfg(
 def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
                           registry: Registry) -> 'Runner':
     """Build a Runner object.
+
     Examples:
         >>> from mmengine.registry import Registry, build_runner_from_cfg
         >>> RUNNERS = Registry('runners', build_func=build_runner_from_cfg)

@@ -74,15 +74,14 @@ Major features:
 
 ## What's New
 
-v0.5.0 was released in 2023-01-20.
+v0.7.0 was released on 2023-03-16.
 
 Highlights:
 
-- Add `BaseInferencer` to provide a general inference interface
-- Provide `ReduceOnPlateauParamScheduler` to adjust learning rate by metric
-- Deprecate support for Python3.6
+- Support PyTorch 2.0! Accelerate training by compiling models. See the tutorial [Model Compilation](https://mmengine.readthedocs.io/en/latest/common_usage/speed_up_training.html#model-compilation) for details
+- Add `EarlyStoppingHook` to stop training when the metric does not improve
 
-Read [Changelog](./docs/en/notes/changelog.md#v050-01202023) for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v070-03162023) for more details.
 
 ## Installation
 
@@ -306,6 +305,19 @@ runner.train()
 ## Contributing
 
 We appreciate all contributions to improve MMEngine. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for the contributing guideline.
+
+## Citation
+
+If you find this project useful in your research, please consider cite:
+
+```
+@article{mmengine2022,
+  title   = {{MMEngine}: OpenMMLab Foundational Library for Training Deep Learning Models},
+  author  = {MMEngine Contributors},
+  howpublished = {\url{https://github.com/open-mmlab/mmengine}},
+  year={2022}
+}
+```
 
 ## License
 

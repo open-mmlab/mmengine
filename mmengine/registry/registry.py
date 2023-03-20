@@ -424,7 +424,7 @@ class Registry:
             >>> # hierarchical registry
             >>> DETECTORS = Registry('detector', parent=MODELS, scope='det')
             >>> # `ResNet` does not exist in `DETECTORS` but `get` method
-            >>> # will try to search from its parenet or ancestors
+            >>> # will try to search from its parents or ancestors
             >>> resnet_cls = DETECTORS.get('ResNet')
             >>> CLASSIFIER = Registry('classifier', parent=MODELS, scope='cls')
             >>> @CLASSIFIER.register_module()
