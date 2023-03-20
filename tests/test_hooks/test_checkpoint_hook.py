@@ -161,10 +161,11 @@ class TestCheckpointHook(RunnerTestCase):
         runner.train_loop._epoch = 9
 
         # if metrics is an empty dict, print a warning information
-        checkpoint_hook = CheckpointHook(
-            interval=2, by_epoch=True, save_best='auto')
-        checkpoint_hook.after_val_epoch(runner, {})
-        runner.logger.warning.assert_called_once()
+        with self.assertLogs(runner.logger, level='WARNING'):
+            checkpoint_hook = CheckpointHook(
+                interval=2, by_epoch=True, save_best='auto')
+            checkpoint_hook.after_val_epoch(runner, {})
+
         # if save_best is None,no best_ckpt meta should be stored
         checkpoint_hook = CheckpointHook(
             interval=2, by_epoch=True, save_best=None)
