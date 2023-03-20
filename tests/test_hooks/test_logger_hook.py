@@ -3,9 +3,8 @@ import copy
 import os
 import os.path as osp
 import shutil
-from unittest.mock import ANY, MagicMock
+from unittest.mock import ANY, MagicMock, call
 
-import pytest
 import torch
 
 from mmengine.fileio import load
@@ -106,13 +105,6 @@ class TestLoggerHook(RunnerTestCase):
     def test_after_val_epoch(self):
         logger_hook = LoggerHook()
         runner = MagicMock()
-        runner.log_processor.get_log_after_epoch = MagicMock(
-            return_value=(dict(), 'string'))
-        logger_hook.after_val_epoch(runner)
-        runner.log_processor.get_log_after_epoch.assert_called()
-        runner.logger.info.assert_called()
-        runner.visualizer.add_scalars.assert_called()
-
         # Test when `log_metric_by_epoch` is True
         runner.log_processor.get_log_after_epoch = MagicMock(
             return_value=({
@@ -121,14 +113,19 @@ class TestLoggerHook(RunnerTestCase):
                 'acc': 0.8
             }, 'string'))
         logger_hook.after_val_epoch(runner)
-        args = {'step': ANY, 'file_path': ANY}
+
         # expect visualizer log `time` and `metric` respectively
-        runner.visualizer.add_scalars.assert_called_with(
-            {
+        args = {'step': ANY, 'file_path': ANY}
+        calls = [
+            call({
                 'time': 1,
                 'datatime': 1,
                 'acc': 0.8
-            }, **args)
+            }, **args),
+        ]
+        self.assertEqual(
+            len(calls), len(runner.visualizer.add_scalars.mock_calls))
+        runner.visualizer.add_scalars.assert_has_calls(calls)
 
         # Test when `log_metric_by_epoch` is False
         logger_hook = LoggerHook(log_metric_by_epoch=False)
@@ -139,22 +136,23 @@ class TestLoggerHook(RunnerTestCase):
                 'acc': 0.5
             }, 'string'))
         logger_hook.after_val_epoch(runner)
+
         # expect visualizer log `time` and `metric` jointly
-        runner.visualizer.add_scalars.assert_called_with(
-            {
+        calls = [
+            call({
+                'time': 1,
+                'datatime': 1,
+                'acc': 0.8
+            }, **args),
+            call({
                 'time': 5,
                 'datatime': 5,
                 'acc': 0.5
-            }, **args)
-
-        with pytest.raises(AssertionError):
-            runner.visualizer.add_scalars.assert_any_call(
-                {
-                    'time': 5,
-                    'datatime': 5
-                }, **args)
-        with pytest.raises(AssertionError):
-            runner.visualizer.add_scalars.assert_any_call({'acc': 0.5}, **args)
+            }, **args),
+        ]
+        self.assertEqual(
+            len(calls), len(runner.visualizer.add_scalars.mock_calls))
+        runner.visualizer.add_scalars.assert_has_calls(calls)
 
     def test_after_test_epoch(self):
         logger_hook = LoggerHook()
