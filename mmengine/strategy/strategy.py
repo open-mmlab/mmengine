@@ -1,67 +1,81 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import logging
 from abc import ABC, abstractmethod
-from copy import deepcopy
-from typing import Dict, List, Optional, Union
+from enum import Enum
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
-import torch.nn as nn
-
-from mmengine.config import Config, ConfigDict
+from mmengine.logging import MMLogger
 from mmengine.optim import OptimWrapper, OptimWrapperDict, _ParamScheduler
-
-# used for type hints
-ConfigType = Union[Config, ConfigDict, Dict]
-ModelType = Union[nn.Module]
-OptimType = Union[OptimWrapper, OptimWrapperDict]
-SchedulerType = Union[_ParamScheduler, List[_ParamScheduler],
-                      Dict[str, List[_ParamScheduler]]]
-# used for runtime type checks
-_ConfigType = (Config, ConfigDict, dict)
-_ModelType = nn.Module  # include BaseModel and all model wrapper types
-_OptimType = (OptimWrapper, OptimWrapperDict)
-_SchedulerType = (_ParamScheduler, list, dict)
+from .utils import (ConfigType, ModelType, OptimType, SchedulerType,
+                    _ConfigType, _ModelType, _OptimType, copy_to_dict)
 
 
-def copy_or_to_dict(config: ConfigType) -> Dict:
-    if isinstance(config, dict):
-        return deepcopy(config)
-    else:
-        return config.to_dict()
+class Mode(Enum):
+    UNSET = 0  # Nothing will be setup
+    VAL = 10  # Only setup model. Same for TEST
+    TEST = 11
+    TRAIN = 20  # Setup model, optimizer, param_scheduler
+
+    @property
+    def priority(self):
+        return self.value // 10
+
+    def __eq__(self, other):
+        if self.__class__ is not other.__class__:
+            raise NotImplementedError()
+        return self.priority == other.priority
+
+    def __lt__(self, other):
+        if self.__class__ is not other.__class__:
+            raise NotImplementedError()
+        return self.priority < other.priority
+
+    def __le__(self, other):
+        if self.__class__ is not other.__class__:
+            raise NotImplementedError()
+        return self.priority <= other.priority
+
+    def __ge__(self, other):
+        if self.__class__ is not other.__class__:
+            raise NotImplementedError()
+        return self.priority >= other.priority
 
 
 class Strategy(ABC):
 
-    # These are actually instance attributes. Place them here to improve user
-    # experience with IDE
-    cfg: Dict = dict()
-    model_cfg: Optional[Dict] = None
-    optim_cfg: Optional[Dict] = None
-    scheduler_cfg: Optional[Dict] = None
-    model: Optional[ModelType] = None
-    optim: Optional[OptimType] = None
-    scheduler: Optional[SchedulerType] = None
-
     # class attributes, each new model_wrapper or optim_wrapper in MMEngine
     # should be declared here
-    builtin_model_wrappers: tuple = (
-        'MMDistributedDataParallel', 'MMSeparateDistributedDataParallel',
-        'MMFullyShardedDataParallel'
-    )
-    builtin_optim_wrappers: tuple = (
-        'OptimWraper', 'AmpOptimWrapper', 'OptimWrapperDict',
-        'ZeroRedundancyOptimizer'
-    )
+    builtin_model_wrappers: tuple = ('MMDistributedDataParallel',
+                                     'MMSeparateDistributedDataParallel',
+                                     'MMFullyShardedDataParallel')
+    builtin_optim_wrappers: tuple = ('OptimWraper', 'OptimWrapperDict',
+                                     'AmpOptimWrapper', 'ApexOptimWrapper')
+    builtin_optim_constructors: tuple = ('DefaultOptimWrapperConstructor', )
 
-    def __init__(self):
-        self._base_is_initialized = True
-        self._config_is_stored = False
+    def __init__(self, logger: logging.Logger = None):
+        self.logger = logger or MMLogger.get_current_instance()
+        self.cfg: Dict = dict()
+        self.model_cfg: Optional[Dict] = None
+        self.optim_cfg: Optional[Dict] = None
+        self.scheduler_cfg: Union[List[Dict], Dict, None] = None
+        self.model: Optional[ModelType] = None
+        self.optim: Optional[OptimType] = None
+        self.schedulers: Optional[SchedulerType] = None
+        self.mode: Mode = Mode.UNSET
 
     @abstractmethod
-    def setup(self,
-              model: Union[ModelType, ConfigType],
-              optim: Union[OptimType, ConfigType, None] = None,
-              scheduler: Union[SchedulerType, ConfigType, None] = None,
-              *,
-              cfg: Optional[ConfigType] = None) -> None:
+    def setup(
+            self,
+            model: Union[ModelType, ConfigType],
+            optim: Union[OptimType, ConfigType, None] = None,
+            scheduler: Union[SchedulerType, ConfigType, None] = None,
+            *,
+            mode: Mode = Mode.TRAIN,
+            cfg: Optional[ConfigType] = None,
+            # Below are for compatibility
+            max_epochs: Optional[int] = None,
+            max_iters: Optional[int] = None,
+            auto_scale_lr: Optional[Dict] = None) -> Tuple:
         pass
 
     @abstractmethod
@@ -69,69 +83,110 @@ class Strategy(ABC):
         pass
 
     @abstractmethod
-    def save_checkpoint(self, *args, **kwargs) -> None:
+    def save_checkpoint(self,
+                        out_dir: str,
+                        name: str,
+                        meta: Dict = None,
+                        save_optimizer: bool = True,
+                        save_param_scheduler: bool = True,
+                        *,
+                        file_client_args: Optional[Dict] = None,
+                        backend_args: Optional[Dict] = None,
+                        callback: Optional[Callable] = None) -> None:
         pass
 
     @abstractmethod
-    def load_checkpoint(self, *args, **kwargs) -> None:
+    def load_checkpoint(self,
+                        load_dir: str,
+                        name: Optional[str] = None,
+                        load_optimizer: bool = False,
+                        load_param_scheduler: bool = False,
+                        *,
+                        strict: bool = False,
+                        map_location: Union[str, Callable] = 'cpu',
+                        callback: Optional[Callable] = None) -> Dict:
         pass
 
-    @property
-    def load_before_setup(self) -> bool:
-        return True
-
-    def _store_config_or_instance(
-                self,
-                model: Union[ModelType, ConfigType] = None,
-                optim: Union[OptimType, ConfigType, None] = None,
-                scheduler: Union[SchedulerType, ConfigType, None] = None,
-                *,
-                cfg: Optional[ConfigType] = None) -> None:
-        # do not setup twice
-        if self._config_is_stored:
-            raise RuntimeError(
-                'Strategy should not be setup twice. This is very likely an '
-                'internal error of MMEngine, please contact maintainers for '
-                'help or fix')
-
+    def _store_config_or_instance(self,
+                                  model: Union[ModelType, ConfigType] = None,
+                                  optim: Union[OptimType, ConfigType,
+                                               None] = None,
+                                  scheduler: Union[SchedulerType, ConfigType,
+                                                   None] = None,
+                                  *,
+                                  cfg: Optional[ConfigType] = None) -> None:
         # make a copy of full cfg for further checks
         if cfg is None:
             self.cfg = dict()
         else:
-            self.cfg = copy_or_to_dict(cfg)
+            self.cfg = copy_to_dict(cfg)
 
         # save model as a config or instance
-        if model is None or isinstance(model, _ModelType):
+        if model is None:
+            pass
+        elif isinstance(model, _ModelType):
             self.model = model
-            self.model_cfg = copy_or_to_dict(self.cfg.get('model', {}))
         elif isinstance(model, _ConfigType):
-            self.model_cfg = copy_or_to_dict(model)
+            self.model_cfg = copy_to_dict(model)
         else:
             raise TypeError(
                 f'valid model types are {ModelType} or {ConfigType}, '
                 f'but got {type(model)}')
 
         # save optim as a config or instance
-        if optim is None or isinstance(optim, _OptimType):
+        # Since there are 3 levels of instances (Optimizer, OptimWrapper,
+        # OptimWrapperDict), the logic here is slightly complex
+        if optim is None:
+            pass
+        elif isinstance(optim, _OptimType):
             self.optim = optim
-            self.optim_cfg = copy_or_to_dict(self.cfg.get('optim_wrapper', {}))
         elif isinstance(optim, _ConfigType):
-            self.optim_cfg = copy_or_to_dict(optim)
+            if 'constructor' in optim:
+                # When constructor is given, the whole OptimWrapper should be
+                # built by the given constructor. No check is available
+                self.optim_cfg = copy_to_dict(optim)
+            elif optim.get('optimizer') is None:
+                # Neither constructor nor optimizer given, it must be a
+                # partially built OptimWrapperDict, with all values being
+                # instances of OptimWrapper
+                for name, optim_wrapper in optim.items():
+                    if not isinstance(optim_wrapper, OptimWrapper):
+                        raise ValueError(
+                            'each item mush be an optimizer object when '
+                            '"optimizer" and "constructor" are not in '
+                            f'optim_wrapper, but got {name}={optim_wrapper}')
+                self.optim = OptimWrapperDict(**optim)
+            else:
+                # No constructor, but optimizer given. Basic use case.
+                # Note that it might contain Optimizer instance
+                self.optim_cfg = copy_to_dict(optim)
         else:
             raise TypeError(
                 f'valid optim types are {OptimType} or {ConfigType}, '
                 f'but got {type(optim)}')
 
         # save scheduler as a config or instance
-        if scheduler is None or isinstance(scheduler, _SchedulerType):
-            self.scheduler = scheduler
-            scheduler_cfg = self.cfg.get('param_scheduler', {})
-            self.scheduler_cfg = copy_or_to_dict(scheduler_cfg)
+        # Schedulers have list & dict form. Should check carefully
+        if scheduler is None:
+            pass
+        elif isinstance(scheduler, _ParamScheduler):
+            self.schedulers = [scheduler]
+        elif isinstance(scheduler, (list, tuple)):
+            if all(isinstance(s, _ParamScheduler) for s in scheduler):
+                # All instances, no need to build
+                self.schedulers = scheduler
+            else:
+                # At least one is not instance, should build
+                self.scheduler_cfg = [copy_to_dict(s) for s in scheduler]
         elif isinstance(scheduler, _ConfigType):
-            self.scheduler_cfg = copy_or_to_dict(scheduler)
+            # There are 2 cases:
+            #   1) "type" given: just a single param_scheduler
+            #   2) "type" not given: keys correspond to OptimWrapperDict, each
+            #      item could be a _ParamScheduler, List[_ParamScheduler],
+            #      Dict, List[Dict]. We cannot further analyze this case
+            #      unless OptimWrapper has been built.
+            self.scheduler_cfg = scheduler
         else:
             raise TypeError(
                 f'valid scheduler types are {SchedulerType} or {ConfigType}, '
-                f'but got {type(optim)}')
-
-        self._config_is_stored = True
+                f'but got {type(scheduler)}')

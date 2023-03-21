@@ -59,3 +59,6 @@ LOG_PROCESSORS = Registry('log_processor')
 
 # manage inferencer
 INFERENCERS = Registry('inferencer')
+
+# manage training strategies
+STRATEGIES = Registry('strategy')
