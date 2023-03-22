@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import threading
+import multiprocessing
 import time
 from collections.abc import Iterable
 from multiprocessing import Pool
@@ -23,7 +23,8 @@ class RichProgressBar:
         self.bar.start()
 
     def __del__(self):
-        self.bar.stop()
+        if self.bar.live.is_started:
+            self.bar.live.stop()
 
     def write(self, msg, color='blue'):
         self.console.print(msg, style=color)
@@ -35,6 +36,7 @@ class RichProgressBar:
             self.bar.add_task(f'[{color}]{description}', total=total))
 
     def add_single_task(self, total, color='blue', description='Process...'):
+        assert len(self.tasks) == 0
         self.colors.append(color)
         if total > 0:
             self.tasks.append(
@@ -83,12 +85,6 @@ class RichProgressBar:
 
             if self.bar.finished:
                 self.bar.stop()
-
-    def reset(self):
-        for i in range(len(self.tasks)):
-            self.bar.remove_task(self.tasks[i])
-        self.tasks.clear()
-        self.colors.clear()
 
 
 def track_single_progress(func,
@@ -290,42 +286,29 @@ def track_single_iter_progress(tasks, description='Process..', color='blue'):
         yield task
 
 
-class MultiThread(threading.Thread):
-
-    def __init__(self, task, func, idx, update_func, param=None):
-        super().__init__()
-        self.task = task
-        self.func = func
-        self.idx = idx
-        self.updata_func = update_func
-        self.result = []
-        self.param = param
-
-    def run(self) -> None:
-        for i in range(len(self.task)):
-            self.result.append(self.func(self.task[i], **self.param))
-            self.updata_func(self.idx)
-
-    def get_value(self):
-        return self.result
+def worker(func, task, send_end, param=dict()):
+    result = []
+    for i in range(len(task)):
+        result.append(func(task[i], **param))
+    send_end.send(result)
 
 
 def track_multi_parallel_progress(funcs,
                                   tasks,
-                                  descriptions,
-                                  colors,
+                                  description,
+                                  color='blue',
                                   params=None):
     """Track multi progress of tasks execution with progress bar and
-    MultiThread.
+    MultiProgress.
 
-    After accepting a task, threads will be created based on the number of
+    After accepting a task, progresses will be created based on the number of
      tasks and tasks will be executed in parallel.
 
     Args:
         funcs (list): Functions apply for each task.
         tasks (list): A list of tasks.
-        descriptions (str or list): The descriptions of each progress bar.
-        colors (str or list): The colors of each progress bar.
+        description (str): The description of progress bar.
+        color (str): The colors of progress bar.
         params (list): The funcs` parameters.
 
     Returns:
@@ -336,30 +319,31 @@ def track_multi_parallel_progress(funcs,
     if params is None:
         params = [dict() for i in range(len(funcs))]
 
-    if isinstance(descriptions, str):
-        descriptions = [descriptions] * len(tasks)
-    if isinstance(colors, str):
-        colors = [colors] * len(tasks)
+    assert len(funcs) == len(tasks) == len(params)
 
-    assert len(funcs) == len(tasks) == len(params) == len(descriptions) == len(
-        colors)
+    num_tasks = len(tasks)
 
     prog_bar = RichProgressBar()
-    for i in range(len(tasks)):
-        total = len(tasks[i])
-        prog_bar.add_multi_task(total, colors[i], descriptions[i])
+    prog_bar.add_single_task(num_tasks, color=color, description=description)
 
-    process = []
-    for i in range(len(tasks)):
-        proc = MultiThread(tasks[i], funcs[i], i, prog_bar.update, params[i])
-        proc.start()
-        process.append(proc)
+    process_list = []
+    pipe_list = []
+    for i in range(num_tasks):
+        recv_end, send_end = multiprocessing.Pipe(False)
+        p = multiprocessing.Process(
+            target=worker, args=(funcs[i], tasks[i], send_end, params[i]))
+        process_list.append(p)
+        pipe_list.append(recv_end)
+        p.start()
 
-    for i in range(len(process)):
-        process[i].join()
+    finished = [0 for i in range(num_tasks)]
+    while True:
+        for i in range(num_tasks):
+            if not process_list[i].is_alive() and finished[i] == 0:
+                finished[i] = 1
+                prog_bar.update()
+        if sum(finished) == num_tasks:
+            break
 
-    result = []
-    for i in range(len(process)):
-        result.append(process[i].get_value())
-
+    result = [pipe.recv() for pipe in pipe_list]
     return result

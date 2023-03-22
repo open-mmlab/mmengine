@@ -31,8 +31,7 @@ class TestRichProgressBar:
         prog_bar.add_single_task(10)
         for i in range(10):
             prog_bar.update()
-        assert prog_bar.bar.tasks[0].finished is True
-        assert prog_bar.bar.tasks[0].completed == 10
+        assert prog_bar.is_task_finish(0) is True
         del prog_bar
         # without total task num
         prog_bar = mmengine.RichProgressBar()
@@ -50,7 +49,7 @@ class TestRichProgressBar:
                 prog_bar.update(task_id)
         assert prog_bar.bar.finished is True
         for i in range(10):
-            assert prog_bar.bar.tasks[i].completed == 10
+            assert prog_bar.is_task_finish(i) is True
 
 
 def sleep_1s(num):
@@ -106,8 +105,8 @@ def test_track_single_parallel_progress_iterator():
 
 
 def test_track_multi_parallel_progress():
-    ret = mmengine.track_multi_parallel_progress(
-        [sleep_1s for i in range(2)], [[1, 2, 3], [1, 2]],
-        descriptions=[f'task{i}' for i in range(2)],
-        colors=['red', 'blue'])
+    ret = mmengine.track_multi_parallel_progress([sleep_1s for i in range(2)],
+                                                 [[1, 2, 3], [1, 2]],
+                                                 description='task',
+                                                 color='blue')
     assert ret[0] == [1, 2, 3] and ret[1] == [1, 2]
