@@ -104,7 +104,7 @@ class Strategy(ABC):
                         *,
                         strict: bool = False,
                         map_location: Union[str, Callable] = 'cpu',
-                        callback: Optional[Callable] = None) -> Dict:
+                        callback: Optional[Callable] = None) -> Optional[Dict]:
         pass
 
     def _store_config_or_instance(self,

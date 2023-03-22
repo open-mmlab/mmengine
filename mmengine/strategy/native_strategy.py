@@ -180,13 +180,15 @@ class NativeStrategy(Strategy):
                         *,
                         strict: bool = False,
                         map_location: Union[str, Callable] = 'cpu',
-                        callback: Optional[Callable] = None) -> Dict:
+                        callback: Optional[Callable] = None) -> Optional[Dict]:
         # Avoid circular import
         from mmengine.runner.checkpoint import (_load_checkpoint,
                                                 _load_checkpoint_to_model)
         if name is None:
             # should auto detect latest checkpoint
             name = self._latest_checkpoint_name(load_dir)
+        if name is None:
+            return None
 
         filepath = osp.join(load_dir, name)
         checkpoint = _load_checkpoint(

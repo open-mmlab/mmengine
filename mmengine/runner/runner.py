@@ -1985,6 +1985,9 @@ class Runner:
             map_location=map_location,
             callback=hook_callback)
 
+        if checkpoint is None:
+            return
+
         self.train_loop._epoch = checkpoint['meta']['epoch']
         self.train_loop._iter = checkpoint['meta']['iter']
 
@@ -2130,6 +2133,11 @@ class Runner:
             time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
             mmengine_version=mmengine.__version__ + get_git_hash())
 
+        meta_checkpoint = {
+            'meta': meta,
+            'message_hub': self.message_hub.state_dict()
+        }
+
         if hasattr(self.train_dataloader.dataset, 'metainfo'):
             meta.update(dataset_meta=self.train_dataloader.dataset.metainfo)
 
@@ -2139,7 +2147,7 @@ class Runner:
         self.strategy.save_checkpoint(
             out_dir,
             filename,
-            meta=meta,
+            meta=meta_checkpoint,
             save_optimizer=save_optimizer,
             save_param_scheduler=save_param_scheduler,
             file_client_args=file_client_args,

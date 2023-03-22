@@ -118,10 +118,11 @@ class DDPStrategy(NativeStrategy):
         super().save_checkpoint(*args, **kwargs)
         self.model = ddp_model
 
-    def load_checkpoint(self, *args, **kwargs):
+    def load_checkpoint(self, *args, **kwargs) -> Optional[Dict]:
         ddp_model, self.model = self.model, self.model.module
-        super().load_checkpoint(*args, **kwargs)
+        checkpoint = super().load_checkpoint(*args, **kwargs)
         self.model = ddp_model
+        return checkpoint
 
     def _maybe_wrap_model(self) -> None:
         # model has been wrapped, do not re-wrap
