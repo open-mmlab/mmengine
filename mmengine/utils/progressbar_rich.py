@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from multiprocessing import Pool
 from typing import List
 
-from rich.console import Console
+import rich
 from rich.progress import Progress
 
 from .timer import Timer
@@ -16,31 +16,37 @@ class RichProgressBar:
 
     def __init__(self):
         self.bar = Progress()
-        self.console = Console()
         self.tasks = []
+        self.descriptions = []
         self.colors = []
-
         self.bar.start()
 
     def __del__(self):
-        if self.bar.live.is_started:
-            self.bar.live.stop()
+        self.bar.stop()
 
     def write(self, msg, color='blue'):
-        self.console.print(msg, style=color)
+        rich.print(f'[{color}]{msg}')
 
-    def add_multi_task(self, total, color='blue', description='Process...'):
-        assert total > 0
+    def add_multi_tasks(self, total, color='blue', description='Process...'):
+        if total <= 0:
+            raise ValueError('total should be greater than 0')
+        self.descriptions.append(description)
         self.colors.append(color)
         self.tasks.append(
-            self.bar.add_task(f'[{color}]{description}', total=total))
+            self.bar.add_task(
+                f'[{color}]{description}_0/{total}', total=total))
 
     def add_single_task(self, total, color='blue', description='Process...'):
         assert len(self.tasks) == 0
+        self.descriptions.append(description)
         self.colors.append(color)
-        if total > 0:
+        if total is not None:
+            if total <= 0:
+                raise ValueError(
+                    'Total only exists if it is greater than zero or None.')
             self.tasks.append(
-                self.bar.add_task(f'[{color}]{description}', total=total))
+                self.bar.add_task(
+                    f'[{color}]{description}_0/{total}', total=total))
             self.infinite = False
         else:
             self.write('completed: 0, elapsed: 0s', self.colors[0])
@@ -49,23 +55,32 @@ class RichProgressBar:
             self.completed = 0
             self.tasks.append(0)
 
-    def is_task_finish(self, task_id):
+    def _is_task_finish(self, task_id):
         completed = self.bar.tasks[task_id].completed
         total = self.bar.tasks[task_id].total
         return completed == total
 
-    def finished(self):
+    def _finished(self):
         return self.bar.finished
 
     def update(self, task_id=0, advance=1):
-        assert advance > 0
+        if advance <= 0:
+            raise ValueError('advance should greater than zero.')
 
         if len(self.tasks) == 1:
-            assert task_id == 0
+            if task_id != 0:
+                raise ValueError('The ID of a single task can only be 0.')
             if not self.infinite:
-                self.bar.advance(self.tasks[task_id], advance=advance)
+                completed = self.bar.tasks[task_id].completed + 1
+                total = self.bar.tasks[task_id].total
+                self.bar.update(
+                    task_id,
+                    advance=advance,
+                    description=f'[{self.colors[task_id]}]'
+                    f'{self.descriptions[task_id]}'
+                    f'_{completed}/{total}')
 
-                if self.is_task_finish(task_id):
+                if self._is_task_finish(task_id):
                     self.bar.stop()
             else:
                 self.completed += advance
@@ -75,20 +90,27 @@ class RichProgressBar:
                 else:
                     fps = float('inf')
                 self.write(
-                    f'completed: {self.completed},'
-                    f' elapsed: {int(elapsed + 0.5)}s,'
-                    f' {fps:.1f} tasks/s', self.colors[task_id])
+                    f'completed: {self.completed}, '
+                    f'elapsed: {int(elapsed + 0.5)}s, '
+                    f'{fps:.1f} tasks/s', self.colors[task_id])
         else:
             assert task_id >= 0 and task_id < len(self.tasks)
-            self.bar.update(self.tasks[task_id], advance=advance)
-            time.sleep(0.01)
+            completed = self.bar.tasks[task_id].completed + 1
+            total = self.bar.tasks[task_id].total
+            self.bar.update(
+                task_id,
+                advance=advance,
+                description=f'[{self.colors[task_id]}]'
+                f'{self.descriptions[task_id]}'
+                f'_{completed}/{total}')
 
-            if self.bar.finished:
+            if self._finished():
                 self.bar.stop()
 
 
 def track_single_progress(func,
                           tasks,
+                          task_num=None,
                           description='Process...',
                           color='blue',
                           **kwargs):
@@ -110,10 +132,12 @@ def track_single_progress(func,
         assert len(tasks) == 2
         assert isinstance(tasks[0], Iterable)
         assert isinstance(tasks[1], int)
-        task_num = tasks[1]
         tasks = tasks[0]
+        if task_num is not None:
+            assert task_num == tasks[1]
     elif isinstance(tasks, Iterable):
-        task_num = len(tasks)
+        if task_num is not None:
+            assert task_num == len(tasks)
     else:
         raise TypeError(
             '"tasks" must be an iterable object or a (iterator, int) tuple')
@@ -124,53 +148,6 @@ def track_single_progress(func,
         results.append(func(task, **kwargs))
         prog_bar.update()
     return results
-
-
-def track_multi_progress(funcs, tasks, descriptions, colors, params=None):
-    """Track multi progress of tasks execution with progress bar.
-
-    Tasks are done with a while-loop and a simple for-loop.
-
-    Args:
-        funcs (list): Functions apply for each task.
-        tasks (list): A list of tasks.
-        descriptions (str or list): The descriptions of each progress bar.
-        colors (str or list): The colors of each progress bar.
-        params (list): The funcs` parameters.
-
-    Returns:
-        list: The task results.
-    """
-    assert isinstance(funcs, List)
-    assert isinstance(tasks, List)
-    if params is None:
-        params = [dict() for i in range(len(funcs))]
-
-    if isinstance(descriptions, str):
-        descriptions = [descriptions] * len(tasks)
-    if isinstance(colors, str):
-        colors = [colors] * len(tasks)
-
-    assert len(funcs) == len(tasks) == len(params) == len(descriptions) == len(
-        colors)
-
-    prog_bar = RichProgressBar()
-    for i in range(len(tasks)):
-        total = len(tasks[i])
-        prog_bar.add_multi_task(total, colors[i], descriptions[i])
-
-    result = [[] for i in range(len(tasks))]
-    idx = 0
-    while not prog_bar.finished():
-        for task_id in range(len(tasks)):
-            if not prog_bar.is_task_finish(task_id=task_id):
-                result[task_id].append(funcs[task_id](tasks[task_id][idx],
-                                                      **params[task_id]))
-                prog_bar.update(task_id, 1)
-            else:
-                continue
-        idx += 1
-    return result
 
 
 def init_pool(process_num, initializer=None, initargs=None):
@@ -297,6 +274,7 @@ def track_multi_parallel_progress(funcs,
                                   tasks,
                                   description,
                                   color='blue',
+                                  num_process=3,
                                   params=None):
     """Track multi progress of tasks execution with progress bar and
     MultiProgress.
@@ -309,6 +287,7 @@ def track_multi_parallel_progress(funcs,
         tasks (list): A list of tasks.
         description (str): The description of progress bar.
         color (str): The colors of progress bar.
+        num_process (int): The number of maximum processes.
         params (list): The funcs` parameters.
 
     Returns:
@@ -326,20 +305,22 @@ def track_multi_parallel_progress(funcs,
     prog_bar = RichProgressBar()
     prog_bar.add_single_task(num_tasks, color=color, description=description)
 
+    pool = Pool(processes=num_process)
+
     process_list = []
     pipe_list = []
     for i in range(num_tasks):
         recv_end, send_end = multiprocessing.Pipe(False)
-        p = multiprocessing.Process(
-            target=worker, args=(funcs[i], tasks[i], send_end, params[i]))
+        p = pool.apply_async(worker, (funcs[i], tasks[i], send_end, params[i]))
         process_list.append(p)
         pipe_list.append(recv_end)
-        p.start()
+    pool.close()
 
     finished = [0 for i in range(num_tasks)]
     while True:
+        time.sleep(0.01)
         for i in range(num_tasks):
-            if not process_list[i].is_alive() and finished[i] == 0:
+            if process_list[i].ready() and finished[i] == 0:
                 finished[i] = 1
                 prog_bar.update()
         if sum(finished) == num_tasks:
