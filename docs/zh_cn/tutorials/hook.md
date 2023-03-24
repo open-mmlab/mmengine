@@ -71,7 +71,7 @@ runner.train()
 - 保存最新的多个权重
 - 保存最优权重
 - 指定保存权重的路径
-- 自动发布最好的和最后的权重
+- 制作发布用的权重
 
 如需了解其他功能，请阅读 [CheckpointHook API 文档](mmengine.hooks.CheckpointHook)。
 
