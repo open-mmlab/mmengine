@@ -170,7 +170,7 @@ def convert_overlay_heatmap(feat_map: Union[np.ndarray, torch.Tensor],
     return heat_img
 
 
-def wait_continue(figure, timeout: int = 0, continue_key: str = ' ') -> int:
+def wait_continue(figure, timeout: float = 0, continue_key: str = ' ') -> int:
     """Show the image and wait for the user's input.
 
     This implementation refers to
