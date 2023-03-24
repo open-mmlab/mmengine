@@ -263,7 +263,7 @@ class Visualizer(ManagerMixin):
             if is_inline:
                 return fig
             wait_continue(fig, timeout=wait_time, continue_key=continue_key)
-        elif 'opencv':
+        elif 'cv2':
             # Keep images are shown in the same window, and the title of window
             # will be updated with `win_name`.
             if not hasattr(self, win_name):
@@ -272,11 +272,12 @@ class Visualizer(ManagerMixin):
                 cv2.setWindowTitle(f'{id(self)}', win_name)
             else:
                 cv2.setWindowTitle(f'{id(self)}', win_name)
-            cv2.imshow(f'{id(self)}',
-                       self.get_image() if drawn_img is None else drawn_img)
-            cv2.waitKey(wait_time * 1000)
+            cv2.imshow(
+                str(id(self)),
+                self.get_image() if drawn_img is None else drawn_img)
+            cv2.waitKey(int(np.ceil(wait_time * 1000)))
         else:
-            raise ValueError('backend should be "matplotlib" or "opencv", '
+            raise ValueError('backend should be "matplotlib" or "cv2", '
                              f'but got {backend} instead')
 
     @master_only
