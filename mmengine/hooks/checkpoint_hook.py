@@ -373,7 +373,7 @@ class CheckpointHook(Hook):
         save_checkpoint(checkpoint, final_path)
         assert self.file_client.isfile(final_path)
         print_log(
-            f'The published model is saved at {final_path}.', logger='current')
+            f'The published model ({ckpt_path}) is saved at {final_path}.', logger='current')
 
     def _save_checkpoint(self, runner) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
