@@ -32,7 +32,7 @@ class TestRichProgressBar:
         prog_bar.add_single_task(10)
         for i in range(10):
             prog_bar.update()
-        assert prog_bar._is_task_finish(0) is True
+        assert prog_bar.bar.tasks[0].finished is True
         del prog_bar
         # without total task num
         prog_bar = mmengine.RichProgressBar()
@@ -50,7 +50,7 @@ class TestRichProgressBar:
                 prog_bar.update(task_id)
         assert prog_bar.bar.finished is True
         for i in range(10):
-            assert prog_bar._is_task_finish(i) is True
+            assert prog_bar.bar.tasks[i].finished is True
         del prog_bar
 
 

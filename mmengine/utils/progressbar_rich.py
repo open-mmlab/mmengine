@@ -36,7 +36,10 @@ class RichProgressBar:
             self.bar.add_task(
                 f'[{color}]{description}_0/{total}', total=total))
 
-    def add_single_task(self, total, color='blue', description='Process...'):
+    def add_single_task(self,
+                        total=None,
+                        color='blue',
+                        description='Process...'):
         assert len(self.tasks) == 0
         self.descriptions.append(description)
         self.colors.append(color)
@@ -55,14 +58,6 @@ class RichProgressBar:
             self.completed = 0
             self.tasks.append(0)
 
-    def _is_task_finish(self, task_id):
-        completed = self.bar.tasks[task_id].completed
-        total = self.bar.tasks[task_id].total
-        return completed == total
-
-    def _finished(self):
-        return self.bar.finished
-
     def update(self, task_id=0, advance=1):
         if advance <= 0:
             raise ValueError('advance should greater than zero.')
@@ -80,7 +75,7 @@ class RichProgressBar:
                     f'{self.descriptions[task_id]}'
                     f'_{completed}/{total}')
 
-                if self._is_task_finish(task_id):
+                if self.bar.tasks[task_id].finished:
                     self.bar.stop()
             else:
                 self.completed += advance
@@ -94,7 +89,11 @@ class RichProgressBar:
                     f'elapsed: {int(elapsed + 0.5)}s, '
                     f'{fps:.1f} tasks/s', self.colors[task_id])
         else:
-            assert task_id >= 0 and task_id < len(self.tasks)
+            assert task_id >= -1 and task_id < len(self.tasks)
+
+            if task_id == -1:
+                task_id = len(self.tasks) - 1
+
             completed = self.bar.tasks[task_id].completed + 1
             total = self.bar.tasks[task_id].total
             self.bar.update(
@@ -104,7 +103,7 @@ class RichProgressBar:
                 f'{self.descriptions[task_id]}'
                 f'_{completed}/{total}')
 
-            if self._finished():
+            if self.bar.finished:
                 self.bar.stop()
 
 
@@ -150,24 +149,11 @@ def track_single_progress(func,
     return results
 
 
-def init_pool(process_num, initializer=None, initargs=None):
-    if initializer is None:
-        return Pool(process_num)
-    elif initargs is None:
-        return Pool(process_num, initializer)
-    else:
-        if not isinstance(initargs, tuple):
-            raise TypeError('"initargs" must be a tuple')
-        return Pool(process_num, initializer, initargs)
-
-
 def track_single_parallel_progress(func,
                                    tasks,
                                    nproc,
                                    description='process...',
                                    color='blue',
-                                   initializer=None,
-                                   initargs=None,
                                    chunksize=1,
                                    skip_first=False,
                                    keep_order=True):
@@ -183,10 +169,6 @@ def track_single_parallel_progress(func,
         nproc (int): Process (worker) number.
         description (str): The description of progress bar.
         color (str): The color of progress bar.
-        initializer (None or callable): Refer to :class:`multiprocessing.Pool`
-            for details.
-        initargs (None or tuple): Refer to :class:`multiprocessing.Pool` for
-            details.
         chunksize (int): Refer to :class:`multiprocessing.Pool` for details.
         skip_first (bool): Whether to skip the first sample for each worker
             when estimating fps, since the initialization step may takes
@@ -208,7 +190,7 @@ def track_single_parallel_progress(func,
     else:
         raise TypeError(
             '"tasks" must be an iterable object or a (iterator, int) tuple')
-    pool = init_pool(nproc, initializer, initargs)
+    pool = Pool(nproc)
     task_num -= nproc * chunksize * int(skip_first)
     prog_bar = RichProgressBar()
     prog_bar.add_single_task(task_num, description=description, color=color)
