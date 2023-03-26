@@ -1369,14 +1369,14 @@ runner = Runner(
     work_dir='./work_dir',
     randomness=randomness,
     env_cfg=env_cfg,
-    launcher='none',  # 不开启分布式训练
+    launcher='none',
     optim_wrapper=optim_wrapper,
     train_dataloader=train_dataloader,
     train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
     val_dataloader=val_dataloader,
     val_evaluator=val_evaluator,
     val_cfg=val_cfg,
-    test_dataloader=val_dataloader,  # 假设测试和验证使用相同的数据和评测器
+    test_dataloader=val_dataloader,
     test_evaluator=val_evaluator,
     test_cfg=dict(type='TestLoop'),
 )

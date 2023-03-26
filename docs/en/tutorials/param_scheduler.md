@@ -148,7 +148,7 @@ Note that the `begin` and `end` parameters are added here. These two parameters 
 
 In the above example, the `by_epoch` of `LinearLR` in the warm-up phase is False, which means that the scheduler only takes effect in the first 50 iterations. After more than 50 iterations, the scheduler will no longer take effect, and the second scheduler, which is `MultiStepLR`, will control the learning rate. When combining different schedulers, the `by_epoch` parameter does not have to be the same for each scheduler.
 
-Here is another example：
+Here is another example:
 
 ```python
 param_scheduler = [
@@ -200,7 +200,7 @@ param_scheduler = [
 
 MMEngine also provides a set of generic parameter schedulers for scheduling other hyperparameters in the `param_groups` of the optimizer. Change `LR` in the class name of the learning rate scheduler to `Param`, such as `LinearParamScheduler`. Users can schedule the specific hyperparameters by setting the `param_name` variable of the scheduler.
 
-Here is an example：
+Here is an example:
 
 ```python
 param_scheduler = [
