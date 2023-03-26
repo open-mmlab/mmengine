@@ -31,7 +31,7 @@ wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/c
 
 A valid configuration file should define a set of key-value pairs, and here are a few examples:
 
-Python：
+Python:
 
 ```Python
 test_int = 1
@@ -39,7 +39,7 @@ test_list = [1, 2, 3]
 test_dict = dict(key1='value1', key2=0.1)
 ```
 
-Json：
+Json:
 
 ```json
 {
@@ -49,7 +49,7 @@ Json：
 }
 ```
 
-YAML：
+YAML:
 
 ```yaml
 test_int: 1
@@ -109,7 +109,7 @@ We can use the `Config` combination with the [Registry](./registry.md) to build 
 
 Here is an example of defining optimizers in a configuration file.
 
-`config_sgd.py`：
+`config_sgd.py`:
 
 ```python
 optimizer = dict(type='SGD', lr=0.1, momentum=0.9, weight_decay=0.0001)
@@ -156,13 +156,13 @@ We address these issues with inheritance mechanism, detailed as below.
 
 Here is an example to illustrate the inheritance mechanism.
 
-`optimizer_cfg.py`：
+`optimizer_cfg.py`:
 
 ```python
 optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
 ```
 
-`resnet50.py`：
+`resnet50.py`:
 
 ```python
 _base_ = ['optimizer_cfg.py']
@@ -182,13 +182,13 @@ print(cfg.optimizer)
 
 `_base_` is a reserved field for the configuration file. It specifies the inherited base files for the current file. Inheriting multiple files will get all the fields at the same time, but it requires that there are no repeated fields defined in all base files.
 
-`runtime_cfg.py`：
+`runtime_cfg.py`:
 
 ```python
 gpu_ids = [0, 1]
 ```
 
-`resnet50_runtime.py`：
+`resnet50_runtime.py`:
 
 ```python
 _base_ = ['optimizer_cfg.py', 'runtime_cfg.py']
@@ -214,7 +214,7 @@ Sometimes, we want to modify some of the fields in the inherited files. For exam
 
 In this case, you can simply redefine the fields in the new configuration file. Note that since the optimizer field is a dictionary, we only need to redefine the modified fields. This rule also applies to adding fields.
 
-`resnet50_lr0.01.py`：
+`resnet50_lr0.01.py`:
 
 ```python
 _base_ = ['optimizer_cfg.py', 'runtime_cfg.py']
@@ -245,7 +245,7 @@ gpu_ids = [0]
 
 Sometimes we not only want to modify or add the keys, but also want to delete them. In this case, we need to set `_delete_=True` in the target field(`dict`) to delete all the keys that do not appear in the newly defined dictionary.
 
-`resnet50_delete_key.py`：
+`resnet50_delete_key.py`:
 
 ```python
 _base_ = ['optimizer_cfg.py', 'runtime_cfg.py']
@@ -298,7 +298,7 @@ a['type'] = 'MobileNet'
 
 The `Config` is not able to parse such a configuration file (it will raise an error when parsing). The `Config` provides a more `pythonic` way to modify base variables for `python` configuration files.
 
-`modify_base_var.py`：
+`modify_base_var.py`:
 
 ```python
 _base_ = ['resnet50.py']
@@ -335,7 +335,7 @@ optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
 model = dict(type='ResNet', depth=50)
 ```
 
-Similarly, we can dump configuration files in `json`, `yaml` format：
+Similarly, we can dump configuration files in `json`, `yaml` format:
 
 `resnet50_dump.yaml`
 
