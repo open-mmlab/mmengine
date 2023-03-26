@@ -298,6 +298,7 @@ class OptimWrapper:
             Dict[str, List[float]]: Learning rate of the optimizer.
         """
         lr = [group['lr'] for group in self.param_groups]
+        lr.sort(reverse=True)
         return dict(lr=lr)
 
     def get_momentum(self) -> Dict[str, List[float]]:
