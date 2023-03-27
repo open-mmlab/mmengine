@@ -54,8 +54,13 @@ class TestOptimWrapperDict(TestCase):
         self.assertTrue((self.model1.weight.grad != 0).any())
         self.assertTrue((self.model2.weight.grad != 0).any())
         optim_wrapper_dict.zero_grad()
-        self.assertTrue((self.model1.weight.grad == 0).all())
-        self.assertTrue((self.model2.weight.grad == 0).all())
+        # After Pytorch v2.0.0, grad will be None after calling `zero_grad`.
+        self.assertTrue(
+            self.model1.weight.grad is None
+            or (self.model1.weight.grad == 0).all())
+        self.assertTrue(
+            self.model1.weight.grad is None
+            or (self.model2.weight.grad == 0).all())
 
     def test_optim_context(self):
         optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
