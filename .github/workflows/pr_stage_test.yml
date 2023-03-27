@@ -143,7 +143,7 @@ jobs:
             platform: cu117
             torch: 2.0.0
             torchvision: 0.15.1
-            # os: windows-2022
+            os: windows-2022
     steps:
       - uses: actions/checkout@v2
       - name: Debug
