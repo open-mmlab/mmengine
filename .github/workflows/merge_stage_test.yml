@@ -273,8 +273,6 @@ jobs:
             torchvision: 0.9.1
           - torch: 2.0.0
             torchvision: 0.15.1
-          - torch: 2.0.0
-            torchvision: 0.15.1
             python: 3.8
             platform: cu117
     steps:
