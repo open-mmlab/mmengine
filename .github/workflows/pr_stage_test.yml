@@ -136,6 +136,16 @@ jobs:
         os: [windows-2022]
         python: [3.7]
         platform: [cpu, cu111]
+        torch: [1.8.1]
+        include:
+          - torch: 1.8.1
+            torchvision: 0.9.1
+          - torch: 2.0.0
+            torchvision: 0.15.1
+          - torch: 2.0.0
+            torchvision: 0.15.1
+            python: 3.8
+            platform: cu117
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -146,9 +156,9 @@ jobs:
         # Windows CI could fail If we call `pip install pip --upgrade` directly.
         run: python -m pip install pip --upgrade
       - name: Install PyTorch
-        run: pip install torch==1.8.1+${{matrix.platform}} torchvision==0.9.1+${{matrix.platform}} -f https://download.pytorch.org/whl/lts/1.8/torch_lts.html
+        run: pip install torch==${{matrix.torch}}+${{matrix.platform}} torchvision==${{matrix.torchvision}}+${{matrix.platform}} -f https://download.pytorch.org/whl/torch/
       - name: Build MMEngine from source
-        run: pip install -e .
+        run: pip install -e . -v
       - name: Install unit tests dependencies
         run: |
           pip install -r requirements/tests.txt
