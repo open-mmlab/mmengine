@@ -2396,3 +2396,17 @@ class TestRunner(TestCase):
                       '(VERY_LOW    ) CheckpointHook                     \n')
         self.assertIn(target_str, runner.get_hooks_info(),
                       'target string is not in logged hooks information.')
+
+    def test_maybe_compile(self):
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_get_hooks_info_from_test_runner_py'
+        cfg.runner_type = 'Runner'
+        cfg.compile = True
+        runner = RUNNERS.build(cfg)
+        runner._maybe_compile('train_step')
+        # PyTorch 2.0.0 could close the FileHandler after the calling of
+        # ``torch.compile``. So we need to test our file handler still work.
+        with open(osp.join(f'{runner.log_dir}',
+                           f'{runner.timestamp}.log')) as f:
+            last_line = f.readlines()[-1]
+            self.assertTrue(last_line.endswith('please be patient.\n'))

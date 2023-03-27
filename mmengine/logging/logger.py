@@ -291,6 +291,20 @@ class MMLogger(Logger, ManagerMixin):
             logger._cache.clear()
         _release_lock()
 
+    def reset_filehandler(self) -> None:
+        """FileHandler will be closed by ``torch.compile`` in PyTorch version
+        2.0.0. This method will be called to resume the FileHandler.
+        """
+        for i, handler in enumerate(self.handlers):
+            if isinstance(handler, logging.FileHandler):
+                filename = handler.baseFilename
+                mode = 'a'
+                handler.close()
+                new_handler = logging.FileHandler(filename, mode)
+                new_handler.setFormatter(
+                    MMFormatter(color=False, datefmt='%Y/%m/%d %H:%M:%S'))
+                self.handlers[i] = new_handler
+
 
 def print_log(msg,
               logger: Optional[Union[Logger, str]] = None,
