@@ -143,8 +143,11 @@ jobs:
             platform: cu117
             torch: 2.0.0
             torchvision: 0.15.1
+            os: [windows-2022]
     steps:
       - uses: actions/checkout@v2
+      - name: Debug
+        run: echo "os=${{ matrix.os }} python-version=${{ matrix.python-version }} platform=${{ matrix.platform }} torch=${{ matrix.torch }} torchvision=${{ matrix.torchvision }}"
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
