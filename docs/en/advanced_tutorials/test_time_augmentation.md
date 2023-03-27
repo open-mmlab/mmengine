@@ -2,7 +2,7 @@
 
 Test time augmentation (TTA) is a data augmentation strategy used during the testing phase. It involves applying various augmentations, such as flipping and scaling, to the same image and then merging the predictions of each augmented image to produce a more accurate prediction. To make it easier for users to use TTA, MMEngine provides [BaseTTAModel](mmengine.model.BaseTTAModel) class, which allows users to implement different TTA strategies by simply extending the `BaseTTAModel` class according to their needs.
 
-The core implementation of TTA is usually divided into two parts：
+The core implementation of TTA is usually divided into two parts:
 
 1. Data augmentation: This part is implemented in MMCV, see the api docs [TestTimeAug](mmcv.transforms.TestTimeAug) for more information.
 2. Merge the predictions: The subclasses of `BaseTTAModel` will merge the predictions of enhanced data in the `test_step` method to improve the accuracy of predictions.
@@ -119,7 +119,7 @@ image3 = dict(
 )
 ```
 
-where `data_{i}_{j}` means the enhanced data，and `data_sample_{i}_{j}` means the ground truth of enhanced data. Then the data will be processed by `Dataloader`, which contributes to the following format:
+where `data_{i}_{j}` means the enhanced data, and `data_sample_{i}_{j}` means the ground truth of enhanced data. Then the data will be processed by `Dataloader`, which contributes to the following format:
 
 ```python
 data_batch = dict(

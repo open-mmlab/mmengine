@@ -424,7 +424,7 @@ from mmengine.registry import DATASETS
 class ExampleDatasetWrapper:
 
     def __init__(self, dataset, lazy_init=False, ...):
-        # Build the source dataset（self.dataset）
+        # Build the source dataset (self.dataset)
         if isinstance(dataset, dict):
             self.dataset = DATASETS.build(dataset)
         elif isinstance(dataset, BaseDataset):

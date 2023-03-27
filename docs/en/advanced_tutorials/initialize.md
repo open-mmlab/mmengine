@@ -36,13 +36,13 @@ Currently, we support the following initialization methods:
 <tr>
   <td><a class="reference internal" href="../api/generated/mmengine.model.TruncNormalInit.html#mmengine.model.TruncNormalInit">TruncNormalInit</a></td>
   <td>TruncNormal</td>
-  <td>Initialize the weight by truncated normal distribution, and initialize the bias with a constant，commonly used for Transformer</td>
+  <td>Initialize the weight by truncated normal distribution, and initialize the bias with a constant, commonly used for Transformer</td>
 </tr>
 
 <tr>
   <td><a class="reference internal" href="../api/generated/mmengine.model.UniformInit.html#mmengine.model.UniformInit">UniformInit</a></td>
   <td>Uniform</td>
-  <td>Initialize the weight by uniform distribution, and initialize the bias with a constant，commonly used for convolution</td>
+  <td>Initialize the weight by uniform distribution, and initialize the bias with a constant, commonly used for convolution</td>
 </tr>
 
 <tr>
@@ -353,7 +353,7 @@ from mmengine.model import normal_init
 normal_init(model, mean=0, std=0.01, bias=0)
 ```
 
-Similarly, we could also use [Kaiming](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf) initialization and  [Xavier](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf) initialization：
+Similarly, we could also use [Kaiming](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf) initialization and  [Xavier](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf) initialization:
 
 ```python
 from mmengine.model import kaiming_init, xavier_init
@@ -387,12 +387,12 @@ Currently, MMEngine provide the following initialization function:
 
 <tr>
   <td><a class="reference internal" href="../api/generated/mmengine.model.trunc_normal_init.html#mmengine.model.trunc_normal_init">trunc_normal_init</a></td>
-  <td>Initialize the weight by truncated normal distribution, and initialize the bias with a constant，commonly used for Transformer</td>
+  <td>Initialize the weight by truncated normal distribution, and initialize the bias with a constant, commonly used for Transformer</td>
 </tr>
 
 <tr>
   <td><a class="reference internal" href="../api/generated/mmengine.model.uniform_init.html#mmengine.model.uniform_init">uniform_init</a></td>
-  <td>Initialize the weight by uniform distribution, and initialize the bias with a constant，commonly used for convolution</td>
+  <td>Initialize the weight by uniform distribution, and initialize the bias with a constant, commonly used for convolution</td>
 </tr>
 
 <tr>
