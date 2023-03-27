@@ -2,6 +2,7 @@
 import multiprocessing
 import time
 from collections.abc import Iterable
+from functools import partial
 from multiprocessing import Pool
 from typing import List
 
@@ -108,7 +109,7 @@ class RichProgressBar:
 
 
 def track_single_progress(func,
-                          tasks,
+                          args,
                           task_num=None,
                           description='Process...',
                           color='blue',
@@ -119,32 +120,26 @@ def track_single_progress(func,
 
     Args:
         func (callable): The function to be applied to each task.
-        tasks (list or tuple[Iterable, int]): A list of tasks or
-            (tasks, total num).
+        args (tuple[Iterable]): A tuple of tasks.
         description (str): The description of progress bar.
         color (str): The color of progress bar.
 
     Returns:
         list: The task results.
     """
-    if isinstance(tasks, tuple):
-        assert len(tasks) == 2
-        assert isinstance(tasks[0], Iterable)
-        assert isinstance(tasks[1], int)
-        tasks = tasks[0]
-        if task_num is not None:
-            assert task_num == tasks[1]
-    elif isinstance(tasks, Iterable):
-        if task_num is not None:
-            assert task_num == len(tasks)
-    else:
-        raise TypeError(
-            '"tasks" must be an iterable object or a (iterator, int) tuple')
+    assert isinstance(args, tuple)
+    for arg in args:
+        isinstance(arg, Iterable)
+    assert len({len(arg) for arg in args}) == 1, 'args must have same length'
+    if task_num is not None:
+        assert task_num == len(args[0]),\
+            'task_num should be same as arg length'
+
     prog_bar = RichProgressBar()
     prog_bar.add_single_task(task_num, color=color, description=description)
     results = []
-    for task in tasks:
-        results.append(func(task, **kwargs))
+    for task in zip(*args):
+        results.append(func(*task))
         prog_bar.update()
     return results
 
@@ -152,6 +147,7 @@ def track_single_progress(func,
 def track_single_parallel_progress(func,
                                    tasks,
                                    nproc,
+                                   static_params=None,
                                    description='process...',
                                    color='blue',
                                    chunksize=1,
@@ -167,6 +163,8 @@ def track_single_parallel_progress(func,
         tasks (list or tuple[Iterable, int]): A list of tasks or
             (tasks, total num).
         nproc (int): Process (worker) number.
+        static_params (dict): The static parameter of func,
+            if none, is set to None.
         description (str): The description of progress bar.
         color (str): The color of progress bar.
         chunksize (int): Refer to :class:`multiprocessing.Pool` for details.
@@ -190,6 +188,10 @@ def track_single_parallel_progress(func,
     else:
         raise TypeError(
             '"tasks" must be an iterable object or a (iterator, int) tuple')
+    if static_params is not None:
+        assert isinstance(static_params, dict)
+        func = partial(func, **static_params)
+
     pool = Pool(nproc)
     task_num -= nproc * chunksize * int(skip_first)
     prog_bar = RichProgressBar()
@@ -202,9 +204,7 @@ def track_single_parallel_progress(func,
     for result in gen:
         results.append(result)
         if skip_first:
-            if len(results) < nproc * chunksize:
-                continue
-            elif len(results) == nproc * chunksize:
+            if len(results) <= nproc * chunksize:
                 continue
         prog_bar.update()
     pool.close()
