@@ -1,6 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import hashlib
 import logging
 import os.path as osp
+import pickle
 from math import inf
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Union
@@ -366,14 +368,14 @@ class CheckpointHook(Hook):
                 'found in published_keys. If you want to keep them, '
                 f'please set `{removed_keys}` in published_keys',
                 logger='current')
-        final_path = osp.splitext(
-            ckpt_path)[0] + f'-published-{runner.timestamp}.pth'
-        for key in list(checkpoint.keys()):
-            assert key in list(self.published_keys)
+        checkpoint_data = pickle.dumps(checkpoint)
+        sha = hashlib.sha256(checkpoint_data).hexdigest()
+        final_path = osp.splitext(ckpt_path)[0] + f'-published-{sha[:8]}.pth'
         save_checkpoint(checkpoint, final_path)
-        assert self.file_client.isfile(final_path)
         print_log(
-            f'The published model ({ckpt_path}) is saved at {final_path}.', logger='current')
+            f'The published model ({ckpt_path}) is saved at '
+            f'{final_path}.',
+            logger='current')
 
     def _save_checkpoint(self, runner) -> None:
         """Save the current checkpoint and delete outdated checkpoint.

@@ -124,7 +124,7 @@ runner.train()
 
 - 制作发布用的权重
 
-  如果你想在训练结束后自动生成可发布的权重（删除不需要的权重，例如优化器状态），你可以设置 `published_keys` 参数，选择需要保留的信息。注意：需要相应设置 save_best 或者 save_last 参数，这样才会生成可发布的权重，其中设置 save_best 会生成最优权重的可发布权重，设置 save_last 会生成最后一个权重的可发布权重，这两个参数也可同时设置。
+  如果你想在训练结束后自动生成可发布的权重（删除不需要的权重，例如优化器状态），你可以设置 `published_keys` 参数，选择需要保留的信息。注意：需要相应设置 `save_best` 或者 `save_last` 参数，这样才会生成可发布的权重，其中设置 `save_best` 会生成最优权重的可发布权重，设置 `save_last` 会生成最后一个权重的可发布权重，这两个参数也可同时设置。
 
   ```python
   default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=1, save_best='accuracy', rule='less', published_keys=['meta', 'state_dict']))

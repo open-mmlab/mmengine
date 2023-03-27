@@ -70,7 +70,7 @@ runner.train()
 - Save the most recent checkpoints
 - Save the best checkpoints
 - Specify the path to save the checkpoints
-- Automatically publish the best and the last checkpoints
+- Make checkpoints for publish
 
 For more features, please read the [CheckpointHook API documentation](mmengine.hooks.CheckpointHook).
 
@@ -121,9 +121,9 @@ The four features mentioned above are described below.
   default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, out_dir='/path/of/directory'))
   ```
 
-- Automatically publish the best and the last checkpoints
+- Make checkpoints for publish
 
-  If you want to publish the best and the last checkpoints after training, you can set the `published_keys` parameter. You can select any keys in checkpoint to be published.
+  If you want to automatically generate publishable checkpoints after training (remove unnecessary keys, such as optimizer state), you can set the `published_keys` parameter to choose which information to keep. Note: You need to set the `save_best` or `save_last` parameters accordingly, so that the releasable checkpoints will be generated. Setting `save_best` will generate the releasable weights of the optimal checkpoint, and setting `save_last` will generate the releasable final checkpoint. These two parameters can also be used set at the same time.
 
   ```python
   default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=1, save_best='accuracy', rule='less', published_keys=['meta', 'state_dict']))
