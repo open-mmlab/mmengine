@@ -33,7 +33,7 @@ from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              LogProcessor, Runner, TestLoop, ValLoop)
 from mmengine.runner.loops import _InfiniteDataloaderIterator
 from mmengine.runner.priority import Priority, get_priority
-from mmengine.utils import digit_version, is_list_of
+from mmengine.utils import digit_version, is_installed, is_list_of
 from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.visualization import Visualizer
 
@@ -1706,7 +1706,7 @@ class TestRunner(TestCase):
             runner.train()
 
     @skipIf(
-        not hasattr(torch, 'compile'),
+        not hasattr(torch, 'compile') or not is_installed('triton'),
         reason='torch.compile is not valid, please install PyTorch>=2.0.0')
     def test_train_with_compile(self):
         # 1. test with simple configuration
