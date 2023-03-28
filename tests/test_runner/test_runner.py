@@ -33,7 +33,7 @@ from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              LogProcessor, Runner, TestLoop, ValLoop)
 from mmengine.runner.loops import _InfiniteDataloaderIterator
 from mmengine.runner.priority import Priority, get_priority
-from mmengine.utils import digit_version, is_installed, is_list_of
+from mmengine.utils import digit_version, is_list_of
 from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.visualization import Visualizer
 
@@ -61,6 +61,25 @@ class ToyModel(BaseModel):
             return outputs
         elif mode == 'predict':
             return outputs
+
+
+def skip_test_comile():
+    if digit_version(torch.__version__) < digit_version('2.0.0'):
+        return True
+    # The default compiling backend for PyTorch 2.0, inductor, does not support
+    # Nvidia graphics cards older than Volta architecture.
+    # As PyTorch does not provide a public function to confirm the availability
+    # of the inductor, we check its availability by attempting compilation.
+    try:
+        model = torch.compile(ToyModel())
+        model(torch.ones(1, 2))
+    except Exception:
+        return True
+    else:
+        return False
+
+
+SKIP_TEST_COMPILE = skip_test_comile()
 
 
 class ToyModel1(ToyModel):
@@ -1706,7 +1725,7 @@ class TestRunner(TestCase):
             runner.train()
 
     @skipIf(
-        not hasattr(torch, 'compile') or not is_installed('triton'),
+        SKIP_TEST_COMPILE,
         reason='torch.compile is not valid, please install PyTorch>=2.0.0')
     def test_train_with_compile(self):
         # 1. test with simple configuration
@@ -1776,7 +1795,7 @@ class TestRunner(TestCase):
                           (torch.float16, torch.bfloat16))
 
     @skipIf(
-        not hasattr(torch, 'compile') or not is_installed('triton'),
+        SKIP_TEST_COMPILE,
         reason='torch.compile is not valid, please install PyTorch>=2.0.0')
     def test_val_with_compile(self):
         # 1. test with simple configuration
@@ -1848,7 +1867,7 @@ class TestRunner(TestCase):
                           (torch.float16, torch.bfloat16))
 
     @skipIf(
-        not hasattr(torch, 'compile') or not is_installed('triton'),
+        SKIP_TEST_COMPILE,
         reason='torch.compile is not valid, please install PyTorch>=2.0.0')
     def test_test_with_compile(self):
         # 1. test with simple configuration
