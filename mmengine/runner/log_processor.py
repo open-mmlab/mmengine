@@ -307,7 +307,8 @@ class LogProcessor:
                 tag[key] = value
         # Log other messages.
         log_items = []
-        for name, val in chain(tag.items(), non_scalar_tag.items()):
+        for name, val in chain(tag.items(), non_scalar_tag.items(),
+                               time_tag.items()):
             if isinstance(val, float):
                 val = f'{val:.{self.num_digits}f}'
             if isinstance(val, (torch.Tensor, np.ndarray)):
@@ -315,9 +316,6 @@ class LogProcessor:
                 val = f'\n{val}\n'
             log_items.append(f'{name}: {val}')
         log_str += '  '.join(log_items)
-
-        for name, val in time_tag.items():
-            log_str += f'{name}: {val:.{self.num_digits}f}  '
 
         if with_non_scalar:
             tag.update(non_scalar_tag)

@@ -161,7 +161,7 @@ class TestLogProcessor:
             return_value=non_scalar_logs)
         _, out = log_processor.get_log_after_epoch(self.runner, 2, mode)
         expect_metric_str = ("accuracy: 0.9000  recall: {'cat': 1, 'dog': 0}  "
-                             'cm: \ntensor([1, 2, 3])\ndata_time: 1.0000  ')
+                             'cm: \ntensor([1, 2, 3])\n  data_time: 1.0000')
         if by_epoch:
             if mode == 'test':
                 assert out == 'Epoch(test) [5/5]  ' + expect_metric_str
