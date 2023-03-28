@@ -90,6 +90,7 @@ class CheckpointHook(Hook):
             or ``save_best`` is not ``None``, it will automatically
             publish model with keys in the list after training.
             Defaults to None.
+            `New in version 0.7.1.`
     Examples:
         >>> # Save best based on single metric
         >>> CheckpointHook(interval=2, by_epoch=True, save_best='acc',
@@ -370,10 +371,10 @@ class CheckpointHook(Hook):
                 logger='current')
         checkpoint_data = pickle.dumps(checkpoint)
         sha = hashlib.sha256(checkpoint_data).hexdigest()
-        final_path = osp.splitext(ckpt_path)[0] + f'-published-{sha[:8]}.pth'
+        final_path = osp.splitext(ckpt_path)[0] + f'-{sha[:8]}.pth'
         save_checkpoint(checkpoint, final_path)
         print_log(
-            f'The published model ({ckpt_path}) is saved at '
+            f'The checkpoint ({ckpt_path}) is published to '
             f'{final_path}.',
             logger='current')
 
