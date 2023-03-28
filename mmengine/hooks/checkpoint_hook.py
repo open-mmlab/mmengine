@@ -230,14 +230,14 @@ class CheckpointHook(Hook):
 
         # published keys
         if not (isinstance(published_keys, str)
-                or is_list_of(published_keys, str) or published_keys is None):
+                or is_seq_of(published_keys, str) or published_keys is None):
             raise TypeError(
-                '"published_keys" should be a str or list of str or None, '
+                '"published_keys" should be a str or a sequence of str or None, '
                 f'but got {type(published_keys)}')
 
         if isinstance(published_keys, str):
             published_keys = [published_keys]
-        elif isinstance(published_keys, list):
+        elif isinstance(published_keys, (list, tuple)):
             assert len(published_keys) == len(set(published_keys)), (
                 'Find duplicate elements in "published_keys".')
         self.published_keys = published_keys
