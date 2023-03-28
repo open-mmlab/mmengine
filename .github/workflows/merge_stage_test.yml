@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   build_cpu_py:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         python-version: [3.8, 3.9]
@@ -53,7 +53,7 @@ jobs:
           coverage report -m
 
   build_cpu_pt:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         python-version: [3.7]
@@ -114,7 +114,7 @@ jobs:
           fail_ci_if_error: false
 
   build_cu102:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     container:
       image: pytorch/pytorch:1.8.1-cuda10.2-cudnn7-devel
     env:
@@ -153,7 +153,7 @@ jobs:
           coverage report -m
 
   build_cu116:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     container:
       image: pytorch/pytorch:1.13.0-cuda11.6-cudnn8-devel
     strategy:
@@ -188,7 +188,7 @@ jobs:
           coverage report -m
 
   build_cu117:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     container:
       image: pytorch/pytorch:2.0.0-cuda11.7-cudnn8-devel
     strategy:
