@@ -45,10 +45,12 @@ def skip_test_comile():
     # Nvidia graphics cards older than Volta architecture.
     # As PyTorch does not provide a public function to confirm the availability
     # of the inductor, we check its availability by attempting compilation.
+    if not torch.cuda.is_available():
+        return True
     try:
-        model = nn.Sequential(nn.Conv2d(1, 1, 1), nn.BatchNorm2d(1))
+        model = nn.Sequential(nn.Conv2d(1, 1, 1), nn.BatchNorm2d(1)).cuda()
         compiled_model = torch.compile(model)
-        compiled_model(torch.ones(3, 1, 1, 1))
+        compiled_model(torch.ones(3, 1, 1, 1).cuda())
     except Exception:
         return True
     else:
