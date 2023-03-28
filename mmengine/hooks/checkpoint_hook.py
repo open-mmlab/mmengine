@@ -232,8 +232,8 @@ class CheckpointHook(Hook):
         if not (isinstance(published_keys, str)
                 or is_seq_of(published_keys, str) or published_keys is None):
             raise TypeError(
-                '"published_keys" should be a str or a sequence of str or None, '
-                f'but got {type(published_keys)}')
+                '"published_keys" should be a str or a sequence of str or '
+                f'None, but got {type(published_keys)}')
 
         if isinstance(published_keys, str):
             published_keys = [published_keys]
