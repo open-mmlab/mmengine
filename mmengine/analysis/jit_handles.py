@@ -12,7 +12,7 @@ import numpy as np
 try:
     from math import prod  # type: ignore
 except ImportError:
-    from numpy import _prod  # type: ignore
+    from numpy import prod as _prod  # type: ignore
 
     # If platform is windows and Python version is Python3.7, this branch
     # will be triggered. We convert the result of `_prod` from  `np.int32` to
