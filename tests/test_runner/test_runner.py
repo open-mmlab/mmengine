@@ -284,7 +284,7 @@ class CustomRunner(Runner):
 
     def __init__(self,
                  model,
-                 work_dir,
+                 work_dir=None,
                  train_dataloader=None,
                  val_dataloader=None,
                  test_dataloader=None,
@@ -701,6 +701,34 @@ class TestRunner(TestCase):
                                     '`param_scheduler` should be a'):
             Runner(**cfg)
 
+        # 7. Test auto distinguish experiment
+        cur_dir = os.getcwd()
+        os.chdir(self.temp_dir)
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.work_dir = None
+
+        # When do not auto distinguish experiments
+        # work_dir is set to work_dirs/experiment_name by default.
+        cfg.auto_distinguish_experiment = False
+        cfg.experiment_name = 'test_distinguish_experiment_false'
+        runner = Runner.from_cfg(cfg)
+        self.assertTrue(
+            runner.work_dir.endswith(
+                os.path.join('work_dirs',
+                             'test_distinguish_experiment_false')))
+
+        # When do not auto distinguish experiments
+        # work_dir is set to work_dirs/experiment_name/timestamp
+        # by default.
+        cfg.auto_distinguish_experiment = True
+        cfg.experiment_name = 'test_distinguish_experiment_true'
+        runner = Runner.from_cfg(cfg)
+        self.assertTrue(
+            runner.work_dir.endswith(
+                os.path.join('work_dirs', 'test_distinguish_experiment_true',
+                             runner.timestamp)))
+        os.chdir(cur_dir)
+
     def test_dump_config(self):
         # dump config from dict.
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -748,7 +776,7 @@ class TestRunner(TestCase):
         runner._experiment_name = 'test_build_logger3'
         logger = runner.build_logger()
         self.assertIsInstance(logger, MMLogger)
-        self.assertEqual(logger.instance_name, 'test_build_logger3')
+        self.assertEqual(logger.instance_name, runner.experiment_name)
 
     def test_build_message_hub(self):
         self.epoch_based_cfg.experiment_name = 'test_build_message_hub1'
@@ -768,7 +796,7 @@ class TestRunner(TestCase):
         message_hub_cfg = dict()
         message_hub = runner.build_message_hub(message_hub_cfg)
         self.assertIsInstance(message_hub, MessageHub)
-        self.assertEqual(message_hub.instance_name, 'test_build_message_hub3')
+        self.assertEqual(message_hub.instance_name, runner.experiment_name)
 
         # input is not a valid type
         with self.assertRaisesRegex(TypeError, 'message_hub should be'):
@@ -797,7 +825,7 @@ class TestRunner(TestCase):
         visualizer_cfg = None
         visualizer = runner.build_visualizer(visualizer_cfg)
         self.assertIsInstance(visualizer, Visualizer)
-        self.assertEqual(visualizer.instance_name, 'test_build_visualizer3')
+        self.assertEqual(visualizer.instance_name, runner.experiment_name)
 
         # input is not a valid type
         with self.assertRaisesRegex(TypeError, 'visualizer should be'):

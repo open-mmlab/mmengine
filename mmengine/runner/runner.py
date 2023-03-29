@@ -243,7 +243,7 @@ class Runner:
     def __init__(
         self,
         model: Union[nn.Module, Dict],
-        work_dir: str,
+        work_dir: Optional[str] = None,
         train_dataloader: Optional[Union[DataLoader, Dict]] = None,
         val_dataloader: Optional[Union[DataLoader, Dict]] = None,
         test_dataloader: Optional[Union[DataLoader, Dict]] = None,
@@ -270,9 +270,6 @@ class Runner:
         experiment_name: Optional[str] = None,
         cfg: Optional[ConfigType] = None,
     ):
-        self._work_dir = osp.abspath(work_dir)
-        mmengine.mkdir_or_exist(self._work_dir)
-
         # recursively copy the `cfg` because `self.cfg` will be modified
         # everywhere.
         if cfg is not None:
@@ -356,19 +353,34 @@ class Runner:
         self._randomness_cfg = randomness
         self.set_randomness(**randomness)
 
-        if experiment_name is not None:
-            self._experiment_name = f'{experiment_name}_{self._timestamp}'
-        elif self.cfg.filename is not None:
-            filename_no_ext = osp.splitext(osp.basename(self.cfg.filename))[0]
-            self._experiment_name = f'{filename_no_ext}_{self._timestamp}'
-        else:
-            self._experiment_name = self.timestamp
-        self._log_dir = osp.join(self.work_dir, self.timestamp)
+        if experiment_name is None and self.cfg.get('filename') is not None:
+            experiment_name = osp.splitext(osp.basename(self.cfg.filename))[0]
+
+        self._experiment_name = experiment_name
+        self._experiment_id = self._timestamp
+
+        have_distinguished_experiment = False
+        if work_dir is None:
+            if self.cfg.get('word_dir') is not None:
+                work_dir = self.cfg.work_dir
+            elif self._experiment_name is not None:
+                work_dir = osp.join('./work_dirs', self._experiment_name)
+            else:
+                work_dir = osp.join('./work_dirs', self._experiment_id)
+                have_distinguished_experiment = True
+
+        if not have_distinguished_experiment and \
+                self.cfg.get('auto_distinguish_experiment') is True:
+            work_dir = osp.join(work_dir, self._experiment_id)
+
+        self._work_dir = osp.abspath(work_dir)
+        self._log_dir = osp.join(self._work_dir, self._experiment_id)
         mmengine.mkdir_or_exist(self._log_dir)
+
         # Used to reset registries location. See :meth:`Registry.build` for
         # more details.
         self.default_scope = DefaultScope.get_instance(
-            self._experiment_name, scope_name=default_scope)
+            self.experiment_name, scope_name=default_scope)
         # Build log processor to format message.
         log_processor = dict() if log_processor is None else log_processor
         self.log_processor = self.build_log_processor(log_processor)
@@ -438,7 +450,7 @@ class Runner:
         cfg = copy.deepcopy(cfg)
         runner = cls(
             model=cfg['model'],
-            work_dir=cfg['work_dir'],
+            work_dir=cfg.get('work_dir'),
             train_dataloader=cfg.get('train_dataloader'),
             val_dataloader=cfg.get('val_dataloader'),
             test_dataloader=cfg.get('test_dataloader'),
@@ -471,7 +483,8 @@ class Runner:
     @property
     def experiment_name(self):
         """str: Name of experiment."""
-        return self._experiment_name
+        return f'{self._experiment_name}_{self._timestamp}' if \
+            self._experiment_name is not None else self._timestamp
 
     @property
     def model_name(self):
@@ -715,7 +728,7 @@ class Runner:
             log_file = osp.join(self._log_dir, f'{self.timestamp}.log')
 
         log_cfg = dict(log_level=log_level, log_file=log_file, **kwargs)
-        log_cfg.setdefault('name', self._experiment_name)
+        log_cfg.setdefault('name', self.experiment_name)
 
         return MMLogger.get_instance(**log_cfg)  # type: ignore
 
@@ -732,10 +745,10 @@ class Runner:
             MessageHub: A MessageHub object build from ``message_hub``.
         """
         if message_hub is None:
-            message_hub = dict(name=self._experiment_name)
+            message_hub = dict(name=self.experiment_name)
         elif isinstance(message_hub, dict):
             # ensure message_hub containing name key
-            message_hub.setdefault('name', self._experiment_name)
+            message_hub.setdefault('name', self.experiment_name)
         else:
             raise TypeError(
                 f'message_hub should be dict or None, but got {message_hub}')
@@ -760,7 +773,7 @@ class Runner:
         """
         if visualizer is None:
             visualizer = dict(
-                name=self._experiment_name,
+                name=self.experiment_name,
                 vis_backends=[dict(type='LocalVisBackend')],
                 save_dir=self._log_dir)
             return Visualizer.get_instance(**visualizer)
@@ -770,7 +783,7 @@ class Runner:
 
         if isinstance(visualizer, dict):
             # ensure visualizer containing name key
-            visualizer.setdefault('name', self._experiment_name)
+            visualizer.setdefault('name', self.experiment_name)
             visualizer.setdefault('save_dir', self._log_dir)
             return VISUALIZERS.build(visualizer)
         else:
