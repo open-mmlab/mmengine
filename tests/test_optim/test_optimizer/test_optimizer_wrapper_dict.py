@@ -6,6 +6,7 @@ import torch.nn as nn
 from torch.optim import SGD
 
 from mmengine.optim import OptimWrapper, OptimWrapperDict
+from mmengine.utils import digit_version
 
 
 class TestOptimWrapperDict(TestCase):
