@@ -2312,6 +2312,8 @@ class Runner:
             f'`compile` should be a dict or bool, got {type(compile_cfg)}')
 
         func = getattr(self.model, target)
+        if digit_version(torch.__version__) == digit_version('2.0.0'):
+            self.logger.reset_filehandler()
         compiled_func = torch.compile(func, **compile_cfg)
         setattr(self.model, target, compiled_func)
         self.logger.info('Model has been "compiled". The first few iterations'
