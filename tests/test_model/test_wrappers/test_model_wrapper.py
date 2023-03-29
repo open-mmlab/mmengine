@@ -105,7 +105,7 @@ class TestDistributedDataParallel(MultiProcessTestCase):
         # Test update params and clean grads.
         ddp_model.train_step(data, optim_wrapper=optim_wrapper)
         grad = ddp_model.module.conv1.weight.grad
-        if grad is not None:
+        if digit_version(torch.__version__) < digit_version('2.0.0'):
             all_grads = all_gather(grad)
             assert_allclose(all_grads[0], torch.zeros_like(all_grads[0]))
             assert_allclose(all_grads[1], torch.zeros_like(all_grads[0]))
