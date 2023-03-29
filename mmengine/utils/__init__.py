@@ -13,8 +13,7 @@ from .path import (check_file_exist, fopen, is_abs, is_filepath,
                    mkdir_or_exist, scandir, symlink)
 from .progressbar import (ProgressBar, track_iter_progress,
                           track_parallel_progress, track_progress)
-from .progressbar_rich import (RichProgressBar, track_multi_parallel_progress,
-                               track_single_iter_progress,
+from .progressbar_rich import (RichProgressBar, track_single_iter_progress,
                                track_single_parallel_progress,
                                track_single_progress)
 from .timer import Timer, TimerError, check_time
@@ -33,6 +32,5 @@ __all__ = [
     'TimerError', 'ProgressBar', 'track_iter_progress',
     'track_parallel_progress', 'track_progress', 'deprecated_function',
     'RichProgressBar', 'track_single_progress',
-    'track_single_parallel_progress', 'track_single_iter_progress',
-    'track_multi_parallel_progress'
+    'track_single_parallel_progress', 'track_single_iter_progress'
 ]

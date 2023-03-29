@@ -9,7 +9,7 @@ class TestRichProgressBar:
     def test_start(self):
         # single task
         prog_bar = mmengine.RichProgressBar()
-        prog_bar.add_single_task(100)
+        prog_bar.add_task(100)
         assert len(prog_bar.bar.tasks) == 1
         assert prog_bar.bar.tasks[0].total == 100
         assert prog_bar.infinite is False
@@ -17,40 +17,41 @@ class TestRichProgressBar:
         # multi tasks
         prog_bar = mmengine.RichProgressBar()
         for i in range(5):
-            prog_bar.add_multi_tasks(10)
+            prog_bar.add_task(10)
         assert len(prog_bar.bar.tasks) == 5
         del prog_bar
         # without total task num
         prog_bar = mmengine.RichProgressBar()
-        prog_bar.add_single_task(None)
+        prog_bar.add_task(None)
         assert prog_bar.infinite is True
         del prog_bar
 
     def test_update(self):
         # single task
         prog_bar = mmengine.RichProgressBar()
-        prog_bar.add_single_task(10)
+        prog_bar.add_task(10)
         for i in range(10):
             prog_bar.update()
         assert prog_bar.bar.tasks[0].finished is True
         del prog_bar
         # without total task num
         prog_bar = mmengine.RichProgressBar()
-        prog_bar.add_single_task(None)
+        prog_bar.add_task(None)
         for i in range(10):
             prog_bar.update()
         assert prog_bar.completed == 10
         del prog_bar
         # multi task
         prog_bar = mmengine.RichProgressBar()
+        task_ids = []
         for i in range(10):
-            prog_bar.add_multi_tasks(10)
+            task_ids.append(prog_bar.add_task(10))
         for i in range(10):
-            for task_id in range(10):
-                prog_bar.update(task_id)
+            for idx in task_ids:
+                prog_bar.update(idx)
         assert prog_bar.bar.finished is True
-        for i in range(10):
-            assert prog_bar.bar.tasks[i].finished is True
+        for idx in task_ids:
+            assert prog_bar.bar.tasks[idx].finished is True
         del prog_bar
 
 
@@ -94,25 +95,22 @@ def test_track_single_enum_progress():
 
 def test_track_single_parallel_progress_list():
     results = mmengine.track_single_parallel_progress(sleep_1s, [1, 2, 3, 4],
-                                                      2)
+                                                      4)
+    assert results == [1, 2, 3, 4]
+
+
+def test_track_single_parallel_progress_without_task_num():
+    results = mmengine.track_single_parallel_progress(sleep_1s, [1, 2, 3, 4])
     assert results == [1, 2, 3, 4]
 
 
 def test_track_single_parallel_progress_list_with_static_param():
     results = mmengine.track_single_parallel_progress(
-        add, [1, 2, 3, 4], 2, static_params={'y': 1})
+        add, [1, 2, 3, 4], 4, static_params={'y': 1})
     assert results == [2, 3, 4, 5]
 
 
 def test_track_single_parallel_progress_iterator():
     results = mmengine.track_single_parallel_progress(
-        sleep_1s, ((i for i in [1, 2, 3, 4]), 4), 2)
+        sleep_1s, ((i for i in [1, 2, 3, 4]), 4), 4)
     assert results == [1, 2, 3, 4]
-
-
-def test_track_multi_parallel_progress():
-    ret = mmengine.track_multi_parallel_progress([sleep_1s for i in range(2)],
-                                                 [[1, 2, 3], [1, 2]],
-                                                 description='task',
-                                                 color='blue')
-    assert ret[0] == [1, 2, 3] and ret[1] == [1, 2]
