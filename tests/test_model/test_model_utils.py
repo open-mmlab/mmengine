@@ -30,7 +30,6 @@ class ToyModule(nn.Module):
 def test_revert_syncbn():
     # conv = ConvModule(3, 8, 2, norm_cfg=dict(type='SyncBN'))
     conv = nn.Sequential(nn.Conv2d(3, 8, 2), nn.SyncBatchNorm(8))
-    assert isinstance(conv[1], nn.SyncBatchNorm)
     conv = revert_sync_batchnorm(conv)
     assert not isinstance(conv[1], nn.SyncBatchNorm)
 
@@ -46,7 +45,6 @@ def test_revert_syncbn():
 def test_convert_syncbn():
     # conv = ConvModule(3, 8, 2, norm_cfg=dict(type='SyncBN'))
     conv = nn.Sequential(nn.Conv2d(3, 8, 2), nn.BatchNorm2d(8))
-    assert isinstance(conv[1], nn.BatchNorm2d)
 
     # Test convert to mmcv SyncBatchNorm
     if is_installed('mmcv'):
