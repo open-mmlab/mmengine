@@ -38,6 +38,28 @@ from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.visualization import Visualizer
 
 
+def skip_test_comile():
+    if digit_version(torch.__version__) < digit_version('2.0.0'):
+        return True
+    # The default compiling backend for PyTorch 2.0, inductor, does not support
+    # Nvidia graphics cards older than Volta architecture.
+    # As PyTorch does not provide a public function to confirm the availability
+    # of the inductor, we check its availability by attempting compilation.
+    if not torch.cuda.is_available():
+        return True
+    try:
+        model = nn.Sequential(nn.Conv2d(1, 1, 1), nn.BatchNorm2d(1)).cuda()
+        compiled_model = torch.compile(model)
+        compiled_model(torch.ones(3, 1, 1, 1).cuda())
+    except Exception:
+        return True
+    else:
+        return False
+
+
+SKIP_TEST_COMPILE = skip_test_comile()
+
+
 class ToyModel(BaseModel):
 
     def __init__(self, data_preprocessor=None):
@@ -1706,7 +1728,7 @@ class TestRunner(TestCase):
             runner.train()
 
     @skipIf(
-        not hasattr(torch, 'compile'),
+        SKIP_TEST_COMPILE,
         reason='torch.compile is not valid, please install PyTorch>=2.0.0')
     def test_train_with_compile(self):
         # 1. test with simple configuration
@@ -1776,7 +1798,7 @@ class TestRunner(TestCase):
                           (torch.float16, torch.bfloat16))
 
     @skipIf(
-        not hasattr(torch, 'compile'),
+        SKIP_TEST_COMPILE,
         reason='torch.compile is not valid, please install PyTorch>=2.0.0')
     def test_val_with_compile(self):
         # 1. test with simple configuration
@@ -1848,7 +1870,7 @@ class TestRunner(TestCase):
                           (torch.float16, torch.bfloat16))
 
     @skipIf(
-        not hasattr(torch, 'compile'),
+        SKIP_TEST_COMPILE,
         reason='torch.compile is not valid, please install PyTorch>=2.0.0')
     def test_test_with_compile(self):
         # 1. test with simple configuration
