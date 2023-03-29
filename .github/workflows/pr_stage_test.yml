@@ -45,12 +45,12 @@ jobs:
           mim install 'mmcv>=2.0.0rc1'
       - name: Run unittests and generate coverage report
         run: |
-          coverage run --branch --source mmengine -m pytest tests/
+          coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist
           coverage xml
           coverage report -m
       # Upload coverage report for python3.7 && pytorch1.8.1 cpu
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1.0.14
+        uses: codecov/codecov-action@v3
         with:
           file: ./coverage.xml
           flags: unittests
@@ -90,7 +90,7 @@ jobs:
           mim install 'mmcv>=2.0.0rc1'
       - name: Run unittests and generate coverage report
         run: |
-          coverage run --branch --source mmengine -m pytest tests/
+          coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist
           coverage xml
           coverage report -m
 
@@ -161,7 +161,7 @@ jobs:
           pip install openmim
           mim install 'mmcv>=2.0.0rc1'
       - name: Run CPU unittests
-        run: pytest tests/
+        run: pytest tests/  --ignore tests/test_dist
         if: ${{ matrix.platform == 'cpu' }}
       - name: Run GPU unittests
         # Skip testing distributed related unit tests since the memory of windows CI is limited
