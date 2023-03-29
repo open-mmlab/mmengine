@@ -14,9 +14,8 @@ try:
 except ImportError:
     from numpy import prod as _prod  # type: ignore
 
-    # If platform is windows and Python version is Python3.7, this branch
-    # will be triggered. We convert the result of `_prod` from  `np.int32` to
-    # `int` to avoid overflow.
+    # Patch `numpy.prod` to avoid overflow on Windows by converting its result
+    # from `np.int32` to `int`.
     def prod(*args, **kwargs):  # type: ignore
         return _prod(*args, **kwargs).item()
 
