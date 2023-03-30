@@ -29,15 +29,23 @@ class AWSBackend(BaseStorageBackend):
         b'hello world'
     """
 
-    def __init__(self, path_mapping: Optional[dict] = None):
+    def __init__(self,
+                 aws_access_key_id: Optional[str] = None,
+                 aws_secret_access_key: Optional[str] = None,
+                 path_mapping: Optional[dict] = None):
         try:
             import boto3
             from botocore.exceptions import ClientError
         except ImportError:
             raise ImportError('Please install boto3 to enable '
                               'AWS_Backend.')
-
-        self._client = boto3.client('s3')
+        if aws_access_key_id and aws_secret_access_key:
+            self._client = boto3.client(
+                's3',
+                aws_access_key_id=aws_access_key_id,
+                aws_secret_access_key=aws_secret_access_key)
+        else:
+            self._client = boto3.client('s3')
         assert isinstance(path_mapping, dict) or path_mapping is None
         self.path_mapping = path_mapping
         # Use to parse bucket and obj_name
