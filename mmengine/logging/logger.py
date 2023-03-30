@@ -202,7 +202,11 @@ class MMLogger(Logger, ManagerMixin):
             stream_handler.setLevel(log_level)
         else:
             stream_handler.setLevel(logging.ERROR)
-        self.addFilter(FilterDuplicateWarning(logger_name))
+        # If we do not use `self.addFilter` to filter duplicate warning,
+        # The unit tests will fail to capture the log with `self.assertLogs`,
+        # which could cause BC-breaking.
+        self.warning_filter = FilterDuplicateWarning(logger_name)
+        stream_handler.addFilter(self.warning_filter)
         self.handlers.append(stream_handler)
 
         if log_file is not None:
@@ -234,6 +238,7 @@ class MMLogger(Logger, ManagerMixin):
                 file_handler.setFormatter(
                     MMFormatter(color=False, datefmt='%Y/%m/%d %H:%M:%S'))
                 file_handler.setLevel(log_level)
+                file_handler.addFilter(self.warning_filter)
                 self.handlers.append(file_handler)
         self._log_file = log_file
 
@@ -301,6 +306,7 @@ class MMLogger(Logger, ManagerMixin):
                 new_handler = logging.FileHandler(filename, 'a')
                 new_handler.setFormatter(
                     MMFormatter(color=False, datefmt='%Y/%m/%d %H:%M:%S'))
+                new_handler.addFilter(self.warning_filter)
                 self.handlers[i] = new_handler
 
 
