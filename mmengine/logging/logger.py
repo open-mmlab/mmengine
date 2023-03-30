@@ -202,7 +202,7 @@ class MMLogger(Logger, ManagerMixin):
             stream_handler.setLevel(log_level)
         else:
             stream_handler.setLevel(logging.ERROR)
-        stream_handler.addFilter(FilterDuplicateWarning(logger_name))
+        self.addFilter(FilterDuplicateWarning(logger_name))
         self.handlers.append(stream_handler)
 
         if log_file is not None:
@@ -234,7 +234,6 @@ class MMLogger(Logger, ManagerMixin):
                 file_handler.setFormatter(
                     MMFormatter(color=False, datefmt='%Y/%m/%d %H:%M:%S'))
                 file_handler.setLevel(log_level)
-                file_handler.addFilter(FilterDuplicateWarning(logger_name))
                 self.handlers.append(file_handler)
         self._log_file = log_file
 
