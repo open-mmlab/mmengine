@@ -5,7 +5,7 @@ import os
 import os.path as osp
 import shutil
 import tempfile
-from unittest import TestCase
+from unittest import TestCase, skipIf
 
 import numpy as np
 import torch
@@ -36,6 +36,28 @@ from mmengine.runner.priority import Priority, get_priority
 from mmengine.utils import digit_version, is_list_of
 from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.visualization import Visualizer
+
+
+def skip_test_comile():
+    if digit_version(torch.__version__) < digit_version('2.0.0'):
+        return True
+    # The default compiling backend for PyTorch 2.0, inductor, does not support
+    # Nvidia graphics cards older than Volta architecture.
+    # As PyTorch does not provide a public function to confirm the availability
+    # of the inductor, we check its availability by attempting compilation.
+    if not torch.cuda.is_available():
+        return True
+    try:
+        model = nn.Sequential(nn.Conv2d(1, 1, 1), nn.BatchNorm2d(1)).cuda()
+        compiled_model = torch.compile(model)
+        compiled_model(torch.ones(3, 1, 1, 1).cuda())
+    except Exception:
+        return True
+    else:
+        return False
+
+
+SKIP_TEST_COMPILE = skip_test_comile()
 
 
 class ToyModel(BaseModel):
@@ -1705,6 +1727,24 @@ class TestRunner(TestCase):
         with self.assertRaisesRegex(AssertionError, 'If you want to validate'):
             runner.train()
 
+    @skipIf(
+        SKIP_TEST_COMPILE,
+        reason='torch.compile is not valid, please install PyTorch>=2.0.0')
+    def test_train_with_compile(self):
+        # 1. test with simple configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_train_compile_simple'
+        cfg.compile = True
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+
+        # 2. test with advanced configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_train_compile_advanced'
+        cfg.compile = dict(backend='inductor', mode='default')
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+
     def test_val(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_val1'
@@ -1756,6 +1796,24 @@ class TestRunner(TestCase):
             runner.val()
             self.assertIn(predictions[0].dtype,
                           (torch.float16, torch.bfloat16))
+
+    @skipIf(
+        SKIP_TEST_COMPILE,
+        reason='torch.compile is not valid, please install PyTorch>=2.0.0')
+    def test_val_with_compile(self):
+        # 1. test with simple configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_val_compile_simple'
+        cfg.compile = True
+        runner = Runner.from_cfg(cfg)
+        runner.val()
+
+        # 2. test with advanced configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_val_compile_advanced'
+        cfg.compile = dict(backend='inductor', mode='default')
+        runner = Runner.from_cfg(cfg)
+        runner.val()
 
     def test_test(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1810,6 +1868,24 @@ class TestRunner(TestCase):
             runner.test()
             self.assertIn(predictions[0].dtype,
                           (torch.float16, torch.bfloat16))
+
+    @skipIf(
+        SKIP_TEST_COMPILE,
+        reason='torch.compile is not valid, please install PyTorch>=2.0.0')
+    def test_test_with_compile(self):
+        # 1. test with simple configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_test_compile_simple'
+        cfg.compile = True
+        runner = Runner.from_cfg(cfg)
+        runner.test()
+
+        # 2. test with advanced configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_test_compile_advanced'
+        cfg.compile = dict(backend='inductor', mode='default')
+        runner = Runner.from_cfg(cfg)
+        runner.test()
 
     def test_register_hook(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)

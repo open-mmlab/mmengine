@@ -180,6 +180,14 @@ class Runner:
         cfg (dict or Configdict or :obj:`Config`, optional): Full config.
             Defaults to None.
 
+    Note:
+        Since PyTorch 2.0.0, you can enable ``torch.compile`` by passing in
+        `cfg.compile = True`. If you want to control compile options, you
+        can pass a dict, e.g. ``cfg.compile = dict(backend='eager')``.
+        Refer to `PyTorch API Documentation <https://pytorch.org/docs/
+        master/generated/torch.compile.html#torch.compile>`_ for more valid
+        options.
+
     Examples:
         >>> from mmengine.runner import Runner
         >>> cfg = dict(
@@ -1686,6 +1694,10 @@ class Runner:
             self._train_loop.iter,  # type: ignore
             self._train_loop.max_iters)  # type: ignore
 
+        # Maybe compile the model according to options in self.cfg.compile
+        # This must be called **AFTER** model has been wrapped.
+        self._maybe_compile('train_step')
+
         model = self.train_loop.run()  # type: ignore
         self.call_hook('after_run')
         return model
@@ -1959,13 +1971,10 @@ class Runner:
         current_seed = self._randomness_cfg.get('seed')
         if resumed_seed is not None and resumed_seed != current_seed:
             if current_seed is not None:
-                print_log(
-                    f'The value of random seed in the '
-                    f'checkpoint "{resumed_seed}" is '
-                    f'different from the value in '
-                    f'`randomness` config "{current_seed}"',
-                    logger='current',
-                    level=logging.WARNING)
+                self.logger.warning(f'The value of random seed in the '
+                                    f'checkpoint "{resumed_seed}" is '
+                                    f'different from the value in '
+                                    f'`randomness` config "{current_seed}"')
             self._randomness_cfg.update(seed=resumed_seed)
             self.set_randomness(**self._randomness_cfg)
 
@@ -1976,13 +1985,11 @@ class Runner:
         # np.ndarray, which cannot be directly judged as equal or not,
         # therefore we just compared their dumped results.
         if pickle.dumps(resumed_dataset_meta) != pickle.dumps(dataset_meta):
-            print_log(
+            self.logger.warning(
                 'The dataset metainfo from the resumed checkpoint is '
                 'different from the current training dataset, please '
                 'check the correctness of the checkpoint or the training '
-                'dataset.',
-                logger='current',
-                level=logging.WARNING)
+                'dataset.')
 
         self.message_hub.load_state_dict(checkpoint['message_hub'])
 
@@ -1994,11 +2001,9 @@ class Runner:
 
         # resume param scheduler
         if resume_param_scheduler and self.param_schedulers is None:
-            print_log(
+            self.logger.warning(
                 '`resume_param_scheduler` is True but `self.param_schedulers` '
-                'is None, so skip resuming parameter schedulers',
-                logger='current',
-                level=logging.WARNING)
+                'is None, so skip resuming parameter schedulers')
             resume_param_scheduler = False
         if 'param_schedulers' in checkpoint and resume_param_scheduler:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
@@ -2155,11 +2160,9 @@ class Runner:
 
         # save param scheduler state dict
         if save_param_scheduler and self.param_schedulers is None:
-            print_log(
+            self.logger.warning(
                 '`save_param_scheduler` is True but `self.param_schedulers` '
-                'is None, so skip saving parameter schedulers',
-                logger='current',
-                level=logging.WARNING)
+                'is None, so skip saving parameter schedulers')
             save_param_scheduler = False
         if save_param_scheduler:
             if isinstance(self.param_schedulers, dict):
@@ -2287,4 +2290,31 @@ class Runner:
                          env_info + '\n'
                          '\nRuntime environment:' + runtime_env_info + '\n' +
                          dash_line + '\n')
-        self.logger.info(f'Config:\n{self.cfg.pretty_text}')
+
+        if self.cfg._cfg_dict:
+            self.logger.info(f'Config:\n{self.cfg.pretty_text}')
+
+    def _maybe_compile(self, target: str) -> None:
+        """Use `torch.compile` to optimize model/wrapped_model."""
+        compile_cfg = self.cfg.get('compile', None)
+        if compile_cfg is None:
+            # no compile options given, won't compile
+            return
+
+        if isinstance(compile_cfg, bool):
+            if not compile_cfg:
+                # compile=False, compilation is disabled
+                return
+            # compile=True, use default configurations
+            compile_cfg = dict()
+
+        assert digit_version(TORCH_VERSION) >= digit_version('2.0.0'), (
+            'PyTorch >= 2.0.0 is required to enable torch.compile')
+        assert isinstance(compile_cfg, dict), (
+            f'`compile` should be a dict or bool, got {type(compile_cfg)}')
+
+        func = getattr(self.model, target)
+        compiled_func = torch.compile(func, **compile_cfg)
+        setattr(self.model, target, compiled_func)
+        self.logger.info('Model has been "compiled". The first few iterations'
+                         ' will be slow, please be patient.')

@@ -348,7 +348,6 @@ class Registry:
                     level=logging.WARNING)
                 try:
                     module = import_module(f'{self.scope}.utils')
-                    module.register_all_modules(False)  # type: ignore
                 except (ImportError, AttributeError, ModuleNotFoundError):
                     if self.scope in MODULE2PACKAGE:
                         print_log(
@@ -366,22 +365,20 @@ class Registry:
                             'have registered the module manually.',
                             logger='current',
                             level=logging.WARNING)
+                else:
+                    # The import errors triggered during the registration
+                    # may be more complex, here just throwing
+                    # the error to avoid causing more implicit registry errors
+                    # like `xxx`` not found in `yyy` registry.
+                    module.register_all_modules(False)  # type: ignore
 
             for loc in self._locations:
-                try:
-                    import_module(loc)
-                    print_log(
-                        f"Modules of {self.scope}'s {self.name} registry have "
-                        f'been automatically imported from {loc}',
-                        logger='current',
-                        level=logging.DEBUG)
-                except (ImportError, AttributeError, ModuleNotFoundError):
-                    print_log(
-                        f'Failed to import {loc}, please check the '
-                        f'location of the registry {self.name} is '
-                        'correct.',
-                        logger='current',
-                        level=logging.WARNING)
+                import_module(loc)
+                print_log(
+                    f"Modules of {self.scope}'s {self.name} registry have "
+                    f'been automatically imported from {loc}',
+                    logger='current',
+                    level=logging.DEBUG)
             self._imported = True
 
     def get(self, key: str) -> Optional[Type]:

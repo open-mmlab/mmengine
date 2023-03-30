@@ -85,3 +85,32 @@ runner.train()
 ```{warning}
 截止到 PyTorch 1.13 版本，在 `Convolution` 中直接使用 `torch.bfloat16` 性能低下，必须手动设置环境变量 `TORCH_CUDNN_V8_API_ENABLED=1` 以启用 CuDNN 版本的 BF16 Convolution。相关讨论见 [PyTorch Issue](https://github.com/pytorch/pytorch/issues/57707#issuecomment-1166656767)
 ```
+
+## 模型编译
+
+PyTorch 2.0 版本引入了 [torch.compile](https://pytorch.org/docs/2.0/dynamo/get-started.html) 新特性，通过对模型进行编译来加速训练、验证。MMEngine 从 v0.7.0 版本开始支持这一特性，你可以通过向 `Runner` 的 `cfg` 参数传入一个带有 `compile` 关键词的字典来开启模型编译：
+
+```python
+runner = Runner(
+    model=ResNet18(),
+    ...  # 你的其他 Runner 配置参数
+    cfg=dict(compile=True)
+)
+```
+
+此外，你也可以传入更多的编译配置选项，所有编译配置选项可以参考 [torch.compile API 文档](https://pytorch.org/docs/2.0/generated/torch.compile.html#torch-compile)
+
+```python
+compile_options = dict(backend='inductor', mode='max-autotune')
+runner = Runner(
+    model=ResNet18(),
+    ...  # 你的其他 Runner 配置参数
+    cfg=dict(compile=compile_options)
+)
+```
+
+这一特性只有在你安装 PyTorch >= 2.0.0 版本时才可用。
+
+```{warning}
+`torch.compile` 目前仍然由 PyTorch 团队持续开发中，一些模型可能会编译失败。如果遇到了类似问题，你可以查阅 [PyTorch Dynamo FAQ](https://pytorch.org/docs/2.0/dynamo/faq.html) 解决常见问题，或参考 [TorchDynamo Troubleshooting](https://pytorch.org/docs/2.0/dynamo/troubleshooting.html) 向 PyTorch 提 issue.
+```
