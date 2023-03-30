@@ -165,7 +165,8 @@ def track_single_parallel_progress(func,
         list: The task results.
     """
     if isinstance(tasks, tuple):
-        assert len(tasks) == 2
+        assert len(tasks) == 2, (
+            '"tasks" must be composed of two elements (task, task_num)')
         assert isinstance(tasks[0], Iterable)
         assert isinstance(tasks[1], int)
         if task_num is not None:
@@ -218,7 +219,8 @@ def track_single_iter_progress(tasks, description='Process..', color='blue'):
         list: The task results.
     """
     if isinstance(tasks, tuple):
-        assert len(tasks) == 2
+        assert len(tasks) == 2, (
+            '"tasks" must be composed of two elements (task, task_num)')
         assert isinstance(tasks[0], Iterable)
         assert isinstance(tasks[1], int)
         task_num = tasks[1]
