@@ -716,7 +716,7 @@ class Runner:
 
         log_cfg = dict(log_level=log_level, log_file=log_file, **kwargs)
         log_cfg.setdefault('name', self._experiment_name)
-        log_cfg.setdefault('mode', 'a')
+        log_cfg.setdefault('file_mode', 'a')
 
         return MMLogger.get_instance(**log_cfg)  # type: ignore
 
