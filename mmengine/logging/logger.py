@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import copy
 import logging
 import os
 import os.path as osp
@@ -238,7 +239,7 @@ class MMLogger(Logger, ManagerMixin):
                 file_handler.setFormatter(
                     MMFormatter(color=False, datefmt='%Y/%m/%d %H:%M:%S'))
                 file_handler.setLevel(log_level)
-                file_handler.addFilter(self.warning_filter)
+                file_handler.addFilter(copy.deepcopy(self.warning_filter))
                 self.handlers.append(file_handler)
         self._log_file = log_file
 
@@ -306,7 +307,7 @@ class MMLogger(Logger, ManagerMixin):
                 new_handler = logging.FileHandler(filename, 'a')
                 new_handler.setFormatter(
                     MMFormatter(color=False, datefmt='%Y/%m/%d %H:%M:%S'))
-                new_handler.addFilter(self.warning_filter)
+                new_handler.addFilter(copy.deepcopy(self.warning_filter))
                 self.handlers[i] = new_handler
 
 
