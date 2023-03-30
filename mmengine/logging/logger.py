@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import copy
 import logging
 import os
 import os.path as osp
@@ -203,11 +202,7 @@ class MMLogger(Logger, ManagerMixin):
             stream_handler.setLevel(log_level)
         else:
             stream_handler.setLevel(logging.ERROR)
-        # If we do not use `self.addFilter` to filter duplicate warning,
-        # The unit tests will fail to capture the log with `self.assertLogs`,
-        # which could cause BC-breaking.
-        self.warning_filter = FilterDuplicateWarning(logger_name)
-        stream_handler.addFilter(self.warning_filter)
+        stream_handler.addFilter(FilterDuplicateWarning(logger_name))
         self.handlers.append(stream_handler)
 
         if log_file is not None:
@@ -239,7 +234,7 @@ class MMLogger(Logger, ManagerMixin):
                 file_handler.setFormatter(
                     MMFormatter(color=False, datefmt='%Y/%m/%d %H:%M:%S'))
                 file_handler.setLevel(log_level)
-                file_handler.addFilter(copy.deepcopy(self.warning_filter))
+                file_handler.addFilter(FilterDuplicateWarning(logger_name))
                 self.handlers.append(file_handler)
         self._log_file = log_file
 
@@ -295,20 +290,6 @@ class MMLogger(Logger, ManagerMixin):
         for logger in MMLogger._instance_dict.values():
             logger._cache.clear()
         _release_lock()
-
-    def reset_filehandler(self) -> None:
-        """FileHandler will be closed by ``torch.compile`` in PyTorch version
-        2.0.0. This method will be called to resume the FileHandler.
-        """
-        for i, handler in enumerate(self.handlers):
-            if isinstance(handler, logging.FileHandler):
-                filename = handler.baseFilename
-                handler.close()
-                new_handler = logging.FileHandler(filename, 'a')
-                new_handler.setFormatter(
-                    MMFormatter(color=False, datefmt='%Y/%m/%d %H:%M:%S'))
-                new_handler.addFilter(copy.deepcopy(self.warning_filter))
-                self.handlers[i] = new_handler
 
 
 def print_log(msg,

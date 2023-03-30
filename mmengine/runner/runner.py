@@ -716,6 +716,7 @@ class Runner:
 
         log_cfg = dict(log_level=log_level, log_file=log_file, **kwargs)
         log_cfg.setdefault('name', self._experiment_name)
+        log_cfg.setdefault('mode', 'a')
 
         return MMLogger.get_instance(**log_cfg)  # type: ignore
 
@@ -2290,7 +2291,9 @@ class Runner:
                          env_info + '\n'
                          '\nRuntime environment:' + runtime_env_info + '\n' +
                          dash_line + '\n')
-        self.logger.info(f'Config:\n{self.cfg.pretty_text}')
+
+        if self.cfg._cfg_dict:
+            self.logger.info(f'Config:\n{self.cfg.pretty_text}')
 
     def _maybe_compile(self, target: str) -> None:
         """Use `torch.compile` to optimize model/wrapped_model."""
@@ -2312,8 +2315,6 @@ class Runner:
             f'`compile` should be a dict or bool, got {type(compile_cfg)}')
 
         func = getattr(self.model, target)
-        if digit_version(torch.__version__) == digit_version('2.0.0'):
-            self.logger.reset_filehandler()
         compiled_func = torch.compile(func, **compile_cfg)
         setattr(self.model, target, compiled_func)
         self.logger.info('Model has been "compiled". The first few iterations'
