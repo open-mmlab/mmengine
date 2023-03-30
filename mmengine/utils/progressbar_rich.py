@@ -99,8 +99,7 @@ def track_single_progress(func,
                           tasks,
                           task_num=None,
                           description='Process...',
-                          color='blue',
-                          **kwargs):
+                          color='blue'):
     """Track the progress of tasks execution with a progress bar.
 
     Tasks are done with a simple for-loop.
