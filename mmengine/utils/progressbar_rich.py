@@ -1,5 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import warnings
 from collections.abc import Iterable
+from functools import partial
 from multiprocessing import Pool
 
 import rich
@@ -26,7 +28,8 @@ class RichProgressBar:
     def __del__(self):
         self.bar.stop()
 
-    def write(self, msg, color='blue'):
+    @staticmethod
+    def write(msg, color='blue'):
         rich.print(f'[{color}]{msg}')
 
     def add_task(self, total=None, color='blue', description='Process...'):
@@ -116,8 +119,9 @@ def track_single_progress(func,
     assert is_seq_of(tasks, Iterable)
     assert len({len(arg) for arg in tasks}) == 1, 'args must have same length'
     if task_num is not None:
-        assert task_num == len(
-            tasks[0]), ('task_num should be same as arg length')
+        if task_num != len(tasks[0]):
+            warnings.warn('task_num should be same as arg length')
+            task_num = len(tasks[0])
 
     prog_bar = RichProgressBar()
     prog_bar.add_task(task_num, color=color, description=description)
@@ -128,10 +132,8 @@ def track_single_progress(func,
     return results
 
 
-def worker(params):
-    func = params[0]
-    param = params[1]
-    result = func(*param)
+def worker(params, func):
+    result = func(*params)
     return result
 
 
@@ -169,13 +171,12 @@ def track_single_parallel_progress(func,
     assert is_seq_of(tasks, Iterable)
     assert len({len(arg) for arg in tasks}) == 1, 'args must have same length'
     if task_num is not None:
-        assert task_num == len(
-            tasks[0]), ('task_num should be same as arg length')
+        if task_num != len(tasks[0]):
+            warnings.warn('task_num should be same as arg length')
+            task_num = len(tasks[0])
 
-    input_param = []
     param = list(zip(*tasks))
-    for i in range(len(tasks[0])):
-        input_param.append([func, param[i]])
+    work = partial(worker, func=func)
 
     pool = Pool(nproc)
     if task_num is not None:
@@ -184,9 +185,9 @@ def track_single_parallel_progress(func,
     prog_bar.add_task(task_num, description=description, color=color)
     results = []
     if keep_order:
-        gen = pool.imap(worker, input_param, chunksize)
+        gen = pool.imap(work, param, chunksize)
     else:
-        gen = pool.imap_unordered(worker, input_param, chunksize)
+        gen = pool.imap_unordered(work, param, chunksize)
     for result in gen:
         results.append(result)
         if skip_first:
