@@ -1745,6 +1745,14 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         runner.train()
 
+        runner._maybe_compile('train_step')
+        # PyTorch 2.0.0 could close the FileHandler after calling of
+        # ``torch.compile``. So we need to test our file handler still works.
+        with open(osp.join(f'{runner.log_dir}',
+                           f'{runner.timestamp}.log')) as f:
+            last_line = f.readlines()[-1]
+            self.assertTrue(last_line.endswith('please be patient.\n'))
+
     def test_val(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_val1'
