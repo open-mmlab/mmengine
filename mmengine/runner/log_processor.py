@@ -196,7 +196,7 @@ class LogProcessor:
                     len(str(dataloader_len)))
                 log_str = (f'Iter({mode}) [{cur_iter_str}/{dataloader_len}]  ')
         # Concatenate lr, momentum string with log header.
-        log_str += f'{lr_str}  '
+        log_str += '' if len(lr_str) == 0 else f'{lr_str}  '
         # If IterTimerHook used in runner, eta, time, and data_time should be
         # recorded.
         if (all(item in log_tag for item in ['time', 'data_time'])
@@ -307,7 +307,6 @@ class LogProcessor:
                 tag[key] = value
         # Log other messages.
         log_items = []
-        log_str += '  '
         for name, val in chain(tag.items(), non_scalar_tag.items(),
                                time_tag.items()):
             if isinstance(val, float):
