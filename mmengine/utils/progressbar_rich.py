@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from collections.abc import Iterable
-from functools import partial
 from multiprocessing import Pool
 
 import rich
@@ -129,11 +128,17 @@ def track_single_progress(func,
     return results
 
 
+def worker(params):
+    func = params[0]
+    param = params[1]
+    result = func(*param)
+    return result
+
+
 def track_single_parallel_progress(func,
                                    tasks,
                                    task_num=None,
                                    nproc=1,
-                                   static_params=None,
                                    description='process...',
                                    color='blue',
                                    chunksize=1,
@@ -146,12 +151,9 @@ def track_single_parallel_progress(func,
 
     Args:
         func (callable): The function to be applied to each task.
-        tasks (list or tuple[Iterable, int]): A list of tasks or
-            (tasks, total num).
+        tasks (tuple[Iterable]): A tuple of tasks.
         task_num (int): Number of tasks. Default is None.
         nproc (int): Process (worker) number. Default is 1.
-        static_params (dict): The static parameter of func,
-            if none, is set to None.
         description (str): The description of progress bar.
         color (str): The color of progress bar.
         chunksize (int): Refer to :class:`multiprocessing.Pool` for details.
@@ -164,23 +166,16 @@ def track_single_parallel_progress(func,
     Returns:
         list: The task results.
     """
-    if isinstance(tasks, tuple):
-        assert len(tasks) == 2, (
-            '"tasks" must be composed of two elements (task, task_num)')
-        assert isinstance(tasks[0], Iterable)
-        assert isinstance(tasks[1], int)
-        if task_num is not None:
-            assert task_num == tasks[1]
-        tasks = tasks[0]
-    elif isinstance(tasks, Iterable):
-        if task_num is not None:
-            assert task_num == len(tasks)
-    else:
-        raise TypeError(
-            '"tasks" must be an iterable object or a (iterator, int) tuple')
-    if static_params is not None:
-        assert isinstance(static_params, dict)
-        func = partial(func, **static_params)
+    assert is_seq_of(tasks, Iterable)
+    assert len({len(arg) for arg in tasks}) == 1, 'args must have same length'
+    if task_num is not None:
+        assert task_num == len(
+            tasks[0]), ('task_num should be same as arg length')
+
+    input_param = []
+    param = list(zip(*tasks))
+    for i in range(len(tasks[0])):
+        input_param.append([func, param[i]])
 
     pool = Pool(nproc)
     if task_num is not None:
@@ -189,9 +184,9 @@ def track_single_parallel_progress(func,
     prog_bar.add_task(task_num, description=description, color=color)
     results = []
     if keep_order:
-        gen = pool.imap(func, tasks, chunksize)
+        gen = pool.imap(worker, input_param, chunksize)
     else:
-        gen = pool.imap_unordered(func, tasks, chunksize)
+        gen = pool.imap_unordered(worker, input_param, chunksize)
     for result in gen:
         results.append(result)
         if skip_first:

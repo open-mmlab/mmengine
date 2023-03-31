@@ -94,23 +94,18 @@ def test_track_single_enum_progress():
 
 
 def test_track_single_parallel_progress_list():
-    results = mmengine.track_single_parallel_progress(sleep_1s, [1, 2, 3, 4],
-                                                      4)
-    assert results == [1, 2, 3, 4]
+    results = mmengine.track_single_parallel_progress(
+        add, ([1, 2, 3], [4, 5, 6]), task_num=3)
+    assert results == [5, 7, 9]
 
 
 def test_track_single_parallel_progress_without_task_num():
-    results = mmengine.track_single_parallel_progress(sleep_1s, [1, 2, 3, 4])
-    assert results == [1, 2, 3, 4]
-
-
-def test_track_single_parallel_progress_list_with_static_param():
-    results = mmengine.track_single_parallel_progress(
-        add, [1, 2, 3, 4], 4, static_params={'y': 1})
-    assert results == [2, 3, 4, 5]
+    results = mmengine.track_single_parallel_progress(add,
+                                                      ([1, 2, 3], [4, 5, 6]))
+    assert results == [5, 7, 9]
 
 
 def test_track_single_parallel_progress_iterator():
-    results = mmengine.track_single_parallel_progress(
-        sleep_1s, ((i for i in [1, 2, 3, 4]), 4), 4)
+    results = mmengine.track_single_parallel_progress(sleep_1s,
+                                                      ([1, 2, 3, 4], ), 4)
     assert results == [1, 2, 3, 4]
