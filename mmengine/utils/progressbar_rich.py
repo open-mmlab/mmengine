@@ -35,8 +35,8 @@ class RichProgressBar:
     def add_task(self, total=None, color='blue', description='Process...'):
         if total is not None:
             assert not self.infinite, (
-                'The prior task is an infinite task (total is None),'
-                ' RichProgressBar can only accept one infinite task')
+                'The prior task is an infinite task (total is None), '
+                'RichProgressBar can only accept one infinite task')
 
             if total <= 0:
                 raise ValueError(
@@ -97,55 +97,20 @@ class RichProgressBar:
                 self.bar.stop()
 
 
-def track_single_progress(func,
-                          tasks,
-                          task_num=None,
-                          description='Process...',
-                          color='blue'):
-    """Track the progress of tasks execution with a progress bar.
-
-    Tasks are done with a simple for-loop.
-
-    Args:
-        func (callable): The function to be applied to each task.
-        tasks (tuple[Iterable]): A tuple of tasks.
-        task_num (int): Number of tasks. Default is None.
-        description (str): The description of progress bar.
-        color (str): The color of progress bar.
-
-    Returns:
-        list: The task results.
-    """
-    assert is_seq_of(tasks, Iterable)
-    assert len({len(arg) for arg in tasks}) == 1, 'args must have same length'
-    if task_num is not None:
-        if task_num != len(tasks[0]):
-            warnings.warn('task_num should be same as arg length')
-            task_num = len(tasks[0])
-
-    prog_bar = RichProgressBar()
-    prog_bar.add_task(task_num, color=color, description=description)
-    results = []
-    for task in zip(*tasks):
-        results.append(func(*task))
-        prog_bar.update()
-    return results
-
-
 def worker(params, func):
     result = func(*params)
     return result
 
 
-def track_single_parallel_progress(func,
-                                   tasks,
-                                   task_num=None,
-                                   nproc=1,
-                                   description='process...',
-                                   color='blue',
-                                   chunksize=1,
-                                   skip_first=False,
-                                   keep_order=True):
+def tracking(func,
+             tasks,
+             task_num=None,
+             nproc=1,
+             description='process...',
+             color='blue',
+             chunksize=1,
+             skip_first=False,
+             keep_order=True):
     """Track the progress of parallel task execution with a progress bar.
 
     The built-in :mod:`multiprocessing` module is used for process pools and
@@ -155,7 +120,8 @@ def track_single_parallel_progress(func,
         func (callable): The function to be applied to each task.
         tasks (tuple[Iterable]): A tuple of tasks.
         task_num (int): Number of tasks. Default is None.
-        nproc (int): Process (worker) number. Default is 1.
+        nproc (int): Process (worker) number, if nuproc is 1, use single
+            process. Default is 1.
         description (str): The description of progress bar.
         color (str): The color of progress bar.
         chunksize (int): Refer to :class:`multiprocessing.Pool` for details.
@@ -174,28 +140,40 @@ def track_single_parallel_progress(func,
         if task_num != len(tasks[0]):
             warnings.warn('task_num should be same as arg length')
             task_num = len(tasks[0])
+    assert nproc > 0, 'nproc must be a positive number'
 
-    param = list(zip(*tasks))
-    work = partial(worker, func=func)
-
-    pool = Pool(nproc)
-    if task_num is not None:
-        task_num -= nproc * chunksize * int(skip_first)
     prog_bar = RichProgressBar()
-    prog_bar.add_task(task_num, description=description, color=color)
-    results = []
-    if keep_order:
-        gen = pool.imap(work, param, chunksize)
+
+    if nproc == 1:
+        prog_bar.add_task(task_num, color=color, description=description)
+        results = []
+        for task in zip(*tasks):
+            results.append(func(*task))
+            prog_bar.update()
+        return results
     else:
-        gen = pool.imap_unordered(work, param, chunksize)
-    for result in gen:
-        results.append(result)
-        if skip_first:
-            if len(results) <= nproc * chunksize:
-                continue
-        prog_bar.update()
-    pool.close()
-    pool.join()
+        param = list(zip(*tasks))
+        work = partial(worker, func=func)
+
+        pool = Pool(nproc)
+        if task_num is not None:
+            task_num -= nproc * chunksize * int(skip_first)
+
+        prog_bar.add_task(task_num, description=description, color=color)
+        results = []
+        if keep_order:
+            gen = pool.imap(work, param, chunksize)
+        else:
+            gen = pool.imap_unordered(work, param, chunksize)
+        for result in gen:
+            results.append(result)
+            if skip_first:
+                if len(results) <= nproc * chunksize:
+                    continue
+            prog_bar.update()
+        pool.close()
+        pool.join()
+
     return results
 
 
