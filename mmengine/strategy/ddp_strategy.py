@@ -62,6 +62,7 @@ class DDPStrategy(NativeStrategy):
             cfg: Any = None,
             # below are for backward compatibility
             max_epochs: Optional[int] = None,
+            epoch_length: Optional[int] = None,
             max_iters: Optional[int] = None,
             auto_scale_lr: Optional[Dict] = None):
         # Only build when necessaray
@@ -73,6 +74,7 @@ class DDPStrategy(NativeStrategy):
         self.mode = mode
 
         self.max_epochs = max_epochs
+        self.epoch_length = epoch_length
         self.max_iters = max_iters
         self.auto_scale_lr = auto_scale_lr
 

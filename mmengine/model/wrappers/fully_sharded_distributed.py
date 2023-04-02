@@ -154,6 +154,34 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                                 'or `BackwardPrefetch`, but has type '
                                 f'{type(backward_prefetch)}')
 
+        def find_fixed_modules_recursively(
+                root_module: nn.Module) -> List[nn.Module]:
+            """Helper function to find fixed modules whose parameters are all
+            untrainable, i.e. `requires_grad=False`.
+
+            This function performs
+            recursively.
+            Args:
+                root_module (nn.Module): root module for recursion
+            Returns:
+                List[nn.Module]: fixed modules in root_module
+            """
+            if all(p.requires_grad for p in root_module.parameters()):
+                return []
+            if all(not p.requires_grad for p in root_module.parameters()):
+                return [root_module]
+            fixed_modules = []
+            for name, sub_module in root_module.named_children():
+                fixed_modules.extend(
+                    find_fixed_modules_recursively(sub_module))
+            return fixed_modules
+
+        self._fixed_modules = find_fixed_modules_recursively(module)
+        # Set `requires_grad=True` to avoid FSDP AssertionError.
+        # See https://github.com/pytorch/pytorch/issues/75943
+        # We make sure these params are untrained by some tricky methods
+        for m in self._fixed_modules:
+            m.requires_grad_(True)
         super().__init__(
             module=module,
             process_group=process_group,
@@ -196,6 +224,12 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                                 f'list tuple or dict, but got {type(data)}')
         parsed_loss, log_vars = self.module.parse_losses(losses)
         optim_wrapper.update_params(parsed_loss)
+
+        # manually zero_grad fixed parameters,
+        # since they are not in any optimizer
+        if optim_wrapper.should_update():
+            for m in self._fixed_modules:
+                m.zero_grad(set_to_none=True)
         return log_vars
 
     def val_step(self, data: dict) -> List[BaseDataElement]:
@@ -207,8 +241,8 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         Returns:
             List[BaseDataElement] or dict: The predictions of given data.
         """
-        inputs, data_sample = self.module.data_preprocessor(data, False)
-        return self(inputs, data_sample, mode='predict')
+        data = self.module.data_preprocessor(data, False)
+        return self._run_forward(data, mode='predict')  # type: ignore
 
     def test_step(self, data: dict) -> List[BaseDataElement]:
         """Gets the predictions of module during testing process.
@@ -219,5 +253,23 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         Returns:
             List[BaseDataElement]: The predictions of given data.
         """
-        inputs, data_sample = self.module.data_preprocessor(data, False)
-        return self(inputs, data_sample, mode='predict')
+        data = self.module.data_preprocessor(data, False)
+        return self._run_forward(data, mode='predict')  # type: ignore
+
+    def _run_forward(self, data: Union[dict, tuple, list],
+                     mode: str) -> Union[Dict[str, torch.Tensor], list]:
+        """Unpacks data for :meth:`forward`
+        Args:
+            data (dict or tuple or list): Data sampled from dataset.
+            mode (str): Mode of forward.
+        Returns:
+            dict or list: Results of training or testing mode.
+        """
+        if isinstance(data, dict):
+            results = self(**data, mode=mode)
+        elif isinstance(data, (list, tuple)):
+            results = self(*data, mode=mode)
+        else:
+            raise TypeError('Output of `data_preprocessor` should be '
+                            f'list, tuple or dict, but got {type(data)}')
+        return results

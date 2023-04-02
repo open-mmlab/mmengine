@@ -59,6 +59,7 @@ class NativeStrategy(Strategy):
             cfg: Any = None,
             # below are for backward compatibility
             max_epochs: Optional[int] = None,
+            epoch_length: Optional[int] = None,
             max_iters: Optional[int] = None,
             auto_scale_lr: Optional[Dict] = None):
         # Only build when necessaray
@@ -70,6 +71,7 @@ class NativeStrategy(Strategy):
         self.mode = mode
 
         self.max_epochs = max_epochs
+        self.epoch_length = epoch_length
         self.max_iters = max_iters
         self.auto_scale_lr = auto_scale_lr
 
@@ -108,9 +110,6 @@ class NativeStrategy(Strategy):
                         backend_args: Optional[Dict] = None,
                         callback: Optional[Callable] = None) -> None:
         # Avoid circular import
-        from mmengine.runner.checkpoint import (get_state_dict,
-                                                save_checkpoint,
-                                                weights_to_cpu)
         if meta is None:
             meta = {}
         assert isinstance(meta, dict)
@@ -131,12 +130,12 @@ class NativeStrategy(Strategy):
                 out_dir, name, backend_args=backend_args)
 
         checkpoint = {
-            'state_dict': weights_to_cpu(get_state_dict(self.model)),
+            'state_dict': self._get_state_dict(),
         }
         # save optimizer state dict to checkpoint
         if save_optimizer:
             if isinstance(self.optim, OptimWrapper):
-                checkpoint['optimizer'] = self.optim.state_dict()
+                checkpoint['optimizer'] = self._get_optim_state_dict()
             else:
                 raise TypeError('self.optim should be an `OptimWrapper` '
                                 'or `OptimWrapperDict` instance, but got '
@@ -170,11 +169,22 @@ class NativeStrategy(Strategy):
             callback(checkpoint)
 
         filepath = osp.join(out_dir, name)
+        self._save_checkpoint_to_file(checkpoint, filepath)
+
+    def _get_state_dict(self):
+        from mmengine.runner.checkpoint import get_state_dict, weights_to_cpu
+        return weights_to_cpu(get_state_dict(self.model))
+
+    def _get_optim_state_dict(self):
+        return self.optim.state_dict()
+
+    def _save_checkpoint_to_file(self, checkpoint, filepath):
+        from mmengine.runner.checkpoint import save_checkpoint
         save_checkpoint(checkpoint, filepath)
 
     def load_checkpoint(self,
                         load_dir: str,
-                        name: Optional[str] = None,
+                        filepath: Optional[str] = None,
                         load_optimizer: bool = False,
                         load_param_scheduler: bool = False,
                         *,
@@ -182,27 +192,24 @@ class NativeStrategy(Strategy):
                         map_location: Union[str, Callable] = 'cpu',
                         callback: Optional[Callable] = None) -> Optional[Dict]:
         # Avoid circular import
-        from mmengine.runner.checkpoint import (_load_checkpoint,
-                                                _load_checkpoint_to_model)
-        if name is None:
+        if filepath is None:
             # should auto detect latest checkpoint
-            name = self._latest_checkpoint_name(load_dir)
-        if name is None:
+            filepath = self._latest_checkpoint_name(load_dir)
+        if filepath is None:
             return None
 
-        filepath = osp.join(load_dir, name)
-        checkpoint = _load_checkpoint(
+        checkpoint = self._load_checkpoint_from_file(
             filepath, map_location=map_location, logger=self.logger)
 
         # Support after_load_checkpoint hook
         if callback is not None:
             callback(checkpoint)
 
-        checkpoint = _load_checkpoint_to_model(self.model, checkpoint, strict)
+        checkpoint = self._load_checkpoint_to_model(checkpoint, strict)
 
         if load_optimizer:
             assert self.optim is not None
-            self.optim.load_state_dict(checkpoint.get('optimizer'))
+            self._resume_optim_wrapper(checkpoint.get('optimizer'))
 
         if load_param_scheduler and self.schedulers is None:
             self.logger.warn(
@@ -223,6 +230,17 @@ class NativeStrategy(Strategy):
                     scheduler.load_state_dict(ckpt_scheduler)
 
         return checkpoint
+
+    def _load_checkpoint_from_file(self, filepath, map_location, logger):
+        from mmengine.runner.checkpoint import _load_checkpoint
+        return _load_checkpoint(filepath, map_location, logger)
+
+    def _load_checkpoint_to_model(self, checkpoint, strict):
+        from mmengine.runner.checkpoint import _load_checkpoint_to_model
+        return _load_checkpoint_to_model(self.model, checkpoint, strict)
+
+    def _resume_optim_wrapper(self, optim_state_dict):
+        self.optim.load_state_dict(optim_state_dict)
 
     def _latest_checkpoint_name(self, ckpt_dir) -> Optional[str]:
         # Modified from mmengine.runner.checkpoint.find_latest_checkpoint
@@ -432,7 +450,9 @@ class NativeStrategy(Strategy):
 
                 _scheduler = PARAM_SCHEDULERS.build(
                     deepcopy(scheduler),
-                    default_args=dict(optimizer=optim_wrapper))
+                    default_args=dict(
+                        optimizer=optim_wrapper,
+                        epoch_length=self.epoch_length))
                 param_schedulers.append(_scheduler)
             else:
                 raise TypeError(

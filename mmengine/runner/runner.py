@@ -354,13 +354,18 @@ class Runner:
             self._distributed = True
 
         # build strategy
+        if self.distributed:
+            default_strategy = 'DDPStrategy'
+        else:
+            default_strategy = 'NativeStrategy'
         if strategy is None:
-            strategy = 'DDPStrategy' if self._distributed else 'NativeStrategy'
+            strategy = default_strategy
         strategy_cfg = dict()
         if isinstance(strategy, str):
             strategy_cfg['type'] = strategy
         elif isinstance(strategy, dict):
             strategy_cfg = copy.deepcopy(strategy)
+            strategy_cfg.setdefault('type', default_strategy)
         self.strategy: Strategy = STRATEGIES.build(strategy_cfg)
 
         # self._timestamp will be set in the `setup_env` method. Besides,
@@ -472,6 +477,7 @@ class Runner:
             default_scope=cfg.get('default_scope', 'mmengine'),
             randomness=cfg.get('randomness', dict(seed=None)),
             experiment_name=cfg.get('experiment_name'),
+            strategy=cfg.get('strategy'),
             cfg=cfg,
         )
 
@@ -1685,7 +1691,10 @@ class Runner:
                 dataloader, DataLoader) else dataloader['batch_size']
             real_bs = self.world_size * bs
             self.auto_scale_lr.setdefault('real_bs', real_bs)
-
+        if isinstance(self.train_dataloader, DataLoader):
+            epoch_length = len(self.train_dataloader)
+        else:
+            epoch_length = None
         # setup model, optimizer, param_schedulers
         (self.model, self.optim_wrapper, self.param_schedulers,
          *_) = self.strategy.setup(
@@ -1695,6 +1704,7 @@ class Runner:
              mode=Mode.TRAIN,
              cfg=self.cfg,
              max_epochs=self.max_epochs,
+             epoch_length=epoch_length,
              max_iters=self.max_iters,
              auto_scale_lr=self.auto_scale_lr)
 
@@ -1706,7 +1716,6 @@ class Runner:
                 self._val_loop)  # type: ignore
         # TODO: add a contextmanager to avoid calling `before_run` many times
         self.call_hook('before_run')
-
 
         # Initiate inner count of `optim_wrapper`.
         self.optim_wrapper.initialize_count_status(
