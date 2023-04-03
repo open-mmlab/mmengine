@@ -1261,6 +1261,7 @@ class TestRunner(TestCase):
             batch_size=1,
             num_workers=2)
         dataloader = runner.build_dataloader(cfg)
+        self.assertIs(dataloader.worker_init_fn.func, custom_worker_init)
 
     def test_build_train_loop(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
