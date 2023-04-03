@@ -83,7 +83,7 @@ class TestMessageHub:
     def test_get_runtime(self):
         message_hub = MessageHub.get_instance('mmengine')
         with pytest.raises(None):
-            message_hub.get_info('unknown', ['unknown'])
+            message_hub.get_info('unknown')
         recorded_dict = dict(a=1, b=2)
         message_hub.update_info('test_value', recorded_dict)
         assert message_hub.get_info('test_value') == recorded_dict
