@@ -13,7 +13,7 @@
 - Support using `get_device` in the compiled model by [@C1rN09](https://github.com/C1rN09) in https://github.com/open-mmlab/mmengine/pull/1004
 - Make sure the FileHandler still alive after `torch.compile` by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1021
 - Unify the use of `print_log` and `logger.info(warning)` by [@LEFTeyex](https://github.com/LEFTeyex) in https://github.com/open-mmlab/mmengine/pull/997
-- Publish models after training if  published_keys is set in CheckpointHook by [@KerwinKai](https://github.com/KerwinKai) in https://github.com/open-mmlab/mmengine/pull/987
+- Publish models after training if published_keys is set in CheckpointHook by [@KerwinKai](https://github.com/KerwinKai) in https://github.com/open-mmlab/mmengine/pull/987
 - Enhance the error catching in registry by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1010
 - Do not print config if it is empty by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1028
 
