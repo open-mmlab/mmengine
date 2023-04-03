@@ -164,14 +164,14 @@ class TestLogProcessor:
                              'cm: \ntensor([1, 2, 3])\n  data_time: 1.0000')
         if by_epoch:
             if mode == 'test':
-                assert out == 'Epoch(test) [5/5]  ' + expect_metric_str
+                assert out == 'Epoch(test) [5/5]    ' + expect_metric_str
             else:
-                assert out == 'Epoch(val) [1][10/10]  ' + expect_metric_str
+                assert out == 'Epoch(val) [1][10/10]    ' + expect_metric_str
         else:
             if mode == 'test':
-                assert out == 'Iter(test) [5/5]  ' + expect_metric_str
+                assert out == 'Iter(test) [5/5]    ' + expect_metric_str
             else:
-                assert out == 'Iter(val) [10/10]  ' + expect_metric_str
+                assert out == 'Iter(val) [10/10]    ' + expect_metric_str
 
     def test_collect_scalars(self):
         history_count = np.ones(100)
