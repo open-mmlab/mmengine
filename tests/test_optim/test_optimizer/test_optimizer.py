@@ -151,7 +151,7 @@ class TestBuilder(TestCase):
         assert optimizer.defaults['momentum'] == self.momentum
         assert optimizer.defaults['weight_decay'] == self.base_wd
         model_parameters = list(model.parameters())
-        assert len(param_groups) == len(model_parameters)
+        assert len(param_groups) == len(model_parameters) + 1
         for i, param in enumerate(model_parameters):
             param_group = param_groups[i]
             assert torch.equal(param_group['params'][0], param)
@@ -598,9 +598,9 @@ class TestBuilder(TestCase):
             optim_constructor(model)
         optim_wrapper = optim_constructor(model)
         model_parameters = list(model.parameters())
-        num_params = 14 if MMCV_FULL_AVAILABLE else 11
+        num_params = 15 if MMCV_FULL_AVAILABLE else 12
         assert len(optim_wrapper.optimizer.param_groups) == len(
-            model_parameters) == num_params
+            model_parameters) + 1 == num_params
         self._check_sgd_optimizer(optim_wrapper.optimizer, model,
                                   **paramwise_cfg)
 
@@ -612,9 +612,9 @@ class TestBuilder(TestCase):
             optim_constructor(model)
         optim_wrapper = optim_constructor(model)
         model_parameters = list(model.parameters())
-        num_params = 14 if MMCV_FULL_AVAILABLE else 11
+        num_params = 15 if MMCV_FULL_AVAILABLE else 12
         assert len(optim_wrapper.optimizer.param_groups) == len(
-            model_parameters) == num_params
+            model_parameters) + 1 == num_params
         self._check_sgd_optimizer(optim_wrapper.optimizer, model,
                                   **paramwise_cfg)
 
@@ -706,7 +706,7 @@ class TestBuilder(TestCase):
             'weight_decay': self.base_wd
         })
 
-        num_params = 14 if MMCV_FULL_AVAILABLE else 11
+        num_params = 15 if MMCV_FULL_AVAILABLE else 12
         assert len(param_groups) == num_params
         for i, (name, param) in enumerate(self.model.named_parameters()):
             assert torch.equal(param_groups[i]['params'][0], param)
@@ -733,6 +733,10 @@ class TestBuilder(TestCase):
         assert optimizer.defaults['momentum'] == self.momentum
         assert optimizer.defaults['weight_decay'] == 0
 
+        # check base lr of param_groups
+        optimizer_wrapper = optim_constructor(self.model)
+        assert optimizer_wrapper.get_lr()['lr'][0] == self.base_lr
+
         # check params groups
         param_groups = optimizer.param_groups
 
@@ -757,7 +761,7 @@ class TestBuilder(TestCase):
             'weight_decay': 0
         })
 
-        num_params = 14 if MMCV_FULL_AVAILABLE else 11
+        num_params = 15 if MMCV_FULL_AVAILABLE else 12
         assert len(param_groups) == num_params
         for i, (name, param) in enumerate(self.model.named_parameters()):
             assert torch.equal(param_groups[i]['params'][0], param)
@@ -784,6 +788,7 @@ class TestZeroOptimizer(MultiProcessTestCase):
         self.assertEqual(optimizer.defaults['momentum'], self.momentum)
         self.assertEqual(optimizer.defaults['weight_decay'], self.base_wd)
         param_groups = optimizer.param_groups
+        param_groups.pop() # remove the last group for state tracker
         params_set = set(model.parameters())
         self.assertEqual(
             sum(len(param_group['params']) for param_group in param_groups),

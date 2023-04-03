@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import copy
 import logging
 from contextlib import contextmanager
 from typing import Dict, List, Optional
@@ -161,6 +162,14 @@ class OptimWrapper:
         # the loss factor will always be the same as `_accumulative_counts`.
         self._remainder_counts = -1
 
+        # add a tensor to the optimizer to retrieve global lr
+        if hasattr(self.optimizer, 'defaults'):
+            new_param_settings = {
+                'params': torch.tensor([0.0], requires_grad=True),
+                'is_state_tracker': True,
+                **self.optimizer.defaults}
+            self.optimizer.param_groups.append(new_param_settings)
+
     def update_params(self,
                       loss: torch.Tensor,
                       step_kwargs: Optional[Dict] = None,
@@ -265,7 +274,31 @@ class OptimWrapper:
         Args:
             state_dict (dict): The state dictionary of :attr:`optimizer`.
         """
+
+        # remote the current state tracker during the loading in optimizer
+        if self.optimizer.param_groups[-1].get('is_state_tracker', False):
+            self.optimizer.param_groups.pop()
+
+        # remote the state tracker in state_dict if exists
+        # save it and add it back after loading
+        state_tracker = None
+        if state_dict['param_groups'][-1].get('is_state_tracker', False):
+            state_tracker = state_dict['param_groups'].pop()
+
+        # load state_dict of optimizer
         self.optimizer.load_state_dict(state_dict)
+
+        # add the state tracker back
+        if state_tracker is None:
+            last_param = copy.deepcopy(self.optimizer.param_groups[-1])
+            last_param.pop('params')
+            new_param_settings = {
+                'params': torch.tensor([0.0], requires_grad=True),
+                'is_state_tracker': True,
+                **last_param}
+            self.optimizer.param_groups.append(new_param_settings)
+        else:
+            self.optimizer.param_groups.append(state_tracker)
 
     @property
     def param_groups(self) -> List[dict]:
@@ -297,8 +330,8 @@ class OptimWrapper:
         Returns:
             Dict[str, List[float]]: Learning rate of the optimizer.
         """
-        lr = [group['lr'] for group in self.param_groups]
-        lr.sort(reverse=True)
+        lr = [group['lr'] for group in self.param_groups if
+              'is_state_tracker' in group and group['is_state_tracker'] is True]
         return dict(lr=lr)
 
     def get_momentum(self) -> Dict[str, List[float]]:
@@ -311,6 +344,8 @@ class OptimWrapper:
         """
         momentum = []
         for group in self.param_groups:
+            if 'is_state_tracker' not in group or group['is_state_tracker'] is False:
+                continue
             # Get momentum of SGD.
             if 'momentum' in group.keys():
                 momentum.append(group['momentum'])
