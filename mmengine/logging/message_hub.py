@@ -312,7 +312,9 @@ class MessageHub(ManagerMixin):
             if default is not None:
                 return default
             else:
-                return None
+                raise KeyError(
+                    f'Can not find {key} in runtime information of message_hub'
+                )
         else:
             # TODO： There are restrictions on objects that can be saved
             # return copy.deepcopy(self._runtime_info[key])
