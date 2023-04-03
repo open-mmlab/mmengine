@@ -1,20 +1,33 @@
 # Changelog of v0.x
 
-## v0.7.1 (03/20/2023)
+## v0.7.1 (04/03/2023)
 
 ### Highlights
 
-- Support compiling the model and enabling mixed-precision training at the same time.
+- Support compiling the model and enabling mixed-precision training at the same time
+- Fix the bug that the log file cannot be saved correctly when `compile` is enabled in `Runner`
 
 ### New Features & Enhancements
 
-- Add `mmpretrain` to the `MODULE2PACKAGE`. by @mzr1996 in https://github.com/open-mmlab/mmengine/pull/1002
-- Unify the use of `print_log` and `logger.info(warning)` by @LEFTeyex in https://github.com/open-mmlab/mmengine/pull/997
-- Support using `get_device` in the compiled model by @C1rN09 in https://github.com/open-mmlab/mmengine/pull/1004
+- Add `mmpretrain` to the `MODULE2PACKAGE`. by [@mzr1996](https://github.com/mzr1996) in https://github.com/open-mmlab/mmengine/pull/1002
+- Support using `get_device` in the compiled model by [@C1rN09](https://github.com/C1rN09) in https://github.com/open-mmlab/mmengine/pull/1004
+- Make sure the FileHandler still alive after `torch.compile` by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1021
+- Unify the use of `print_log` and `logger.info(warning)` by [@LEFTeyex](https://github.com/LEFTeyex) in https://github.com/open-mmlab/mmengine/pull/997
+- Publish models after training if  published_keys is set in CheckpointHook by [@KerwinKai](https://github.com/KerwinKai) in https://github.com/open-mmlab/mmengine/pull/987
+- Enhance the error catching in registry by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1010
+- Do not print config if it is empty by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1028
+
+### Bug fixes
+
+- Fix there is no space between `data_time` and metric in logs by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1025
+
+### Docs
+
+- Minor fixes in EN docs to remove or replace unicode chars with ascii by [@evdcush](https://github.com/evdcush) in https://github.com/open-mmlab/mmengine/pull/1018
 
 ### Contributors
 
-A total of 3 developers contributed to this release. Thanks [@LEFTeyex](https://github.com/LEFTeyex), [@mzr1996](https://github.com/mzr1996), [@C1rN09](https://github.com/C1rN09)
+A total of 7 developers contributed to this release. Thanks [@LEFTeyex](https://github.com/LEFTeyex), [@KerwinKai](https://github.com/KerwinKai), [@mzr1996](https://github.com/mzr1996), [@evdcush](https://github.com/evdcush), [@C1rN09](https://github.com/C1rN09), [@HAOCHENYE](https://github.com/HAOCHENYE), [@zhouzaida](https://github.com/zhouzaida)
 
 ## v0.7.0 (03/16/2023)
 

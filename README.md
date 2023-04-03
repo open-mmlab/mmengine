@@ -80,13 +80,14 @@ Major features:
 
 ## What's New
 
-v0.7.1 was released on 2023-03-20.
+v0.7.1 was released on 2023-04-03.
 
 Highlights:
 
 - Support compiling the model and enabling mixed-precision training at the same time.
+- Fix the bug that the log file cannot be saved correctly when `compile` is enabled in `Runner`
 
-Read [Changelog](./docs/en/notes/changelog.md#v071-03202023) for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v071-04032023) for more details.
 
 ## Installation
 
