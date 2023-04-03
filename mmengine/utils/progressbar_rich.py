@@ -103,7 +103,6 @@ def worker(params, func):
 
 def tracking(func,
              tasks,
-             infinite=False,
              nproc=1,
              description='process...',
              color='blue',
@@ -118,7 +117,6 @@ def tracking(func,
     Args:
         func (callable): The function to be applied to each task.
         tasks (tuple[Iterable]): A tuple of tasks.
-        infinite (bool): Progressbar mode, default is False.
         nproc (int): Process (worker) number, if nuproc is 1, use single
             process. Default is 1.
         description (str): The description of progress bar.
@@ -137,7 +135,7 @@ def tracking(func,
     assert len({len(arg) for arg in tasks}) == 1, 'args must have same length'
     assert nproc > 0, 'nproc must be a positive number'
 
-    if infinite:
+    if hasattr(tasks[0], '__len__'):
         task_num = None
     else:
         task_num = len(tasks[0])
