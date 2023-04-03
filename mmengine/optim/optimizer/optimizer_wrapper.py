@@ -167,7 +167,8 @@ class OptimWrapper:
             new_param_settings = {
                 'params': torch.tensor([0.0], requires_grad=True),
                 'is_state_tracker': True,
-                **self.optimizer.defaults}
+                **self.optimizer.defaults
+            }
             self.optimizer.param_groups.append(new_param_settings)
 
     def update_params(self,
@@ -295,7 +296,8 @@ class OptimWrapper:
             new_param_settings = {
                 'params': torch.tensor([0.0], requires_grad=True),
                 'is_state_tracker': True,
-                **last_param}
+                **last_param
+            }
             self.optimizer.param_groups.append(new_param_settings)
         else:
             self.optimizer.param_groups.append(state_tracker)
@@ -330,8 +332,10 @@ class OptimWrapper:
         Returns:
             Dict[str, List[float]]: Learning rate of the optimizer.
         """
-        lr = [group['lr'] for group in self.param_groups if
-              'is_state_tracker' in group and group['is_state_tracker'] is True]
+        lr = [
+            group['lr'] for group in self.param_groups if
+            'is_state_tracker' in group and group['is_state_tracker'] is True
+        ]
         return dict(lr=lr)
 
     def get_momentum(self) -> Dict[str, List[float]]:
@@ -344,7 +348,8 @@ class OptimWrapper:
         """
         momentum = []
         for group in self.param_groups:
-            if 'is_state_tracker' not in group or group['is_state_tracker'] is False:
+            if 'is_state_tracker' not in group or group[
+                    'is_state_tracker'] is False:
                 continue
             # Get momentum of SGD.
             if 'momentum' in group.keys():

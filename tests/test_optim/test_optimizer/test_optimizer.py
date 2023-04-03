@@ -599,8 +599,8 @@ class TestBuilder(TestCase):
         optim_wrapper = optim_constructor(model)
         model_parameters = list(model.parameters())
         num_params = 15 if MMCV_FULL_AVAILABLE else 12
-        assert len(optim_wrapper.optimizer.param_groups) == len(
-            model_parameters) + 1 == num_params
+        assert len(optim_wrapper.optimizer.param_groups
+                   ) == len(model_parameters) + 1 == num_params
         self._check_sgd_optimizer(optim_wrapper.optimizer, model,
                                   **paramwise_cfg)
 
@@ -613,8 +613,8 @@ class TestBuilder(TestCase):
         optim_wrapper = optim_constructor(model)
         model_parameters = list(model.parameters())
         num_params = 15 if MMCV_FULL_AVAILABLE else 12
-        assert len(optim_wrapper.optimizer.param_groups) == len(
-            model_parameters) + 1 == num_params
+        assert len(optim_wrapper.optimizer.param_groups
+                   ) == len(model_parameters) + 1 == num_params
         self._check_sgd_optimizer(optim_wrapper.optimizer, model,
                                   **paramwise_cfg)
 
@@ -788,7 +788,7 @@ class TestZeroOptimizer(MultiProcessTestCase):
         self.assertEqual(optimizer.defaults['momentum'], self.momentum)
         self.assertEqual(optimizer.defaults['weight_decay'], self.base_wd)
         param_groups = optimizer.param_groups
-        param_groups.pop() # remove the last group for state tracker
+        param_groups.pop()  # remove the last group for state tracker
         params_set = set(model.parameters())
         self.assertEqual(
             sum(len(param_group['params']) for param_group in param_groups),

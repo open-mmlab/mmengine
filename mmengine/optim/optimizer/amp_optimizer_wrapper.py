@@ -169,7 +169,8 @@ class AmpOptimWrapper(OptimWrapper):
             new_param_settings = {
                 'params': torch.tensor([0.0], requires_grad=True),
                 'is_state_tracker': True,
-                **last_param}
+                **last_param
+            }
             self.optimizer.param_groups.append(new_param_settings)
         else:
             self.optimizer.param_groups.append(state_tracker)
