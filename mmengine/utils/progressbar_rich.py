@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import warnings
 from collections.abc import Iterable
 from functools import partial
 from multiprocessing import Pool
@@ -104,7 +103,7 @@ def worker(params, func):
 
 def tracking(func,
              tasks,
-             task_num=None,
+             infinite=False,
              nproc=1,
              description='process...',
              color='blue',
@@ -119,7 +118,7 @@ def tracking(func,
     Args:
         func (callable): The function to be applied to each task.
         tasks (tuple[Iterable]): A tuple of tasks.
-        task_num (int): Number of tasks. Default is None.
+        infinite (bool): Progressbar mode, default is False.
         nproc (int): Process (worker) number, if nuproc is 1, use single
             process. Default is 1.
         description (str): The description of progress bar.
@@ -136,11 +135,12 @@ def tracking(func,
     """
     assert is_seq_of(tasks, Iterable)
     assert len({len(arg) for arg in tasks}) == 1, 'args must have same length'
-    if task_num is not None:
-        if task_num != len(tasks[0]):
-            warnings.warn('task_num should be same as arg length')
-            task_num = len(tasks[0])
     assert nproc > 0, 'nproc must be a positive number'
+
+    if infinite:
+        task_num = None
+    else:
+        task_num = len(tasks[0])
 
     prog_bar = RichProgressBar()
 
@@ -175,37 +175,3 @@ def tracking(func,
         pool.join()
 
     return results
-
-
-def track_single_iter_progress(tasks, description='Process..', color='blue'):
-    """Track the progress of tasks iteration or enumeration with a progress
-    bar.
-
-    Tasks are yielded with a simple for-loop.
-
-    Args:
-        tasks (list or tuple[Iterable, int]): A list of tasks or
-            (tasks, total num).
-        description (str): The description of progress bar.
-        color (str): The color of progress bar.
-
-    Yields:
-        list: The task results.
-    """
-    if isinstance(tasks, tuple):
-        assert len(tasks) == 2, (
-            '"tasks" must be composed of two elements (task, task_num)')
-        assert isinstance(tasks[0], Iterable)
-        assert isinstance(tasks[1], int)
-        task_num = tasks[1]
-        tasks = tasks[0]
-    elif isinstance(tasks, Iterable):
-        task_num = len(tasks)
-    else:
-        raise TypeError(
-            '"tasks" must be an iterable object or a (iterator, int) tuple')
-    prog_bar = RichProgressBar()
-    prog_bar.add_task(task_num, description=description, color=color)
-    for task in tasks:
-        prog_bar.update(0, 1)
-        yield task

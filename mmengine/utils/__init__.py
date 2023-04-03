@@ -13,8 +13,7 @@ from .path import (check_file_exist, fopen, is_abs, is_filepath,
                    mkdir_or_exist, scandir, symlink)
 from .progressbar import (ProgressBar, track_iter_progress,
                           track_parallel_progress, track_progress)
-from .progressbar_rich import (RichProgressBar, track_single_iter_progress,
-                               tracking)
+from .progressbar_rich import RichProgressBar, tracking
 from .timer import Timer, TimerError, check_time
 from .version_utils import digit_version, get_git_hash
 
@@ -30,5 +29,5 @@ __all__ = [
     'get_git_hash', 'ManagerMeta', 'ManagerMixin', 'Timer', 'check_time',
     'TimerError', 'ProgressBar', 'track_iter_progress',
     'track_parallel_progress', 'track_progress', 'deprecated_function',
-    'RichProgressBar', 'tracking', 'track_single_iter_progress'
+    'RichProgressBar', 'tracking'
 ]
