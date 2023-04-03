@@ -313,8 +313,8 @@ class MessageHub(ManagerMixin):
                 return default
             else:
                 raise KeyError(
-                    f'Can not find {key} in runtime information of message_hub'
-                )
+                    f'{key} is not found in Messagehub.log_buffers: '
+                    f'instance name is: {MessageHub.instance_name}')
         else:
             # TODO： There are restrictions on objects that can be saved
             # return copy.deepcopy(self._runtime_info[key])
