@@ -5,7 +5,7 @@
 ### Highlights
 
 - Support compiling the model and enabling mixed-precision training at the same time
-- Fix the bug that the log file cannot be saved correctly when `compile` is enabled in `Runner`
+- Fix the bug where the logs cannot be properly saved to the log file after calling `torch.compile`
 
 ### New Features & Enhancements
 
