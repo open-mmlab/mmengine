@@ -184,7 +184,7 @@ class NativeStrategy(Strategy):
 
     def load_checkpoint(self,
                         load_dir: str,
-                        filepath: Optional[str] = None,
+                        name: Optional[str] = None,
                         load_optimizer: bool = False,
                         load_param_scheduler: bool = False,
                         *,
@@ -192,12 +192,12 @@ class NativeStrategy(Strategy):
                         map_location: Union[str, Callable] = 'cpu',
                         callback: Optional[Callable] = None) -> Optional[Dict]:
         # Avoid circular import
-        if filepath is None:
+        if name is None:
             # should auto detect latest checkpoint
-            filepath = self._latest_checkpoint_name(load_dir)
-        if filepath is None:
+            name = self._latest_checkpoint_name(load_dir)
+        if name is None:
             return None
-
+        filepath = osp.join(load_dir, name)
         checkpoint = self._load_checkpoint_from_file(
             filepath, map_location=map_location, logger=self.logger)
 
