@@ -368,7 +368,8 @@ class Visualizer(ManagerMixin):
                     positions: Union[np.ndarray, torch.Tensor],
                     colors: Union[str, tuple, List[str], List[tuple]] = 'g',
                     marker: Optional[str] = None,
-                    sizes: Optional[Union[np.ndarray, torch.Tensor]] = None):
+                    sizes: Optional[Union[np.ndarray, torch.Tensor]] = None,
+                    zorder: float = 1.0):
         """Draw single or multiple points.
 
         Args:
@@ -384,6 +385,7 @@ class Visualizer(ManagerMixin):
                 marker styles. Defaults to None.
             sizes (Optional[Union[np.ndarray, torch.Tensor]]): The marker size.
                 Defaults to None.
+            zorder (float): The z-order of points. Defaults to 1.0.
         """
         check_type('positions', positions, (np.ndarray, torch.Tensor))
         positions = tensor2ndarray(positions)
@@ -395,7 +397,12 @@ class Visualizer(ManagerMixin):
             f'but got {positions.shape}')
         colors = color_val_matplotlib(colors)  # type: ignore
         self.ax_save.scatter(
-            positions[:, 0], positions[:, 1], c=colors, s=sizes, marker=marker)
+            positions[:, 0],
+            positions[:, 1],
+            c=colors,
+            s=sizes,
+            marker=marker,
+            zorder=zorder)
         return self
 
     @master_only
@@ -410,7 +417,7 @@ class Visualizer(ManagerMixin):
         font_families: Union[str, List[str]] = 'sans-serif',
         bboxes: Optional[Union[dict, List[dict]]] = None,
         font_properties: Optional[Union['FontProperties',
-                                        List['FontProperties']]] = None
+                                        List['FontProperties']]] = None,
     ) -> 'Visualizer':
         """Draw single or multiple text boxes.
 
@@ -549,7 +556,8 @@ class Visualizer(ManagerMixin):
         y_datas: Union[np.ndarray, torch.Tensor],
         colors: Union[str, tuple, List[str], List[tuple]] = 'g',
         line_styles: Union[str, List[str]] = '-',
-        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2
+        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
+        zorder: float = 2.0,
     ) -> 'Visualizer':
         """Draw single or multiple line segments.
 
@@ -576,6 +584,7 @@ class Visualizer(ManagerMixin):
                 the same length with lines or just single value.
                 If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 2.
+            zorder (float): The zorder of lines. Defaults to 2.0.
         """
         from matplotlib.collections import LineCollection
         check_type('x_datas', x_datas, (np.ndarray, torch.Tensor))
@@ -602,6 +611,7 @@ class Visualizer(ManagerMixin):
             colors=colors,
             linestyles=line_styles,
             linewidths=line_widths)
+        line_collect.set_zorder(zorder)
         self.ax_save.add_collection(line_collect)
         return self
 
@@ -615,6 +625,7 @@ class Visualizer(ManagerMixin):
         line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
         face_colors: Union[str, tuple, List[str], List[tuple]] = 'none',
         alpha: Union[float, int] = 0.8,
+        zorder: float = 1.0,
     ) -> 'Visualizer':
         """Draw single or multiple circles.
 
@@ -645,6 +656,7 @@ class Visualizer(ManagerMixin):
                 The face colors. Defaults to None.
             alpha (Union[int, float]): The transparency of circles.
                 Defaults to 0.8.
+            zorder (float): The zorder of circles. Defaults to 1.0.
         """
         from matplotlib.collections import PatchCollection
         from matplotlib.patches import Circle
@@ -686,6 +698,7 @@ class Visualizer(ManagerMixin):
             edgecolors=edge_colors,
             linewidths=line_widths,
             linestyles=line_styles)
+        p.set_zorder(zorder)
         self.ax_save.add_collection(p)
         return self
 
@@ -698,6 +711,7 @@ class Visualizer(ManagerMixin):
         line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
         face_colors: Union[str, tuple, List[str], List[tuple]] = 'none',
         alpha: Union[int, float] = 0.8,
+        zorder: float = 2.0,
     ) -> 'Visualizer':
         """Draw single or multiple bboxes.
 
@@ -726,6 +740,7 @@ class Visualizer(ManagerMixin):
                 The face colors. Defaults to None.
             alpha (Union[int, float]): The transparency of bboxes.
                 Defaults to 0.8.
+            zorder (float): The zorder of bboxes. Defaults to 2.0.
         """
         check_type('bboxes', bboxes, (np.ndarray, torch.Tensor))
         bboxes = tensor2ndarray(bboxes)
@@ -752,7 +767,8 @@ class Visualizer(ManagerMixin):
             edge_colors=edge_colors,
             line_styles=line_styles,
             line_widths=line_widths,
-            face_colors=face_colors)
+            face_colors=face_colors,
+            zorder=zorder)
 
     @master_only
     def draw_polygons(
@@ -764,6 +780,7 @@ class Visualizer(ManagerMixin):
         line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
         face_colors: Union[str, tuple, List[str], List[tuple]] = 'none',
         alpha: Union[int, float] = 0.8,
+        zorder: float = 2.0,
     ) -> 'Visualizer':
         """Draw single or multiple bboxes.
 
@@ -825,7 +842,7 @@ class Visualizer(ManagerMixin):
             linestyles=line_styles,
             edgecolors=edge_colors,
             linewidths=line_widths)
-
+        polygon_collection.set_zorder(zorder)
         self.ax_save.add_collection(polygon_collection)
         return self
 
