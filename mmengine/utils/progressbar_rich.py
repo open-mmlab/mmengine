@@ -136,12 +136,13 @@ def track_progress_v2(func: Callable,
         list: The task results.
     """
     assert is_seq_of(tasks, Iterable)
-    assert len({len(arg) for arg in tasks}) == 1, 'args must have same length'
     assert nproc > 0, 'nproc must be a positive number'
 
-    if hasattr(tasks[0], '__len__'):
+    if not hasattr(tasks[0], '__len__'):
         task_num = None
     else:
+        assert len({len(arg)
+                    for arg in tasks}) == 1, 'args must have same length'
         task_num = len(tasks[0])
 
     prog_bar = RichProgressBar()

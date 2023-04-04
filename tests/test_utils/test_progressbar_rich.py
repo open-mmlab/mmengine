@@ -55,11 +55,6 @@ class TestRichProgressBar:
         del prog_bar
 
 
-def sleep_1s(num):
-    time.sleep(1)
-    return num
-
-
 def add(x, y):
     time.sleep(1)
     return x + y
@@ -77,10 +72,11 @@ def test_track_parallel_progress():
 
 def test_track_parallel_progress_skip_first():
     results = mmengine.track_progress_v2(
-        add, ([1, 2, 3], [4, 5, 6]), nproc=3, skip_first=True)
-    assert results == [5, 7, 9]
+        add, ([1, 2, 3, 4], [2, 3, 4, 5]), nproc=2, skip_first=True)
+    assert results == [3, 5, 7, 9]
 
 
 def test_track_parallel_progress_iterator():
-    results = mmengine.track_progress_v2(sleep_1s, ([1, 2, 3, 4], ), nproc=3)
-    assert results == [1, 2, 3, 4]
+    results = mmengine.track_progress_v2(
+        add, (iter([1, 2, 3, 4]), iter([2, 3, 4, 5])), nproc=3)
+    assert results == [3, 5, 7, 9]
