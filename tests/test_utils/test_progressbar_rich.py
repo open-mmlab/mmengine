@@ -66,15 +66,21 @@ def add(x, y):
 
 
 def test_track_progress():
-    ret = mmengine.tracking(add, ([1, 2, 3], [4, 5, 6]))
+    ret = mmengine.track_progress_v2(add, ([1, 2, 3], [4, 5, 6]))
     assert ret == [5, 7, 9]
 
 
 def test_track_parallel_progress():
-    results = mmengine.tracking(add, ([1, 2, 3], [4, 5, 6]), nproc=3)
+    results = mmengine.track_progress_v2(add, ([1, 2, 3], [4, 5, 6]), nproc=3)
+    assert results == [5, 7, 9]
+
+
+def test_track_parallel_progress_skip_first():
+    results = mmengine.track_progress_v2(
+        add, ([1, 2, 3], [4, 5, 6]), nproc=3, skip_first=True)
     assert results == [5, 7, 9]
 
 
 def test_track_parallel_progress_iterator():
-    results = mmengine.tracking(sleep_1s, ([1, 2, 3, 4], ), nproc=3)
+    results = mmengine.track_progress_v2(sleep_1s, ([1, 2, 3, 4], ), nproc=3)
     assert results == [1, 2, 3, 4]

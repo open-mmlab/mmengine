@@ -2,6 +2,7 @@
 from collections.abc import Iterable
 from functools import partial
 from multiprocessing import Pool
+from typing import Callable, Tuple
 
 import rich
 from rich.progress import Progress
@@ -28,10 +29,13 @@ class RichProgressBar:
         self.bar.stop()
 
     @staticmethod
-    def write(msg, color='blue'):
+    def write(msg: str, color: str = 'blue'):
         rich.print(f'[{color}]{msg}')
 
-    def add_task(self, total=None, color='blue', description='Process...'):
+    def add_task(self,
+                 total: int = None,
+                 color: str = 'blue',
+                 description: str = 'Process...') -> int:
         if total is not None:
             assert not self.infinite, (
                 'The prior task is an infinite task (total is None), '
@@ -61,7 +65,7 @@ class RichProgressBar:
             task_id = 0
         return task_id
 
-    def update(self, task_id=0, advance=1):
+    def update(self, task_id: int = 0, advance: int = 1):
         if advance <= 0:
             raise ValueError('advance should greater than zero.')
 
@@ -96,19 +100,19 @@ class RichProgressBar:
                 self.bar.stop()
 
 
-def worker(params, func):
-    result = func(*params)
+def worker(params, function):
+    result = function(*params)
     return result
 
 
-def tracking(func,
-             tasks,
-             nproc=1,
-             description='process...',
-             color='blue',
-             chunksize=1,
-             skip_first=False,
-             keep_order=True):
+def track_progress_v2(func: Callable,
+                      tasks: Tuple[list],
+                      nproc: int = 1,
+                      description: str = 'process...',
+                      color: str = 'blue',
+                      chunksize: int = 1,
+                      skip_first: bool = False,
+                      keep_order: bool = True) -> list:
     """Track the progress of parallel task execution with a progress bar.
 
     The built-in :mod:`multiprocessing` module is used for process pools and
@@ -116,7 +120,7 @@ def tracking(func,
 
     Args:
         func (callable): The function to be applied to each task.
-        tasks (tuple[Iterable]): A tuple of tasks.
+        tasks (tuple[list]): A tuple of tasks.
         nproc (int): Process (worker) number, if nuproc is 1, use single
             process. Default is 1.
         description (str): The description of progress bar.
@@ -151,7 +155,7 @@ def tracking(func,
         return results
     else:
         param = list(zip(*tasks))
-        work = partial(worker, func=func)
+        work = partial(worker, function=func)
 
         pool = Pool(nproc)
         if task_num is not None:
@@ -172,4 +176,4 @@ def tracking(func,
         pool.close()
         pool.join()
 
-    return results
+        return results
