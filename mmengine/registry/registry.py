@@ -572,7 +572,7 @@ class Registry:
             force (bool): Whether to override an existing class with the same
                 name. Defaults to False.
         """
-        if not inspect.isclass(module) and not inspect.isfunction(module):
+        if not inspect.isclass(module) and not callable(module):
             raise TypeError('module must be a class or a function, '
                             f'but got {type(module)}')
 

@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import time
+from functools import partial
 
 import pytest
 
@@ -65,16 +66,18 @@ class TestRegistry:
         assert CATS.get('muchkin') is muchkin
         assert 'muchkin' in CATS
 
-        # can only decorate a class or a function
-        with pytest.raises(TypeError):
+        # decorate a class method
+        class Demo:
 
-            class Demo:
+            def some_method(self):
+                pass
 
-                def some_method(self):
-                    pass
+        method = Demo().some_method
+        CATS.register_module(name='some_method', module=method)
 
-            method = Demo().some_method
-            CATS.register_module(name='some_method', module=method)
+        # decorate a partial function
+        partial_func = partial(print, sep='')
+        CATS.register_module(name='partical_func', module=partial_func)
 
         # test `name` parameter which must be either of None, a string or a
         # sequence of string
@@ -83,7 +86,7 @@ class TestRegistry:
         class BritishShorthair:
             pass
 
-        assert len(CATS) == 2
+        assert len(CATS) == 4
         assert CATS.get('BritishShorthair') is BritishShorthair
 
         # `name` is a string
@@ -91,7 +94,7 @@ class TestRegistry:
         class Munchkin:
             pass
 
-        assert len(CATS) == 3
+        assert len(CATS) == 5
         assert CATS.get('Munchkin') is Munchkin
         assert 'Munchkin' in CATS
 
@@ -102,7 +105,7 @@ class TestRegistry:
 
         assert CATS.get('Siamese') is SiameseCat
         assert CATS.get('Siamese2') is SiameseCat
-        assert len(CATS) == 5
+        assert len(CATS) == 7
 
         # `name` is an invalid type
         with pytest.raises(
@@ -139,7 +142,7 @@ class TestRegistry:
         class BritishShorthair:
             pass
 
-        assert len(CATS) == 5
+        assert len(CATS) == 7
 
         # test `module` parameter, which is either None or a class
         # when the `register_module`` is called as a method rather than a
@@ -155,16 +158,16 @@ class TestRegistry:
 
         CATS.register_module(module=SphynxCat)
         assert CATS.get('SphynxCat') is SphynxCat
-        assert len(CATS) == 6
+        assert len(CATS) == 8
 
         CATS.register_module(name='Sphynx1', module=SphynxCat)
         assert CATS.get('Sphynx1') is SphynxCat
-        assert len(CATS) == 7
+        assert len(CATS) == 9
 
         CATS.register_module(name=['Sphynx2', 'Sphynx3'], module=SphynxCat)
         assert CATS.get('Sphynx2') is SphynxCat
         assert CATS.get('Sphynx3') is SphynxCat
-        assert len(CATS) == 9
+        assert len(CATS) == 11
 
     def _build_registry(self):
         """A helper function to build a Hierarchical Registry."""
