@@ -1,15 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Callable, Dict, List, Optional, Union
+from typing import Callable, Dict, Iterable, List, Optional, Union
 
 import torch
 import torch.nn as nn
 from torch.distributed import ProcessGroup
 from torch.distributed.fsdp.fully_sharded_data_parallel import (
-    BackwardPrefetch, CPUOffload, FullyShardedDataParallel)
+    BackwardPrefetch, CPUOffload, FullyShardedDataParallel, MixedPrecision)
 
 from mmengine.optim import OptimWrapper
 from mmengine.registry import MODEL_WRAPPERS, Registry
 from mmengine.structures import BaseDataElement
+from mmengine.utils import is_seq_of
 
 # support customize fsdp policy
 FSDP_WRAP_POLICIES = Registry('fsdp wrap policy')
@@ -109,6 +110,10 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         cpu_offload: Optional[Union[bool, CPUOffload]] = None,
         fsdp_auto_wrap_policy: Optional[Union[str, Callable]] = None,
         backward_prefetch: Optional[Union[str, BackwardPrefetch]] = None,
+        mixed_precision: Optional[Union[dict, MixedPrecision]] = None,
+        ignored_modules: Optional[Union[Iterable[str], Iterable[nn.Module]]] = None,
+        # TODO: use FUNCTIONS registry
+        param_init_fn: Optional[Union[str, Callable[[nn.Module], None]]] = None,
         **kwargs,
     ):
 
@@ -154,6 +159,23 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                                 'or `BackwardPrefetch`, but has type '
                                 f'{type(backward_prefetch)}')
 
+        module_dict = dict(module.named_modules())
+        if is_seq_of(ignored_modules, str):
+            ignored_modules = [module_dict[name] for name in ignored_modules]
+        if not is_seq_of(ignored_modules, nn.Module) or ignored_modules is None:
+            raise TypeError(
+                '`ignored_modules` should be `None`, `Iterable[str]` or '
+                f'`Iterable[nn.Module]`, but has type {type(ignored_modules)}')
+
+        if isinstance(mixed_precision, dict):
+            mixed_precision = MixedPrecision(**mixed_precision)
+        elif isinstance(mixed_precision, MixedPrecision):
+            mixed_precision = mixed_precision
+        elif mixed_precision is not None:
+            raise TypeError(
+                '`mixed_precision` should be `None`, `dict` or '
+                f'`MixedPrecision`, but has type {type(mixed_precision)}')
+
         def find_fixed_modules_recursively(
                 root_module: nn.Module) -> List[nn.Module]:
             """Helper function to find fixed modules whose parameters are all
@@ -188,6 +210,8 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             auto_wrap_policy=fsdp_auto_wrap_policy,
             cpu_offload=cpu_offload,
             backward_prefetch=backward_prefetch,
+            mixed_precision=mixed_precision,
+            ignored_modules=ignored_modules,
             **kwargs)
 
     def train_step(self, data: dict,
