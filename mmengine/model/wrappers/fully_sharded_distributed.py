@@ -111,9 +111,11 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         fsdp_auto_wrap_policy: Optional[Union[str, Callable]] = None,
         backward_prefetch: Optional[Union[str, BackwardPrefetch]] = None,
         mixed_precision: Optional[Union[dict, MixedPrecision]] = None,
-        ignored_modules: Optional[Union[Iterable[str], Iterable[nn.Module]]] = None,
+        ignored_modules: Optional[Union[Iterable[str],
+                                        Iterable[nn.Module]]] = None,
         # TODO: use FUNCTIONS registry
-        param_init_fn: Optional[Union[str, Callable[[nn.Module], None]]] = None,
+        param_init_fn: Optional[Union[str, Callable[[nn.Module],
+                                                    None]]] = None,
         **kwargs,
     ):
 
@@ -162,7 +164,8 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         module_dict = dict(module.named_modules())
         if is_seq_of(ignored_modules, str):
             ignored_modules = [module_dict[name] for name in ignored_modules]
-        if not is_seq_of(ignored_modules, nn.Module) or ignored_modules is None:
+        if not is_seq_of(ignored_modules,
+                         nn.Module) and ignored_modules is not None:
             raise TypeError(
                 '`ignored_modules` should be `None`, `Iterable[str]` or '
                 f'`Iterable[nn.Module]`, but has type {type(ignored_modules)}')

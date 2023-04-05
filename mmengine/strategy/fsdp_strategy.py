@@ -68,6 +68,7 @@ class FSDPStrategy(DDPStrategy):
             'Model should have been built before wrap')
 
         self.fsdp_kwargs.setdefault('type', 'MMFullyShardedDataParallel')
+        self.fsdp_kwargs.setdefault('module', self.model)
         model_wrapper_cfg: dict = self.cfg.get('model_wrapper_cfg', dict())
         if self.fsdp_kwargs:
             assert not model_wrapper_cfg, (
