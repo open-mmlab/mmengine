@@ -71,6 +71,7 @@ runner.train()
 - 保存最新的多个权重
 - 保存最优权重
 - 指定保存权重的路径
+- 制作发布用的权重
 
 如需了解其他功能，请阅读 [CheckpointHook API 文档](mmengine.hooks.CheckpointHook)。
 
@@ -121,6 +122,14 @@ runner.train()
   default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, out_dir='/path/of/directory'))
   ```
 
+- 制作发布用的权重
+
+  如果你想在训练结束后自动生成可发布的权重（删除不需要的权重，例如优化器状态），你可以设置 `published_keys` 参数，选择需要保留的信息。注意：需要相应设置 `save_best` 或者 `save_last` 参数，这样才会生成可发布的权重，其中设置 `save_best` 会生成最优权重的可发布权重，设置 `save_last` 会生成最后一个权重的可发布权重，这两个参数也可同时设置。
+
+  ```python
+  default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=1, save_best='accuracy', rule='less', published_keys=['meta', 'state_dict']))
+  ```
+
 ### LoggerHook
 
 [LoggerHook](mmengine.hooks.LoggerHook) 负责收集日志并把日志输出到终端或者输出到文件、TensorBoard 等后端。
@@ -131,7 +140,7 @@ runner.train()
 default_hooks = dict(logger=dict(type='LoggerHook', interval=20))
 ```
 
-如果你对日志的管理感兴趣，可以阅读[记录日志（logging）](logging.md)。
+如果你对日志的管理感兴趣，可以阅读[记录日志（logging）](../advanced_tutorials/logging.md)。
 
 ### ParamSchedulerHook
 
@@ -236,9 +245,9 @@ class CheckInvalidLossHook(Hook):
 ```python
 from mmengine.runner import Runner
 
-custom_hooks = dict(
+custom_hooks = [
     dict(type='CheckInvalidLossHook', interval=50)
-)
+]
 runner = Runner(custom_hooks=custom_hooks, ...)  # 实例化执行器，主要完成环境的初始化以及各种模块的构建
 runner.train()  # 执行器开始训练
 ```
@@ -248,9 +257,9 @@ runner.train()  # 执行器开始训练
 注意，自定义钩子的优先级默认为 `NORMAL (50)`，如果想改变钩子的优先级，则可以在配置中设置 priority 字段。
 
 ```python
-custom_hooks = dict(
+custom_hooks = [
     dict(type='CheckInvalidLossHook', interval=50, priority='ABOVE_NORMAL')
-)
+]
 ```
 
 也可以在定义类时给定优先级
@@ -262,4 +271,4 @@ class CheckInvalidLossHook(Hook):
     priority = 'ABOVE_NORMAL'
 ```
 
-你可能还想阅读[钩子的设计](../design/hook.md)或者[钩子的 API 文档](mmengine.hooks)。
+你可能还想阅读[钩子的设计](../design/hook.md)或者[钩子的 API 文档](../api/hooks)。

@@ -36,6 +36,26 @@ English | [简体中文](README_zh-CN.md)
 
 </div>
 
+<div align="center">
+  <a href="https://openmmlab.medium.com/" style="text-decoration:none;">
+    <img src="https://user-images.githubusercontent.com/25839884/219255827-67c1a27f-f8c5-46a9-811d-5e57448c61d1.png" width="3%" alt="" /></a>
+  <img src="https://user-images.githubusercontent.com/25839884/218346358-56cc8e2f-a2b8-487f-9088-32480cceabcf.png" width="3%" alt="" />
+  <a href="https://discord.com/channels/1037617289144569886/1073056342287323168" style="text-decoration:none;">
+    <img src="https://user-images.githubusercontent.com/25839884/218347213-c080267f-cbb6-443e-8532-8e1ed9a58ea9.png" width="3%" alt="" /></a>
+  <img src="https://user-images.githubusercontent.com/25839884/218346358-56cc8e2f-a2b8-487f-9088-32480cceabcf.png" width="3%" alt="" />
+  <a href="https://twitter.com/OpenMMLab" style="text-decoration:none;">
+    <img src="https://user-images.githubusercontent.com/25839884/218346637-d30c8a0f-3eba-4699-8131-512fb06d46db.png" width="3%" alt="" /></a>
+  <img src="https://user-images.githubusercontent.com/25839884/218346358-56cc8e2f-a2b8-487f-9088-32480cceabcf.png" width="3%" alt="" />
+  <a href="https://www.youtube.com/openmmlab" style="text-decoration:none;">
+    <img src="https://user-images.githubusercontent.com/25839884/218346691-ceb2116a-465a-40af-8424-9f30d2348ca9.png" width="3%" alt="" /></a>
+  <img src="https://user-images.githubusercontent.com/25839884/218346358-56cc8e2f-a2b8-487f-9088-32480cceabcf.png" width="3%" alt="" />
+  <a href="https://space.bilibili.com/1293512903" style="text-decoration:none;">
+    <img src="https://user-images.githubusercontent.com/25839884/219026751-d7d14cce-a7c9-4e82-9942-8375fca65b99.png" width="3%" alt="" /></a>
+  <img src="https://user-images.githubusercontent.com/25839884/218346358-56cc8e2f-a2b8-487f-9088-32480cceabcf.png" width="3%" alt="" />
+  <a href="https://www.zhihu.com/people/openmmlab" style="text-decoration:none;">
+    <img src="https://user-images.githubusercontent.com/25839884/219026120-ba71e48b-6e94-4bd4-b4e9-b7d175b5e362.png" width="3%" alt="" /></a>
+</div>
+
 ## Introduction
 
 MMEngine is a foundational library for training deep learning models based on PyTorch. It provides a solid engineering foundation and frees developers from writing redundant codes on workflows. It serves as the training engine of all OpenMMLab codebases, which support hundreds of algorithms in various research areas. Moreover, MMEngine is also generic to be applied to non-OpenMMLab projects.
@@ -60,15 +80,14 @@ Major features:
 
 ## What's New
 
-v0.5.0 was released in 2023-01-20.
+v0.7.1 was released on 2023-04-03.
 
 Highlights:
 
-- Add `BaseInferencer` to provide a general inference interface
-- Provide `ReduceOnPlateauParamScheduler` to adjust learning rate by metric
-- Deprecate support for Python3.6
+- Support compiling the model and enabling mixed-precision training at the same time.
+- Fix the bug where the logs cannot be properly saved to the log file after calling `torch.compile`
 
-Read [Changelog](./docs/en/notes/changelog.md#v050-01202023) for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v071-04032023) for more details.
 
 ## Installation
 
@@ -251,12 +270,18 @@ runner.train()
 </details>
 
 <details>
+<summary>Examples</summary>
+
+- [Train a GAN](https://mmengine.readthedocs.io/en/latest/examples/train_a_gan.html)
+
+</details>
+
+<details>
 <summary>Common Usage</summary>
 
-- [Resume Training](https://mmengine.readthedocs.io/en/latest/examples/resume_training.html)
-- [Speed up Training](https://mmengine.readthedocs.io/en/latest/examples/speed_up_training.html)
-- [Save Memory on GPU](https://mmengine.readthedocs.io/en/latest/examples/save_gpu_memory.html)
-- [Train a GAN](https://mmengine.readthedocs.io/en/latest/examples/train_a_gan.html)
+- [Resume Training](https://mmengine.readthedocs.io/en/latest/common_usage/resume_training.html)
+- [Speed up Training](https://mmengine.readthedocs.io/en/latest/common_usage/speed_up_training.html)
+- [Save Memory on GPU](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html)
 
 </details>
 
@@ -286,6 +311,19 @@ runner.train()
 ## Contributing
 
 We appreciate all contributions to improve MMEngine. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for the contributing guideline.
+
+## Citation
+
+If you find this project useful in your research, please consider cite:
+
+```
+@article{mmengine2022,
+  title   = {{MMEngine}: OpenMMLab Foundational Library for Training Deep Learning Models},
+  author  = {MMEngine Contributors},
+  howpublished = {\url{https://github.com/open-mmlab/mmengine}},
+  year={2022}
+}
+```
 
 ## License
 

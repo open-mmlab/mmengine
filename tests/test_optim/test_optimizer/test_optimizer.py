@@ -10,10 +10,12 @@ import torch.nn as nn
 from torch.distributed.rpc import is_available
 
 from mmengine.dist import get_rank
+from mmengine.logging import MMLogger
 from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             DefaultOptimWrapperConstructor, OptimWrapper,
                             build_optim_wrapper)
 from mmengine.optim.optimizer.builder import (DADAPTATION_OPTIMIZERS,
+                                              LION_OPTIMIZERS,
                                               TORCH_OPTIMIZERS)
 from mmengine.optim.optimizer.default_constructor import reduce_param_groups
 from mmengine.registry import build_from_cfg
@@ -30,6 +32,14 @@ if not MMCV_FULL_AVAILABLE:
 def has_dadaptation() -> bool:
     try:
         import dadaptation  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def has_lion() -> bool:
+    try:
+        import lion_pytorch  # noqa: F401
         return True
     except ImportError:
         return False
@@ -222,6 +232,10 @@ class TestBuilder(TestCase):
         dadaptation_optimizers = ['DAdaptAdaGrad', 'DAdaptAdam', 'DAdaptSGD']
         assert set(dadaptation_optimizers).issubset(
             set(DADAPTATION_OPTIMIZERS))
+
+    @unittest.skipIf(not has_lion(), 'lion-pytorch is not installed')
+    def test_lion_optimizers(self):
+        assert 'Lion' in LION_OPTIMIZERS
 
     def test_build_optimizer(self):
         # test build function without ``constructor`` and ``paramwise_cfg``
@@ -588,10 +602,23 @@ class TestBuilder(TestCase):
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
 
-        self.assertWarnsRegex(
-            Warning,
-            'conv3.0 is duplicate. It is skipped since bypass_duplicate=True',
-            lambda: optim_constructor(model))
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
+            # Warning should be raised since conv3.0 is a duplicate param.
+            optim_constructor(model)
+        optim_wrapper = optim_constructor(model)
+        model_parameters = list(model.parameters())
+        num_params = 14 if MMCV_FULL_AVAILABLE else 11
+        assert len(optim_wrapper.optimizer.param_groups) == len(
+            model_parameters) == num_params
+        self._check_sgd_optimizer(optim_wrapper.optimizer, model,
+                                  **paramwise_cfg)
+
+        # test DefaultOptimWrapperConstructor when the params in shared
+        # modules do not require grad
+        model.conv1[0].requires_grad_(False)
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
+            # Warning should be raised since conv3.0 is a duplicate param.
+            optim_constructor(model)
         optim_wrapper = optim_constructor(model)
         model_parameters = list(model.parameters())
         num_params = 14 if MMCV_FULL_AVAILABLE else 11

@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import warnings
+import logging
 from pickle import dumps
 from typing import Any, Dict, List, Optional, Union
 
@@ -52,7 +52,7 @@ class DefaultOptimWrapperConstructor:
       rate for parameters of offset layer in the deformable convs
       of a model.
     - ``bypass_duplicate`` (bool): If true, the duplicate parameters
-      would not be added into optimizer. Default: False.
+      would not be added into optimizer. Defaults to False.
     - ``reduce_param_groups`` (bool): If true, constructor will cluster the
       parameter groups with the same learning rate, momentum and other
       parameters, which can speed up the optimizer. Defaults to true.
@@ -209,13 +209,17 @@ class DefaultOptimWrapperConstructor:
 
         for name, param in module.named_parameters(recurse=False):
             param_group = {'params': [param]}
+            if bypass_duplicate and self._is_in(param_group, params):
+                print_log(
+                    f'{prefix} is duplicate. It is skipped since '
+                    f'bypass_duplicate={bypass_duplicate}',
+                    logger='current',
+                    level=logging.WARNING)
+                continue
             if not param.requires_grad:
                 params.append(param_group)
                 continue
-            if bypass_duplicate and self._is_in(param_group, params):
-                warnings.warn(f'{prefix} is duplicate. It is skipped since '
-                              f'bypass_duplicate={bypass_duplicate}')
-                continue
+
             # if the parameter match one of the custom keys, ignore other rules
             is_custom = False
             for key in sorted_keys:

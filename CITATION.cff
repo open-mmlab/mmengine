@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - name: "MMEngine Contributors"
+title: "OpenMMLab Foundational Library for Training Deep Learning Models"
+date-released: 2022-09-01
+url: "https://github.com/open-mmlab/mmengine"
+license: Apache-2.0

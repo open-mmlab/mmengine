@@ -4,7 +4,7 @@
 
 随着支持的深度学习任务越来越多，用户的需求不断增加，我们对 MMCV 已有的执行器（Runner）的灵活性和通用性有了更高的要求。
 因此，MMEngine 在 MMCV 的基础上，实现了一个更加通用灵活的执行器以支持更多复杂的模型训练流程。
-MMEngine 中的执行器扩大了作用域，也承担了更多的功能；我们抽象出了[训练循环控制器（EpochBasedTrainLoop/IterBasedTrainLoop）](mmengine.runner.EpochBasedLoop)、[验证循环控制器（ValLoop）](mmengine.runner.ValLoop)和[测试循环控制器（TestLoop）](mmengine.runner.TestLoop)来方便用户灵活拓展模型的执行流程。
+MMEngine 中的执行器扩大了作用域，也承担了更多的功能；我们抽象出了[训练循环控制器（EpochBasedTrainLoop/IterBasedTrainLoop）](mmengine.runner.EpochBasedTrainLoop)、[验证循环控制器（ValLoop）](mmengine.runner.ValLoop)和[测试循环控制器（TestLoop）](mmengine.runner.TestLoop)来方便用户灵活拓展模型的执行流程。
 
 我们将首先介绍算法库的执行入口该如何从 MMCV 迁移到 MMEngine， 以最大程度地简化和统一执行入口的代码。
 然后我们将详细介绍在 MMCV 和 MMEngine 中构造执行器及其内部组件进行训练的差异。
@@ -695,7 +695,7 @@ set_random_seed(seed, deterministic=args.deterministic)
 
 **MMEngine 设计随机种子**
 
-配置执行器的 `randomness` 参数，配置规则详见[执行器 api 文档](mmengine.runner.Runner.set_randomnes1s)
+配置执行器的 `randomness` 参数，配置规则详见[执行器 api 文档](mmengine.runner.Runner.set_randomness)
 
 **OpenMMLab 系列算法库配置变更**
 
@@ -902,7 +902,7 @@ test_dataloader = val_dataloader
 
 ### 准备模型
 
-详见[迁移 MMCV 模型至 MMEngine](./migrate_model_from_mmcv.md)
+详见[迁移 MMCV 模型至 MMEngine](../migration/model.md)
 
 ```python
 import torch.nn as nn
@@ -1043,7 +1043,7 @@ optim_wrapper = dict(
 </thead>
 </table>
 
-```{note}:
+```{note}
 对于检测、分类一类的上层任务（High level）MMCV 需要配置 `optim_config` 来构建优化器钩子，而 MMEngine 不需要。
 ```
 
@@ -1095,19 +1095,19 @@ MMEngine 执行器将 MMCV 常用的训练钩子配置成默认钩子：
 - [RuntimeInfoHook](mmengine.hooks.RuntimeInfoHook)
 - [IterTimerHook](mmengine.hooks.IterTimerHook)
 - [DistSamplerSeedHook](mmengine.hooks.DistSamplerSeedHook)
-- [LoggerHook](mmedge.hooks.LoggerHook)
+- [LoggerHook](mmengine.hooks.LoggerHook)
 - [CheckpointHook](mmengine.hooks.CheckpointHook)
 - [ParamSchedulerHook](mmengine.hooks.ParamSchedulerHook)
 
 对比上例中 MMCV 配置的训练钩子：
 
 - `LrUpdaterHook` 对应 MMEngine 中的 `ParamSchedulerHook`，二者对应关系详见[迁移 `scheduler` 文档](./param_scheduler.md)
-- MMEngine 在模型的 [train_step](mmengine.BaseModel.train_step) 时更新参数，因此不需要配置优化器钩子（`OptimizerHook`）
+- MMEngine 在模型的 [train_step](mmengine.model.BaseModel.train_step) 时更新参数，因此不需要配置优化器钩子（`OptimizerHook`）
 - MMEngine 自带 `CheckPointHook`，可以使用默认配置
 - MMEngine 自带 `LoggerHook`，可以使用默认配置
 
 因此我们只需要配置执行器[优化器参数调整策略（param_scheduler）](../tutorials/param_scheduler.md)，就能达到和 MMCV 示例一样的效果。
-MMEngine 也支持注册自定义钩子，具体教程详见[执行器教程](../tutorials/runner.md#通过配置文件使用执行器) 和[迁移 `hook` 文档](./migrate_hook_from_mmcv.md)。
+MMEngine 也支持注册自定义钩子，具体教程详见[钩子教程](../tutorials/hook.md#自定义钩子) 和[迁移 `hook` 文档](../migration/hook.md)。
 
 <table class="docutils">
 <thead>
@@ -1191,7 +1191,7 @@ param_scheduler = dict(type='MultiStepLR', milestones=[2, 3], gamma=0.1)
 
 ### 准备验证模块
 
-MMCV 借助 `EvalHook` 实现验证流程，受限于篇幅，这里不做进一步展开。MMEngine 通过[验证循环控制器（ValLoop）](../tutorials/runner.md#自定义执行流程) 和[评测器（Evaluator）](../tutorials/evaluation.md)实现执行流程，如果我们想基于自定义的评价指标完成验证流程，则需要定义一个 `Metric`，并将其注册至 `METRICS` 注册器：
+MMCV 借助 `EvalHook` 实现验证流程，受限于篇幅，这里不做进一步展开。MMEngine 通过[验证循环控制器（ValLoop）](mmengine.runner.ValLoop) 和[评测器（Evaluator）](../tutorials/evaluation.md)实现执行流程，如果我们想基于自定义的评价指标完成验证流程，则需要定义一个 `Metric`，并将其注册至 `METRICS` 注册器：
 
 ```python
 import torch
@@ -1213,7 +1213,7 @@ class ToyAccuracyMetric(BaseMetric):
         return dict(Accuracy=acc / num_sample)
 ```
 
-实现自定义 `Metric` 后，我们还需在执行器的构造参数中配置评测器和[验证循环控制器](../tutorials/runner.md#自定义执行流程)，本教程中示例配置如下：
+实现自定义 `Metric` 后，我们还需在执行器的构造参数中配置评测器和[验证循环控制器](mmengine.runner.ValLoop)，本教程中示例配置如下：
 
 ```python
 val_evaluator = dict(type='ToyAccuracyMetric')

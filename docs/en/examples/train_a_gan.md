@@ -17,7 +17,7 @@ It will be divided into the following steps:
 ### Building a Dataset
 
 First, we will build a dataset class `MNISTDataset` for the MNIST dataset, inheriting from the base dataset class [BaseDataset](mmengine.dataset.BaseDataset), and overwrite the `load_data_list` function of the base dataset class to ensure that the return value is a `list[dict]`, where each `dict` represents a data sample.
-More details about using datasets in MMEngine, refer to [the Dataset tutorial](../tutorials/basedataset.md).
+More details about using datasets in MMEngine, refer to [the Dataset tutorial](../advanced_tutorials/basedataset.md).
 
 ```python
 import numpy as np
@@ -262,7 +262,7 @@ model = GAN(generator, discriminator, 100, data_preprocessor)
 ## Building an Optimizer
 
 MMEngine uses [OptimWrapper](mmengine.optim.OptimWrapper) to wrap optimizers. For multiple optimizers, we use [OptimWrapperDict](mmengine.optim.OptimWrapperDict) to further wrap OptimWrapper.
-More details about optimizers, refer to the [Optimizer tutorial](../tutorials/optimizer.md).
+More details about optimizers, refer to the [Optimizer tutorial](../tutorials/optim_wrapper.md).
 
 ```python
 from mmengine.optim import OptimWrapper, OptimWrapperDict
