@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
-from collections import defaultdict
+from pickle import dumps
 from typing import Any, Dict, List, Optional, Union
 
 import torch
@@ -53,6 +53,10 @@ class DefaultOptimWrapperConstructor:
       of a model.
     - ``bypass_duplicate`` (bool): If true, the duplicate parameters
       would not be added into optimizer. Default: False.
+    - ``reduce_param_groups`` (bool): If true, constructor will cluster the
+      parameter groups with the same learning rate, momentum and other
+      parameters, which can speed up the optimizer. Defaults to true.
+      New in version 0.7.1.
 
     Note:
 
@@ -315,27 +319,6 @@ class DefaultOptimWrapperConstructor:
         return optim_wrapper
 
 
-def _expand_param_groups(params: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Transform parameter groups into per-parameter structure. Later items in
-    `params` can overwrite parameters set in previous items.
-
-    Ref: https://github.com/facebookresearch/detectron2/blob/main/detectron2/solver/build.py
-
-    Args:
-        params (List[Dict[str, Any]]): The parameter groups.
-
-    Returns:
-        List[Dict[str, Any]]: List of expanded parameter groups.
-    """  # noqa: E501
-    ret: dict = defaultdict(dict)
-    for item in params:
-        assert 'params' in item
-        cur_params = {x: y for x, y in item.items() if x != 'params'}
-        for param in item['params']:
-            ret[param].update({'params': [param], **cur_params})
-    return list(ret.values())
-
-
 def reduce_param_groups(params: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Reorganize the parameter groups and merge duplicated groups. The number
     of parameter groups needs to be as small as possible in order to
@@ -344,7 +327,7 @@ def reduce_param_groups(params: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     groups and merge duplicated groups. This approach speeds up multi-tensor
     optimizer significantly.
 
-    Ref: https://github.com/facebookresearch/detectron2/blob/main/detectron2/solver/build.py
+    References: https://github.com/facebookresearch/detectron2/blob/main/detectron2/solver/build.py
 
     Args:
         params (List[Dict[str, Any]]): The parameter groups.
@@ -352,15 +335,16 @@ def reduce_param_groups(params: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     Returns:
         List[Dict[str, Any]]: The reorganized parameter groups.
     """  # noqa: E501
-    params = _expand_param_groups(params)
-    groups = defaultdict(
-        list)  # re-group all parameter groups by their hyperparams
+    groups: dict = dict()
+
+    def param_info_id(param_info):
+        return dumps(param_info)
+
     for item in params:
-        cur_params = tuple((x, y) for x, y in item.items() if x != 'params')
-        groups[cur_params].extend(item['params'])
-    ret = []
-    for param_keys, param_values in groups.items():
-        cur = {kv[0]: kv[1] for kv in param_keys}
-        cur['params'] = param_values
-        ret.append(cur)
-    return ret
+        param_info = {x: y for x, y in item.items() if x != 'params'}
+        info_id = param_info_id(param_info)
+        if info_id in groups:
+            groups[info_id]['params'].extend(item['params'])
+        else:
+            groups[info_id] = item
+    return list(groups.values())
