@@ -59,7 +59,6 @@ class TestCheckpointHook(RunnerTestCase):
 
         # Test save best
         CheckpointHook(save_best='acc')
-
         CheckpointHook(save_best=['acc'])
 
         with self.assertRaisesRegex(AssertionError, '"save_best" should be'):
@@ -70,9 +69,7 @@ class TestCheckpointHook(RunnerTestCase):
             CheckpointHook(interval=2, save_best=['auto', 'acc'])
 
         # Test rules
-
         CheckpointHook(save_best=['acc', 'mAcc'], rule='greater')
-
         with self.assertRaisesRegex(AssertionError, '"rule" should be a str'):
             CheckpointHook(save_best=['acc'], rule=1)
 
@@ -125,9 +122,8 @@ class TestCheckpointHook(RunnerTestCase):
         checkpoint_hook = CheckpointHook(
             interval=1, by_epoch=True, out_dir='test_dir')
         checkpoint_hook.before_train(runner)
-        self.assertEqual(
-            checkpoint_hook.out_dir,
-            osp.join('test_dir', osp.join(osp.basename(cfg.work_dir))))
+        self.assertEqual(checkpoint_hook.out_dir,
+                         osp.join('test_dir', osp.basename(cfg.work_dir)))
 
         # If `save_best` is a list of string, the path to save the best
         # checkpoint will be defined in attribute `best_ckpt_path_dict`.
@@ -253,12 +249,9 @@ class TestCheckpointHook(RunnerTestCase):
         best_mIoU_path = checkpoint_hook.file_client.join_path(
             checkpoint_hook.out_dir, best_mIoU_name)
         self.assertEqual(runner.message_hub.get_info('best_score_acc'), 0.5)
-
         self.assertEqual(runner.message_hub.get_info('best_score_mIoU'), 0.6)
-
         self.assertEqual(
             runner.message_hub.get_info('best_ckpt_acc'), best_acc_path)
-
         self.assertEqual(
             runner.message_hub.get_info('best_ckpt_mIoU'), best_mIoU_path)
 
@@ -291,7 +284,6 @@ class TestCheckpointHook(RunnerTestCase):
             checkpoint_hook.out_dir, best_ckpt_name)
         self.assertEqual(
             runner.message_hub.get_info('best_ckpt'), best_ckpt_path)
-
         self.assertEqual(runner.message_hub.get_info('best_score'), 0.666)
 
         # check best checkpoint name with `by_epoch` is False

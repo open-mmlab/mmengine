@@ -414,7 +414,7 @@ class CheckpointHook(Hook):
 
             best_ckpt_name = f'best_{key_indicator}_{ckpt_filename}'
             # Replace illegal characters for filename with `_`
-            best_ckpt_name = re.sub('(\\\\|/)', '_', best_ckpt_name)
+            best_ckpt_name = re.sub('/', '_', best_ckpt_name)
             if len(self.key_indicators) == 1:
                 self.best_ckpt_path = self.file_client.join_path(  # type: ignore # noqa: E501
                     self.out_dir, best_ckpt_name)
