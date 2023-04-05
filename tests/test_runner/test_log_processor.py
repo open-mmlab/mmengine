@@ -161,17 +161,17 @@ class TestLogProcessor:
             return_value=non_scalar_logs)
         _, out = log_processor.get_log_after_epoch(self.runner, 2, mode)
         expect_metric_str = ("accuracy: 0.9000  recall: {'cat': 1, 'dog': 0}  "
-                             'cm: \ntensor([1, 2, 3])\ndata_time: 1.0000  ')
+                             'cm: \ntensor([1, 2, 3])\n  data_time: 1.0000')
         if by_epoch:
             if mode == 'test':
-                assert out == 'Epoch(test) [5/5]  ' + expect_metric_str
+                assert out == 'Epoch(test) [5/5]    ' + expect_metric_str
             else:
-                assert out == 'Epoch(val) [1][10/10]  ' + expect_metric_str
+                assert out == 'Epoch(val) [1][10/10]    ' + expect_metric_str
         else:
             if mode == 'test':
-                assert out == 'Iter(test) [5/5]  ' + expect_metric_str
+                assert out == 'Iter(test) [5/5]    ' + expect_metric_str
             else:
-                assert out == 'Iter(val) [10/10]  ' + expect_metric_str
+                assert out == 'Iter(val) [10/10]    ' + expect_metric_str
 
     def test_collect_scalars(self):
         history_count = np.ones(100)

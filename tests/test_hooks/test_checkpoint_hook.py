@@ -1,6 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import os
 import os.path as osp
+import re
 
 import torch
 from parameterized import parameterized
@@ -467,3 +469,11 @@ class TestCheckpointHook(RunnerTestCase):
         runner.train()
         self.assertTrue(
             osp.isfile(osp.join(cfg.work_dir, 'best_test_acc_test_5.pth')))
+
+        # test save published keys
+        cfg.default_hooks.checkpoint.published_keys = ['meta', 'state_dict']
+        runner = self.build_runner(cfg)
+        runner.train()
+        ckpt_files = os.listdir(runner.work_dir)
+        self.assertTrue(
+            any(re.findall(r'-[\d\w]{8}\.pth', file) for file in ckpt_files))
