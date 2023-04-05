@@ -716,6 +716,11 @@ class Runner:
 
         log_cfg = dict(log_level=log_level, log_file=log_file, **kwargs)
         log_cfg.setdefault('name', self._experiment_name)
+        # `torch.compile` in PyTorch 2.0 could close all user defined handlers
+        # unexpectedly. Using file mode 'a' can help prevent abnormal
+        # termination of the FileHandler and ensure that the log file could
+        # be continuously updated during the lifespan of the runner.
+        log_cfg.setdefault('file_mode', 'a')
 
         return MMLogger.get_instance(**log_cfg)  # type: ignore
 
@@ -2290,7 +2295,9 @@ class Runner:
                          env_info + '\n'
                          '\nRuntime environment:' + runtime_env_info + '\n' +
                          dash_line + '\n')
-        self.logger.info(f'Config:\n{self.cfg.pretty_text}')
+
+        if self.cfg._cfg_dict:
+            self.logger.info(f'Config:\n{self.cfg.pretty_text}')
 
     def _maybe_compile(self, target: str) -> None:
         """Use `torch.compile` to optimize model/wrapped_model."""

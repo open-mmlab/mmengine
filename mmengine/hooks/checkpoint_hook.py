@@ -1,6 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import hashlib
 import logging
 import os.path as osp
+import pickle
 from math import inf
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Union
@@ -84,7 +86,11 @@ class CheckpointHook(Hook):
         backend_args (dict, optional): Arguments to instantiate the
             prefix of uri corresponding backend. Defaults to None.
             New in v0.2.0.
-
+        published_keys (str, List[str], optional): If ``save_last`` is ``True``
+            or ``save_best`` is not ``None``, it will automatically
+            publish model with keys in the list after training.
+            Defaults to None.
+            `New in version 0.7.1.`
     Examples:
         >>> # Save best based on single metric
         >>> CheckpointHook(interval=2, by_epoch=True, save_best='acc',
@@ -95,6 +101,9 @@ class CheckpointHook(Hook):
         >>> # Save best based on multi metrics with different comparison rule
         >>> CheckpointHook(interval=2, by_epoch=True,
         >>>                save_best=['FID', 'IS'], rule=['less', 'greater'])
+        >>> # Save best based on single metric and publish model after training
+        >>> CheckpointHook(interval=2, by_epoch=True, save_best='acc',
+        >>>                rule='less', published_keys=['meta', 'state_dict'])
     """
     out_dir: str
 
@@ -128,6 +137,7 @@ class CheckpointHook(Hook):
                  file_client_args: Optional[dict] = None,
                  filename_tmpl: Optional[str] = None,
                  backend_args: Optional[dict] = None,
+                 published_keys: Union[str, List[str], None] = None,
                  **kwargs) -> None:
         self.interval = interval
         self.by_epoch = by_epoch
@@ -218,6 +228,20 @@ class CheckpointHook(Hook):
             else:
                 self.best_ckpt_path_dict: Dict = dict()
 
+        # published keys
+        if not (isinstance(published_keys, str)
+                or is_seq_of(published_keys, str) or published_keys is None):
+            raise TypeError(
+                '"published_keys" should be a str or a sequence of str or '
+                f'None, but got {type(published_keys)}')
+
+        if isinstance(published_keys, str):
+            published_keys = [published_keys]
+        elif isinstance(published_keys, (list, tuple)):
+            assert len(published_keys) == len(set(published_keys)), (
+                'Find duplicate elements in "published_keys".')
+        self.published_keys = published_keys
+
     def before_train(self, runner) -> None:
         """Finish all operations, related to checkpoint.
 
@@ -303,6 +327,56 @@ class CheckpointHook(Hook):
             return
 
         self._save_best_checkpoint(runner, metrics)
+
+    def after_train(self, runner) -> None:
+        """Publish the checkpoint after training.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
+        if self.published_keys is None:
+            return
+
+        if self.save_last and 'last_ckpt' in runner.message_hub.runtime_info:
+            last_ckpt = runner.message_hub.get_info('last_ckpt')
+            self._publish_model(runner, last_ckpt)
+
+        if getattr(self, 'best_ckpt_path', None) is not None:
+            self._publish_model(runner, str(self.best_ckpt_path))
+        if getattr(self, 'best_ckpt_path_dict', None) is not None:
+            for key, best_ckpt in self.best_ckpt_path_dict.items():
+                self._publish_model(runner, best_ckpt)
+
+    def _publish_model(self, runner, ckpt_path: str) -> None:
+        """Remove unnecessary keys from ckpt_path and save the new checkpoint.
+
+        Args:
+            runner (Runner): The runner of the training process.
+            ckpt_path (str): The checkpoint path that ought to be published.
+        """
+        from mmengine.runner import save_checkpoint
+        from mmengine.runner.checkpoint import _load_checkpoint
+        checkpoint = _load_checkpoint(ckpt_path)
+        assert self.published_keys is not None
+        removed_keys = []
+        for key in list(checkpoint.keys()):
+            if key not in self.published_keys:
+                removed_keys.append(key)
+                checkpoint.pop(key)
+        if removed_keys:
+            print_log(
+                f'Key {removed_keys} will be removed because they are not '
+                'found in published_keys. If you want to keep them, '
+                f'please set `{removed_keys}` in published_keys',
+                logger='current')
+        checkpoint_data = pickle.dumps(checkpoint)
+        sha = hashlib.sha256(checkpoint_data).hexdigest()
+        final_path = osp.splitext(ckpt_path)[0] + f'-{sha[:8]}.pth'
+        save_checkpoint(checkpoint, final_path)
+        print_log(
+            f'The checkpoint ({ckpt_path}) is published to '
+            f'{final_path}.',
+            logger='current')
 
     def _save_checkpoint(self, runner) -> None:
         """Save the current checkpoint and delete outdated checkpoint.

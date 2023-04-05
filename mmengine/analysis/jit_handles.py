@@ -12,7 +12,13 @@ import numpy as np
 try:
     from math import prod  # type: ignore
 except ImportError:
-    from numpy import prod  # type: ignore
+    from numpy import prod as _prod  # type: ignore
+
+    # Patch `numpy.prod` to avoid overflow on Windows by converting its result
+    # from `np.int32` to `int`.
+    def prod(*args, **kwargs):  # type: ignore
+        return _prod(*args, **kwargs).item()
+
 
 Handle = Callable[[List[Any], List[Any]], Union[typing.Counter[str], int]]
 

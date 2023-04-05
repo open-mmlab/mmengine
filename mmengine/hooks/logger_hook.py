@@ -329,5 +329,6 @@ class LoggerHook(Hook):
 
             if not self.keep_local:
                 runner.logger.info(f'{local_filepath} was removed due to the '
-                                   '`self.keep_local=False`')
+                                   '`self.keep_local=False`. You can check '
+                                   f'the running logs in {out_filepath}')
                 os.remove(local_filepath)

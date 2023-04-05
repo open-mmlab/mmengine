@@ -465,7 +465,10 @@ class TestCheckpointHook:
             type='CheckpointHook',
             interval=save_interval,
             filename_tmpl=tmpl,
-            by_epoch=True)
+            by_epoch=True,
+            save_best='test/acc',
+            rule='less',
+            published_keys=['meta', 'state_dict'])
         runner = Runner(
             model=ToyModel(),
             work_dir=work_dir,
