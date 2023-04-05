@@ -95,7 +95,6 @@ class LoggerHook(Hook):
 
         if not isinstance(interval_exp_name, int):
             raise TypeError('interval_exp_name must be an integer')
-
         if interval_exp_name <= 0:
             raise ValueError('interval_exp_name must be greater than 0')
 
@@ -122,7 +121,7 @@ class LoggerHook(Hook):
                     'at the same time.')
 
         if not (isinstance(out_suffix, str) or is_seq_of(out_suffix, str)):
-            raise TypeError('out_suffix should be a string or tuple of '
+            raise TypeError('out_suffix should be a string or a sequence of '
                             f'string, but got {type(out_suffix)}')
 
         self.out_suffix = out_suffix
