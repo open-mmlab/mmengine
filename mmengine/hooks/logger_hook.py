@@ -310,15 +310,10 @@ class LoggerHook(Hook):
         if self.out_dir is None:
             return
 
-        # Close file handler to avoid PermissionError on Windows.
-        if not self.keep_local:
-            for handler in runner.logger.handlers:
-                if isinstance(handler, logging.FileHandler):
-                    handler.close()
-                    runner.logger.removeHandler(handler)
-
+        removed_files = []
         for filename in scandir(runner._log_dir, self.out_suffix, True):
             local_filepath = osp.join(runner._log_dir, filename)
+            removed_files.append(local_filepath)
             out_filepath = self.file_backend.join_path(self.out_dir, filename)
             with open(local_filepath) as f:
                 self.file_backend.put_text(f.read(), out_filepath)
@@ -331,4 +326,12 @@ class LoggerHook(Hook):
                 runner.logger.info(f'{local_filepath} was removed due to the '
                                    '`self.keep_local=False`. You can check '
                                    f'the running logs in {out_filepath}')
-                os.remove(local_filepath)
+
+        if not self.keep_local:
+            # Close file handler to avoid PermissionError on Windows.
+            for handler in runner.logger.handlers:
+                if isinstance(handler, logging.FileHandler):
+                    handler.close()
+
+            for file in removed_files:
+                os.remove(file)

@@ -9,6 +9,7 @@ import torch
 
 from mmengine.fileio import load
 from mmengine.hooks import LoggerHook
+from mmengine.logging import MMLogger
 from mmengine.testing import RunnerTestCase
 from mmengine.utils import mkdir_or_exist, scandir
 
@@ -45,9 +46,9 @@ class TestLoggerHook(RunnerTestCase):
         with self.assertRaisesRegex(ValueError, 'file_client_args'):
             LoggerHook(file_client_args=dict(enable_mc=True))
 
-        # test `file_client_args` and `backend_args`
-        with self.assertWarnsRegex(DeprecationWarning,
-                                   '"file_client_args" will be deprecated'):
+        # test deprecated warning raised by `file_client_args`
+        logger = MMLogger.get_current_instance()
+        with self.assertLogs(logger, level='WARNING'):
             LoggerHook(
                 out_dir=self.temp_dir.name,
                 file_client_args=dict(backend='disk'))
