@@ -295,6 +295,3 @@ def test_apply_to():
     data = dict(a=[dict(c=1)], b=2.0)
     result = apply_to(data, lambda x: isinstance(x, int), lambda x: x + 1)
     assert dict(a=[dict(c=2)], b=2.0)
-
-    with pytest.raises(ValueError):
-        apply_to(data, lambda x: isinstance(x, list), lambda x: x)

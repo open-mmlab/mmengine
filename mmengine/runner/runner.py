@@ -41,7 +41,8 @@ from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
-                         find_latest_checkpoint, save_checkpoint)
+                         find_latest_checkpoint, save_checkpoint,
+                         weights_to_cpu)
 from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
@@ -2141,8 +2142,7 @@ class Runner:
             'meta':
             meta,
             'state_dict':
-            apply_to(model.state_dict(), lambda x: hasattr(x, 'cpu'),
-                     lambda x: x.cpu()),
+            weights_to_cpu(model.state_dict()),
             'message_hub':
             apply_to(self.message_hub.state_dict(),
                      lambda x: hasattr(x, 'cpu'), lambda x: x.cpu()),

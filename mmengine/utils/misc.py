@@ -241,27 +241,23 @@ def apply_to(data: Any, expr: Callable, apply_func: Callable):
     Returns:
         Any: The data after applying.
     """  # noqa: E501
-    if any(map(expr, (dict(), '', b'', tuple(), list()))):
-        raise ValueError(
-            '``expr`` should not match with Mapping, str, bytes, tuple or '
-            'list. This kind of `expr` could lead to an unexpected results')
-
-    def _apply(data, expr, apply_func):
-        if isinstance(data, dict):
-            return {key: _apply(data[key], expr, apply_func) for key in data}
-        elif isinstance(data, (str, bytes)) or data is None:
-            return data
-        elif isinstance(data, tuple) and hasattr(data, '_fields'):
-            # namedtuple
-            return type(data)(*(_apply(sample, expr, apply_func) for sample in data))  # type: ignore  # noqa: E501  # yapf:disable
-        elif isinstance(data, (tuple, list)):
-            return type(data)(_apply(sample, expr, apply_func) for sample in data)  # type: ignore  # noqa: E501  # yapf:disable
-        elif expr(data):
-            return apply_func(data)
-        else:
-            return data
-
-    return _apply(data, expr, apply_func)
+    if isinstance(data, dict):
+        # Keep the original dict type
+        res = type(data)()
+        for key, value in data.items():
+            res[key] = apply_to(value, expr, apply_func)
+        return res
+    elif isinstance(data, (str, bytes)) or data is None:
+        return data
+    elif isinstance(data, tuple) and hasattr(data, '_fields'):
+        # namedtuple
+        return type(data)(*(apply_to(sample, expr, apply_func) for sample in data))  # type: ignore  # noqa: E501  # yapf:disable
+    elif isinstance(data, (tuple, list)):
+        return type(data)(apply_to(sample, expr, apply_func) for sample in data)  # type: ignore  # noqa: E501  # yapf:disable
+    elif expr(data):
+        return apply_func(data)
+    else:
+        return data
 
 
 def check_prerequisites(
