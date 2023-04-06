@@ -159,10 +159,13 @@ class TestRegistry:
         # partial functions can be registered
         muchkin0 = functools.partial(muchkin, size=0)
         CATS.register_module('muchkin0', False, muchkin0)
+        # lambda functions can be registered
+        CATS.register_module(name='unknown cat', module=lambda: 'unknown')
 
         assert CATS.get('muchkin0') is muchkin0
+        assert 'unknown cat' in CATS
         assert 'muchkin0' in CATS
-        assert len(CATS) == 10
+        assert len(CATS) == 11
 
     def _build_registry(self):
         """A helper function to build a Hierarchical Registry."""
@@ -434,6 +437,18 @@ class TestRegistry:
         assert isinstance(dog, MySamoyed)
         assert isinstance(dog.friend, YourSamoyed)
         assert DefaultScope.get_current_instance().scope_name != 'samoyed'
+
+        # build an instance by lambda or partial function.
+        lambda_dog = lambda name: name  # noqa: E731
+        DOGS.register_module(name='lambda_dog', module=lambda_dog)
+        lambda_cfg = cfg_type(dict(type='lambda_dog', name='unknown'))
+        assert DOGS.build(lambda_cfg) == 'unknown'
+
+        DOGS.register_module(
+            name='patial dog',
+            module=functools.partial(lambda_dog, name='patial'))
+        unknown_cfg = cfg_type(dict(type='patial dog'))
+        assert DOGS.build(unknown_cfg) == 'patial'
 
     def test_get_registry_by_scope(self):
         DOGS = Registry('dogs')

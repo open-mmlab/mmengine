@@ -121,17 +121,18 @@ def build_from_cfg(
             else:
                 obj = obj_cls(**args)  # type: ignore
 
-            # For some rare cases (e.g. obj_cls is a partial function), obj_cls
-            # doesn't have the following attributes. Use default value to
-            # prevent error
-            cls_name = getattr(obj_cls, '__name__', str(obj_cls))
-            cls_module = getattr(obj_cls, '__module__', 'unknown')
-            print_log(
-                f'An `{cls_name}` instance is built from '  # type: ignore # noqa: E501
-                'registry, its implementation can be found in '
-                f'{cls_module}',  # type: ignore
-                logger='current',
-                level=logging.DEBUG)
+            if (inspect.isclass(obj_cls) or inspect.isfunction(obj_cls)
+                    or inspect.ismethod(obj_cls)):
+                print_log(
+                    f'An `{obj_cls.__name__}` instance is built from '  # type: ignore # noqa: E501
+                    'registry, and its implementation can be found in '
+                    f'{obj_cls.__module__}',  # type: ignore
+                    logger='current',
+                    level=logging.DEBUG)
+            else:
+                print_log(
+                    'An instance is built from registry, and its constructor '
+                    f'is {obj_cls}')
             return obj
 
         except Exception as e:
