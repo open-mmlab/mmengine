@@ -80,14 +80,9 @@ Major features:
 
 ## What's New
 
-v0.7.1 was released on 2023-04-03.
+v0.7.2 was released on 2023-04-06.
 
-Highlights:
-
-- Support compiling the model and enabling mixed-precision training at the same time.
-- Fix the bug where the logs cannot be properly saved to the log file after calling `torch.compile`
-
-Read [Changelog](./docs/en/notes/changelog.md#v071-04032023) for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v071-04062023) for more details.
 
 ## Installation
 
