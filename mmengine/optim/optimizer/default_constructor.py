@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
-from pickle import dumps
 from typing import Any, Dict, List, Optional, Union
 
 import torch
@@ -56,7 +55,7 @@ class DefaultOptimWrapperConstructor:
     - ``reduce_param_groups`` (bool): If true, constructor will cluster the
       parameter groups with the same learning rate, momentum and other
       parameters, which can speed up the optimizer. Defaults to true.
-      New in version 0.7.1.
+      New in version 0.7.2.
 
     Note:
 
@@ -341,14 +340,11 @@ def reduce_param_groups(params: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """  # noqa: E501
     groups: dict = dict()
 
-    def param_info_id(param_info):
-        return dumps(param_info)
-
     for item in params:
-        param_info = {x: y for x, y in item.items() if x != 'params'}
-        info_id = param_info_id(param_info)
-        if info_id in groups:
-            groups[info_id]['params'].extend(item['params'])
+        hyper_params_id = tuple(
+            (x, y) for x, y in item.items() if x != 'params')
+        if hyper_params_id in groups:
+            groups[hyper_params_id]['params'].extend(item['params'])
         else:
-            groups[info_id] = item
+            groups[hyper_params_id] = item
     return list(groups.values())
