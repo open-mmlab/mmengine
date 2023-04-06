@@ -5,7 +5,7 @@
 ### Bug fixes
 
 - Align the evaluation result in log by [@kitecats](https://github.com/kitecats) in https://github.com/open-mmlab/mmengine/pull/1034
-- Update the sample loic in `ClassBalancedDataset` by [@BIGWangYuDong](https://github.com/BIGWangYuDong) in https://github.com/open-mmlab/mmengine/pull/1048
+- Update the logic to calculate the `repeat_factors` in `ClassBalancedDataset` by [@BIGWangYuDong](https://github.com/BIGWangYuDong) in https://github.com/open-mmlab/mmengine/pull/1048
 - Initialize sub-modules in `DistributedDataParallel` that define `init_weights` during initialization by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1045
 - Refactor checkpointhook unittest by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/789
 
