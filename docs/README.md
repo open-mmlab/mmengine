@@ -4,7 +4,7 @@
 
    ```bash
    git clone https://github.com/open-mmlab/mmengine.git
-   cd mmegnine
+   cd mmengine
    ```
 
 2. Install the building dependencies of documentation

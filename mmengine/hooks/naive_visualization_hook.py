@@ -20,9 +20,9 @@ class NaiveVisualizationHook(Hook):
 
     Args:
         interval (int): Visualization interval. Defaults to 1.
-        draw_gt (bool): Whether to draw the ground truth. Default to True.
+        draw_gt (bool): Whether to draw the ground truth. Defaults to True.
         draw_pred (bool): Whether to draw the predicted result.
-            Default to True.
+            Defaults to True.
     """
     priority = 'NORMAL'
 
@@ -48,6 +48,14 @@ class NaiveVisualizationHook(Hook):
         unpad_width, unpad_height = unpad_shape
         unpad_image = input[:unpad_height, :unpad_width]
         return unpad_image
+
+    def before_train(self, runner) -> None:
+        """Call add_graph method of visualizer.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
+        runner.visualizer.add_graph(runner.model, None)
 
     def after_test_iter(self,
                         runner,

@@ -20,9 +20,11 @@ Optimizer
    :template: classtemplate.rst
 
     AmpOptimWrapper
+    ApexOptimWrapper
     OptimWrapper
     OptimWrapperDict
     DefaultOptimWrapperConstructor
+    ZeroRedundancyOptimizer
 
 .. autosummary::
    :toctree: generated
@@ -62,3 +64,6 @@ Scheduler
    StepLR
    StepMomentum
    StepParamScheduler
+   ReduceOnPlateauLR
+   ReduceOnPlateauMomentum
+   ReduceOnPlateauParamScheduler

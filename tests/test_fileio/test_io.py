@@ -107,10 +107,13 @@ def test_get_file_backend():
     backend_args = {'backend': 'local'}
     backend = fileio.get_file_backend(uri=None, backend_args=backend_args)
     assert isinstance(backend, fileio.backends.LocalBackend)
+    # backend_args should not be modified
+    assert backend_args == {'backend': 'local'}
 
     backend_args = {'backend': 'petrel', 'enable_mc': True}
     backend = fileio.get_file_backend(uri=None, backend_args=backend_args)
     assert isinstance(backend, fileio.backends.PetrelBackend)
+    assert backend_args == {'backend': 'petrel', 'enable_mc': True}
 
     # backend name has a higher priority
     backend_args = {'backend': 'http'}

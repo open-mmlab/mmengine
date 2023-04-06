@@ -2,6 +2,7 @@
 import os
 import shutil
 import sys
+import warnings
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -145,7 +146,7 @@ class TestTensorboardVisBackend:
         tensorboard_vis_backend.add_scalar('map', 0.9, step=0)
         tensorboard_vis_backend.add_scalar('map', 0.95, step=1)
         # test with numpy
-        with pytest.warns(None) as record:
+        with warnings.catch_warnings(record=True) as record:
             tensorboard_vis_backend.add_scalar('map', np.array(0.9), step=0)
             tensorboard_vis_backend.add_scalar('map', np.array(0.95), step=1)
             tensorboard_vis_backend.add_scalar('map', np.array(9), step=0)
@@ -206,7 +207,7 @@ class TestWandbVisBackend:
 
     def test_add_config(self):
         cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
-        wandb_vis_backend = WandbVisBackend('temp_dir')
+        wandb_vis_backend = WandbVisBackend('temp_dir', log_code_name='code')
         _wandb = wandb_vis_backend.experiment
         _wandb.run.dir = 'temp_dir'
         wandb_vis_backend.add_config(cfg)

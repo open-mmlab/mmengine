@@ -1,0 +1,84 @@
+# IMPORTANT:
+# This file is ONLY used to subscribe for notifications for PRs
+# related to a specific file path, and each line is a file pattern followed by
+# one or more owners.
+
+# Order is important; the last matching pattern takes the most
+# precedence.
+
+# These owners will be the default owners for everything in
+# the repo. Unless a later match takes precedence,
+# @global-owner1 and @global-owner2 will be requested for
+# review when someone opens a pull request.
+* @zhouzaida @HAOCHENYE
+
+# Docs
+/docs/ @C1rN09
+*.rst @zhouzaida @HAOCHENYE
+
+# mmengine file
+# config
+/mmengine/config/ @HAOCHENYE
+
+# dataset
+/mmengine/dataset/ @HAOCHENYE
+
+# device
+/mmengine/device/ @zhouzaida
+
+# dist
+/mmengine/dist/ @zhouzaida @C1rN09
+
+# evaluator
+/mmengine/evaluator/ @RangiLyu @C1rN09
+
+# fileio
+/mmengine/fileio/ @zhouzaida
+
+# hooks
+/mmengine/hooks/ @zhouzaida @HAOCHENYE
+/mmengine/hooks/ema_hook.py @RangiLyu
+
+# hub
+/mmengine/hub/ @HAOCHENYE @zhouzaida
+
+# logging
+/mmengine/logging/ @HAOCHENYE
+
+# model
+/mmengine/model/ @HAOCHENYE @C1rN09
+/mmengine/model/averaged_model.py @RangiLyu
+/mmengine/model/wrappers/fully_sharded_distributed.py @C1rN09
+
+# optim
+/mmengine/optim/ @HAOCHENYE
+/mmengine/optim/scheduler/ @RangiLyu
+
+# registry
+/mmengine/registry/ @C1rN09 @HAOCHENYE
+
+# runner
+/mmengine/runner/ @zhouzaida @RangiLyu @HAOCHENYE
+/mmengine/runner/amp.py @HAOCHENYE
+/mmengine/runner/log_processor.py @HAOCHENYE
+/mmengine/runner/checkpoint.py @zhouzaida @C1rN09
+/mmengine/runner/priority.py @zhouzaida
+/mmengine/runner/utils.py @zhouzaida @HAOCHENYE
+
+# structure
+/mmengine/structures/ @Harold-lkk @HAOCHENYE
+
+# testing
+/mmengine/testing/ @zhouzaida
+
+# utils
+/mmengine/utils/ @HAOCHENYE @zhouzaida
+
+# visualization
+/mmengine/visualization/ @Harold-lkk @HAOCHENYE
+
+# version
+/mmengine/__version__.py @zhouzaida
+
+# unit test
+/tests/ @zhouzaida @HAOCHENYE

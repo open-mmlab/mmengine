@@ -173,19 +173,18 @@ class MessageHub(ManagerMixin):
         assert isinstance(log_dict, dict), ('`log_dict` must be a dict!, '
                                             f'but got {type(log_dict)}')
         for log_name, log_val in log_dict.items():
-            self._set_resumed_keys(log_name, resumed)
             if isinstance(log_val, dict):
                 assert 'value' in log_val, \
                     f'value must be defined in {log_val}'
                 count = self._get_valid_value(log_val.get('count', 1))
-                checked_value = self._get_valid_value(log_val['value'])
+                value = log_val['value']
             else:
                 count = 1
-                checked_value = self._get_valid_value(log_val)
+                value = log_val
             assert isinstance(count,
                               int), ('The type of count must be int. but got '
                                      f'{type(count): {count}}')
-            self.update_scalar(log_name, checked_value, count)
+            self.update_scalar(log_name, value, count, resumed)
 
     def update_info(self, key: str, value: Any, resumed: bool = True) -> None:
         """Update runtime information.
@@ -208,7 +207,6 @@ class MessageHub(ManagerMixin):
                 could be resumed.
         """
         self._set_resumed_keys(key, resumed)
-        self._resumed_keys[key] = resumed
         self._runtime_info[key] = value
 
     def update_info_dict(self, info_dict: dict, resumed: bool = True) -> None:
@@ -233,7 +231,6 @@ class MessageHub(ManagerMixin):
         assert isinstance(info_dict, dict), ('`log_dict` must be a dict!, '
                                              f'but got {type(info_dict)}')
         for key, value in info_dict.items():
-            self._set_resumed_keys(key, resumed)
             self.update_info(key, value, resumed=resumed)
 
     def _set_resumed_keys(self, key: str, resumed: bool) -> None:
@@ -317,17 +314,19 @@ class MessageHub(ManagerMixin):
         return self._runtime_info[key]
 
     def _get_valid_value(
-            self, value: Union['torch.Tensor', np.ndarray, int, float]) \
-            -> Union[int, float]:
+        self,
+        value: Union['torch.Tensor', np.ndarray, np.number, int, float],
+    ) -> Union[int, float]:
         """Convert value to python built-in type.
 
         Args:
-            value (torch.Tensor or np.ndarray or int or float): value of log.
+            value (torch.Tensor or np.ndarray or np.number or int or float):
+                value of log.
 
         Returns:
             float or int: python built-in type value.
         """
-        if isinstance(value, np.ndarray):
+        if isinstance(value, (np.ndarray, np.number)):
             assert value.size == 1
             value = value.item()
         elif isinstance(value, (int, float)):

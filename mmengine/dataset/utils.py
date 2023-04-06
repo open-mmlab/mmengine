@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import random
+import warnings
 from typing import Any, Mapping, Sequence
 
 import numpy as np
@@ -7,14 +8,19 @@ import torch
 from torch.utils.data._utils.collate import \
     default_collate as torch_default_collate
 
-from mmengine.registry import Registry
+from mmengine.registry import FUNCTIONS
 from mmengine.structures import BaseDataElement
 
-COLLATE_FUNCTIONS = Registry('Collate Functions')
+# FUNCTIONS is new in MMEngine v0.7.0. Reserve the `COLLATE_FUNCTIONS` to keep
+# the compatibility.
+COLLATE_FUNCTIONS = FUNCTIONS
 
 
-def worker_init_fn(worker_id: int, num_workers: int, rank: int,
-                   seed: int) -> None:
+def worker_init_fn(worker_id: int,
+                   num_workers: int,
+                   rank: int,
+                   seed: int,
+                   disable_subprocess_warning: bool = False) -> None:
     """This function will be called on each worker subprocess after seeding and
     before data loading.
 
@@ -31,9 +37,11 @@ def worker_init_fn(worker_id: int, num_workers: int, rank: int,
     np.random.seed(worker_seed)
     random.seed(worker_seed)
     torch.manual_seed(worker_seed)
+    if disable_subprocess_warning and worker_id != 0:
+        warnings.simplefilter('ignore')
 
 
-@COLLATE_FUNCTIONS.register_module()
+@FUNCTIONS.register_module()
 def pseudo_collate(data_batch: Sequence) -> Any:
     """Convert list of data sampled from dataset into a batch of data, of which
     type consistent with the type of each data_itement in ``data_batch``.
@@ -44,14 +52,15 @@ def pseudo_collate(data_batch: Sequence) -> Any:
     tensors.
 
     This code is referenced from:
-    `Pytorch default_collate <https://github.com/pytorch/pytorch/blob/master/torch/utils/data/_utils/collate.py>`_.  # noqa: E501
+    `Pytorch default_collate <https://github.com/pytorch/pytorch/blob/master/torch/utils/data/_utils/collate.py>`_.
+
     Args:
         data_batch (Sequence): Batch of data from dataloader.
 
     Returns:
         Any: Transversed Data in the same format as the data_itement of
         ``data_batch``.
-    """
+    """  # noqa: E501
     data_item = data_batch[0]
     data_item_type = type(data_item)
     if isinstance(data_item, (str, bytes)):
@@ -90,7 +99,7 @@ def pseudo_collate(data_batch: Sequence) -> Any:
         return data_batch
 
 
-@COLLATE_FUNCTIONS.register_module()
+@FUNCTIONS.register_module()
 def default_collate(data_batch: Sequence) -> Any:
     """Convert list of data sampled from dataset into a batch of data, of which
     type consistent with the type of each data_itement in ``data_batch``.
@@ -104,7 +113,7 @@ def default_collate(data_batch: Sequence) -> Any:
     not process ``BaseDataElement``.
 
     This code is referenced from:
-    `Pytorch default_collate <https://github.com/pytorch/pytorch/blob/master/torch/utils/data/_utils/collate.py>`_.  # noqa: E501
+    `Pytorch default_collate <https://github.com/pytorch/pytorch/blob/master/torch/utils/data/_utils/collate.py>`_.
 
     Note:
         ``default_collate`` only accept input tensor with the same shape.
@@ -116,7 +125,7 @@ def default_collate(data_batch: Sequence) -> Any:
         Any: Data in the same format as the data_itement of ``data_batch``, of which
         tensors have been stacked, and ndarray, int, float have been
         converted to tensors.
-    """
+    """  # noqa: E501
     data_item = data_batch[0]
     data_item_type = type(data_item)
 

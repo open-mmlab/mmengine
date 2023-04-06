@@ -1,10 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import datetime
 import os.path as osp
 from tempfile import TemporaryDirectory
 from unittest import TestCase, skipIf
 
-from mmengine.registry import (Registry, count_registered_modules, root,
-                               traverse_registry_tree)
+from mmengine.logging import MMLogger
+from mmengine.registry import (DefaultScope, Registry,
+                               count_registered_modules, init_default_scope,
+                               root, traverse_registry_tree)
 from mmengine.utils import is_installed
 
 
@@ -62,3 +65,18 @@ class TestUtils(TestCase):
         self.assertFalse(
             osp.exists(
                 osp.join(temp_dir.name, 'modules_statistic_results.json')))
+
+    @skipIf(not is_installed('torch'), 'tests requires torch')
+    def test_init_default_scope(self):
+        # init default scope
+        init_default_scope('mmdet')
+        self.assertEqual(DefaultScope.get_current_instance().scope_name,
+                         'mmdet')
+
+        # init default scope when another scope is init
+        name = f'test-{datetime.datetime.now()}'
+        DefaultScope.get_instance(name, scope_name='test')
+        # Warning should be raised since the current
+        # default scope is not 'mmdet'
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
+            init_default_scope('mmdet')

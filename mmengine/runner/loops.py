@@ -1,13 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import bisect
+import logging
 import time
-import warnings
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import torch
 from torch.utils.data import DataLoader
 
 from mmengine.evaluator import Evaluator
+from mmengine.logging import print_log
 from mmengine.registry import LOOPS
 from .amp import autocast
 from .base_loop import BaseLoop
@@ -41,20 +42,27 @@ class EpochBasedTrainLoop(BaseLoop):
             val_interval: int = 1,
             dynamic_intervals: Optional[List[Tuple[int, int]]] = None) -> None:
         super().__init__(runner, dataloader)
-        self._max_epochs = max_epochs
-        self._max_iters = max_epochs * len(self.dataloader)
+        self._max_epochs = int(max_epochs)
+        assert self._max_epochs == max_epochs, \
+            f'`max_epochs` should be a integer number, but get {max_epochs}.'
+        self._max_iters = self._max_epochs * len(self.dataloader)
         self._epoch = 0
         self._iter = 0
         self.val_begin = val_begin
         self.val_interval = val_interval
+        # This attribute will be updated by `EarlyStoppingHook`
+        # when it is enabled.
+        self.stop_training = False
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.runner.visualizer.dataset_meta = \
                 self.dataloader.dataset.metainfo
         else:
-            warnings.warn(
+            print_log(
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
                 'metainfo. ``dataset_meta`` in visualizer will be '
-                'None.')
+                'None.',
+                logger='current',
+                level=logging.WARNING)
 
         self.dynamic_milestones, self.dynamic_intervals = \
             calc_dynamic_intervals(
@@ -84,7 +92,7 @@ class EpochBasedTrainLoop(BaseLoop):
         """Launch training."""
         self.runner.call_hook('before_train')
 
-        while self._epoch < self._max_epochs:
+        while self._epoch < self._max_epochs and not self.stop_training:
             self.run_epoch()
 
             self._decide_current_val_interval()
@@ -155,11 +163,14 @@ class _InfiniteDataloaderIterator:
         try:
             data = next(self._iterator)
         except StopIteration:
-            warnings.warn('Reach the end of the dataloader, it will be '
-                          'restarted and continue to iterate. It is '
-                          'recommended to use '
-                          '`mmengine.dataset.InfiniteSampler` to enable the '
-                          'dataloader to iterate infinitely.')
+            print_log(
+                'Reach the end of the dataloader, it will be '
+                'restarted and continue to iterate. It is '
+                'recommended to use '
+                '`mmengine.dataset.InfiniteSampler` to enable the '
+                'dataloader to iterate infinitely.',
+                logger='current',
+                level=logging.WARNING)
             self._epoch += 1
             if hasattr(self._dataloader, 'sampler') and hasattr(
                     self._dataloader.sampler, 'set_epoch'):
@@ -206,20 +217,27 @@ class IterBasedTrainLoop(BaseLoop):
             val_interval: int = 1000,
             dynamic_intervals: Optional[List[Tuple[int, int]]] = None) -> None:
         super().__init__(runner, dataloader)
-        self._max_iters = max_iters
+        self._max_iters = int(max_iters)
+        assert self._max_iters == max_iters, \
+            f'`max_iters` should be a integer number, but get {max_iters}'
         self._max_epochs = 1  # for compatibility with EpochBasedTrainLoop
         self._epoch = 0
         self._iter = 0
         self.val_begin = val_begin
         self.val_interval = val_interval
+        # This attribute will be updated by `EarlyStoppingHook`
+        # when it is enabled.
+        self.stop_training = False
         if hasattr(self.dataloader.dataset, 'metainfo'):
             self.runner.visualizer.dataset_meta = \
                 self.dataloader.dataset.metainfo
         else:
-            warnings.warn(
+            print_log(
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
                 'metainfo. ``dataset_meta`` in visualizer will be '
-                'None.')
+                'None.',
+                logger='current',
+                level=logging.WARNING)
         # get the iterator of the dataloader
         self.dataloader_iterator = _InfiniteDataloaderIterator(self.dataloader)
 
@@ -253,7 +271,7 @@ class IterBasedTrainLoop(BaseLoop):
         # In iteration-based training loop, we treat the whole training process
         # as a big epoch and execute the corresponding hook.
         self.runner.call_hook('before_train_epoch')
-        while self._iter < self._max_iters:
+        while self._iter < self._max_iters and not self.stop_training:
             self.runner.model.train()
 
             data_batch = next(self.dataloader_iterator)
@@ -328,10 +346,12 @@ class ValLoop(BaseLoop):
             self.runner.visualizer.dataset_meta = \
                 self.dataloader.dataset.metainfo
         else:
-            warnings.warn(
+            print_log(
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
                 'metainfo. ``dataset_meta`` in evaluator, metric and '
-                'visualizer will be None.')
+                'visualizer will be None.',
+                logger='current',
+                level=logging.WARNING)
         self.fp16 = fp16
 
     def run(self) -> dict:
@@ -398,10 +418,12 @@ class TestLoop(BaseLoop):
             self.runner.visualizer.dataset_meta = \
                 self.dataloader.dataset.metainfo
         else:
-            warnings.warn(
+            print_log(
                 f'Dataset {self.dataloader.dataset.__class__.__name__} has no '
                 'metainfo. ``dataset_meta`` in evaluator, metric and '
-                'visualizer will be None.')
+                'visualizer will be None.',
+                logger='current',
+                level=logging.WARNING)
         self.fp16 = fp16
 
     def run(self) -> dict:

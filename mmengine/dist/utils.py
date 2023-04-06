@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import datetime
 import functools
 import os
 import subprocess
@@ -10,7 +11,7 @@ import torch.multiprocessing as mp
 from torch import Tensor
 from torch import distributed as torch_dist
 from torch.distributed import ProcessGroup
-from mmengine.device import is_mlu_available
+from mmengine.device import is_mlu_available, is_npu_available
 
 from collections.abc import Iterable, Mapping
 
@@ -50,6 +51,19 @@ def init_dist(launcher, backend='nccl', **kwargs) -> None:
             'gloo' and 'mpi'. Defaults to 'nccl'.
         **kwargs: keyword arguments are passed to ``init_process_group``.
     """
+    timeout = kwargs.get('timeout', None)
+    if timeout is not None:
+        # If a timeout (in seconds) is specified, it must be converted
+        # to a timedelta object before forwarding the call to
+        # the respective backend, because they expect a timedelta object.
+        try:
+            kwargs['timeout'] = datetime.timedelta(seconds=timeout)
+        except TypeError as exception:
+            raise TypeError(
+                f'Timeout for distributed training must be provided as '
+                f"timeout in seconds, but we've received the type "
+                f'{type(timeout)}. Please specify the timeout like this: '
+                f"dist_cfg=dict(backend='nccl', timeout=1800)") from exception
     if mp.get_start_method(allow_none=True) is None:
         mp.set_start_method('spawn')
     if launcher == 'pytorch':
@@ -77,6 +91,14 @@ def _init_dist_pytorch(backend, **kwargs) -> None:
         torch.mlu.set_device(rank)
         torch_dist.init_process_group(
             backend='cncl',
+            rank=rank,
+            world_size=int(os.environ['WORLD_SIZE']),
+            **kwargs)
+    elif is_npu_available():
+        import torch_npu  # noqa: F401
+        torch.npu.set_device(rank)
+        torch_dist.init_process_group(
+            backend='hccl',
             rank=rank,
             world_size=int(os.environ['WORLD_SIZE']),
             **kwargs)
@@ -437,7 +459,10 @@ def get_comm_device(group: Optional[ProcessGroup] = None) -> torch.device:
         torch.device: The device of backend.
     """
     backend = get_backend(group)
-    if backend == torch_dist.Backend.NCCL:
+    if backend == 'hccl':
+        import torch_npu  # noqa: F401
+        return torch.device('npu', torch.npu.current_device())
+    elif backend == torch_dist.Backend.NCCL:
         return torch.device('cuda', torch.cuda.current_device())
     elif backend == 'cncl':
         import torch_mlu  # noqa: F401

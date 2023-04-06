@@ -14,7 +14,7 @@ def digit_version(version_str: str, length: int = 4):
 
     Args:
         version_str (str): The version string.
-        length (int): The maximum number of version levels. Default: 4.
+        length (int): The maximum number of version levels. Defaults to 4.
 
     Returns:
         tuple[int]: The version info in digits (integers).
@@ -58,8 +58,9 @@ def _minimal_ext_cmd(cmd):
     env['LANGUAGE'] = 'C'
     env['LANG'] = 'C'
     env['LC_ALL'] = 'C'
-    out = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, env=env).communicate()[0]
+    out, err = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        env=env).communicate()
     return out
 
 

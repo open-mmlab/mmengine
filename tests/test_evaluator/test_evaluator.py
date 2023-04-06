@@ -8,6 +8,7 @@ import numpy as np
 import torch
 
 from mmengine.evaluator import BaseMetric, Evaluator, get_metric_value
+from mmengine.logging import MMLogger
 from mmengine.registry import METRICS
 from mmengine.structures import BaseDataElement
 
@@ -110,7 +111,8 @@ class TestEvaluator(TestCase):
         # Test empty results
         cfg = dict(type='ToyMetric', dummy_metrics=dict(accuracy=1.0))
         evaluator = Evaluator(cfg)
-        with self.assertWarnsRegex(UserWarning, 'got empty `self.results`.'):
+        # Warning should be raised if the results are empty
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             evaluator.evaluate(0)
 
     def test_composed_metrics(self):
@@ -185,8 +187,10 @@ class TestEvaluator(TestCase):
 
     def test_prefix(self):
         cfg = dict(type='NonPrefixedMetric')
-        with self.assertWarnsRegex(UserWarning, 'The prefix is not set'):
-            _ = Evaluator(cfg)
+        logger = MMLogger.get_current_instance()
+        # Warning should be raised if prefix is not set.
+        with self.assertLogs(logger, 'WARNING'):
+            Evaluator(cfg)
 
     def test_get_metric_value(self):
 
@@ -247,7 +251,7 @@ class TestEvaluator(TestCase):
         all_data = [dict() for _ in range(9)]
         with self.assertRaisesRegex(
                 AssertionError,
-                'outputs and data should have the same length'):
+                'data_samples and data should have the same length'):
             evaluator.offline_evaluate(all_predictions, all_data)
 
     @unittest.skipUnless(torch.cuda.is_available(), 'can only run with gpu')

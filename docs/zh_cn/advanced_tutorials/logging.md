@@ -4,7 +4,7 @@
 
 ## 灵活的日志统计方式
 
-我们可以通过在构建执行器时候配置[日志处理器](mmengine.logging.LogProcessor)，来灵活地选择日志统计方式。如果不为执行器配置日志处理器，则会按照日志处理器的默认参数构建实例，效果等价于：
+我们可以通过在构建执行器时候配置[日志处理器](mmengine.runner.LogProcessor)，来灵活地选择日志统计方式。如果不为执行器配置日志处理器，则会按照日志处理器的默认参数构建实例，效果等价于：
 
 ```python
 log_processor = dict(window_size=10, by_epoch=True, custom_cfg=None, num_digits=4)
@@ -53,12 +53,12 @@ runner.train()
 以训练阶段为例，日志处理器默认会按照以下方式统计执行器输出的日志：
 
 - 日志前缀：
-  - Epoch 模式（`by_epoch=True`）: `Epoch(train) [{当前epoch次数}][{当前迭代次数}/{Dataloader 总长度}]`
+  - Epoch 模式（`by_epoch=True`）：`Epoch(train) [{当前epoch次数}][{当前迭代次数}/{Dataloader 总长度}]`
   - Iter 模式（`by_epoch=False`）： `Iter(train) [{当前迭代次数}/{总迭代次数}]`
 - 学习率（`lr`）：统计最近一次迭代，参数更新的学习率
 - 时间
-  - 迭代时间（`time`）：最近 `window_size`（日志处理器参数） 次迭代，处理一个 batch 数据（包括数据加载和模型前向推理）的平局时间
-  - 数据时间（`data_time`）：最近 `window_size` 次迭代，加载一个 batch 数据的平局时间
+  - 迭代时间（`time`）：最近 `window_size`（日志处理器参数） 次迭代，处理一个 batch 数据（包括数据加载和模型前向推理）的平均时间
+  - 数据时间（`data_time`）：最近 `window_size` 次迭代，加载一个 batch 数据的平均时间
   - 剩余时间（`eta`）：根据总迭代次数和历次迭代时间计算出来的总剩余时间，剩余时间随着迭代次数增加逐渐趋于稳定
 - 损失：模型前向推理得到的各种字段的损失，默认统计最近 `window_size` 次迭代的平均损失。
 
@@ -97,12 +97,35 @@ log_processor 默认输出 `by_epoch=True` 格式的日志。日志格式需要�
 
 其中 `data_src` 为原日志名，`mean` 为统计方法，`global` 为统计方法的参数。这样的话，日志中统计的 `loss1` 就是全局均值。我们可以在日志处理器中配置以下统计方法：
 
-| 统计方法 | 参数        | 功能                   |
-| :------- | :---------- | :--------------------- |
-| mean     | window_size | 统计窗口内日志的均值   |
-| min      | window_size | 统计窗口内日志的最小值 |
-| max      | window_size | 统计窗口内日志的最大值 |
-| current  | /           | 返回最近一次更新的日志 |
+<table class="docutils">
+<thead>
+<tr>
+    <th>统计方法</th>
+    <th>参数</th>
+    <th>功能</th>
+</tr>
+<tr>
+    <td>mean</td>
+    <td>window_size</td>
+    <td>统计窗口内日志的均值</td>
+</tr>
+<tr>
+    <td>min</td>
+    <td>window_size</td>
+    <td>统计窗口内日志的最小值</td>
+</tr>
+<tr>
+    <td>max</td>
+    <td>window_size</td>
+    <td>统计窗口内日志的最大值</td>
+</tr>
+<tr>
+    <td>current</td>
+    <td>/</td>
+    <td>返回最近一次更新的日志</td>
+</tr>
+</thead>
+</table>
 
 其中 `window_size` 的值可以是：
 
@@ -164,7 +187,7 @@ runner.train()
 08/21 03:17:26 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0024  data_time: 0.0010  loss1: 0.5464  loss2: 0.7251  loss: 1.2715  loss1_local_max: 2.8872  loss1_global_max: 2.8872
 ```
 
-更多配置规则见[日志处理器文档](mmengine.logging.LogProcessor)
+更多配置规则见[日志处理器文档](mmengine.runner.LogProcessor)
 
 ## 自定义统计内容
 
@@ -218,7 +241,7 @@ runner.train()
 通过调用[消息枢纽](mmengine.logging.MessageHub)的接口实现自定义日志的统计，具体步骤如下：
 
 1. 调用 `get_current_instance` 接口获取执行器的消息枢纽。
-2. 调用 `add_scalar` 接口更新日志内容，其中第一个参数为日志的名称，日志名称以 `train/`，`val/`，`test/` 前缀打头，用于区分训练状态，然后才是实际的日志名，如上例中的 `train/loss_tmp`,这样统计的日志中就会出现 `loss_tmp`。
+2. 调用 `update_scalar` 接口更新日志内容，其中第一个参数为日志的名称，日志名称以 `train/`，`val/`，`test/` 前缀打头，用于区分训练状态，然后才是实际的日志名，如上例中的 `train/loss_tmp`,这样统计的日志中就会出现 `loss_tmp`。
 3. 配置日志处理器，以均值的方式统计 `loss_tmp`。如果不配置，日志里显示 `loss_tmp` 最近一次更新的值。
 
 ## 输出调试日志
@@ -248,7 +271,7 @@ runner.train()
 此外，分布式训练时，`DEBUG` 模式还会分进程存储日志。单机多卡，或者多机多卡但是共享存储的情况下，导出的分布式日志路径如下
 
 ```text
-#  共享存储
+# 共享存储
 ./tmp
 ├── tmp.log
 ├── tmp_rank1.log
@@ -266,7 +289,7 @@ runner.train()
 
 ```text
 # 独立存储
-# 设备0：
+# 设备 0：
 work_dir/
 └── exp_name_logs
     ├── exp_name.log
@@ -276,7 +299,7 @@ work_dir/
     ...
     └── exp_name_rank7.log
 
-# 设备7：
+# 设备 7：
 work_dir/
 └── exp_name_logs
     ├── exp_name_rank56.log

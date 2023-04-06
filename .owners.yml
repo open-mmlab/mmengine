@@ -1,0 +1,10 @@
+assign:
+  strategy:
+    # random
+    daily-shift-based
+  scedule:
+    '*/1 * * * *'
+  assignees:
+    - zhouzaida
+    - HAOCHENYE
+    - C1rN09

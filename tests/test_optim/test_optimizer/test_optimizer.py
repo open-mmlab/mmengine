@@ -1,22 +1,47 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import os
 import sys
+import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock
 
 import torch
 import torch.nn as nn
+from torch.distributed.rpc import is_available
 
+from mmengine.dist import get_rank
+from mmengine.logging import MMLogger
 from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             DefaultOptimWrapperConstructor, OptimWrapper,
                             build_optim_wrapper)
-from mmengine.optim.optimizer.builder import TORCH_OPTIMIZERS
+from mmengine.optim.optimizer.builder import (DADAPTATION_OPTIMIZERS,
+                                              LION_OPTIMIZERS,
+                                              TORCH_OPTIMIZERS)
 from mmengine.registry import build_from_cfg
-from mmengine.utils.dl_utils import mmcv_full_available
+from mmengine.testing._internal import MultiProcessTestCase
+from mmengine.utils.dl_utils import TORCH_VERSION, mmcv_full_available
+from mmengine.utils.version_utils import digit_version
 
 MMCV_FULL_AVAILABLE = mmcv_full_available()
 if not MMCV_FULL_AVAILABLE:
     sys.modules['mmcv.ops'] = MagicMock(
         DeformConv2d=dict, ModulatedDeformConv2d=dict)
+
+
+def has_dadaptation() -> bool:
+    try:
+        import dadaptation  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def has_lion() -> bool:
+    try:
+        import lion_pytorch  # noqa: F401
+        return True
+    except ImportError:
+        return False
 
 
 class ExampleModel(nn.Module):
@@ -118,6 +143,7 @@ class TestBuilder(TestCase):
                              norm_decay_mult=1,
                              dwconv_decay_mult=1,
                              dcn_offset_lr_mult=1,
+                             flat_decay_mult=1,
                              bypass_duplicate=False):
         param_groups = optimizer.param_groups
         assert isinstance(optimizer, torch.optim.SGD)
@@ -134,7 +160,7 @@ class TestBuilder(TestCase):
         # param1
         param1 = param_groups[0]
         assert param1['lr'] == self.base_lr
-        assert param1['weight_decay'] == self.base_wd
+        assert param1['weight_decay'] == self.base_wd * flat_decay_mult
         # conv1.weight
         conv1_weight = param_groups[1]
         assert conv1_weight['lr'] == self.base_lr
@@ -158,7 +184,7 @@ class TestBuilder(TestCase):
         # sub.param1
         sub_param1 = param_groups[6]
         assert sub_param1['lr'] == self.base_lr
-        assert sub_param1['weight_decay'] == self.base_wd
+        assert sub_param1['weight_decay'] == self.base_wd * flat_decay_mult
         # sub.conv1.weight
         sub_conv1_weight = param_groups[7]
         assert sub_conv1_weight['lr'] == self.base_lr
@@ -167,8 +193,7 @@ class TestBuilder(TestCase):
         # sub.conv1.bias
         sub_conv1_bias = param_groups[8]
         assert sub_conv1_bias['lr'] == self.base_lr * bias_lr_mult
-        assert sub_conv1_bias[
-            'weight_decay'] == self.base_wd * dwconv_decay_mult
+        assert sub_conv1_bias['weight_decay'] == self.base_wd * bias_decay_mult
         # sub.gn.weight
         sub_gn_weight = param_groups[9]
         assert sub_gn_weight['lr'] == self.base_lr
@@ -199,6 +224,16 @@ class TestBuilder(TestCase):
             'Optimizer', 'RMSprop', 'Rprop', 'SGD', 'SparseAdam'
         ]
         assert set(torch_optimizers).issubset(set(TORCH_OPTIMIZERS))
+
+    @unittest.skipIf(not has_dadaptation(), 'dadaptation is not installed')
+    def test_dadaptation_optimizers(self):
+        dadaptation_optimizers = ['DAdaptAdaGrad', 'DAdaptAdam', 'DAdaptSGD']
+        assert set(dadaptation_optimizers).issubset(
+            set(DADAPTATION_OPTIMIZERS))
+
+    @unittest.skipIf(not has_lion(), 'lion-pytorch is not installed')
+    def test_lion_optimizers(self):
+        assert 'Lion' in LION_OPTIMIZERS
 
     def test_build_optimizer(self):
         # test build function without ``constructor`` and ``paramwise_cfg``
@@ -253,7 +288,8 @@ class TestBuilder(TestCase):
             bias_decay_mult=0.5,
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
-            dcn_offset_lr_mult=0.1)
+            dcn_offset_lr_mult=0.1,
+            flat_decay_mult=0.3)
         optim_constructor_cfg = dict(
             type='DefaultOptimWrapperConstructor',
             optim_wrapper_cfg=optim_wrapper,
@@ -385,7 +421,8 @@ class TestBuilder(TestCase):
             bias_decay_mult=0.5,
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
-            dcn_offset_lr_mult=0.1)
+            dcn_offset_lr_mult=0.1,
+            flat_decay_mult=0.3)
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
         optim_wrapper = optim_constructor(model)
@@ -424,7 +461,8 @@ class TestBuilder(TestCase):
                 bias_decay_mult=0.5,
                 norm_decay_mult=0,
                 dwconv_decay_mult=0.1,
-                dcn_offset_lr_mult=0.1)
+                dcn_offset_lr_mult=0.1,
+                flat_decay_mult=0.3)
             optim_constructor = DefaultOptimWrapperConstructor(
                 optim_wrapper_cfg, paramwise_cfg)
             optim_wrapper = optim_constructor(model)
@@ -479,7 +517,8 @@ class TestBuilder(TestCase):
             bias_decay_mult=0.5,
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
-            dcn_offset_lr_mult=0.1)
+            dcn_offset_lr_mult=0.1,
+            flat_decay_mult=0.3)
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
         optim_wrapper = optim_constructor(self.model)
@@ -549,14 +588,28 @@ class TestBuilder(TestCase):
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1,
+            flat_decay_mult=0.3,
             bypass_duplicate=True)
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
 
-        self.assertWarnsRegex(
-            Warning,
-            'conv3.0 is duplicate. It is skipped since bypass_duplicate=True',
-            lambda: optim_constructor(model))
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
+            # Warning should be raised since conv3.0 is a duplicate param.
+            optim_constructor(model)
+        optim_wrapper = optim_constructor(model)
+        model_parameters = list(model.parameters())
+        num_params = 14 if MMCV_FULL_AVAILABLE else 11
+        assert len(optim_wrapper.optimizer.param_groups) == len(
+            model_parameters) == num_params
+        self._check_sgd_optimizer(optim_wrapper.optimizer, model,
+                                  **paramwise_cfg)
+
+        # test DefaultOptimWrapperConstructor when the params in shared
+        # modules do not require grad
+        model.conv1[0].requires_grad_(False)
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
+            # Warning should be raised since conv3.0 is a duplicate param.
+            optim_constructor(model)
         optim_wrapper = optim_constructor(model)
         model_parameters = list(model.parameters())
         num_params = 14 if MMCV_FULL_AVAILABLE else 11
@@ -713,3 +766,98 @@ class TestBuilder(TestCase):
                     for setting in settings:
                         assert param_groups[i][setting] == settings[
                             setting], f'{name} {setting}'
+
+
+@unittest.skipIf(
+    (digit_version(TORCH_VERSION) < digit_version('1.8.0'))
+    or not is_available(),
+    reason='ZeRO requires pytorch>=1.8 with torch.distributed.rpc available.')
+class TestZeroOptimizer(MultiProcessTestCase):
+
+    def setUp(self) -> None:
+        super().setUp()
+        self._spawn_processes()
+
+    def _check_default_optimizer(self, optimizer, model):
+        self.assertIsInstance(optimizer.optim, torch.optim.SGD)
+        self.assertEqual(optimizer.defaults['lr'], self.base_lr)
+        self.assertEqual(optimizer.defaults['momentum'], self.momentum)
+        self.assertEqual(optimizer.defaults['weight_decay'], self.base_wd)
+        param_groups = optimizer.param_groups
+        params_set = set(model.parameters())
+        self.assertEqual(
+            sum(len(param_group['params']) for param_group in param_groups),
+            len(params_set))
+        self.assertTrue(
+            all(param in params_set for param_group in param_groups
+                for param in param_group['params']))
+        state_dict = optimizer.state_dict()
+        if get_rank() == 0:
+            self.assertEqual(
+                sum(len(pg['params']) for pg in state_dict['param_groups']),
+                len(params_set))
+        else:
+            self.assertEqual(state_dict, {})
+
+    def test_zero_redundancy_optimizer(self):
+        self._init_dist_env(self.rank, self.world_size)
+        model = ExampleModel()
+        self.base_lr = 0.01
+        self.momentum = 0.0001
+        self.base_wd = 0.9
+
+        # test build function
+        optim_wrapper_cfg = dict(
+            optimizer=dict(
+                type='ZeroRedundancyOptimizer',
+                optimizer_type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum))
+        optim_wrapper = build_optim_wrapper(model, optim_wrapper_cfg)
+        self._check_default_optimizer(optim_wrapper.optimizer, model)
+
+        # test build optimizer without ``optimizer_type``
+        with self.assertRaises(TypeError):
+            optim_wrapper_cfg = dict(
+                optimizer=dict(
+                    type='ZeroRedundancyOptimizer',
+                    lr=self.base_lr,
+                    weight_decay=self.base_wd,
+                    momentum=self.momentum))
+            optim_wrapper = build_optim_wrapper(model, optim_wrapper_cfg)
+
+    @unittest.skipIf(
+        digit_version(TORCH_VERSION) < digit_version('1.12.0'),
+        reason='ZeRO started to support param groups since pytorch 1.12.0')
+    def test_zero_redundancy_optimizer_with_paramwise_cfg(self):
+        self._init_dist_env(self.rank, self.world_size)
+        model = ExampleModel()
+        self.base_lr = 0.01
+        self.momentum = 0.0001
+        self.base_wd = 0.9
+
+        # test build function
+        paramwise_cfg = dict(
+            custom_keys={
+                'conv1': dict(lr_mult=0.0, decay_mult=0.0),
+                'conv2': dict(lr_mult=1.0, decay_mult=2.0)
+            })
+        optim_wrapper_cfg = dict(
+            optimizer=dict(
+                type='ZeroRedundancyOptimizer',
+                optimizer_type='SGD',
+                lr=self.base_lr,
+                weight_decay=self.base_wd,
+                momentum=self.momentum),
+            paramwise_cfg=paramwise_cfg)
+        optim_wrapper = build_optim_wrapper(model, optim_wrapper_cfg)
+        self._check_default_optimizer(optim_wrapper.optimizer, model)
+
+    def _init_dist_env(self, rank, world_size):
+        """Initialize the distributed environment."""
+        os.environ['MASTER_ADDR'] = '127.0.0.1'
+        os.environ['MASTER_PORT'] = '29510'
+        os.environ['RANK'] = str(rank)
+        torch.distributed.init_process_group(
+            backend='gloo', rank=rank, world_size=world_size)

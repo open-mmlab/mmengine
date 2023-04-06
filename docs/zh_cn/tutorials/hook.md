@@ -31,12 +31,11 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 
 **自定义钩子**
 
-|                名称                 |         用途          |    优先级    |
-| :---------------------------------: | :-------------------: | :----------: |
-|         [EMAHook](#emahook)         | 模型参数指数滑动平均  | NORMAL (50)  |
-|  [EmptyCacheHook](#emptycachehook)  | PyTorch CUDA 缓存清理 | NORMAL (50)  |
-| [SyncBuffersHook](#syncbuffershook) |   同步模型的 buffer   | NORMAL (50)  |
-|       NaiveVisualizationHook        |        可视化         | LOWEST (100) |
+|                名称                 |         用途          |   优先级    |
+| :---------------------------------: | :-------------------: | :---------: |
+|         [EMAHook](#emahook)         | 模型参数指数滑动平均  | NORMAL (50) |
+|  [EmptyCacheHook](#emptycachehook)  | PyTorch CUDA 缓存清理 | NORMAL (50) |
+| [SyncBuffersHook](#syncbuffershook) |   同步模型的 buffer   | NORMAL (50) |
 
 ```{note}
 不建议修改默认钩子的优先级，因为优先级低的钩子可能会依赖优先级高的钩子。例如 CheckpointHook 的优先级需要比 ParamSchedulerHook 低，这样保存的优化器状态才是正确的状态。另外，自定义钩子的优先级默认为 `NORMAL (50)`。
@@ -56,9 +55,7 @@ default_hooks = dict(
     checkpoint=dict(type='CheckpointHook', interval=1),
 )
 
-custom_hooks = [
-    dict(type='NaiveVisualizationHook', priority='LOWEST'),
-]
+custom_hooks = [dict(type='EmptyCacheHook')]
 
 runner = Runner(default_hooks=default_hooks, custom_hooks=custom_hooks, ...)
 runner.train()
@@ -74,55 +71,64 @@ runner.train()
 - 保存最新的多个权重
 - 保存最优权重
 - 指定保存权重的路径
+- 制作发布用的权重
 
-如需了解其他功能，请阅读[CheckpointHook API 文档](mmengine.hooks.CheckpointHook)。
+如需了解其他功能，请阅读 [CheckpointHook API 文档](mmengine.hooks.CheckpointHook)。
 
 下面介绍上面提到的 4 个功能。
 
 - 按照间隔保存权重，支持按 epoch 数或者 iteration 数保存权重
 
-假设我们一共训练 20 个 epoch 并希望每隔 5 个 epoch 保存一次权重，下面的配置即可帮我们实现该需求。
+  假设我们一共训练 20 个 epoch 并希望每隔 5 个 epoch 保存一次权重，下面的配置即可帮我们实现该需求。
 
-```python
-# by_epoch 的默认值为 True
-default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, by_epoch=True))
-```
+  ```python
+  # by_epoch 的默认值为 True
+  default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, by_epoch=True))
+  ```
 
-如果想以迭代次数作为保存间隔，则可以将 `by_epoch` 设为 False，`interval=5` 则表示每迭代 5 次保存一次权重。
+  如果想以迭代次数作为保存间隔，则可以将 `by_epoch` 设为 False，`interval=5` 则表示每迭代 5 次保存一次权重。
 
-```python
-default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, by_epoch=False))
-```
+  ```python
+  default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, by_epoch=False))
+  ```
 
 - 保存最新的多个权重
 
-如果只想保存一定数量的权重，可以通过设置 `max_keep_ckpts` 参数实现最多保存 `max_keep_ckpts` 个权重，当保存的权重数超过 `max_keep_ckpts` 时，前面的权重会被删除。
+  如果只想保存一定数量的权重，可以通过设置 `max_keep_ckpts` 参数实现最多保存 `max_keep_ckpts` 个权重，当保存的权重数超过 `max_keep_ckpts` 时，前面的权重会被删除。
 
-```python
-default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, max_keep_ckpts=2))
-```
+  ```python
+  default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, max_keep_ckpts=2))
+  ```
 
-上述例子表示，假如一共训练 20 个 epoch，那么会在第 5, 10, 15, 20 个 epoch 保存模型，但是在第 15 个 epoch 的时候会删除第 5 个 epoch 保存的权重，在第 20 个 epoch 的时候会删除第 10 个 epoch 的权重，最终只有第 15 和第 20 个 epoch 的权重才会被保存。
+  上述例子表示，假如一共训练 20 个 epoch，那么会在第 5, 10, 15, 20 个 epoch 保存模型，但是在第 15 个 epoch 的时候会删除第 5 个 epoch 保存的权重，在第 20 个 epoch 的时候会删除第 10 个 epoch 的权重，最终只有第 15 和第 20 个 epoch 的权重才会被保存。
 
 - 保存最优权重
 
-如果想要保存训练过程验证集的最优权重，可以设置 `save_best` 参数，如果设置为 `'auto'`，则会根据验证集的第一个评价指标（验证集返回的评价指标是一个有序字典）判断当前权重是否最优。
+  如果想要保存训练过程验证集的最优权重，可以设置 `save_best` 参数，如果设置为 `'auto'`，则会根据验证集的第一个评价指标（验证集返回的评价指标是一个有序字典）判断当前权重是否最优。
 
-```python
-default_hooks = dict(checkpoint=dict(type='CheckpointHook', save_best='auto'))
-```
+  ```python
+  default_hooks = dict(checkpoint=dict(type='CheckpointHook', save_best='auto'))
+  ```
 
-也可以直接指定 `save_best` 的值为评价指标，例如在分类任务中，可以指定为 `save_best='top-1'`，则会根据 `'top-1'` 的值判断当前权重是否最优。
+  也可以直接指定 `save_best` 的值为评价指标，例如在分类任务中，可以指定为 `save_best='top-1'`，则会根据 `'top-1'` 的值判断当前权重是否最优。
 
-除了 `save_best` 参数，和保存最优权重相关的参数还有 `rule`，`greater_keys` 和 `less_keys`，这三者用来判断 `save_best` 的值是越大越好还是越小越好。例如指定了 `save_best='top-1'`，可以指定 `rule='greater'`，则表示该值越大表示权重越好。
+  除了 `save_best` 参数，和保存最优权重相关的参数还有 `rule`，`greater_keys` 和 `less_keys`，这三者用来判断 `save_best` 的值是越大越好还是越小越好。例如指定了 `save_best='top-1'`，可以指定 `rule='greater'`，则表示该值越大表示权重越好。
 
 - 指定保存权重的路径
 
-权重默认保存在工作目录（work_dir），但可以通过设置 `out_dir` 改变保存路径。
+  权重默认保存在工作目录（work_dir），但可以通过设置 `out_dir` 改变保存路径。
 
-```python
-default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, out_dir='/path/of/directory'))
-```
+  ```python
+  default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, out_dir='/path/of/directory'))
+  ```
+
+- 制作发布用的权重
+
+  如果你想在训练结束后自动生成可发布的权重（删除不需要的权重，例如优化器状态），你可以设置 `published_keys` 参数，选择需要保留的信息。注意：需要相应设置 `save_best` 或者 `save_last` 参数，这样才会生成可发布的权重，其中设置 `save_best` 会生成最优权重的可发布权重，设置 `save_last` 会生成最后一个权重的可发布权重，这两个参数也可同时设置。
+
+  ```python
+  default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=1, save_best='accuracy', rule='less', published_keys=['meta', 'state_dict']))
+  ```
 
 ### LoggerHook
 
@@ -134,7 +140,7 @@ default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=5, out_dir=
 default_hooks = dict(logger=dict(type='LoggerHook', interval=20))
 ```
 
-如果你对日志的管理感兴趣，可以阅读[记录日志（logging）](logging.md)。
+如果你对日志的管理感兴趣，可以阅读[记录日志（logging）](../advanced_tutorials/logging.md)。
 
 ### ParamSchedulerHook
 
@@ -150,8 +156,7 @@ default_hooks = dict(logger=dict(type='LoggerHook', interval=20))
 
 ### RuntimeInfoHook
 
-[RuntimeInfoHook](mmengine.hooks.RuntimeInfoHook) 会在执行器的不同钩子位点将当前的运行时信息（如 epoch、iter、max_epochs、max_iters、lr、metrics等）更新至 message hub 中，
-以便其他无法访问执行器的模块能够获取到这些信息。`RuntimeInfoHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
+[RuntimeInfoHook](mmengine.hooks.RuntimeInfoHook) 会在执行器的不同钩子位点将当前的运行时信息（如 epoch、iter、max_epochs、max_iters、lr、metrics等）更新至 message hub 中，以便其他无法访问执行器的模块能够获取到这些信息。`RuntimeInfoHook` 默认注册到执行器并且没有可配置的参数，所以无需对其做任何配置。
 
 ### EMAHook
 
@@ -169,12 +174,11 @@ runner.train()
 custom_hooks = [dict(type='EMAHook', ema_type='StochasticWeightAverage')]
 ```
 
-更多用法请阅读[EMAHook API 文档](mmengine.hooks.EMAHook)。
+更多用法请阅读 [EMAHook API 文档](mmengine.hooks.EMAHook)。
 
 ### EmptyCacheHook
 
-[EmptyCacheHook](mmengine.hooks.EmptyCacheHook) 调用 `torch.cuda.empty_cache()` 释放未被使用的显存。
-可以通过设置 `before_epoch`, `after_iter` 以及 `after_epoch` 参数控制释显存的时机，第一个参数表示在每个 epoch 开始之前，第二参数表示在每次迭代之后，第三个参数表示在每个 epoch 之后。
+[EmptyCacheHook](mmengine.hooks.EmptyCacheHook) 调用 `torch.cuda.empty_cache()` 释放未被使用的显存。可以通过设置 `before_epoch`, `after_iter` 以及 `after_epoch` 参数控制释显存的时机，第一个参数表示在每个 epoch 开始之前，第二参数表示在每次迭代之后，第三个参数表示在每个 epoch 之后。
 
 ```python
 # 每一个 epoch 结束都会执行释放操作
@@ -241,9 +245,9 @@ class CheckInvalidLossHook(Hook):
 ```python
 from mmengine.runner import Runner
 
-custom_hooks = dict(
+custom_hooks = [
     dict(type='CheckInvalidLossHook', interval=50)
-)
+]
 runner = Runner(custom_hooks=custom_hooks, ...)  # 实例化执行器，主要完成环境的初始化以及各种模块的构建
 runner.train()  # 执行器开始训练
 ```
@@ -253,9 +257,9 @@ runner.train()  # 执行器开始训练
 注意，自定义钩子的优先级默认为 `NORMAL (50)`，如果想改变钩子的优先级，则可以在配置中设置 priority 字段。
 
 ```python
-custom_hooks = dict(
+custom_hooks = [
     dict(type='CheckInvalidLossHook', interval=50, priority='ABOVE_NORMAL')
-)
+]
 ```
 
 也可以在定义类时给定优先级
@@ -267,4 +271,4 @@ class CheckInvalidLossHook(Hook):
     priority = 'ABOVE_NORMAL'
 ```
 
-你可能还想阅读[钩子的设计](../design/hook.md)或者[钩子的 API 文档](mmengine.hooks)。
+你可能还想阅读[钩子的设计](../design/hook.md)或者[钩子的 API 文档](../api/hooks)。

@@ -16,7 +16,7 @@
 
 ### 构建数据集
 
-接下来, 我们为 MNIST 数据集构建一个数据集类 `MNISTDataset`, 继承自数据集基类 [BaseDataset](mmengine.dataset.BaseDataset), 并且重载数据集基类的 `load_data_list` 函数, 保证返回值为 `list[dict]`，其中每个 `dict` 代表一个数据样本。更多关于 MMEngine 中数据集的用法，可以参考[数据集教程](../tutorials/basedataset.md)。
+接下来, 我们为 MNIST 数据集构建一个数据集类 `MNISTDataset`, 继承自数据集基类 [BaseDataset](mmengine.dataset.BaseDataset), 并且重载数据集基类的 `load_data_list` 函数, 保证返回值为 `list[dict]`，其中每个 `dict` 代表一个数据样本。更多关于 MMEngine 中数据集的用法，可以参考[数据集教程](../advanced_tutorials/basedataset.md)。
 
 ```python
 import numpy as np
@@ -147,8 +147,7 @@ from mmengine.model import ImgDataPreprocessor
 data_preprocessor = ImgDataPreprocessor(mean=([127.5]), std=([127.5]))
 ```
 
-下面的代码实现了基础 GAN 的算法。使用 MMEngine 实现算法类，需要继承 [BaseModel](mmengine.model.BaseModel) 基类，
-在 train_step 中实现训练过程。GAN 需要交替训练生成器和判别器，分别由 train_discriminator 和 train_generator 实现，并实现 disc_loss 和 gen_loss 计算判别器损失函数和生成器损失函数。
+下面的代码实现了基础 GAN 的算法。使用 MMEngine 实现算法类，需要继承 [BaseModel](mmengine.model.BaseModel) 基类，在 train_step 中实现训练过程。GAN 需要交替训练生成器和判别器，分别由 train_discriminator 和 train_generator 实现，并实现 disc_loss 和 gen_loss 计算判别器损失函数和生成器损失函数。
 关于 BaseModel 的更多信息，请参考[模型教程](../tutorials/model.md).
 
 ```python
@@ -262,7 +261,7 @@ model = GAN(generator, discriminator, 100, data_preprocessor)
 ## 构建优化器
 
 MMEngine 使用 [OptimWrapper](mmengine.optim.OptimWrapper) 来封装优化器，对于多个优化器的情况，使用 [OptimWrapperDict](mmengine.optim.OptimWrapperDict) 对 OptimWrapper 再进行一次封装。
-关于优化器的更多信息，请参考[优化器教程](../tutorials/optimizer.md).
+关于优化器的更多信息，请参考[优化器教程](../tutorials/optim_wrapper.md).
 
 ```python
 from mmengine.optim import OptimWrapper, OptimWrapperDict

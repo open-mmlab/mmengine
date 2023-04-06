@@ -109,6 +109,7 @@ Miscellaneous
    to_ntuple
    check_prerequisites
    deprecated_api_warning
+   deprecated_function
    has_method
    is_method_overridden
    import_modules_from_strings

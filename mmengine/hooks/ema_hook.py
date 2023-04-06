@@ -27,11 +27,12 @@ class EMAHook(Hook):
             Defaults to 'ExponentialMovingAverage'.
         strict_load (bool): Whether to strictly enforce that the keys of
             ``state_dict`` in checkpoint match the keys returned by
-            ``self.module.state_dict``. Defaults to True.
+            ``self.module.state_dict``. Defaults to False.
+            Changed in v0.3.0.
         begin_iter (int): The number of iteration to enable ``EMAHook``.
             Defaults to 0.
-        begin_epoch (int): The number of epoch to enable ``EMAHook``. Defaults
-            to 0.
+        begin_epoch (int): The number of epoch to enable ``EMAHook``.
+            Defaults to 0.
         **kwargs: Keyword arguments passed to subclasses of
             :obj:`BaseAveragedModel`
     """
@@ -40,7 +41,7 @@ class EMAHook(Hook):
 
     def __init__(self,
                  ema_type: str = 'ExponentialMovingAverage',
-                 strict_load: bool = True,
+                 strict_load: bool = False,
                  begin_iter: int = 0,
                  begin_epoch: int = 0,
                  **kwargs):
@@ -49,9 +50,11 @@ class EMAHook(Hook):
         assert not (begin_iter != 0 and begin_epoch != 0), (
             '`begin_iter` and `begin_epoch` should not be both set.')
         assert begin_iter >= 0, (
-            f'begin_iter must larger than 0, but got begin: {begin_iter}')
+            '`begin_iter` must larger than or equal to 0, '
+            f'but got begin_iter: {begin_iter}')
         assert begin_epoch >= 0, (
-            f'begin_epoch must larger than 0, but got begin: {begin_epoch}')
+            '`begin_epoch` must larger than or equal to 0, '
+            f'but got begin_epoch: {begin_epoch}')
         self.begin_iter = begin_iter
         self.begin_epoch = begin_epoch
         # If `begin_epoch` and `begin_iter` are not set, `EMAHook` will be
@@ -79,12 +82,14 @@ class EMAHook(Hook):
         """
         if self.enabled_by_epoch:
             assert self.begin_epoch <= runner.max_epochs, (
-                'self.begin_epoch should be smaller than runner.max_epochs: '
-                f'{runner.max_epochs}, but got begin: {self.begin_epoch}')
+                'self.begin_epoch should be smaller than or equal to '
+                f'runner.max_epochs: {runner.max_epochs}, but got '
+                f'begin_epoch: {self.begin_epoch}')
         else:
             assert self.begin_iter <= runner.max_iters, (
-                'self.begin_iter should be smaller than runner.max_iters: '
-                f'{runner.max_iters}, but got begin: {self.begin_iter}')
+                'self.begin_iter should be smaller than or equal to '
+                f'runner.max_iters: {runner.max_iters}, but got '
+                f'begin_iter: {self.begin_iter}')
 
     def after_train_iter(self,
                          runner,

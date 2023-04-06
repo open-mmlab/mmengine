@@ -10,9 +10,7 @@
 
 ## 构建模型
 
-首先，我们需要构建一个**模型**，在 MMEngine 中，我们约定这个模型应当继承 `BaseModel`，并且其 `forward` 方法除了接受来自数据集的若干参数外，
-还需要接受额外的参数 `mode`：对于训练，我们需要 `mode` 接受字符串 "loss"，并返回一个包含 "loss" 字段的字典；
-对于验证，我们需要 `mode` 接受字符串 "predict"，并返回同时包含预测信息和真实信息的结果。
+首先，我们需要构建一个**模型**，在 MMEngine 中，我们约定这个模型应当继承 `BaseModel`，并且其 `forward` 方法除了接受来自数据集的若干参数外，还需要接受额外的参数 `mode`：对于训练，我们需要 `mode` 接受字符串 "loss"，并返回一个包含 "loss" 字段的字典；对于验证，我们需要 `mode` 接受字符串 "predict"，并返回同时包含预测信息和真实信息的结果。
 
 ```python
 import torch.nn.functional as F
@@ -70,12 +68,10 @@ val_dataloader = DataLoader(batch_size=32,
 
 ## 构建评测指标
 
-为了进行验证和测试，我们需要定义模型推理结果的**评测指标**。我们约定这一评测指标需要继承 `BaseMetric`，
-并实现 `process` 和 `compute_metrics` 方法。其中 `process` 方法接受数据集的输出和模型 `mode="predict"`
+为了进行验证和测试，我们需要定义模型推理结果的**评测指标**。我们约定这一评测指标需要继承 `BaseMetric`，并实现 `process` 和 `compute_metrics` 方法。其中 `process` 方法接受数据集的输出和模型 `mode="predict"`
 时的输出，此时的数据为一个批次的数据，对这一批次的数据进行处理后，保存信息至 `self.results` 属性。
 而 `compute_metrics` 接受 `results` 参数，这一参数的输入为 `process` 中保存的所有信息
-（如果是分布式环境，`results` 中为已收集的，包括各个进程 `process` 保存信息的结果），
-利用这些信息计算并返回保存有评测指标结果的字典。
+（如果是分布式环境，`results` 中为已收集的，包括各个进程 `process` 保存信息的结果），利用这些信息计算并返回保存有评测指标结果的字典。
 
 ```python
 from mmengine.evaluator import BaseMetric
@@ -238,5 +234,9 @@ System environment:
 ...
 2022/08/22 15:52:54 - mmengine - INFO - Epoch(val) [1][313/313]  accuracy: 35.7000
 ```
+
+基于 PyTorch 和基于 MMEngine 的训练流程对比如下：
+
+![output](https://user-images.githubusercontent.com/57566630/203142869-cfe5f855-f391-4fd4-a80c-beecf1bd111f.gif)
 
 除了以上基础组件，你还可以利用**执行器**轻松地组合配置各种训练技巧，如开启混合精度训练和梯度累积（见 [优化器封装（OptimWrapper）](../tutorials/optim_wrapper.md)）、配置学习率衰减曲线（见 [评测指标与评测器（Metrics & Evaluator）](../tutorials/evaluation.md)）等。

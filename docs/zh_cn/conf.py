@@ -11,6 +11,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import subprocess
 import sys
 
 import pytorch_sphinx_theme
@@ -48,21 +49,20 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
-    'sphinx.ext.autosectionlabel',
-    'sphinx_markdown_tables',
     'myst_parser',
     'sphinx_copybutton',
     'sphinx.ext.autodoc.typehints',
 ]  # yapf: disable
 autodoc_typehints = 'description'
 myst_heading_anchors = 4
+myst_enable_extensions = ['colon_fence']
 
 # Configuration for intersphinx
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'numpy': ('https://numpy.org/doc/stable', None),
     'torch': ('https://pytorch.org/docs/stable/', None),
-    'mmcv': ('https://mmcv.readthedocs.io/en/2.x/', None),
+    'mmcv': ('https://mmcv.readthedocs.io/zh_CN/2.x/', None),
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -102,3 +102,11 @@ html_css_files = ['css/readthedocs.css']
 # Ignore >>> when copying code
 copybutton_prompt_text = r'>>> |\.\.\. '
 copybutton_prompt_is_regexp = True
+
+
+def builder_inited_handler(app):
+    subprocess.run(['./cp_origin_docs.sh'])
+
+
+def setup(app):
+    app.connect('builder-inited', builder_inited_handler)
