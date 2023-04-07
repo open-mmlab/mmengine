@@ -2238,7 +2238,6 @@ class Runner:
         Args:
             param_scheduler (dict or list): The original parameter scheduler.
         """  # noqa: E501
-        param_schedulers: Union[dict, list, _ParamScheduler]
         if param_scheduler is None:
             return
         if isinstance(param_scheduler, _ParamScheduler):
