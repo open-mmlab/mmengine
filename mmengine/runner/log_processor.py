@@ -307,6 +307,7 @@ class LogProcessor:
                 tag[key] = value
         # Log other messages.
         log_items = []
+        log_str += '  '
         for name, val in chain(tag.items(), non_scalar_tag.items(),
                                time_tag.items()):
             if isinstance(val, float):

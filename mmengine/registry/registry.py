@@ -345,7 +345,7 @@ class Registry:
                     f'`{self.scope}.utils.register_all_modules` '
                     'instead.',
                     logger='current',
-                    level=logging.WARNING)
+                    level=logging.DEBUG)
                 try:
                     module = import_module(f'{self.scope}.utils')
                 except (ImportError, AttributeError, ModuleNotFoundError):

@@ -1,5 +1,18 @@
 # Changelog of v0.x
 
+## v0.7.2 (04/06/2023)
+
+### Bug fixes
+
+- Align the evaluation result in log by [@kitecats](https://github.com/kitecats) in https://github.com/open-mmlab/mmengine/pull/1034
+- Update the logic to calculate the `repeat_factors` in `ClassBalancedDataset` by [@BIGWangYuDong](https://github.com/BIGWangYuDong) in https://github.com/open-mmlab/mmengine/pull/1048
+- Initialize sub-modules in `DistributedDataParallel` that define `init_weights` during initialization by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1045
+- Refactor checkpointhook unittest by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/789
+
+### Contributors
+
+A total of 3 developers contributed to this release. Thanks [@kitecats](https://github.com/kitecats), [@BIGWangYuDong](https://github.com/BIGWangYuDong), [@HAOCHENYE](https://github.com/HAOCHENYE)
+
 ## v0.7.1 (04/03/2023)
 
 ### Highlights
