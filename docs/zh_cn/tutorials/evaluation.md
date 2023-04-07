@@ -50,6 +50,8 @@ test_evaluator = [
 具体实现如下：
 
 ```python
+from typing import Sequence, List
+
 from mmengine.evaluator import BaseMetric
 from mmengine.registry import METRICS
 
