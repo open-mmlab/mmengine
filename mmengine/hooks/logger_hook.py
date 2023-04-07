@@ -306,6 +306,9 @@ class LoggerHook(Hook):
             runner (Runner): The runner of the training/testing/validation
                 process.
         """
+        # close the visualizer
+        runner.visualizer.close()
+
         # copy or upload logs to self.out_dir
         if self.out_dir is None:
             return
