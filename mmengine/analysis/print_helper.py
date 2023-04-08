@@ -3,6 +3,7 @@
 # Modified from
 # https://github.com/facebookresearch/fvcore/blob/main/fvcore/nn/print_model_statistics.py
 
+import warnings
 from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
@@ -675,7 +676,7 @@ def complexity_stats_table(
 
 def get_model_complexity_info(
     model: nn.Module,
-    input_shape: tuple,
+    input_shape: tuple = None,
     inputs: Optional[torch.Tensor] = None,
     show_table: bool = True,
     show_arch: bool = True,
@@ -696,6 +697,13 @@ def get_model_complexity_info(
     Returns:
         dict: The complexity information of the model.
     """
+    assert (input_shape is not None) or (
+        inputs
+        is not None), '"input_shape" and "inputs" cannot both be "None".'
+    if (input_shape is not None) and (inputs is not None):
+        warnings.warn('Both "input_shape" and "inputs" are provided.\
+            "inputs" will be used.')
+
     if inputs is None:
         inputs = (torch.randn(1, *input_shape), )
 
