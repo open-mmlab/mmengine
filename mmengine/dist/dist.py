@@ -187,9 +187,6 @@ def gather(data: Tensor,
         and just returns a list containing :attr:`data` itself.
 
     Note:
-        ``NCCL`` backend does not support ``gather``.
-
-    Note:
         Unlike PyTorch ``torch.distributed.gather``, :meth:`gather` in
         MMEngine does not pass in an empty list ``gather_list`` and returns
         the ``gather_list`` directly, which is more convenient. The difference
@@ -251,7 +248,14 @@ def gather(data: Tensor,
     else:
         gather_list = []
 
-    torch_dist.gather(data, gather_list, dst, group)
+    # Check if the backend is NCCL
+    if get_backend(group) == torch_dist.Backend.NCCL:
+        if get_rank(group) == dst:
+            gather_list = torch.cuda.comm.gather(data, dst, group)
+        else:
+            torch.cuda.comm.gather(data, dst, group)
+    else:
+        torch_dist.gather(data, gather_list, dst, group)
 
     if get_rank(group) == dst:
         return cast_data_device(gather_list, input_device)  # type: ignore
