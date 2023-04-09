@@ -1385,6 +1385,7 @@ class Runner:
             worker_init_fn_cfg = dataloader_cfg.pop('worker_init_fn')
             worker_init_fn_type = worker_init_fn_cfg.pop('type')
             worker_init_fn = FUNCTIONS.get(worker_init_fn_type)
+            assert callable(worker_init_fn)
             init_fn = partial(worker_init_fn,
                               **worker_init_fn_cfg)  # type: ignore
         else:
