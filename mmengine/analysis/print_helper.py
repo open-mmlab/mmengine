@@ -675,7 +675,7 @@ def complexity_stats_table(
 
 def get_model_complexity_info(
     model: nn.Module,
-    input_shape: tuple,
+    input_shape: tuple = None,
     inputs: Optional[torch.Tensor] = None,
     show_table: bool = True,
     show_arch: bool = True,
@@ -696,6 +696,11 @@ def get_model_complexity_info(
     Returns:
         dict: The complexity information of the model.
     """
+    if input_shape is None and inputs is None:
+        raise ValueError('One of "input_shape" and "inputs" should be set.')
+    elif input_shape is not None and inputs is not None:
+        raise ValueError('"input_shape" and "inputs" cannot be both set.')
+
     if inputs is None:
         inputs = (torch.randn(1, *input_shape), )
 
