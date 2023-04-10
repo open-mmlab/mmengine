@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 
 import mmengine
 from mmengine.config import Config, ConfigDict
-from mmengine.dataset import worker_init_fn
+from mmengine.dataset import worker_init_fn as default_worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
                            is_distributed, master_only)
@@ -1381,21 +1381,28 @@ class Runner:
         # build dataloader
         init_fn: Optional[partial]
 
-        if seed is not None:
-            disable_subprocess_warning = dataloader_cfg.pop(
-                'disable_subprocess_warning', False)
-            assert isinstance(
-                disable_subprocess_warning,
-                bool), ('disable_subprocess_warning should be a bool, but got '
-                        f'{type(disable_subprocess_warning)}')
-            init_fn = partial(
-                worker_init_fn,
-                num_workers=dataloader_cfg.get('num_workers'),
-                rank=get_rank(),
-                seed=seed,
-                disable_subprocess_warning=disable_subprocess_warning)
+        if 'worker_init_fn' in dataloader_cfg:
+            worker_init_fn_cfg = dataloader_cfg.pop('worker_init_fn')
+            worker_init_fn_type = worker_init_fn_cfg.pop('type')
+            worker_init_fn = FUNCTIONS.get(worker_init_fn_type)
+            assert callable(worker_init_fn)
+            init_fn = partial(worker_init_fn,
+                              **worker_init_fn_cfg)  # type: ignore
         else:
-            init_fn = None
+            if seed is not None:
+                disable_subprocess_warning = dataloader_cfg.pop(
+                    'disable_subprocess_warning', False)
+                assert isinstance(disable_subprocess_warning, bool), (
+                    'disable_subprocess_warning should be a bool, but got '
+                    f'{type(disable_subprocess_warning)}')
+                init_fn = partial(
+                    default_worker_init_fn,
+                    num_workers=dataloader_cfg.get('num_workers'),
+                    rank=get_rank(),
+                    seed=seed,
+                    disable_subprocess_warning=disable_subprocess_warning)
+            else:
+                init_fn = None
 
         # `persistent_workers` requires pytorch version >= 1.7
         if ('persistent_workers' in dataloader_cfg
