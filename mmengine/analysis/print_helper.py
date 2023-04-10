@@ -4,7 +4,7 @@
 # https://github.com/facebookresearch/fvcore/blob/main/fvcore/nn/print_model_statistics.py
 
 from collections import defaultdict
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 import torch
 from rich import box
@@ -676,7 +676,7 @@ def complexity_stats_table(
 def get_model_complexity_info(
     model: nn.Module,
     input_shape: tuple = None,
-    inputs: Optional[torch.Tensor] = None,
+    inputs: Union[torch.Tensor, Tuple[torch.Tensor, ...], None] = None,
     show_table: bool = True,
     show_arch: bool = True,
 ):
@@ -685,9 +685,9 @@ def get_model_complexity_info(
     Args:
         model (nn.Module): The model to analyze.
         input_shape (tuple): The input shape of the model.
-        inputs (torch.Tensor, optional): The input tensor of the model.
-            If not given the input tensor will be generated automatically
-            with the given input_shape.
+        inputs (Union[torch.Tensor, tuple[torch.Tensor, ...], None]):\
+            The input tensor(s) of the model. If not given the input tensor
+            will be generated automatically with the given input_shape.
         show_table (bool): Whether to show the complexity table.
             Defaults to True.
         show_arch (bool): Whether to show the complexity arch.
