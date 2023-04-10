@@ -95,7 +95,7 @@ class RichProgressBar:
                 'The task_id must be within a valid range')
 
             if task_id == -1:
-                task_id = len(self.tasks) - 1
+                task_id = self.bar.tasks[-1].id
 
             completed = self.bar.tasks[task_id].completed + advance
             total = self.bar.tasks[task_id].total
