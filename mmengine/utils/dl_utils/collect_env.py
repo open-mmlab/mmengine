@@ -11,16 +11,18 @@ import torch
 
 import mmengine
 
+
 def is_rocm_pytorch() -> bool:
     """Check whether the PyTorch is compiled on ROCm."""
     is_rocm = False
     try:
         from torch.utils.cpp_extension import ROCM_HOME
         is_rocm = True if ((torch.version.hip is not None) and
-                            (ROCM_HOME is not None)) else False
+                           (ROCM_HOME is not None)) else False
     except ImportError:
         pass
     return is_rocm
+
 
 def _get_cuda_home():
     """Obtain the path of CUDA home."""

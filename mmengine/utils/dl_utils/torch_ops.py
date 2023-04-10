@@ -1,11 +1,11 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
 
+from mmengine.utils.dl_utils import TORCH_VERSION
 from ..version_utils import digit_version
-from . import TORCH_VERSION
 
 _torch_version_meshgrid_indexing = (
-    digit_version(TORCH_VERSION) >= digit_version('1.10.0a0'))
+    digit_version(TORCH_VERSION) >= digit_version('1.10.0a0'))  # type: ignore
 
 
 def torch_meshgrid(*tensors):

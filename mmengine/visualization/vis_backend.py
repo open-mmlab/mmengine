@@ -19,7 +19,6 @@ from mmengine.hooks.logger_hook import SUFFIX_TYPE
 from mmengine.logging import MMLogger, print_log
 from mmengine.registry import VISBACKENDS
 from mmengine.utils import scandir
-from mmengine.utils.dl_utils import TORCH_VERSION
 
 
 def force_init_env(old_func: Callable) -> Any:

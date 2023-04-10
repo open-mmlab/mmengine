@@ -4,11 +4,11 @@
 # torch >= 1.6.0 but loaded in torch < 1.7.0.
 # More details at https://github.com/open-mmlab/mmpose/issues/904
 
+from mmengine.utils.dl_utils import TORCH_VERSION
 from ..path import mkdir_or_exist
 from ..version_utils import digit_version
-from mmengine.utils.dl_utils import TORCH_VERSION
 
-if digit_version(TORCH_VERSION) < digit_version('1.7.0'):
+if digit_version(TORCH_VERSION) < digit_version('1.7.0'):  # type: ignore
     # Modified from https://github.com/pytorch/pytorch/blob/master/torch/hub.py
     import os
     import sys

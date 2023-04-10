@@ -63,9 +63,8 @@ def assert_tensor_equal(tensor_a, tensor_b):
 def test_get_state_dict():
     state_dict_keys = {
         'block.conv.weight', 'block.conv.bias', 'block.norm.weight',
-        'block.norm.bias', 'block.norm.running_mean',
-        'block.norm.running_var', 'block.norm.num_batches_tracked',
-        'conv.weight', 'conv.bias'
+        'block.norm.bias', 'block.norm.running_mean', 'block.norm.running_var',
+        'block.norm.num_batches_tracked', 'conv.weight', 'conv.bias'
     }
 
     model = Model()
@@ -131,8 +130,8 @@ def test_get_state_dict():
     assert_tensor_equal(state_dict['block.norm.running_var'],
                         wrapped_model.module.block.module.norm.running_var)
     assert_tensor_equal(
-            state_dict['block.norm.num_batches_tracked'],
-            wrapped_model.module.block.module.norm.num_batches_tracked)
+        state_dict['block.norm.num_batches_tracked'],
+        wrapped_model.module.block.module.norm.num_batches_tracked)
     assert_tensor_equal(state_dict['conv.weight'],
                         wrapped_model.module.conv.module.weight)
     assert_tensor_equal(state_dict['conv.bias'],
