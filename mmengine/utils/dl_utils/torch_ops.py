@@ -2,7 +2,7 @@
 import torch
 
 from ..version_utils import digit_version
-from .torch_wrapper import TORCH_VERSION
+from . import TORCH_VERSION
 
 _torch_version_meshgrid_indexing = (
     digit_version(TORCH_VERSION) >= digit_version('1.10.0a0'))

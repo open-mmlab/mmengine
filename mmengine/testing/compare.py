@@ -7,11 +7,12 @@ from typing import Any, Callable, Dict, List, Optional, Union
 from unittest.mock import patch
 
 from torch.nn import GroupNorm, LayerNorm
+from torch.nn.modules.batchnorm import _BatchNorm
+from torch.nn.modules.instancenorm import _InstanceNorm
 from torch.testing import assert_allclose as _assert_allclose
 
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
-from mmengine.utils.dl_utils.torch_wrapper import _BatchNorm, _InstanceNorm
 
 
 def assert_allclose(
