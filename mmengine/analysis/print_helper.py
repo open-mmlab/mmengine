@@ -3,7 +3,6 @@
 # Modified from
 # https://github.com/facebookresearch/fvcore/blob/main/fvcore/nn/print_model_statistics.py
 
-import warnings
 from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
@@ -697,12 +696,10 @@ def get_model_complexity_info(
     Returns:
         dict: The complexity information of the model.
     """
-    assert (input_shape is not None) or (
-        inputs
-        is not None), '"input_shape" and "inputs" cannot both be "None".'
-    if (input_shape is not None) and (inputs is not None):
-        warnings.warn('Both "input_shape" and "inputs" are provided.\
-            "inputs" will be used.')
+    if input_shape is None and inputs is None:
+        raise ValueError('One of "input_shape" and "inputs" should be set.')
+    elif input_shape is not None and inputs is not None:
+        raise ValueError('"input_shape" and "inputs" cannot be both set.')
 
     if inputs is None:
         inputs = (torch.randn(1, *input_shape), )
