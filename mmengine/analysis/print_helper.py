@@ -675,7 +675,7 @@ def complexity_stats_table(
 
 def get_model_complexity_info(
     model: nn.Module,
-    input_shape: Optional[tuple] = None,
+    input_shape: Union[Tuple[int, ...], Tuple[Tuple[int, ...]], None] = None,
     inputs: Union[torch.Tensor, Tuple[torch.Tensor, ...], None] = None,
     show_table: bool = True,
     show_arch: bool = True,
@@ -684,8 +684,16 @@ def get_model_complexity_info(
 
     Args:
         model (nn.Module): The model to analyze.
-        input_shape (tuple, optional): The input shape of the model.
-            If inputs is not specified, the input_shape should be set.
+        input_shape (Union[Tuple[int, ...], Tuple[Tuple[int, ...]], None]):
+            The input shape of the model.
+            If "inputs" is not specified, the "input_shape" should be set.
+            If the input_shape is a "tuple of int", one tensor will be
+            constructed. If the input_shape is a "tuple of tuple of int",
+            multiple tensors will be constructed. For example, assume
+                >>> input_shape = ((5,6), (7,8))
+            a "inputs" tuple consists of two tensors
+                >>> inputs = (torch.randn(1, 5, 6), torch.randn(1, 7, 8))
+            will be constructed and fed into the model.
             Defaults to None.
         inputs (torch.Tensor or tuple[torch.Tensor, ...], optional]):
             The input tensor(s) of the model. If not given the input tensor
@@ -705,7 +713,23 @@ def get_model_complexity_info(
         raise ValueError('"input_shape" and "inputs" cannot be both set.')
 
     if inputs is None:
-        inputs = (torch.randn(1, *input_shape), )
+        if isinstance(input_shape, tuple) and all(
+                isinstance(item, int)
+                for item in input_shape):  # tuple of int, construct one tensor
+            inputs = (torch.randn(1, *input_shape), )
+        elif isinstance(input_shape, tuple) and all(
+                isinstance(item, tuple) and all(
+                    isinstance(i, int) for i in item) for item in input_shape
+        ):  # tuple of tuple of int, construct multiple tensors
+            inputs = tuple([
+                torch.randn(1, *one_input_shape)
+                for one_input_shape in input_shape
+            ])
+        else:
+            raise ValueError(
+                '"input_shape" should be either a `tuple of int` (to construct\
+                one input tensor) or a `tuple of tuple of int` (to construct\
+                multiple input tensors).')
 
     flop_handler = FlopAnalyzer(model, inputs)
     activation_handler = ActivationAnalyzer(model, inputs)
