@@ -427,8 +427,8 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
             gather_list = dist.gather(data, dst=dst, group=self.group)
             if self.rank == dst:
                 for i in range(self.world_size):
-                    self.assertTrue(torch.allclose(
-                        gather_list[i], expected[i]))
+                    self.assertTrue(
+                        torch.allclose(gather_list[i], expected[i]))
             else:
                 self.assertEqual(gather_list, [])
 
