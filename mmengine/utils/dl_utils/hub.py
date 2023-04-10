@@ -6,7 +6,7 @@
 
 from ..path import mkdir_or_exist
 from ..version_utils import digit_version
-from . import TORCH_VERSION
+from mmengine.utils.dl_utils import TORCH_VERSION
 
 if digit_version(TORCH_VERSION) < digit_version('1.7.0'):
     # Modified from https://github.com/pytorch/pytorch/blob/master/torch/hub.py
