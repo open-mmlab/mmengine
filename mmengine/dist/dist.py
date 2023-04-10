@@ -250,10 +250,14 @@ def gather(data: Tensor,
 
     # Check if the backend is NCCL
     if get_backend(group) == torch_dist.Backend.NCCL:
-        if get_rank(group) == dst:
-            gather_list = torch.cuda.comm.gather(data, dst, group)
+        if digit_version(TORCH_VERSION) >= digit_version('1.11.0'):
+            torch_dist.gather(data, gather_list, dst, group)
         else:
-            torch.cuda.comm.gather(data, dst, group)
+            if get_rank(group) == dst:
+                gather_list = torch.cuda.comm.gather(data, dst, group)
+            else:
+                torch.cuda.comm.gather(data, dst, group)
+                gather_list = []
     else:
         torch_dist.gather(data, gather_list, dst, group)
 

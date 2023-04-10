@@ -415,6 +415,23 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
                 torch.allclose(output[dist.get_rank()],
                                expected[dist.get_rank()]))
 
+    def test_gather(self):
+        self._init_dist_env(self.rank, self.world_size)
+        for device_type in ('cpu', 'cuda'):
+            data = torch.tensor([self.rank, self.rank + 1]).to(device_type)
+            dst = 0
+            expected = [
+                torch.tensor([0, 1]).to(device_type),
+                torch.tensor([1, 2]).to(device_type),
+            ]
+            gather_list = dist.gather(data, dst=dst, group=self.group)
+            if self.rank == dst:
+                for i in range(self.world_size):
+                    self.assertTrue(torch.allclose(
+                        gather_list[i], expected[i]))
+            else:
+                self.assertEqual(gather_list, [])
+
     def test_broadcast_dist(self):
         self._init_dist_env(self.rank, self.world_size)
         for device_type in ('cpu', 'cuda'):
