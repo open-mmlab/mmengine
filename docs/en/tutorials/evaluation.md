@@ -1,12 +1,12 @@
 # Evaluation
 
-In model validation and model test, it is often necessary to make a quantitative evaluation of model accuracy. We can do this by specifying the Metric in the configuration file.
+In model validation and model test, it is often necessary to make a quantitative evaluation of model accuracy. We can do this by specifying the metrics(type and arguments of `Metric`) in the configuration file.
 
 ## Evaluation in model training or test
 
 ### Using a single evaluation metric
 
-When training or testing a model based on MMEngine, users only need to specify the evaluation metrics for the validation and test stages in the configuration file via the `val_evaluator` and `test_evaluator` fields, respectively. For example, when training a classification model using [MMClassification](https://github.com/open-mmlab/mmclassification), you want to evaluate the top-1 and top-5 classification accuracy during the validation stage of the model, you can configure it as follows:
+When training or testing a model based on MMEngine, users only need to specify the evaluation metrics for the validation and test stages in the configuration file via the `val_evaluator` and `test_evaluator` fields, respectively. For example, when training a classification model using [MMClassification](https://github.com/open-mmlab/mmclassification), you want to evaluate the top-1 and top-5 classification accuracy during the validation stage of the model,  and then you can configure it as follows:
 
 ```python
 val_evaluator = dict(type='Accuracy', top_k=(1, 5))  # using classification accuracy evaluation metric
@@ -39,7 +39,7 @@ test_evaluator = [
 
 If the common evaluation metrics provided in the algorithm library cannot meet the needs, users can also add custom evaluation metrics. As an example, we present the implementation of custom metrics with the simplified classification accuracy:
 
-1. When defining a new evaluation metric class, you need to inherit the base class [BaseMetric](../../../mmengine/evaluator/metric.py) (for the introduction of this base class, you can refer to the [design document](../design/evaluation.md)). In addition, the evaluation metric class needs to be registered with the registrar `METRICS` (for a description of the registrar, please refer to the [Registry documentation](../advanced_tutorials/registry.md)).
+1. When defining a new evaluation metric class, you need to inherit the base class [BaseMetric](mmengine.evaluator.BaseMetric) (for the introduction of this base class, you can refer to the [design document](../design/evaluation.md)). In addition, the evaluation metric class needs to be registered with the registrar `METRICS` (for a description of the registrar, please refer to the [Registry documentation](../advanced_tutorials/registry.md)).
 
 2. Implement the `process()` method. This method has two input parameters, which are the test data samples of a batch `data_batch` and the model prediction results `data_samples`. We take the sample category labels and the classification prediction results from them and store them in `self.results` respectively.
 
