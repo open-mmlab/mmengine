@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import atexit
 from collections.abc import Iterable
 from functools import partial
 from multiprocessing import Pool
@@ -14,8 +15,15 @@ from .timer import Timer
 class RichProgressBar:
     """use rich to enhance progress bar."""
 
+    running_progress = False
+    bar = Progress()
+
     def __init__(self):
-        self.bar = Progress()
+        if RichProgressBar.running_progress:
+            RichProgressBar.bar.stop()
+            RichProgressBar.bar = Progress()
+
+        RichProgressBar.running_progress = True
         self.tasks = []
         self.descriptions = []
         self.colors = []
@@ -24,9 +32,11 @@ class RichProgressBar:
         self.infinite = False
 
         self.bar.start()
+        atexit.register(self.cleanup)
 
-    def __del__(self):
+    def cleanup(self):
         self.bar.stop()
+        RichProgressBar.running_progress = False
 
     @staticmethod
     def write(msg: str, color: str = 'blue'):
@@ -49,7 +59,7 @@ class RichProgressBar:
                     f'[{color}]{description}_0/{total}', total=total))
             self.colors.append(color)
             self.descriptions.append(description)
-            task_id = len(self.tasks) - 1
+            task_id = self.bar.tasks[-1].id
         else:
             assert not self.tasks, (
                 'Since the total argument is None, this task is considered '
@@ -105,14 +115,14 @@ def worker(params, function):
     return result
 
 
-def track_progress_v2(func: Callable,
-                      tasks: Tuple[list],
-                      nproc: int = 1,
-                      description: str = 'process...',
-                      color: str = 'blue',
-                      chunksize: int = 1,
-                      skip_first: bool = False,
-                      keep_order: bool = True) -> list:
+def track_progress_rich(func: Callable,
+                        tasks: Tuple[list],
+                        nproc: int = 1,
+                        description: str = 'process...',
+                        color: str = 'blue',
+                        chunksize: int = 1,
+                        skip_first: bool = False,
+                        keep_order: bool = True) -> list:
     """Track the progress of parallel task execution with a progress bar.
 
     The built-in :mod:`multiprocessing` module is used for process pools and
@@ -135,14 +145,19 @@ def track_progress_v2(func: Callable,
     Returns:
         list: The task results.
     """
-    assert is_seq_of(tasks, Iterable)
+    assert is_seq_of(tasks,
+                     Iterable), 'The content of tasks must be iterable object'
     assert nproc > 0, 'nproc must be a positive number'
 
     if not hasattr(tasks[0], '__len__'):
         task_num = None
     else:
-        assert len({len(arg)
-                    for arg in tasks}) == 1, 'args must have same length'
+        assert len(
+            {len(arg)
+             for arg in tasks}
+        ) == 1, 'args must have the same length, ' \
+                'please check each argument in your ' \
+                'tasks has the same length'
         task_num = len(tasks[0])
 
     prog_bar = RichProgressBar()
