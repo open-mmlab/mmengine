@@ -12,7 +12,7 @@ from mmengine.model import (MMDistributedDataParallel,
                             convert_sync_batchnorm, is_model_wrapper,
                             revert_sync_batchnorm)
 from mmengine.registry import MODEL_WRAPPERS, Registry
-from mmengine.utils import is_installed
+from mmengine.utils.dl_utils import mmcv_full_available
 
 
 class ToyModule(nn.Module):
@@ -43,7 +43,7 @@ def test_convert_syncbn():
     conv = nn.Sequential(nn.Conv2d(3, 8, 2), nn.BatchNorm2d(8))
 
     # Test convert to mmcv SyncBatchNorm
-    if is_installed('mmcv'):
+    if mmcv_full_available():
         # MMCV SyncBatchNorm is only supported on distributed training.
         # torch 1.6 will throw an AssertionError, and higher version will
         # throw an RuntimeError
