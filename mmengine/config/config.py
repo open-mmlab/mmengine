@@ -22,7 +22,7 @@ from mmengine.logging import print_log
 from mmengine.utils import (check_file_exist, get_installed_path,
                             import_modules_from_strings, is_installed)
 from .lazy import LazyAttr, LazyModule
-from .lazy_ast import Transform, import_to_lazymodule
+from .lazy_ast import Transform, _gather_abs_import_lazymodule
 from .utils import (RemoveAssignFromAST, _get_external_cfg_base_path,
                     _get_external_cfg_path, _get_package_and_cfg_path)
 
@@ -162,7 +162,8 @@ class Config:
     def fromfile(filename: Union[str, Path],
                  use_predefined_variables: bool = True,
                  import_custom_modules: bool = True,
-                 use_environment_variables: bool = True) -> 'Config':
+                 use_environment_variables: bool = True,
+                 lazy_import=False) -> 'Config':
         """Build a Config instance from config file.
 
         Args:
@@ -176,22 +177,60 @@ class Config:
             Config: Config instance built from config file.
         """
         filename = str(filename) if isinstance(filename, Path) else filename
-        cfg_dict, cfg_text, env_variables = Config._file2dict(
-            filename, use_predefined_variables, use_environment_variables)
-        if import_custom_modules and cfg_dict.get('custom_imports', None):
-            try:
-                import_modules_from_strings(**cfg_dict['custom_imports'])
-            except ImportError as e:
-                raise ImportError('Failed to custom import!') from e
-        return Config(
-            cfg_dict,
-            cfg_text=cfg_text,
-            filename=filename,
-            env_variables=env_variables)
+        if not lazy_import:
+            cfg_dict, cfg_text, env_variables = Config._file2dict(
+                filename, use_predefined_variables, use_environment_variables)
+            if import_custom_modules and cfg_dict.get('custom_imports', None):
+                try:
+                    import_modules_from_strings(**cfg_dict['custom_imports'])
+                except ImportError as e:
+                    raise ImportError('Failed to custom import!') from e
+            return Config(
+                cfg_dict,
+                cfg_text=cfg_text,
+                filename=filename,
+                env_variables=env_variables)
+        else:
+            cfg_dict = Config._parse_lazy_import(filename)
+            return Config(cfg_dict, filename=filename)
 
     @classmethod
-    def _parse_lazy_import(cls, filepath):
-        with open(filepath) as f:
+    def _parse_lazy_import(cls, filename):
+        # In lazy import mode, users can use the Python syntax `import` to
+        # implement inheritance between configuration files, which is easier
+        # for users to understand the hierarchical relationships between
+        # different configuration files.
+
+        # Besides, users can also using `import` syntax to import corresponding
+        # module which will be filled in the `type` field. It means users
+        # can directly navigate to the source of the module in the
+        # configuration file by clicking the `type` field.
+
+        # To avoid really importing the third party package like `torch`
+        # during import `type` object, we use `_parse_lazy_import` to parse the
+        # configuration file, which will not actually trigger the import
+        # process, but simply parse the imported `type`s as LazyModule objects.
+
+        # The overall pipeline of _parse_lazy_import is:
+        # 1. Parse the base module from the config file.
+        #                       ||
+        #                       \/
+        #       base_module = ['mmdet.configs.default_runtime']
+        #                       ||
+        #                       \/
+        # 2. recursively parse the base module and gather imported objects to
+        #    a dict.
+        #                       ||
+        #                       \/
+        #       The base_dict will be:
+        #       {
+        #           'mmdet.configs.default_runtime': {...}
+        #           'mmdet.configs.retinanet_r50_fpn_1x_coco': {...}
+        #           ...
+        #       }, each item in base_dict is a dict of `LazyModule`
+        # 3. parse the current config file filling the imported variable
+        #    with the base_dict.
+        with open(filename) as f:
             global_dict = {'LazyModule': LazyModule}
             base_dict = {}
 
@@ -200,49 +239,77 @@ class Config:
             for inst in code.body:
                 if (isinstance(inst, ast.Assign)
                         and isinstance(inst.targets[0], ast.Name)
-                        and inst.targets[0].id == cls.base_key):
+                        and inst.targets[0].id == BASE_KEY):
                     base_code.append(inst)
             variable_dict: dict = {}
             base_code = ast.Module(body=base_code, type_ignores=[])
             exec(
-                compile(base_code, '', mode='exec'), variable_dict,
+                compile(base_code, filename, mode='exec'), variable_dict,
                 variable_dict)
+            # get base module from file.
+            # _base_ = ['a.b.c', 'b.d.e']
+            # base_modules = ['a.b.c', 'b.d.e']
             base_modules = variable_dict.get('_base_', [])
+
             if not isinstance(base_modules, list):
                 base_modules = [base_modules]
+            # get imported module path
             for base_module in base_modules:
-                # from .xxx import xxx
-                # fron mmdet.config.xxx import xxx
+                # If base_module means a relative import, assuming the level is 2,
+                # which means the module is imported like
+                # "from ..a.b import c". we must ensure that c is an
+                # object `defined` in module b, and module b should not be a
+                # pacakge including `__init__` file but a single python file.
                 level = len(re.match(r'\.*', base_module).group())
                 if level > 0:
                     # Relative import
-                    base_dir = osp.dirname(filepath)
+                    base_dir = osp.dirname(filename)
                     module_path = osp.join(
-                        base_dir,
-                        *(['..'] * (level - 1)),
+                        base_dir, *(['..'] * (level - 1)),
                         f'{base_module[level:].replace(".", "/")}.py')
                 else:
                     # Absolute import
                     module_list = base_module.split('.')
                     if len(module_list) == 1:
-                        # TODO
-                        ...
-                        # module_path = osp.abspath(f'{module_list[0]}.py')
+                        raise RuntimeError(
+                            'The imported configuaration file should not be '
+                            f'an independent package {module_list[0]}. Here '
+                            'is an example: '
+                            '"_base_ = mmdet.configs.retinanet_r50_fpn_1x_coco"'
+                        )
                     else:
                         package = module_list[0]
                         root_path = get_installed_path(package)
                         module_path = f'{osp.join(root_path, *module_list[1:])}.py'
-                base_cfg = cls._parse(module_path)
+                if not osp.isfile(module_path):
+                    raise FileNotFoundError(
+                        'Incorrect module defined in '
+                        f"_base_ = ['{base_module}', ...], please "
+                        'make sure the base config module is valid '
+                        'and is consistent with the prior import '
+                        'logic')
+                base_cfg = cls._parse_lazy_import(module_path)
+                # The base_dict will be:
+                # {
+                #     'mmdet.configs.default_runtime': {...}
+                #     'mmdet.configs.retinanet_r50_fpn_1x_coco': {...}
+                #     ...
+                # }
                 base_dict[base_module] = base_cfg
-            # TODO only support relative import now.
-            transform = Transform(
-                global_dict=global_dict,
-                base_dict=base_dict)
+
+            # `base_dict` contains all the imported modules from `base_cfg`.
+            # In order to collect the specific imported module from `base_cfg`
+            # before parse the current file, we using AST Transform to
+            # transverse the imported module from base_cfg and merge then into
+            # the global dict. After the ast transformation, most of import
+            # syntax will be removed (except for the builtin import) and
+            # replaced with the `LazyModule`
+            transform = Transform(global_dict=global_dict, base_dict=base_dict)
             modified_code = transform.visit(code)
-            modified_code = import_to_lazymodule(modified_code)
+            modified_code = _gather_abs_import_lazymodule(modified_code)
             modified_code = ast.fix_missing_locations(modified_code)
             exec(
-                compile(modified_code, filepath, mode='exec'), global_dict,
+                compile(modified_code, filename, mode='exec'), global_dict,
                 global_dict)
 
             ret = {}
@@ -251,8 +318,8 @@ class Config:
                     continue
                 ret[key] = value
 
-            cfg_dict = Config._to_config_dict(ret)
-            return cls(cfg_dict, global_dict=global_dict)
+            cfg_dict = Config._dict_to_config_dict(ret)
+            return cfg_dict
 
     @staticmethod
     def fromstring(cfg_str: str, file_format: str) -> 'Config':
@@ -941,6 +1008,9 @@ class Config:
             return r
 
         cfg_dict = self._cfg_dict.to_dict()
+        for key, value in list(cfg_dict.items()):
+            if isinstance(value, (LazyModule, LazyAttr)):
+                cfg_dict.pop(key)
         text = _format_dict(cfg_dict, outest_level=True)
         # copied from setup.cfg
         yapf_style = dict(
@@ -958,16 +1028,10 @@ class Config:
         return len(self._cfg_dict)
 
     def __getattr__(self, name: str) -> Any:
-        output = getattr(self._cfg_dict, name)
-        if isinstance(output, (LazyModule, LazyAttr)):
-            output = output.build()
-        return output
+        return getattr(self._cfg_dict, name)
 
     def __getitem__(self, name):
-        output = self._cfg_dict.__getitem__(name)
-        if isinstance(output, (LazyModule, LazyAttr)):
-            output = output.build()
-        return output
+        return self._cfg_dict.__getitem__(name)
 
     def __setattr__(self, name, value):
         if isinstance(value, dict):

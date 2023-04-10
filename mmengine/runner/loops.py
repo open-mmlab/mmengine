@@ -7,7 +7,6 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union
 import torch
 from torch.utils.data import DataLoader
 
-from mmengine.config.lazy import LazyCall
 from mmengine.evaluator import Evaluator
 from mmengine.logging import print_log
 from mmengine.registry import LOOPS
@@ -335,7 +334,7 @@ class ValLoop(BaseLoop):
                  fp16: bool = False) -> None:
         super().__init__(runner, dataloader)
 
-        if isinstance(evaluator, (dict, list, LazyCall)):
+        if isinstance(evaluator, (dict, list)):
             self.evaluator = runner.build_evaluator(evaluator)  # type: ignore
         else:
             assert isinstance(evaluator, Evaluator), (

@@ -4,6 +4,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 from mmengine.config import Config, ConfigDict
+from mmengine.config.lazy import LazyAttr, LazyModule
 from mmengine.utils import ManagerMixin
 from .registry import Registry
 
@@ -107,6 +108,8 @@ def build_from_cfg(
         # this will include classes, functions, partial functions and more
         elif callable(obj_type):
             obj_cls = obj_type
+        elif isinstance(obj_type, (LazyAttr, LazyModule)):
+            obj_cls = obj_type.build()
         else:
             raise TypeError(
                 f'type must be a str or valid type, but got {type(obj_type)}')
@@ -200,6 +203,8 @@ def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
                 )
         elif inspect.isclass(obj_type):
             runner_cls = obj_type
+        elif isinstance(obj_type, (LazyAttr, LazyModule)):
+            runner_cls = obj_type.build()
         else:
             raise TypeError(
                 f'type must be a str or valid type, but got {type(obj_type)}')

@@ -7,7 +7,7 @@ from collections import OrderedDict
 
 from mmengine.utils import get_installed_path
 from .lazy import LazyCall, LazyModule
-from .lazy_ast import Transform, import_to_lazymodule
+from .lazy_ast import Transform, _gather_abs_import_lazymodule
 
 
 class Config(OrderedDict):
@@ -48,8 +48,7 @@ class Config(OrderedDict):
                     # Relative import
                     base_dir = osp.dirname(filepath)
                     module_path = osp.join(
-                        base_dir,
-                        *(['..'] * (level - 1)),
+                        base_dir, *(['..'] * (level - 1)),
                         f'{base_module[level:].replace(".", "/")}.py')
                 else:
                     # Absolute import
@@ -65,11 +64,9 @@ class Config(OrderedDict):
                 base_cfg = cls._parse(module_path)
                 base_dict[base_module] = base_cfg
             # TODO only support relative import now.
-            transform = Transform(
-                global_dict=global_dict,
-                base_dict=base_dict)
+            transform = Transform(global_dict=global_dict, base_dict=base_dict)
             modified_code = transform.visit(code)
-            modified_code = import_to_lazymodule(modified_code)
+            modified_code = _gather_abs_import_lazymodule(modified_code)
             modified_code = ast.fix_missing_locations(modified_code)
             exec(
                 compile(modified_code, filepath, mode='exec'), global_dict,
@@ -93,6 +90,7 @@ class Config(OrderedDict):
     def _to_config_dict(cls, cfg_dict):
         ordered_keys = cfg_dict.keys()
         result = OrderedDict()
+
         # Do not used generator-expression here for the building sequence.
         def _convert(cfg_dict):
             if isinstance(cfg_dict, dict):

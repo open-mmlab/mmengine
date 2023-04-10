@@ -13,8 +13,10 @@ from unittest.mock import patch
 import pytest
 
 from mmengine import Config, ConfigDict, DictAction
+from mmengine.config.lazy import LazyModule
 from mmengine.fileio import dump, load
 from mmengine.registry import MODELS, DefaultScope, Registry
+from mmengine.runner import Runner
 from mmengine.utils import is_installed
 
 
@@ -936,3 +938,12 @@ class TestConfig:
         assert model.backbone.style == 'pytorch'
         assert isinstance(model.roi_head.bbox_head.loss_cls, ToyLoss)
         DefaultScope._instance_dict.pop('test1')
+
+    def test_lazy_import(self, tmp_path):
+        lazy_import_cfg_path = osp.join(
+            self.data_path, 'config/lazy_module_config/toy_model.py')
+        cfg = Config.fromfile(lazy_import_cfg_path, lazy_import=True)
+        cfg.work_dir = str(tmp_path)
+        assert isinstance(cfg.model.type, LazyModule)
+        runner = Runner.from_cfg(cfg)
+        runner.train()
