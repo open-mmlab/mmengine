@@ -524,20 +524,13 @@ class TensorboardVisBackend(BaseVisBackend):
         """Setup env for Tensorboard."""
         if not os.path.exists(self._save_dir):
             os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
-        if TORCH_VERSION == 'parrots':
-            try:
-                from tensorboardX import SummaryWriter
-            except ImportError:
-                raise ImportError('Please install tensorboardX to use '
-                                  'TensorboardLoggerHook.')
-        else:
-            try:
-                from torch.utils.tensorboard import SummaryWriter
-            except ImportError:
-                raise ImportError(
-                    'Please run "pip install future tensorboard" to install '
-                    'the dependencies to use torch.utils.tensorboard '
-                    '(applicable to PyTorch 1.1 or higher)')
+        try:
+            from torch.utils.tensorboard import SummaryWriter
+        except ImportError:
+            raise ImportError(
+                'Please run "pip install future tensorboard" to install '
+                'the dependencies to use torch.utils.tensorboard '
+                '(applicable to PyTorch 1.1 or higher)')
         self._tensorboard = SummaryWriter(self._save_dir)
 
     @property  # type: ignore

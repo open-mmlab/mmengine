@@ -11,7 +11,7 @@ from torch.testing import assert_allclose as _assert_allclose
 
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
-from mmengine.utils.dl_utils.parrots_wrapper import _BatchNorm, _InstanceNorm
+from mmengine.utils.dl_utils.torch_wrapper import _BatchNorm, _InstanceNorm
 
 
 def assert_allclose(
@@ -40,8 +40,7 @@ def assert_allclose(
             the values of corresponding tensors mismatch. Unused when PyTorch
             < 1.6.
     """
-    if 'parrots' not in TORCH_VERSION and \
-            digit_version(TORCH_VERSION) >= digit_version('1.6'):
+    if digit_version(TORCH_VERSION) >= digit_version('1.6'):
         _assert_allclose(
             actual,
             expected,

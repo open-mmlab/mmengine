@@ -6,10 +6,9 @@
 
 from ..path import mkdir_or_exist
 from ..version_utils import digit_version
-from .parrots_wrapper import TORCH_VERSION
+from .torch_wrapper import TORCH_VERSION
 
-if TORCH_VERSION != 'parrots' and digit_version(TORCH_VERSION) < digit_version(
-        '1.7.0'):
+if digit_version(TORCH_VERSION) < digit_version('1.7.0'):
     # Modified from https://github.com/pytorch/pytorch/blob/master/torch/hub.py
     import os
     import sys

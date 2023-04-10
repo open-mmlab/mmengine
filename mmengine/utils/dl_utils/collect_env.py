@@ -10,18 +10,25 @@ import numpy as np
 import torch
 
 import mmengine
-from .parrots_wrapper import TORCH_VERSION, get_build_config, is_rocm_pytorch
 
+def is_rocm_pytorch() -> bool:
+    """Check whether the PyTorch is compiled on ROCm."""
+    is_rocm = False
+    try:
+        from torch.utils.cpp_extension import ROCM_HOME
+        is_rocm = True if ((torch.version.hip is not None) and
+                            (ROCM_HOME is not None)) else False
+    except ImportError:
+        pass
+    return is_rocm
 
 def _get_cuda_home():
-    if TORCH_VERSION == 'parrots':
-        from parrots.utils.build_extension import CUDA_HOME
+    """Obtain the path of CUDA home."""
+    if is_rocm_pytorch():
+        from torch.utils.cpp_extension import ROCM_HOME
+        CUDA_HOME = ROCM_HOME
     else:
-        if is_rocm_pytorch():
-            from torch.utils.cpp_extension import ROCM_HOME
-            CUDA_HOME = ROCM_HOME
-        else:
-            from torch.utils.cpp_extension import CUDA_HOME
+        from torch.utils.cpp_extension import CUDA_HOME
     return CUDA_HOME
 
 
@@ -128,7 +135,7 @@ def collect_env():
         env_info['MSVC'] = f'n/a, reason: {str(e)}'
 
     env_info['PyTorch'] = torch.__version__
-    env_info['PyTorch compiling details'] = get_build_config()
+    env_info['PyTorch compiling details'] = torch.__config__.show()
 
     try:
         import torchvision

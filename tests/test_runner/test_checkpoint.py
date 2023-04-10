@@ -61,19 +61,12 @@ def assert_tensor_equal(tensor_a, tensor_b):
 
 
 def test_get_state_dict():
-    if torch.__version__ == 'parrots':
-        state_dict_keys = {
-            'block.conv.weight', 'block.conv.bias', 'block.norm.weight',
-            'block.norm.bias', 'block.norm.running_mean',
-            'block.norm.running_var', 'conv.weight', 'conv.bias'
-        }
-    else:
-        state_dict_keys = {
-            'block.conv.weight', 'block.conv.bias', 'block.norm.weight',
-            'block.norm.bias', 'block.norm.running_mean',
-            'block.norm.running_var', 'block.norm.num_batches_tracked',
-            'conv.weight', 'conv.bias'
-        }
+    state_dict_keys = {
+        'block.conv.weight', 'block.conv.bias', 'block.norm.weight',
+        'block.norm.bias', 'block.norm.running_mean',
+        'block.norm.running_var', 'block.norm.num_batches_tracked',
+        'conv.weight', 'conv.bias'
+    }
 
     model = Model()
     state_dict = get_state_dict(model)
@@ -90,9 +83,8 @@ def test_get_state_dict():
                         model.block.norm.running_mean)
     assert_tensor_equal(state_dict['block.norm.running_var'],
                         model.block.norm.running_var)
-    if torch.__version__ != 'parrots':
-        assert_tensor_equal(state_dict['block.norm.num_batches_tracked'],
-                            model.block.norm.num_batches_tracked)
+    assert_tensor_equal(state_dict['block.norm.num_batches_tracked'],
+                        model.block.norm.num_batches_tracked)
     assert_tensor_equal(state_dict['conv.weight'], model.conv.weight)
     assert_tensor_equal(state_dict['conv.bias'], model.conv.bias)
 
@@ -112,10 +104,8 @@ def test_get_state_dict():
                         wrapped_model.module.block.norm.running_mean)
     assert_tensor_equal(state_dict['block.norm.running_var'],
                         wrapped_model.module.block.norm.running_var)
-    if torch.__version__ != 'parrots':
-        assert_tensor_equal(
-            state_dict['block.norm.num_batches_tracked'],
-            wrapped_model.module.block.norm.num_batches_tracked)
+    assert_tensor_equal(state_dict['block.norm.num_batches_tracked'],
+                        wrapped_model.module.block.norm.num_batches_tracked)
     assert_tensor_equal(state_dict['conv.weight'],
                         wrapped_model.module.conv.weight)
     assert_tensor_equal(state_dict['conv.bias'],
@@ -140,8 +130,7 @@ def test_get_state_dict():
                         wrapped_model.module.block.module.norm.running_mean)
     assert_tensor_equal(state_dict['block.norm.running_var'],
                         wrapped_model.module.block.module.norm.running_var)
-    if torch.__version__ != 'parrots':
-        assert_tensor_equal(
+    assert_tensor_equal(
             state_dict['block.norm.num_batches_tracked'],
             wrapped_model.module.block.module.norm.num_batches_tracked)
     assert_tensor_equal(state_dict['conv.weight'],

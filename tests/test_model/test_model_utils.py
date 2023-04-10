@@ -25,8 +25,6 @@ class ToyModule(nn.Module):
         raise ValueError()
 
 
-@pytest.mark.skipif(
-    torch.__version__ == 'parrots', reason='not supported in parrots now')
 def test_revert_syncbn():
     # conv = ConvModule(3, 8, 2, norm_cfg=dict(type='SyncBN'))
     conv = nn.Sequential(nn.Conv2d(3, 8, 2), nn.SyncBatchNorm(8))
@@ -40,8 +38,6 @@ def test_revert_syncbn():
     revert_sync_batchnorm(conv)
 
 
-@pytest.mark.skipif(
-    torch.__version__ == 'parrots', reason='not supported in parrots now')
 def test_convert_syncbn():
     # conv = ConvModule(3, 8, 2, norm_cfg=dict(type='SyncBN'))
     conv = nn.Sequential(nn.Conv2d(3, 8, 2), nn.BatchNorm2d(8))

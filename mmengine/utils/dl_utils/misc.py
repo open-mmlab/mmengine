@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 
 from ..misc import is_tuple_of
-from .parrots_wrapper import _BatchNorm, _InstanceNorm
+from .torch_wrapper import _BatchNorm, _InstanceNorm
 
 
 def is_norm(layer: nn.Module,
