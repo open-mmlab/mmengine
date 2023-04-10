@@ -132,7 +132,9 @@ def build_from_cfg(
             else:
                 print_log(
                     'An instance is built from registry, and its constructor '
-                    f'is {obj_cls}')
+                    f'is {obj_cls}',
+                    logger='current',
+                    level=logging.DEBUG)
             return obj
 
         except Exception as e:
