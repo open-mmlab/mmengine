@@ -727,9 +727,9 @@ def get_model_complexity_info(
             ])
         else:
             raise ValueError(
-                '"input_shape" should be either a `tuple of int` (to construct\
-                one input tensor) or a `tuple of tuple of int` (to construct\
-                multiple input tensors).')
+                '"input_shape" should be either a `tuple of int` (to construct'
+                'one input tensor) or a `tuple of tuple of int` (to construct'
+                'multiple input tensors).')
 
     flop_handler = FlopAnalyzer(model, inputs)
     activation_handler = ActivationAnalyzer(model, inputs)
