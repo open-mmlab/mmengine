@@ -103,7 +103,6 @@ def mmcv_full_available() -> bool:
     Returns:
         bool: True if mmcv-full is installed else False.
     """
-    return False
     try:
         import mmcv  # noqa: F401
     except ImportError:
