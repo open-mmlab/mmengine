@@ -1,19 +1,19 @@
-# 模型精度评测
+# Evaluation
 
-## 评测指标与评测器
+## Evaluation metrics and evaluators
 
-在模型验证和模型测试中，通常需要对模型精度做定量评测。在 MMEngine 中实现了评测指标（Metric）和评测器（Evaluator）来完成这一功能。
+In model validation and model testing, quantitative evaluation of model accuracy is usually required. `Metric` and `Evaluator` are implemented in MMEngine to perform this function.
 
-- **评测指标** 用于根据测试数据和模型预测结果，完成特定模型精度指标的计算。在 OpenMMLab 各算法库中提供了对应任务的常用评测指标，如 [MMClassification](https://github.com/open-mmlab/mmclassification) 中提供了[Accuracy](https://mmclassification.readthedocs.io/en/1.x/api/generated/mmcls.evaluation.Accuracy.html#mmcls.evaluation.Accuracy) 用于计算分类模型的 Top-k 分类正确率；MMDetection 中提供了 [COCOMetric](https://github.com/open-mmlab/mmdetection/blob/3.x/mmdet/evaluation/metrics/coco_metric.py) 用于计算目标检测模型的 AP，AR 等评测指标。评测指标与数据集解耦，如 COCOMetric 也可用于 COCO 以外的目标检测数据集上。
+- **Metric** is used to complete the calculation of specific model accuracy metrics based on test data and model prediction results. Common metrics for the corresponding tasks are provided in each of the OpenMMLab algorithm libraries, e.g. [Accuracy](https://mmclassification.readthedocs.io/en/1.x/api/generated/mmcls.evaluation.Accuracy.html#mmcls.evaluation.Accuracy) is provided in [MMClassification](https://github.com/open-mmlab/mmclassification) for calculating the top-k rate of correct classification of classification models; [COCOMetric](https://github.com/open-mmlab/mmdetection/blob/3.x/mmdet/evaluation/metrics/coco_metric.py) is provided in [MMDetection](https://github.com/open-mmlab/mmdetection) to calculate AP, AR, and other metrics for object detection models. The evaluation metrics is decoupled from the dataset, as COCOMetric can also be used on object detection datasets other than COCO.
 
-- **评测器** 是评测指标的上层模块，通常包含一个或多个评测指标。评测器的作用是在模型评测时完成必要的数据格式转换，并调用评测指标计算模型精度。评测器通常由[执行器](../tutorials/runner.md)或测试脚本构建，分别用于在线评测和离线评测。
+- **Evaluator** is an upper-level module for Metric, usually containing one or more Metric. The role of the Evaluator is to complete the necessary data format conversions during model evaluation and to call the Metric to calculate the model accuracy. Evaluator is usually built from [Runner](../tutorials/runner.md) or test scripts for online and offline evaluations, respectively.
 
-### 评测指标基类 `BaseMetric`
+### The base class of Metric `BaseMetric`
 
-评测指标基类 `BaseMetric` 是一个抽象类，初始化参数如下:
+`BaseMetric` is an abstract class with the following initialization parameters:
 
-- `collect_device`：在分布式评测中用于同步结果的设备名，如 `'cpu'` 或 `'gpu'`。
-- `prefix`：评测指标名前缀，用以区别多个同名的评测指标。如果该参数未给定，则会尝试使用类属性 `default_prefix` 作为前缀。
+- `collect_device`: is used to synchronize the name of the device of results in distributed reviews, such as `'cpu'` or `'gpu'`.
+- `prefix`: the prefix of the metric name which is used to distinguish multiple metrics with the same name. If this parameter is not given, then an attempt is made to use the class attribute `default_prefix` as the prefix.
 
 ```python
 class BaseMetric(metaclass=ABCMeta):
@@ -26,13 +26,13 @@ class BaseMetric(metaclass=ABCMeta):
         ...
 ```
 
-`BaseMetric` 有以下 2 个重要的方法需要在子类中重写：
+`BaseMetric` has the following two important methods that need to be overridden in the subclass:
 
-- **`process()`** 用于处理每个批次的测试数据和模型预测结果。处理结果应存放在 `self.results` 列表中，用于在处理完所有测试数据后计算评测指标。该方法具有以下 2 个参数：
+- **`process()`** is used to process the test data and model prediction results for each batch. The processing results should be stored in the `self.results` list, which is used to calculate the metrics after all the test data has been processed. This method has the following two parameters:
 
-  - `data_batch`：一个批次的测试数据样本，通常直接来自与数据加载器
-  - `data_samples`：对应的模型预测结果
-    该方法没有返回值。函数接口定义如下：
+  - `data_batch`: A sample of test data from a batch, usually directly from the dataloader
+  - `data_samples`: Corresponding model prediction results
+    This method has no return value. The function interface is defined as follows:
 
   ```python
   @abstractmethod
@@ -46,43 +46,43 @@ class BaseMetric(metaclass=ABCMeta):
       """
   ```
 
-- **`compute_metrics()`** 用于计算评测指标，并将所评测指标存放在一个字典中返回。该方法有以下 1 个参数：
+- **`compute_metrics()`** is used to calculate the metrics and return the metrics in a dictionary. This method has the following one parameter:
 
-  - `results`：列表类型，存放了所有批次测试数据经过 `process()` 方法处理后得到的结果
-    该方法返回一个字典，里面保存了评测指标的名称和对应的评测值。函数接口定义如下：
+  - `results`: list type, which holds the results of all batches of test data processed by the `process()` method
+    This method returns a dictionary that holds the names of the metrics and the corresponding values of the metrics. The function interface is defined as follows:
 
   ```python
   @abstractmethod
   def compute_metrics(self, results: list) -> dict:
       """Compute the metrics from processed results.
-
+  
       Args:
           results (list): The processed results of each batch.
-
+  
       Returns:
           dict: The computed metrics. The keys are the names of the metrics,
           and the values are corresponding results.
       """
   ```
 
-其中，`compute_metrics()` 会在 `evaluate()` 方法中被调用；后者在计算评测指标前，会在分布式测试时收集和汇总不同 rank 的中间处理结果。
+Among them, `compute_metrics()` is called in the `evaluate()` method; the latter collects and aggregates intermediate processing results of different ranks during distributed test before calculating the metrics.
 
-需要注意的是，`self.results` 中存放的具体类型取决于评测指标子类的实现。例如，当测试样本或模型输出数据量较大（如语义分割、图像生成等任务），不宜全部存放在内存中时，可以在 `self.results` 中存放每个批次计算得到的指标，并在 `compute_metrics()` 中汇总；或将每个批次的中间结果存储到临时文件中，并在 `self.results` 中存放临时文件路径，最后由 `compute_metrics()` 从文件中读取数据并计算指标。
+Note that the content of `self.results` depends on the implementation of the subclasses. For example, when the amount of test samples or model output data is large (such as semantic segmentation, image generation, and other tasks) and it is not appropriate to store them all in memory, you can store the metrics computed by each batch in `self.results` and collect them in `compute_metrics()`; or store the intermediate results of each batch in a temporary file, and store the temporary file path in `self .results`, and then collect them in `compute_metrics()` by reading the data from the file and calculates the metrics.
 
-## 模型精度评测流程
+## Model accuracy evaluation process
 
-通常，模型精度评测的过程如下图所示。
+Usually, the process of model accuracy evaluation is shown in the figure below.
 
-**在线评测**：测试数据通常会被划分为若干批次（batch）。通过一个循环，依次将每个批次的数据送入模型，得到对应的预测结果，并将测试数据和模型预测结果送入评测器。评测器会调用评测指标的 `process()` 方法对数据和预测结果进行处理。当循环结束后，评测器会调用评测指标的 `evaluate()` 方法，可计算得到对应指标的模型精度。
+**Online evaluation**: The test data is usually divided into batches. Through a loop, each batch is fed into the model in turn, yielding corresponding predictions, and the test data and model predictions are passed to the evaluator. The evaluator calls the `process()` method of the `Metric` to process the data and prediction results. When the loop ends, the evaluator calls the `evaluate()` method of the metrics to calculate the model accuracy of the corresponding metrics.
 
-**离线评测**：与在线评测过程类似，区别是直接读取预先保存的模型预测结果来进行评测。评测器提供了 `offline_evaluate` 接口，用于在离线方式下调用评测指标来计算模型精度。为了避免同时处理大量数据导致内存溢出，离线评测时会将测试数据和预测结果分成若干个块（chunk）进行处理，类似在线评测中的批次。
+**Offline  evaluation**: Similar to the online evaluation process, the difference is that the pre-saved model predictions are read directly to perform the evaluation. The evaluator provides the `offline_evaluate` interface for calling the `Metric`s to calculate the model accuracy in an offline way. In order to avoid memory overflow caused by processing a large amount of data at the same time, the offline evaluation divides the test data and prediction results into chunks for processing, similar to the batches in online evaluation.
 
 <div align="center">
     <img src="https://user-images.githubusercontent.com/15977946/187579113-279f097c-3530-40c4-9cd3-1bb0ce2fa452.png" width="500"/>
 </div>
 
-## 增加自定义评测指标
+## Add custom evaluation metrics
 
-在 OpenMMLab 的各个算法库中，已经实现了对应方向的常用评测指标。如 MMDetection 中提供了 COCO 评测指标，MMClassification 中提供了 Accuracy、F1Score 等评测指标等。
+In each algorithm library of OpenMMLab, common evaluation metrics have been implemented in the corresponding direction. For example, COCO metrics is provided in MMDetection and Accuracy, F1Score, etc. are provided in MMClassification.
 
-用户也可以增加自定义的评测指标。具体方法可以参考[教程文档](../tutorials/evaluation.md#自定义评测指标)中给出的示例。
+Users can also add custom metrics. For details, please refer to the examples given in the [tutorial documentation](../tutorials/evaluation.md#Custom evaluation metrics).
