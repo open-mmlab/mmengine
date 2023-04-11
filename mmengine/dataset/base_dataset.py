@@ -830,13 +830,16 @@ class BaseDataset(Dataset):
 
         return other
 
-    def load(self, pkl_file: str) -> None:
+    @classmethod
+    def load(cls, pkl_file: str) -> None:
         """Load data list from pickle file.
 
         Args:
             pkl_file (str): Pickle file path.
         """
-        self.data_list = load(pkl_file)
+        obj = cls.__new__(cls)
+        obj.__dict__.update(load(pkl_file))
+        return obj
 
     def dump(self, pkl_file: str) -> None:
         """Dump data list to pickle file.
@@ -844,4 +847,4 @@ class BaseDataset(Dataset):
         Args:
             pkl_file (str): Pickle file path.
         """
-        fileio_dump(self.data_list, pkl_file, file_format='pkl')
+        fileio_dump(self.__dict__, pkl_file, file_format='pkl')

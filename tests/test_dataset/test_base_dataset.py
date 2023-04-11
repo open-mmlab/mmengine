@@ -1,6 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import os
 import os.path as osp
+import shutil
+import tempfile
+from typing import Callable, List, Optional, Sequence, Union
 from unittest.mock import MagicMock
 
 import pytest
@@ -353,6 +357,7 @@ class TestBaseDataset:
         dataset.prepare_data = MagicMock(return_value=None)
         with pytest.raises(Exception):
             dataset[0]
+
         # Test get valid image by `_rand_another`
 
         def fake_prepare_data(idx):
@@ -591,6 +596,57 @@ class TestBaseDataset:
             indices=1)
         assert dataset._rand_another() >= 0
         assert dataset._rand_another() < len(dataset)
+
+    def test_dump_and_load(self):
+        temp_dir = tempfile.mkdtemp()
+        # 1. test dump and load BaseDataset
+        dataset = BaseDataset(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img_path='imgs'),
+            ann_file='annotations/dummy_annotation.json')
+
+        temp_file = os.path.join(temp_dir, 'dataset.pkl')
+
+        dataset.dump(temp_file)
+        new_dataset = BaseDataset.load(temp_file)
+
+        # 2. test dump and load subclass of BaseDataset
+        class ToyDataset(BaseDataset):
+
+            def __init__(self,
+                         ann_file: str = '',
+                         metainfo: Optional[dict] = None,
+                         data_root: str = '',
+                         data_prefix: dict = dict(img_path=''),
+                         filter_cfg: Optional[dict] = None,
+                         indices: Optional[Union[int, Sequence[int]]] = None,
+                         serialize_data: bool = True,
+                         pipeline: List[Union[dict, Callable]] = [],
+                         test_mode: bool = False,
+                         lazy_init: bool = False,
+                         max_refetch: int = 1000,
+                         attr1: int = 1,
+                         attr2: str = ''):
+                super().__init__(ann_file, metainfo, data_root,
+                                     data_prefix, filter_cfg, indices,
+                                     serialize_data, pipeline, test_mode,
+                                     lazy_init, max_refetch)
+                self.attr1 = attr1
+                self.attr2 = attr2
+
+        toy_dataset = ToyDataset(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img_path='imgs'),
+            ann_file='annotations/dummy_annotation.json',
+            attr1=1,
+            attr2='hello')
+        temp_file = os.path.join(temp_dir, 'toy_dataset.pkl')
+        toy_dataset.dump(temp_file)
+        new_toy_dataset = ToyDataset.load(temp_file)
+        assert new_toy_dataset.attr1 == 1
+        assert new_toy_dataset.attr2 == 'hello'
+
+        shutil.rmtree(temp_dir)
 
 
 class TestConcatDataset:
