@@ -1,4 +1,4 @@
-# Visualize training logs
+# Visualize Training Logs
 
 MMEngine integrates experiment management tools such as [TensorBoard](https://www.tensorflow.org/tensorboard), [Weights & Biases (WandB)](https://docs.wandb.ai/), and [MLflow](https://mlflow.org/docs/latest/index.html), making it easy to track and visualize metrics like loss and accuracy.
 
