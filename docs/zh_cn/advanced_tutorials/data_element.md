@@ -29,7 +29,7 @@ for img, data_sample in dataloader:
 
 在实际实现过程中，算法库中的各个组件所具备的数据接口，一般为如下两个种：
 
-- 一个训练或测试样本(例如一张图像)的所有的标注信息和预测信息的集合，例如数据集的输出、模型以及可视化器的输入一般为单个训练或测试样本的所有信息。MMEngine将其定义为数据样本(DataSample)
+- 一个训练或测试样本(例如一张图像)的所有的标注信息和预测信息的集合，例如数据集的输出、模型以及可视化器的输入，一般为单个训练或测试样本的所有信息。MMEngine将其定义为数据样本(DataSample)
 - 单一类型的预测或标注，一般是算法模型中某个子模块的输出, 例如二阶段检测中RPN的输出、语义分割模型的输出、关键点分支的输出， GAN中生成器的输出等。MMengine将其定义为数据元素(XXXData)
 
 下边首先介绍一下数据样本与数据元素的基类 [BaseDataElement](mmengine.structures.BaseDataElement)。
@@ -73,7 +73,7 @@ data_element = BaseDataElement(
 
 ### 2. `new` 与 `clone` 函数
 
-用户可以使用 `new()` 函数通过已有的数据接口创建一个具有相同状态和数据的抽象数据接口。用户可以在创建新 `BaseDataElement` 时设置 `metainfo` 和 `data`，用于创建仅 `data` 或 `metainfo` 具有相同状态和数据的抽象接口。比如 `new(metainfo=xx)` 使得新的 `BaseDataElement` 与被 clone 的 `BaseDataElement` 包含相同的 `data` 内容，但 `metainfo` 为新设置的内容。
+用户可以使用 `new()` 函数通过已有的数据接口创建一个具有相同状态和数据的抽象数据接口。用户可以在创建新 `BaseDataElement` 时设置 `metainfo` 和 `data`，用于创建和 `data` 或 `metainfo` 具有相同状态和数据的抽象接口。比如 `new(metainfo=xx)` 使得新的 `BaseDataElement` 与被 clone 的 `BaseDataElement` 包含相同的 `data` 内容，但 `metainfo` 为新设置的内容。
 也可以直接使用 `clone()` 来获得一份深拷贝，`clone()` 函数的行为与 PyTorch 中 Tensor 的 `clone()` 参数保持一致。
 
 ```python
@@ -108,7 +108,7 @@ label in data_element2 is True
 
 ### 3. 属性的增加与查询
 
-对增加属性而言，用户可以像增加类属性那样增加 `data` 内的属性；对`metainfo` 而言，一般储存的为一些图像的元信息，一般情况下不会修改，如果需要增加，用户应当使用 `set_metainfo` 接口显示地修改。
+对增加属性而言，用户可以像增加类属性那样增加 `data` 内的属性；对 `metainfo` 而言，一般储存的为一些图像的元信息，一般情况下不会修改，如果需要增加，用户应当使用 `set_metainfo` 接口显示地修改。
 
 对查询而言，用户可以可以通过 `keys`，`values`，和 `items` 来访问只存在于 data 中的键值，也可以通过 `metainfo_keys`，`metainfo_values`，和`metainfo_items` 来访问只存在于 metainfo 中的键值。
 用户还能通过 `all_keys`，`all_values`， `all_items` 来访问 `BaseDataElement` 的所有的属性并且不区分他们的类型。
@@ -220,7 +220,7 @@ bboxes: tensor([[0.9204, 0.2110, 0.2886, 0.7925],
 
 ### 4. 属性的删改
 
-用户可以像修改实例属性一样修改 `BaseDataElement` 的 `data`, 对`metainfo` 而言 一般储存的为一些图像的元信息，一般情况下不会修改，如果需要修改，用户应当使用 `set_metainfo` 接口显示的修改。
+用户可以像修改实例属性一样修改 `BaseDataElement` 的 `data`, 对`metainfo` 而言，一般储存的为一些图像的元信息，一般情况下不会修改，如果需要修改，用户应当使用 `set_metainfo` 接口显示的修改。
 
 同时为了操作的便捷性，对 `data` 和 `metainfo` 中的数据可以通过 `del` 直接删除，也支持 `pop` 在访问属性后删除属性。
 
@@ -377,7 +377,7 @@ MMEngine 将数据元素情况划分为三个类别:
 
 - 实例数据(InstanceData): 主要针对的是上层任务(high-level)中，对图像中所有实例相关的数据进行封装，比如检测框(bounding boxes), 物体类别(box labels),实例掩码(instance masks), 关键点(key points), 文字边界(polygons), 跟踪id(tracking ids) 等. 所有实例相关的数据的**长度一致**，均为图像中实例的个数。
 - 像素数据(PixelData): 主要针对底层任务(low-level) 以及需要感知像素级别标签的部分上层任务。像素数据对像素级相关的数据进行封装，比如语义分割中的分割图（segmentation map）, 光流任务中的光流图（flow map）, 全景分割中的全景分割图（panoptic seg map）；底层任务中生成的各种图像，比如超分辨图，去噪图，以及生成的各种风格图。这些数据的特点是都是三维或四维数组，最后两维度为数据的高度(height)和宽度(width)，且具有相同的height和width
-- 标签数据(LabelData): 主要标签级别的数据进行封装，比如图像分类，多分类中的类别，图像生成中生成图像的类别内容，或者文字识别中的文本等。
+- 标签数据(LabelData): 主要针对标签级别的数据进行封装，比如图像分类，多分类中的类别，图像生成中生成图像的类别内容，或者文字识别中的文本等。
 
 ### InstanceData
 
@@ -388,7 +388,8 @@ MMEngine 将数据元素情况划分为三个类别:
 - data 部分支持类字典访问和设置它的属性
 - 支持基础索引，切片以及高级索引功能
 - 支持具有**相同的 `key`** 但是不同 `InstanceData` 的拼接功能。
-  这些扩展功能除了支持基础的数据结构， 比如`torch.tensor`, `numpy.dnarray`, `list`, `str`, `tuple`, 也可以是自定义的数据结构，只要自定义数据结构实现了 `__len__`, `__getitem__` and `cat`.
+
+这些扩展功能除了支持基础的数据结构， 比如`torch.tensor`, `numpy.dnarray`, `list`, `str`, `tuple`, 也可以是自定义的数据结构，只要自定义数据结构实现了 `__len__`, `__getitem__` and `cat`.
 
 #### 数据校验
 
@@ -724,7 +725,8 @@ print(InstanceData.cat([instance_data, instance_data]))
 
 - 所有 data 内的数据均为 3 维，并且顺序为 (通道，高， 宽)
 - 所有在 data 内的数据要有相同的长和宽
-  基于上述假定对 `PixelData`进行了扩展，包括：
+
+基于上述假定对 `PixelData`进行了扩展，包括：
 - 对 `PixelData` 中 data 所存储的数据进行了尺寸的校验
 - 支持对 data 部分的数据对实例进行空间维度的索引和切片。
 
@@ -1010,7 +1012,6 @@ AssertionError: tensor([[0.4370, 0.1661, 0.0902, 0.8421],
 `img`， `img_metas`， `gt_bboxes`， `gt_labels`， `gt_bboxes_ignore` 作为输入，但是 `SingleStageInstanceSegmentor` 还需要 `gt_masks`，导致 detector 的训练接口不一致，影响了代码的灵活性。
 
 ```python
-
 class SingleStageDetector(BaseDetector):
     ...
 
@@ -1083,7 +1084,7 @@ class MaskHungarianAssigner(BaseAssigner):
                eps=1e-7):
 ```
 
-`InstanceData` 可以封装实例的框、分数、和掩码，将 `HungarianAssigner` 的核心参数简化成 `pred_instances`，`gt_instancess`，和 `gt_instances_ignore`
+`InstanceData` 可以封装实例的框、分数、和掩码，将 `HungarianAssigner` 的核心参数简化成 `pred_instances`，`gt_instances`，和 `gt_instances_ignore`
 使得 `HungarianAssigner` 和 `MaskHungarianAssigner` 可以合并成一个通用的 `HungarianAssigner`。
 
 ```python
