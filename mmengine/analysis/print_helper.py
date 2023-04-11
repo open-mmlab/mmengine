@@ -12,6 +12,7 @@ from rich.console import Console
 from rich.table import Table
 from torch import nn
 
+from ..utils import is_tuple_of
 from .complexity_analysis import (ActivationAnalyzer, FlopAnalyzer,
                                   parameter_count)
 
@@ -713,14 +714,12 @@ def get_model_complexity_info(
         raise ValueError('"input_shape" and "inputs" cannot be both set.')
 
     if inputs is None:
-        if isinstance(input_shape, tuple) and all(
-                isinstance(item, int)
-                for item in input_shape):  # tuple of int, construct one tensor
+        if is_tuple_of(input_shape, int):  # tuple of int, construct one tensor
             inputs = (torch.randn(1, *input_shape), )
-        elif isinstance(input_shape, tuple) and all(
-                isinstance(item, tuple) and all(
-                    isinstance(i, int) for i in item) for item in input_shape
-        ):  # tuple of tuple of int, construct multiple tensors
+        elif is_tuple_of(input_shape, tuple) and all([
+                is_tuple_of(one_input_shape, int)
+                for one_input_shape in input_shape
+        ]):  # tuple of tuple of int, construct multiple tensors
             inputs = tuple([
                 torch.randn(1, *one_input_shape)
                 for one_input_shape in input_shape
