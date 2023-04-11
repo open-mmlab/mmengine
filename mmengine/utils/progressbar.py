@@ -181,10 +181,12 @@ def track_iter_progress(tasks, bar_width=50, file=sys.stdout):
     bar.
 
     Tasks are yielded with a simple for-loop.
+
     Args:
         tasks (list or tuple[Iterable, int]): A list of tasks or
             (tasks, total num).
         bar_width (int): Width of progress bar.
+
     Yields:
         list: The task results.
     """
