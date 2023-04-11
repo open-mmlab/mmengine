@@ -2,9 +2,9 @@
 
 ## Introduction
 
-Due to the development of our architecture design and increasing user demands, existing hook mount points in MMCV are insufficient for the needs. Hence, we redesigned the mount points in MMEngine, and the functions of hooks are adjusted accordingly. Before your migration, it will help a lot to read the tutorial [Hook Design](../design/hook.md).
+Due to the upgrade of our architecture design and the continuous increase of user demands, existing hook mount points in MMCV can no longer meet the requirements. Hence, we redesigned the mount points in MMEngine, and the functions of hooks were adjusted accordingly. It will help a lot to read the tutorial [Hook Design](../design/hook.md) before your migration.
 
-This tutorial compares the difference in function, mount point, usage and implementation between the hooks from [MMCV v1.6.0](https://github.com/open-mmlab/mmcv/tree/v1.6.0) and [MMEngine v0.5.0](https://github.com/open-mmlab/mmengine/tree/v0.5.0).
+This tutorial compares the difference in function, mount point, usage and implementation between [MMCV v1.6.0](https://github.com/open-mmlab/mmcv/tree/v1.6.0) and [MMEngine v0.5.0](https://github.com/open-mmlab/mmengine/tree/v0.5.0).
 
 ## Function Comparison
 
@@ -37,7 +37,7 @@ This tutorial compares the difference in function, mount point, usage and implem
   <tr>
     <td>Saving model weights at specified interval</td>
     <td>CheckpointHook</td>
-    <td rowspan="2">New CheckpointHook can save model weights and optimal weights as well. While the model evaluation function of EvalHook can be achieved by ValLoop or TestLoop</td>
+    <td rowspan="2">The CheckpointHook is responsible for not only saving weights but also saving the optimal weights. Meanwhile, the model evaluation function of EvalHook is delegated to ValLoop or TestLoop.</td>
   </tr>
   <tr>
     <td>Model evaluation and optimal weights saving</td>
@@ -45,7 +45,7 @@ This tutorial compares the difference in function, mount point, usage and implem
   </tr>
   <tr>
     <td>Log printing</td>
-    <td rowspan="3">LoggerHook and its subclasses can print logs, save logs and visualize functions</td>
+    <td rowspan="3">LoggerHook and its subclasses can print logs, save logs and visualize data</td>
     <td>LoggerHook</td>
   </tr>
   <tr>
@@ -62,7 +62,7 @@ This tutorial compares the difference in function, mount point, usage and implem
     <td>EMAHook</td>
   </tr>
   <tr>
-    <td>Ensuring the shuffle function of distributed Sampler</td>
+    <td>Ensuring that the shuffle functionality of the distributed Sampler takes effect</td>
     <td>DistSamplerSeedHook</td>
     <td>DistSamplerSeedHook</td>
   </tr>
@@ -87,7 +87,7 @@ This tutorial compares the difference in function, mount point, usage and implem
     <td>Not yet available</td>
   </tr>
   <tr>
-    <td>Provide registration method to the function of hooks</td>
+    <td>Provide the most concise function registration</td>
     <td>ClosureHook</td>
     <td>Not yet available</td>
   </tr>
@@ -151,12 +151,12 @@ This tutorial compares the difference in function, mount point, usage and implem
   <tr>
     <td>before each iteration</td>
     <td>before_train_iter</td>
-    <td>before_train_iter，with additional args: batch_idx and data_batch</td>
+    <td>before_train_iter, with additional args: batch_idx and data_batch</td>
   </tr>
   <tr>
     <td>after each iteration</td>
     <td>after_train_iter</td>
-    <td>after_train_iter，with additional args: batch_idx、data_batch, and outputs</td>
+    <td>after_train_iter, with additional args: batch_idx、data_batch, and outputs</td>
   </tr>
   <tr>
     <td rowspan="6">Validation related</td>
@@ -182,12 +182,12 @@ This tutorial compares the difference in function, mount point, usage and implem
   <tr>
     <td>before each iteration</td>
     <td>before_val_iter</td>
-    <td>before_val_iter，with additional args: batch_idx and data_batch</td>
+    <td>before_val_iter, with additional args: batch_idx and data_batch</td>
   </tr>
   <tr>
     <td>after each iteration</td>
     <td>after_val_iter</td>
-    <td>after_val_iter，with additional args: batch_idx、data_batch and outputs</td>
+    <td>after_val_iter, with additional args: batch_idx、data_batch and outputs</td>
   </tr>
   <tr>
     <td rowspan="6">Test related</td>
@@ -213,19 +213,19 @@ This tutorial compares the difference in function, mount point, usage and implem
   <tr>
     <td>before each iteration</td>
     <td>None</td>
-    <td>before_test_iter，with additional args: batch_idx and data_batch</td>
+    <td>before_test_iter, with additional args: batch_idx and data_batch</td>
   </tr>
   <tr>
     <td>after each iteration</td>
     <td>None</td>
-    <td>after_test_iter，with additional args: batch_idx、data_batch and outputs</td>
+    <td>after_test_iter, with additional args: batch_idx、data_batch and outputs</td>
   </tr>
 </tbody>
 </table>
 
 ## Usage Comparison
 
-In MMCV, to register hooks to the Runner, you need to call the `register_training_hooks` method of the Runner to register hooks on the Runner, while in MMEngine, you can pass parameters to the Runner's initialization method for registration.
+In MMCV, to register hooks to the runner, you need to call the Runner's `register_training_hooks` method to register hooks to the Runner. In MMEngine, you can register hooks by passing them as parameters to the Runner's initialization method.
 
 - MMCV
 
@@ -285,7 +285,7 @@ For more details of MMEngine hooks, please refer to [Usage of Hooks](../tutorial
 
 ## Implementation Comparison
 
-Taking `CheckpointHook` as an example, compared with [CheckpointHook](https://github.com/open-mmlab/mmcv/blob/v1.6.0/mmcv/runner/hooks/checkpoint.py) in MMCV, [CheckpointHook](https://github.com/open-mmlab/mmengine/blob/main/mmengine/hooks/checkpoint_hook.py) of MMEngine needs to implement the `after_val_epoch` method, since new CheckpointHook supports saving the optimal weights, while in MMCV, the function is achieved by EvalHook.
+Taking `CheckpointHook` as an example, compared with [CheckpointHook](https://github.com/open-mmlab/mmcv/blob/v1.6.0/mmcv/runner/hooks/checkpoint.py) in MMCV, [CheckpointHook](https://github.com/open-mmlab/mmengine/blob/main/mmengine/hooks/checkpoint_hook.py) of MMEngine needs to implement the `after_val_epoch` method, since new `CheckpointHook` supports saving the optimal weights, while in MMCV, the function is achieved by EvalHook.
 
 - MMCV
 
@@ -295,7 +295,7 @@ class CheckpointHook(Hook):
         """Initialize out_dir and file_client"""
 
     def after_train_epoch(self, runner):
-        """Synchronize buffer and save model weights，for tasks trained in epochs"""
+        """Synchronize buffer and save model weights, for tasks trained in epochs"""
 
     def after_train_iter(self, runner):
         """Synchronize buffers and save model weights for tasks trained in iterations"""
@@ -309,7 +309,7 @@ class CheckpointHook(Hook):
         """Initialize out_dir and file_client"""
 
     def after_train_epoch(self, runner):
-        """Synchronize buffer and save model weights，for tasks trained in epochs"""
+        """Synchronize buffer and save model weights, for tasks trained in epochs"""
 
     def after_train_iter(self, runner, batch_idx, data_batch, outputs):
         """Synchronize buffers and save model weights for tasks trained in iterations"""
