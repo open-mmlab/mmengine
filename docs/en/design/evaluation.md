@@ -55,10 +55,10 @@ class BaseMetric(metaclass=ABCMeta):
   @abstractmethod
   def compute_metrics(self, results: list) -> dict:
       """Compute the metrics from processed results.
-
+  
       Args:
           results (list): The processed results of each batch.
-
+  
       Returns:
           dict: The computed metrics. The keys are the names of the metrics,
           and the values are corresponding results.
@@ -73,7 +73,7 @@ Note that the content of `self.results` depends on the implementation of the sub
 
 Usually, the process of model accuracy evaluation is shown in the figure below.
 
-**Online evaluation**: The test data is usually divided into batches. Through a loop, each batch is fed into the model in turn, yielding corresponding predictions, and both the test data and model predictions are passed to the evaluator. The evaluator calls the `process()` method of the `Metric` to process the data and prediction results. When the loop ends, the evaluator calls the `evaluate()` method of the metrics to calculate the model accuracy of the corresponding metrics.
+**Online evaluation**: The test data is usually divided into batches. Through a loop, each batch is fed into the model in turn, yielding corresponding predictions, and the test data and model predictions are passed to the evaluator. The evaluator calls the `process()` method of the `Metric` to process the data and prediction results. When the loop ends, the evaluator calls the `evaluate()` method of the metrics to calculate the model accuracy of the corresponding metrics.
 
 **Offline  evaluation**: Similar to the online evaluation process, the difference is that the pre-saved model predictions are read directly to perform the evaluation. The evaluator provides the `offline_evaluate` interface for calling the `Metric`s to calculate the model accuracy in an offline way. In order to avoid memory overflow caused by processing a large amount of data at the same time, the offline evaluation divides the test data and prediction results into chunks for processing, similar to the batches in online evaluation.
 
