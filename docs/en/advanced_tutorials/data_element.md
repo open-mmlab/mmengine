@@ -1,6 +1,6 @@
 # Abstract Data Element
 
-During the model training and testing, there will be a large amount of data passed through different components, and different algorithms ususally have different kinds of data. For example, single-stage detectors may only need ground truth bouding boxes and ground truth box labels, whereas Mask R-CNN also requires the instance masks.
+During the model training and testing, there will be a large amount of data passed through different components, and different algorithms usually have different kinds of data. For example, single-stage detectors may only need ground truth bounding boxes and ground truth box labels, whereas Mask R-CNN also requires the instance masks.
 
 The training codes can be shown as:
 
@@ -14,7 +14,7 @@ for img, img_metas, gt_bboxes, gt_masks, gt_labels in data_loader:
     loss = mask_rcnn(img, img_metas, gt_bboxes, gt_masks, gt_labels)
 ```
 
-We can see that without encapsulation, the inconsistency of data required by different algorithms leads to the inconsistency of interfaces among different algorithm modules, which affects the extensibility of the whole algorithm library. Moreover, the modules within one algorithm library often need redundent interfaces in order to maintain compatibility.
+We can see that without encapsulation, the inconsistency of data required by different algorithms leads to the inconsistency of interfaces among different algorithm modules, which affects the extensibility of the whole algorithm library. Moreover, the modules within one algorithm library often need redundant interfaces in order to maintain compatibility.
 
 These disadvantages are more obvious among different algorithm libraries, which makes it difficult to reuse modules and expand interfaces when implementing multi-task perception models (multiple tasks such as semantic segmentation, detection, key point detection, etc.).
 
@@ -34,23 +34,23 @@ The MMEngine based algirthm library can inherit from this design and implement i
 During the implementation, there are two types of the data interfaces for the algorithm libraries:
 
 - A collection of all the annotation and prediction information of a training or test sample. For example, the output of a dataset, a model, and the input of a visualizer. MMEngine defines it as a `DataSample`.
-- A single type of prediction or annotation infomation which is usually the output of a sub-module of a model, such as the output of a RPN in two-stage detection algorithm, the result of a semantic segmentation model, the production of a key point branch, and the output of a generator of a GAN model, etc. MMEngine defines these data as a data element (`XXXData`).
+- A single type of prediction or annotation information which is usually the output of a sub-module of a model, such as the output of a RPN in two-stage detection algorithm, the result of a semantic segmentation model, the production of a key point branch, and the output of a generator of a GAN model, etc. MMEngine defines these data as a data element (`XXXData`).
 
-The following section first introduces the base class [BaseDataElement](mmengine.structres.BaseDataElement) for data samples and elements.
+The following section first introduces the base class [BaseDataElement](mmengine.structures.BaseDataElement) for data samples and elements.
 
 ## BaseDataElement
 
-There are two types of data in `BaseDataElement`. One is `data` such as the bounding box, label, and the instance mask, etc., the other is `metainfo` which contains the meta information of the data to ensure the integrity of the data, including `img_shape`, `img_id`, and some other basic information of the images. These information faciliate the recovery and the use of the data in visualization and other cases. Therefore, users need to explicitly distinguish and declare the data of these two types of attributes while creating the `BaseDataElement`.
+There are two types of data in `BaseDataElement`. One is `data` such as the bounding box, label, and the instance mask, etc., the other is `metainfo` which contains the meta information of the data to ensure the integrity of the data, including `img_shape`, `img_id`, and some other basic information of the images. These information facilitate the recovery and the use of the data in visualization and other cases. Therefore, users need to explicitly distinguish and declare the data of these two types of attributes while creating the `BaseDataElement`.
 
 To make it easier to use `BaseDataElement`, the data in both `data` and `metainfo` are properties of `BaseDataElement`. We can directly access the data in these two parts by accessing the class properties. In addition, `BaseDataElement` provides several methods for manipulating the data in `data`.
 
 - Add, delete, change, and check data in different fields of `data`.
 - Migrate `data` to target devices.
-- Support accessing data in the same way as a dictionary or a tensor to fully satify the algorithm's requirements.
+- Support accessing data in the same way as a dictionary or a tensor to fully satisfy the algorithm's requirements.
 
 ### 1. Create BaseDataElement
 
-The data parameter of `BaseDataElement` can be freely added by means fo `key=value`. The fields of `metainfo`, however, need to be explicitly specified using the keyword `metainfo`.
+The data parameter of `BaseDataElement` can be freely added by means of `key=value`. The fields of `metainfo`, however, need to be explicitly specified using the keyword `metainfo`.
 
 ```python
 import torch
@@ -149,7 +149,7 @@ img_shape: (100, 100)
 
 ```python
 
-# directly set data field via class attribtes in BaseDataElement
+# directly set data field via class attributes in BaseDataElement
 data_element.scores = torch.rand((5,))
 data_element.bboxes = torch.rand((5, 4))
 
@@ -347,7 +347,7 @@ The type of cpu_element_1 is convert to <class 'numpy.ndarray'>
 
 ### 6. Show properties
 
-`BaseDataElement` also implements `__repr__` which allows users to get all the data information through `print`. Meanwhile, to faciliate debugging, all properties in `BaseDataElement` are added to `__dict__`. Users can visualize the contents directly in their IDEs. A complete property display is as follow:
+`BaseDataElement` also implements `__repr__` which allows users to get all the data information through `print`. Meanwhile, to facilitate debugging, all properties in `BaseDataElement` are added to `__dict__`. Users can visualize the contents directly in their IDEs. A complete property display is as follow:
 
 ```python
 img_meta = dict(img_shape=(800, 1196, 3), pad_shape=(800, 1216, 3))
@@ -375,7 +375,7 @@ print(instance_data)
 MMEngine divides the data elements into three categories:
 
 - InstanceData: mainly for high-level tasks that encapsulated all instance related data in the image, such as bounding boxes, labels, instance masks, key points, polygons, and tracking ids, etc. All instance related data has the same **length**, which is the number of instances in the image.
-- PixelData: mainly for low-level tasks and some high-level tasks that need perception pixel-level labels. `PixelData` encapsulates pixel-level data such as segmentation map for semantic segmentations, flow map for optical flow tasks, panoptic seg map for panoramic segmentions, and various images generated by the bottom-level taks like super-resolution maps, denoising maps, and other various style maps generated. These data are characterized as three-dimensional or four-dimensional arrays, with the last two dimentsions being the height and width of the data. The height and the width are same.
+- PixelData: mainly for low-level tasks and some high-level tasks that need perception pixel-level labels. `PixelData` encapsulates pixel-level data such as segmentation map for semantic segmentations, flow map for optical flow tasks, panoptic seg map for panoramic segmentions, and various images generated by the bottom-level tasks like super-resolution maps, denoising maps, and other various style maps generated. These data are characterized as three-dimensional or four-dimensional arrays, with the last two dimentsions being the height and width of the data. The height and the width are same.
 - LabelData: mainly for encapsulating label level data such as image classification, categories in multi-categorization, category content of the generated images in image generation, or texts in text recoginition.
 
 ### InstanceData
@@ -393,7 +393,7 @@ These extensions support not only basic data structures such as `torch.Tensor`, 
 
 #### Data verification
 
-All data stored in `InstanceData` must have the same length. 
+All data stored in `InstanceData` must have the same length.
 
 ```python
 from mmengine.structures import InstanceData
@@ -779,7 +779,7 @@ AssertionError: The dim of value must be 2 or 3, but got 4
 
 #### Querying in spatial dimension
 
-`PixelData` suports indexing and slicing in spatial dimension on part of the data instances. Users only need to pass in the index of the length and width.
+`PixelData` supports indexing and slicing in spatial dimension on part of the data instances. Users only need to pass in the index of the length and width.
 
 ```python
 metainfo = dict(
@@ -821,7 +821,7 @@ The shape of slice_data is (10, 20)
 
 ### LabelData
 
-[`LabelData`](mmengine.structures.LabelData) is mainly used to encapsulate label datas such as classiciation labels, predicted text labels, etc. `LabelData` has no limitations to `data`, and it provides two extra features: `onehot` transformation and `index` transformation.
+[`LabelData`](mmengine.structures.LabelData) is mainly used to encapsulate label data such as classiciation labels, predicted text labels, etc. `LabelData` has no limitations to `data`, and it provides two extra features: `onehot` transformation and `index` transformation.
 
 ```python
 from mmengine.structures import LabelData
@@ -1005,7 +1005,7 @@ AssertionError: tensor([[0.4370, 0.1661, 0.0902, 0.8421],
 
 ## Simpify the interfaces
 
-In this section we use MMDetection to demonstrate how to migrate the abstract data interfaces to simplify the module and component interfaces. We suppose both `DetDataSample` and `InstanceData` have been implementated in MMDetection and MMEngine.
+In this section we use MMDetection to demonstrate how to migrate the abstract data interfaces to simplify the module and component interfaces. We suppose both `DetDataSample` and `InstanceData` have been implemented in MMDetection and MMEngine.
 
 ### 1. Simplify the module interface
 
@@ -1057,7 +1057,7 @@ class SingleStageInstanceSegmentor(BaseDetector):
 
 ### 2. Simplify the model interfaces
 
-In MMDet 2.X, `HungarianAssigner` and `MaskHungarianAssigner` will be used to assign bboxes and instance segment informations with annotated instances, respectively. The assignment logics of these two moduls are the same, and the only differences are the interface and the calculation of the loss functions. However, this difference make the code of `HungarianAssigner` cannot be directly used in `MaskHungarianAssigner`, which caused the redundency.
+In MMDet 2.X, `HungarianAssigner` and `MaskHungarianAssigner` will be used to assign bboxes and instance segment information with annotated instances, respectively. The assignment logics of these two moduls are the same, and the only differences are the interface and the calculation of the loss functions. However, this difference make the code of `HungarianAssigner` cannot be directly used in `MaskHungarianAssigner`, which caused the redundancy.
 
 ```python
 class HungarianAssigner(BaseAssigner):

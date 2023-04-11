@@ -727,6 +727,7 @@ print(InstanceData.cat([instance_data, instance_data]))
 - 所有在 data 内的数据要有相同的长和宽
 
 基于上述假定对 `PixelData`进行了扩展，包括：
+
 - 对 `PixelData` 中 data 所存储的数据进行了尺寸的校验
 - 支持对 data 部分的数据对实例进行空间维度的索引和切片。
 
