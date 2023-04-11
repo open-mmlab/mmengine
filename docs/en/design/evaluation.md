@@ -67,15 +67,15 @@ class BaseMetric(metaclass=ABCMeta):
 
 Among them, `compute_metrics()` is called in the `evaluate()` method; the latter collects and aggregates intermediate processing results of different ranks during distributed test before calculating the metrics.
 
-Note that the specific type of storage in `self.results` depends on the implementation of the subclasses of the evaluation metrics. For example, when the amount of test samples or model output data is large (such as semantic segmentation, image generation and other tasks) and it is not appropriate to store them all in memory, you can store the metrics computed by each batch in `self.results` and summarize them in `compute_metrics()`; or store the intermediate results of each batch in a temporary file, and store the temporary file path in `self .results`, and then `compute_metrics()` reads the data from the file and calculates the metrics.
+Note that the content of `self.results` depends on the implementation of the subclasses. For example, when the amount of test samples or model output data is large (such as semantic segmentation, image generation, and other tasks) and it is not appropriate to store them all in memory, you can store the metrics computed by each batch in `self.results` and collect them in `compute_metrics()`; or store the intermediate results of each batch in a temporary file, and store the temporary file path in `self .results`, and then collect them in `compute_metrics()` by reading the data from the file and calculates the metrics.
 
 ## Model accuracy evaluation process
 
 Usually, the process of model accuracy evaluation is shown in the figure below.
 
-**Online evaluation**: The test data is usually divided into batches. Through a loop, each batch is fed into the model in turn, and the corresponding predictions are obtained, and the test data and model predictions are sent to the evaluator. The evaluator calls the `process()` method of the metrics to process the data and prediction results. When the loop ends, the evaluator calls the `evaluate()` method of the metrics to calculate the model accuracy of the corresponding metrics.
+**Online evaluation**: The test data is usually divided into batches. Through a loop, each batch is fed into the model in turn, yielding corresponding predictions, and both the test data and model predictions are passed to the evaluator. The evaluator calls the `process()` method of the `Metric` to process the data and prediction results. When the loop ends, the evaluator calls the `evaluate()` method of the metrics to calculate the model accuracy of the corresponding metrics.
 
-**Offline  evaluation**: Similar to the online evaluation process, the difference is that the pre-saved model predictions are read directly to perform the evaluation. The evaluator provides the `offline_evaluate` interface for calling the metrics to calculate the model accuracy in an offline way. In order to avoid memory overflow caused by processing a large amount of data at the same time, the offline evaluation divides the test data and prediction results into chunks for processing, similar to the batches in online evaluation.
+**Offline  evaluation**: Similar to the online evaluation process, the difference is that the pre-saved model predictions are read directly to perform the evaluation. The evaluator provides the `offline_evaluate` interface for calling the `Metric`s to calculate the model accuracy in an offline way. In order to avoid memory overflow caused by processing a large amount of data at the same time, the offline evaluation divides the test data and prediction results into chunks for processing, similar to the batches in online evaluation.
 
 <div align="center">
     <img src="https://user-images.githubusercontent.com/15977946/187579113-279f097c-3530-40c4-9cd3-1bb0ce2fa452.png" width="500"/>
@@ -85,4 +85,4 @@ Usually, the process of model accuracy evaluation is shown in the figure below.
 
 In each algorithm library of OpenMMLab, common evaluation metrics have been implemented in the corresponding direction. For example, COCO metrics is provided in MMDetection and Accuracy, F1Score, etc. are provided in MMClassification.
 
-Users can also add custom metrics. For details, please refer to the examples given in the \[tutorial documentation\](../tutorials/evaluation.md#Custom evaluation metrics).
+Users can also add custom metrics. For details, please refer to the examples given in the [tutorial documentation](../tutorials/evaluation.md#Custom evaluation metrics).
