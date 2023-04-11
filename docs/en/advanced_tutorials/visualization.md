@@ -102,7 +102,7 @@ def draw_featmap(
     # the layout when multiple channels are expanded into multiple images
     arrangement: Tuple[int, int] = (5, 2),
     # scale the feature map
-    resize_shape：Optional[tuple] = None,
+    resize_shape: Optional[tuple] = None,
     # overlay ratio between input image and generated feature map
     alpha: float = 0.5,
 ) -> np.ndarray:

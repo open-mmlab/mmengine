@@ -99,7 +99,7 @@ def draw_featmap(
     # 多通道展开为多张图时候布局
     arrangement: Tuple[int, int] = (5, 2),
     # 可以指定 resize_shape 参数来缩放特征图
-    resize_shape：Optional[tuple] = None,
+    resize_shape: Optional[tuple] = None,
     # 图片和特征图绘制的叠加比例
     alpha: float = 0.5,
 ) -> np.ndarray:

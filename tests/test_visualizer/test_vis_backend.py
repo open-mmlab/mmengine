@@ -2,6 +2,7 @@
 import os
 import shutil
 import sys
+import warnings
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -11,8 +12,8 @@ import torch
 from mmengine import Config
 from mmengine.fileio import load
 from mmengine.registry import VISBACKENDS
-from mmengine.visualization import (LocalVisBackend, TensorboardVisBackend,
-                                    WandbVisBackend)
+from mmengine.visualization import (LocalVisBackend, MLflowVisBackend,
+                                    TensorboardVisBackend, WandbVisBackend)
 
 
 class TestLocalVisBackend:
@@ -145,7 +146,7 @@ class TestTensorboardVisBackend:
         tensorboard_vis_backend.add_scalar('map', 0.9, step=0)
         tensorboard_vis_backend.add_scalar('map', 0.95, step=1)
         # test with numpy
-        with pytest.warns(None) as record:
+        with warnings.catch_warnings(record=True) as record:
             tensorboard_vis_backend.add_scalar('map', np.array(0.9), step=0)
             tensorboard_vis_backend.add_scalar('map', np.array(0.95), step=1)
             tensorboard_vis_backend.add_scalar('map', np.array(9), step=0)
@@ -240,4 +241,47 @@ class TestWandbVisBackend:
         wandb_vis_backend = WandbVisBackend('temp_dir')
         wandb_vis_backend._init_env()
         wandb_vis_backend.close()
+        shutil.rmtree('temp_dir')
+
+
+class TestMLflowVisBackend:
+
+    def test_init(self):
+        MLflowVisBackend('temp_dir')
+        VISBACKENDS.build(dict(type='MLflowVisBackend', save_dir='temp_dir'))
+
+    def test_experiment(self):
+        mlflow_vis_backend = MLflowVisBackend('temp_dir')
+        assert mlflow_vis_backend.experiment == mlflow_vis_backend._mlflow
+
+    def test_add_config(self):
+        cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        mlflow_vis_backend = MLflowVisBackend('temp_dir')
+        mlflow_vis_backend.add_config(cfg)
+
+    def test_add_image(self):
+        image = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
+        mlflow_vis_backend = MLflowVisBackend('temp_dir')
+        mlflow_vis_backend.add_image('img.png', image)
+
+    def test_add_scalar(self):
+        mlflow_vis_backend = MLflowVisBackend('temp_dir')
+        mlflow_vis_backend.add_scalar('map', 0.9)
+        # test append mode
+        mlflow_vis_backend.add_scalar('map', 0.9)
+        mlflow_vis_backend.add_scalar('map', 0.95)
+
+    def test_add_scalars(self):
+        mlflow_vis_backend = MLflowVisBackend('temp_dir')
+        input_dict = {'map': 0.7, 'acc': 0.9}
+        mlflow_vis_backend.add_scalars(input_dict)
+        # test append mode
+        mlflow_vis_backend.add_scalars({'map': 0.8, 'acc': 0.8})
+
+    def test_close(self):
+        cfg = Config(dict(work_dir='temp_dir'))
+        mlflow_vis_backend = MLflowVisBackend('temp_dir')
+        mlflow_vis_backend._init_env()
+        mlflow_vis_backend.add_config(cfg)
+        mlflow_vis_backend.close()
         shutil.rmtree('temp_dir')

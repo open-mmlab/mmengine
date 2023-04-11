@@ -307,7 +307,8 @@ def broadcast(data: Tensor,
         input_device = get_data_device(data)
         backend_device = get_comm_device(group)
         data_on_device = cast_data_device(data, backend_device)
-
+        # broadcast requires tensor is contiguous
+        data_on_device = data_on_device.contiguous()  # type: ignore
         torch_dist.broadcast(data_on_device, src, group)
 
         if get_rank(group) != src:

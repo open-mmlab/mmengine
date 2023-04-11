@@ -352,10 +352,10 @@ When using config files, you typically don't need to manually register every mod
 ```
 
 ```{note}
-When using config files, the implementations of your custom modules may be stored in separate files and thus not registered properly, which will lead to errors in the build process. You may find solutions in [Registry tutorial](./registry.md) by searching for `custom_imports`.
+When using config files, the implementations of your custom modules may be stored in separate files and thus not registered properly, which will lead to errors in the build process. You may find solutions in [Config tutorial](../advanced_tutorials/config.md#import-the-custom-module).
 ```
 
-```{warnings}
+```{warning}
 Although sharing nearly the same codes, `from_cfg` and `__init__` differs in some default values like `env_cfg`.
 ```
 

@@ -81,7 +81,7 @@ print(ACTIVATION.module_dict)
 
 2. 手动导入文件。常用于用户在算法库之内或之外实现新的模块。
 
-3. 在配置中使用 ``custom_imports`` 字段。 详情请参考[导入自定义Python模块](config.md#import-the-custom-module)。
+3. 在配置中使用 ``custom_imports`` 字段。 详情请参考[导入自定义Python模块](config.md#导入自定义-python-模块)。
 ```
 
 模块成功注册后，我们可以通过配置文件使用这个激活模块。
@@ -167,7 +167,7 @@ func_res = FUNCTION.build(func_cfg)
 
 MMEngine 的注册器支持层级注册，利用该功能可实现跨项目调用，即可以在一个项目中使用另一个项目的模块。虽然跨项目调用也有其他方法的可以实现，但 MMEngine 注册器提供了更为简便的方法。
 
-为了方便跨库调用，MMEngine 提供了 20 个根注册器：
+为了方便跨库调用，MMEngine 提供了 22 个根注册器：
 
 - RUNNERS: Runner 的注册器
 - RUNNER_CONSTRUCTORS: Runner 的构造器
@@ -189,6 +189,8 @@ MMEngine 的注册器支持层级注册，利用该功能可实现跨项目调�
 - VISUALIZERS: 管理绘制模块，如 `DetVisualizer` 可在图片上绘制预测框
 - VISBACKENDS: 存储训练日志的后端，如 `LocalVisBackend`, `TensorboardVisBackend`
 - LOG_PROCESSORS: 控制日志的统计窗口和统计方法，默认使用 `LogProcessor`，如有特殊需求可自定义 `LogProcessor`
+- FUNCTIONS: 注册了各种函数，如 Dataloader 中传入的 `collate_fn`
+- INFERENCERS: 注册了各种任务的推理器，如 `DetInferencer`，负责检测任务的推理
 
 ### 调用父节点的模块
 

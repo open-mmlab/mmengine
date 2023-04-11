@@ -3,10 +3,11 @@
 In this tutorial, we'll take training a ResNet-50 model on CIFAR-10 dataset as an example. We will build a complete and configurable pipeline for both training and validation in only 80 lines of code with `MMEgnine`.
 The whole process includes the following steps:
 
-1. [Build a Model](#build-a-model)
-2. [Build a Dataset and DataLoader](#build-a-dataset-and-dataloader)
-3. [Build a Evaluation Metrics](#build-a-evaluation-metrics)
-4. [Build a Runner and Run the Task](#build-a-runner-and-run-the-task)
+- [15 minutes to get started with MMEngine](#15-minutes-to-get-started-with-mmengine)
+  - [Build a Model](#build-a-model)
+  - [Build a Dataset and DataLoader](#build-a-dataset-and-dataloader)
+  - [Build a Evaluation Metrics](#build-a-evaluation-metrics)
+  - [Build a Runner and Run the Task](#build-a-runner-and-run-the-task)
 
 ## Build a Model
 

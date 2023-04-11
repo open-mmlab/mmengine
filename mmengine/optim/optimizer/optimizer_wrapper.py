@@ -43,7 +43,7 @@ class OptimWrapper:
               ``'inf'`` for infinity norm.
             - error_if_nonfinite (bool): If True, an error is thrown if
               the total norm of the gradients from :attr:`parameters` is
-              ``nan``, ``inf``, or ``-inf``. Default: False (will switch
+              ``nan``, ``inf``, or ``-inf``. Defaults to False (will switch
               to True in the future)
 
             If the key ``type`` is set to "value", the accepted keys are as

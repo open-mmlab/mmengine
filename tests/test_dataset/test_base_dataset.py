@@ -34,7 +34,7 @@ class CustomDataset(BaseDataset):
 
 class TestBaseDataset:
 
-    def setup(self):
+    def setup_method(self):
         self.data_info = dict(
             filename='test_img.jpg', height=604, width=640, sample_idx=0)
         self.imgs = torch.rand((2, 3, 32, 32))
@@ -43,7 +43,7 @@ class TestBaseDataset:
         BaseDataset.parse_data_info = MagicMock(return_value=self.data_info)
         self.pipeline = MagicMock(return_value=dict(imgs=self.imgs))
 
-    def teardown(self):
+    def teardown_method(self):
         BaseDataset.METAINFO = self.ori_meta
         BaseDataset.parse_data_info = self.ori_parse_data_info
 
@@ -595,7 +595,7 @@ class TestBaseDataset:
 
 class TestConcatDataset:
 
-    def setup(self):
+    def setup_method(self):
         dataset = BaseDataset
 
         # create dataset_a
@@ -726,7 +726,7 @@ class TestConcatDataset:
 
 class TestRepeatDataset:
 
-    def setup(self):
+    def setup_method(self):
         dataset = BaseDataset
         data_info = dict(filename='test_img.jpg', height=604, width=640)
         dataset.parse_data_info = MagicMock(return_value=data_info)
@@ -797,7 +797,7 @@ class TestRepeatDataset:
 
 class TestClassBalancedDataset:
 
-    def setup(self):
+    def setup_method(self):
         dataset = BaseDataset
         data_info = dict(filename='test_img.jpg', height=604, width=640)
         dataset.parse_data_info = MagicMock(return_value=data_info)

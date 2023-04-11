@@ -234,7 +234,7 @@ OpenMMLab 系列算法仓库必须将 Inferencer 注册到下游仓库的注册�
 
 入参：
 
-- inputs：输入数据，通常为图片路径、或者图片数据组成的列表。`inputs` 中的每个元素也可以是其他类型的数据，只需要保证数据能够被 [\_init_pipeline](#initpipeline) 返回的 `pipeline` 处理即可。当 `inputs` 只含一个推理数据时，它可以不是一个 `list`，`__call__` 会在内部将 `inputs` 包装成列表，以便于后续处理
+- inputs：输入数据，通常为图片路径、或者图片数据组成的列表。`inputs` 中的每个元素也可以是其他类型的数据，只需要保证数据能够被 [\_init_pipeline](#_init_pipeline) 返回的 `pipeline` 处理即可。当 `inputs` 只含一个推理数据时，它可以不是一个 `list`，`__call__` 会在内部将 `inputs` 包装成列表，以便于后续处理
 - return_datasample：是否将 datasample 转换成 `dict` 返回
 - batch_size：推理的 batch size，会被进一步传给 `preprocess` 函数
 - 其他参数：分发给 `preprocess`、`forward`、`visualize`、`postprocess` 函数的额外参数

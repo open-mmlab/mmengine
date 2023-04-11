@@ -55,7 +55,7 @@ class OptimWrapperDict(OptimWrapper):
         should be updated.
 
         Therefore, this method is not implemented. The optimizer wrapper of
-        OptimWrapperDict should be accessed and call its `update_params.
+        OptimWrapperDict should be accessed and call its `update_params`.
         """
         raise NotImplementedError('`update_params` should be called by each '
                                   'optimizer separately`')
@@ -66,7 +66,7 @@ class OptimWrapperDict(OptimWrapper):
         different :obj:AmpOptimWrapper), this method is not implemented.
 
         The optimizer wrapper of OptimWrapperDict should be accessed and call
-        its `backward.
+        its `backward`.
         """
         raise NotImplementedError('`backward` should be called by each '
                                   'optimizer separately`')

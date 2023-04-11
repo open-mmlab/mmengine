@@ -3,9 +3,10 @@ import copy
 import logging
 import os
 import os.path as osp
+import random
 import shutil
 import tempfile
-from unittest import TestCase
+from unittest import TestCase, skipIf
 
 import numpy as np
 import torch
@@ -15,7 +16,7 @@ from torch.optim import SGD, Adam
 from torch.utils.data import DataLoader, Dataset
 
 from mmengine.config import Config
-from mmengine.dataset import COLLATE_FUNCTIONS, DefaultSampler, pseudo_collate
+from mmengine.dataset import DefaultSampler, pseudo_collate
 from mmengine.evaluator import BaseMetric, Evaluator
 from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
                             IterTimerHook, LoggerHook, ParamSchedulerHook,
@@ -24,10 +25,11 @@ from mmengine.logging import MessageHub, MMLogger
 from mmengine.model import BaseDataPreprocessor, BaseModel, ImgDataPreprocessor
 from mmengine.optim import (DefaultOptimWrapperConstructor, MultiStepLR,
                             OptimWrapper, OptimWrapperDict, StepLR)
-from mmengine.registry import (DATASETS, EVALUATOR, HOOKS, LOG_PROCESSORS,
-                               LOOPS, METRICS, MODEL_WRAPPERS, MODELS,
-                               OPTIM_WRAPPER_CONSTRUCTORS, OPTIM_WRAPPERS,
-                               PARAM_SCHEDULERS, RUNNERS, Registry)
+from mmengine.registry import (DATASETS, EVALUATOR, FUNCTIONS, HOOKS,
+                               LOG_PROCESSORS, LOOPS, METRICS, MODEL_WRAPPERS,
+                               MODELS, OPTIM_WRAPPER_CONSTRUCTORS,
+                               OPTIM_WRAPPERS, PARAM_SCHEDULERS, RUNNERS,
+                               Registry)
 from mmengine.runner import (BaseLoop, EpochBasedTrainLoop, IterBasedTrainLoop,
                              LogProcessor, Runner, TestLoop, ValLoop)
 from mmengine.runner.loops import _InfiniteDataloaderIterator
@@ -35,6 +37,28 @@ from mmengine.runner.priority import Priority, get_priority
 from mmengine.utils import digit_version, is_list_of
 from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.visualization import Visualizer
+
+
+def skip_test_comile():
+    if digit_version(torch.__version__) < digit_version('2.0.0'):
+        return True
+    # The default compiling backend for PyTorch 2.0, inductor, does not support
+    # Nvidia graphics cards older than Volta architecture.
+    # As PyTorch does not provide a public function to confirm the availability
+    # of the inductor, we check its availability by attempting compilation.
+    if not torch.cuda.is_available():
+        return True
+    try:
+        model = nn.Sequential(nn.Conv2d(1, 1, 1), nn.BatchNorm2d(1)).cuda()
+        compiled_model = torch.compile(model)
+        compiled_model(torch.ones(3, 1, 1, 1).cuda())
+    except Exception:
+        return True
+    else:
+        return False
+
+
+SKIP_TEST_COMPILE = skip_test_comile()
 
 
 class ToyModel(BaseModel):
@@ -329,6 +353,11 @@ def custom_collate(data_batch, pad_value):
     return pseudo_collate(data_batch)
 
 
+def custom_worker_init(worker_id):
+    np.random.seed(worker_id)
+    random.seed(worker_id)
+
+
 class TestRunner(TestCase):
 
     def setUp(self):
@@ -352,7 +381,8 @@ class TestRunner(TestCase):
         LOG_PROCESSORS.register_module(module=CustomLogProcessor, force=True)
         RUNNERS.register_module(module=CustomRunner, force=True)
         EVALUATOR.register_module(module=ToyEvaluator, force=True)
-        COLLATE_FUNCTIONS.register_module(module=custom_collate, force=True)
+        FUNCTIONS.register_module(module=custom_collate, force=True)
+        FUNCTIONS.register_module(module=custom_worker_init, force=True)
 
         self.temp_dir = tempfile.mkdtemp()
         epoch_based_cfg = dict(
@@ -435,7 +465,8 @@ class TestRunner(TestCase):
         LOG_PROCESSORS.module_dict.pop('CustomLogProcessor')
         RUNNERS.module_dict.pop('CustomRunner')
         EVALUATOR.module_dict.pop('ToyEvaluator')
-        COLLATE_FUNCTIONS.module_dict.pop('custom_collate')
+        FUNCTIONS.module_dict.pop('custom_collate')
+        FUNCTIONS.module_dict.pop('custom_worker_init')
 
         logging.shutdown()
         MMLogger._instance_dict.clear()
@@ -1222,6 +1253,16 @@ class TestRunner(TestCase):
             cfg, seed=seed, diff_rank_seed=True)
         self.assertNotEqual(dataloader.sampler.seed, seed)
 
+        # custom worker_init_fn
+        cfg = dict(
+            dataset=dict(type='ToyDataset'),
+            sampler=dict(type='DefaultSampler', shuffle=True),
+            worker_init_fn=dict(type='custom_worker_init'),
+            batch_size=1,
+            num_workers=2)
+        dataloader = runner.build_dataloader(cfg)
+        self.assertIs(dataloader.worker_init_fn.func, custom_worker_init)
+
     def test_build_train_loop(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_train_loop'
@@ -1478,10 +1519,8 @@ class TestRunner(TestCase):
         cfg.train_cfg = dict(
             by_epoch=False, max_iters=12, val_interval=4, val_begin=4)
         runner = Runner.from_cfg(cfg)
-        with self.assertWarnsRegex(
-                Warning,
-                'Reach the end of the dataloader, it will be restarted and '
-                'continue to iterate.'):
+        # Warning should be raised since the sampler is not InfiniteSampler.
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             runner.train()
 
         assert isinstance(runner.train_loop, IterBasedTrainLoop)
@@ -1668,6 +1707,14 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         runner.train()
 
+        # 10.3 Test build dataloader with custom worker_init function
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_train10.3'
+        cfg.train_dataloader.update(
+            worker_init_fn=dict(type='custom_worker_init'))
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+
         # 11 test build dataloader without default arguments of collate
         # function.
         with self.assertRaises(TypeError):
@@ -1705,6 +1752,32 @@ class TestRunner(TestCase):
 
         with self.assertRaisesRegex(AssertionError, 'If you want to validate'):
             runner.train()
+
+    @skipIf(
+        SKIP_TEST_COMPILE,
+        reason='torch.compile is not valid, please install PyTorch>=2.0.0')
+    def test_train_with_compile(self):
+        # 1. test with simple configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_train_compile_simple'
+        cfg.compile = True
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+
+        # 2. test with advanced configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_train_compile_advanced'
+        cfg.compile = dict(backend='inductor', mode='default')
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+
+        runner._maybe_compile('train_step')
+        # PyTorch 2.0.0 could close the FileHandler after calling of
+        # ``torch.compile``. So we need to test our file handler still works.
+        with open(osp.join(f'{runner.log_dir}',
+                           f'{runner.timestamp}.log')) as f:
+            last_line = f.readlines()[-1]
+            self.assertTrue(last_line.endswith('please be patient.\n'))
 
     def test_val(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1757,6 +1830,24 @@ class TestRunner(TestCase):
             runner.val()
             self.assertIn(predictions[0].dtype,
                           (torch.float16, torch.bfloat16))
+
+    @skipIf(
+        SKIP_TEST_COMPILE,
+        reason='torch.compile is not valid, please install PyTorch>=2.0.0')
+    def test_val_with_compile(self):
+        # 1. test with simple configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_val_compile_simple'
+        cfg.compile = True
+        runner = Runner.from_cfg(cfg)
+        runner.val()
+
+        # 2. test with advanced configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_val_compile_advanced'
+        cfg.compile = dict(backend='inductor', mode='default')
+        runner = Runner.from_cfg(cfg)
+        runner.val()
 
     def test_test(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1811,6 +1902,24 @@ class TestRunner(TestCase):
             runner.test()
             self.assertIn(predictions[0].dtype,
                           (torch.float16, torch.bfloat16))
+
+    @skipIf(
+        SKIP_TEST_COMPILE,
+        reason='torch.compile is not valid, please install PyTorch>=2.0.0')
+    def test_test_with_compile(self):
+        # 1. test with simple configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_test_compile_simple'
+        cfg.compile = True
+        runner = Runner.from_cfg(cfg)
+        runner.test()
+
+        # 2. test with advanced configuration
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_test_compile_advanced'
+        cfg.compile = dict(backend='inductor', mode='default')
+        runner = Runner.from_cfg(cfg)
+        runner.test()
 
     def test_register_hook(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -2073,11 +2182,8 @@ class TestRunner(TestCase):
         # ckpt_modified['meta']['seed'] = 123
         path_modified = osp.join(self.temp_dir, 'modified.pth')
         torch.save(ckpt_modified, path_modified)
-        with self.assertWarnsRegex(
-                Warning, 'The dataset metainfo from the resumed checkpoint is '
-                'different from the current training dataset, please '
-                'check the correctness of the checkpoint or the training '
-                'dataset.'):
+        # Warning should be raised since dataset_meta is not matched
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             runner.resume(path_modified)
 
         # 1.3.3 test resume with unmatched seed
@@ -2085,8 +2191,8 @@ class TestRunner(TestCase):
         ckpt_modified['meta']['seed'] = 123
         path_modified = osp.join(self.temp_dir, 'modified.pth')
         torch.save(ckpt_modified, path_modified)
-        with self.assertWarnsRegex(
-                Warning, 'The value of random seed in the checkpoint'):
+        # Warning should be raised since seed is not matched
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             runner.resume(path_modified)
 
         # 1.3.3 test resume with no seed and dataset meta
@@ -2303,7 +2409,7 @@ class TestRunner(TestCase):
                               MultiStepLR)
         self.assertIsInstance(runner.param_schedulers['linear2'][0], StepLR)
 
-        # 2.7.3 test `resume` 2 optimizers and 0 sheduler list.
+        # 2.7.3 test `resume` 2 optimizers and 0 scheduler list.
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_checkpoint18'
         cfg.optim_wrapper = optim_cfg

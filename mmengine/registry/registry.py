@@ -7,6 +7,9 @@ from contextlib import contextmanager
 from importlib import import_module
 from typing import Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
+from rich.console import Console
+from rich.table import Table
+
 from mmengine.config.utils import MODULE2PACKAGE
 from mmengine.utils import is_seq_of
 from .default_scope import DefaultScope
@@ -120,10 +123,18 @@ class Registry:
         return self.get(key) is not None
 
     def __repr__(self):
-        format_str = self.__class__.__name__ + \
-                     f'(name={self._name}, ' \
-                     f'items={self._module_dict})'
-        return format_str
+        table = Table(title=f'Registry of {self._name}')
+        table.add_column('Names', justify='left', style='cyan')
+        table.add_column('Objects', justify='left', style='green')
+
+        for name, obj in sorted(self._module_dict.items()):
+            table.add_row(name, str(obj))
+
+        console = Console()
+        with console.capture() as capture:
+            console.print(table, end='')
+
+        return capture.get()
 
     @staticmethod
     def infer_scope() -> str:
@@ -334,10 +345,9 @@ class Registry:
                     f'`{self.scope}.utils.register_all_modules` '
                     'instead.',
                     logger='current',
-                    level=logging.WARNING)
+                    level=logging.DEBUG)
                 try:
                     module = import_module(f'{self.scope}.utils')
-                    module.register_all_modules(False)  # type: ignore
                 except (ImportError, AttributeError, ModuleNotFoundError):
                     if self.scope in MODULE2PACKAGE:
                         print_log(
@@ -355,22 +365,20 @@ class Registry:
                             'have registered the module manually.',
                             logger='current',
                             level=logging.WARNING)
+                else:
+                    # The import errors triggered during the registration
+                    # may be more complex, here just throwing
+                    # the error to avoid causing more implicit registry errors
+                    # like `xxx`` not found in `yyy` registry.
+                    module.register_all_modules(False)  # type: ignore
 
             for loc in self._locations:
-                try:
-                    import_module(loc)
-                    print_log(
-                        f"Modules of {self.scope}'s {self.name} registry have "
-                        f'been automatically imported from {loc}',
-                        logger='current',
-                        level=logging.DEBUG)
-                except (ImportError, AttributeError, ModuleNotFoundError):
-                    print_log(
-                        f'Failed to import {loc}, please check the '
-                        f'location of the registry {self.name} is '
-                        'correct.',
-                        logger='current',
-                        level=logging.WARNING)
+                import_module(loc)
+                print_log(
+                    f"Modules of {self.scope}'s {self.name} registry have "
+                    f'been automatically imported from {loc}',
+                    logger='current',
+                    level=logging.DEBUG)
             self._imported = True
 
     def get(self, key: str) -> Optional[Type]:
@@ -413,7 +421,7 @@ class Registry:
             >>> # hierarchical registry
             >>> DETECTORS = Registry('detector', parent=MODELS, scope='det')
             >>> # `ResNet` does not exist in `DETECTORS` but `get` method
-            >>> # will try to search from its parenet or ancestors
+            >>> # will try to search from its parents or ancestors
             >>> resnet_cls = DETECTORS.get('ResNet')
             >>> CLASSIFIER = Registry('classifier', parent=MODELS, scope='cls')
             >>> @CLASSIFIER.register_module()
@@ -479,8 +487,11 @@ class Registry:
                     obj_cls = root.get(key)
 
         if obj_cls is not None:
+            # For some rare cases (e.g. obj_cls is a partial function), obj_cls
+            # doesn't have `__name__`. Use default value to prevent error
+            cls_name = getattr(obj_cls, '__name__', str(obj_cls))
             print_log(
-                f'Get class `{obj_cls.__name__}` from "{registry_name}"'
+                f'Get class `{cls_name}` from "{registry_name}"'
                 f' registry in "{scope_name}"',
                 logger='current',
                 level=logging.DEBUG)
@@ -557,16 +568,16 @@ class Registry:
         """Register a module.
 
         Args:
-            module (type): Module class or function to be registered.
+            module (type): Module to be registered. Typically a class or a
+                function, but generally all ``Callable`` are acceptable.
             module_name (str or list of str, optional): The module name to be
                 registered. If not specified, the class name will be used.
                 Defaults to None.
             force (bool): Whether to override an existing class with the same
                 name. Defaults to False.
         """
-        if not inspect.isclass(module) and not inspect.isfunction(module):
-            raise TypeError('module must be a class or a function, '
-                            f'but got {type(module)}')
+        if not callable(module):
+            raise TypeError(f'module must be Callable, but got {type(module)}')
 
         if module_name is None:
             module_name = module.__name__
@@ -594,7 +605,7 @@ class Registry:
             name (str or list of str, optional): The module name to be
                 registered. If not specified, the class name will be used.
             force (bool): Whether to override an existing class with the same
-                name. Default to False.
+                name. Defaults to False.
             module (type, optional): Module class or function to be registered.
                 Defaults to None.
 

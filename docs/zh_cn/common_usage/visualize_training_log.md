@@ -1,16 +1,12 @@
-# 实验管理
+# 可视化训练日志
 
-MMEngine 集成了 [TensorBoard](https://www.tensorflow.org/tensorboard?hl=zh-cn) 和 [WandB](https://docs.wandb.ai/v/zh-hans/) 实验管理工具，你可以很方便地
-
-- 跟踪和可视化损失及准确率等指标
-- 可视化模型结构图
-- 可视化特征图
+MMEngine 集成了 [TensorBoard](https://www.tensorflow.org/tensorboard?hl=zh-cn)、[Weights & Biases (WandB)](https://docs.wandb.ai/) 和 [MLflow](https://mlflow.org/docs/latest/index.html) 实验管理工具，你可以很方便地跟踪和可视化损失及准确率等指标。
 
 下面基于[15 分钟上手 MMENGINE](../get_started/15_minutes.md)中的例子介绍如何一行配置实验管理工具。
 
 ## TensorBoard
 
-`Runner` 新增 `visualizer` 参数并设置 `vis_backends` 为 `TensorboardVisBackend`。
+设置 `Runner` 初始化参数中的 `visualizer`，并将 `vis_backends` 设置为 `TensorboardVisBackend`。
 
 ```python
 runner = Runner(
@@ -29,21 +25,14 @@ runner.train()
 
 ## WandB
 
-使用 WandB 前需安装依赖库 wandb 并登录至 wandb。
+使用 WandB 前需安装依赖库 `wandb` 并登录至 wandb。
 
-- 安装
+```bash
+pip install wandb
+wandb login
+```
 
-  ```bash
-  pip install wandb
-  ```
-
-- 登录
-
-  ```bash
-  wandb login
-  ```
-
-接下来只需修改 `Runner` 输入参数 `visualizer` 中的 `vis_backends` 为 `WandbVisBackend` 即可。
+设置 `Runner` 初始化参数中的 `visualizer`，并将 `vis_backends` 设置为 `WandbVisBackend`。
 
 ```python
 runner = Runner(
@@ -80,3 +69,5 @@ runner = Runner(
 )
 runner.train()
 ```
+
+## MLflow (WIP)

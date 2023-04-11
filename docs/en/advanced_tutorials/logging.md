@@ -4,7 +4,7 @@
 
 ## Flexible Logging System
 
-Logging system is configured by passing a [LogProcessor](mmengine.logging.LogProcessor) to the runner. If no log processor is passed, the runner will use the default log processor, which is equivalent to:
+Logging system is configured by passing a [LogProcessor](mmengine.runner.LogProcessor) to the runner. If no log processor is passed, the runner will use the default log processor, which is equivalent to:
 
 ```python
 log_processor = dict(window_size=10, by_epoch=True, custom_cfg=None, num_digits=4)
@@ -70,7 +70,7 @@ The significant digits(`num_digits`) of the log is 4 by default.
 Output the value of all custom logs at the last iteration by default.
 ```
 
-```{warnning}
+```{warning}
 log_processor outputs the epoch based log by default(`by_epoch=True`). To get an expected log matched with the `train_cfg`, we should set the same value for `by_epoch` in `train_cfg` and `log_processor`.
 ```
 
@@ -191,7 +191,7 @@ runner.train()
 08/21 03:17:26 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0024  data_time: 0.0010  loss1: 0.5464  loss2: 0.7251  loss: 1.2715  loss1_local_max: 2.8872  loss1_global_max: 2.8872
 ```
 
-More examples can be found in [log_processor](mmengine.logging.LogProcessor).
+More examples can be found in [log_processor](mmengine.runner.LogProcessor).
 
 ## Customize log
 

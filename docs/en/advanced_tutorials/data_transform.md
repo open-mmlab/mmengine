@@ -15,7 +15,7 @@ processed data as a dictionary. A simple example is as belows:
 ```{note}
 In MMEngine, we don't have the implementations of data transforms. you can find the base data transform class
 and many other data transforms in MMCV. So you need to install MMCV before learning this tutorial, see the
-{external+mmcv:doc}`MMCV installation guild <get_started/installation>`.
+{external+mmcv:doc}`MMCV installation guide <get_started/installation>`.
 ```
 
 ```python

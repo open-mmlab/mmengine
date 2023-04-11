@@ -297,7 +297,7 @@ class BaseModel(BaseModule):
                 - ``loss``: Called by ``train_step`` and return loss ``dict``
                   used for logging
                 - ``predict``: Called by ``val_step`` and ``test_step``
-                  and return list of `results used for computing metric.
+                  and return list of results used for computing metric.
                 - ``tensor``: Called by custom use to get ``Tensor`` type
                   results.
 
@@ -308,7 +308,7 @@ class BaseModel(BaseModule):
                 - If ``mode == predict``, return a ``list`` of inference
                   results.
                 - If ``mode == tensor``, return a tensor or ``tuple`` of tensor
-                  or ``dict of tensor for custom use.
+                  or ``dict`` of tensor for custom use.
         """
 
     def _run_forward(self, data: Union[dict, tuple, list],
