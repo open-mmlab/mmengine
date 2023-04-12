@@ -13,7 +13,7 @@ from unittest.mock import patch
 import pytest
 
 from mmengine import Config, ConfigDict, DictAction
-from mmengine.config.lazy import LazyModule
+from mmengine.config.lazy import LazyObject
 from mmengine.fileio import dump, load
 from mmengine.registry import MODELS, DefaultScope, Registry
 from mmengine.runner import Runner
@@ -960,7 +960,7 @@ class TestConfig:
             else:
                 if isinstance(a, str) and a != '_module_':
                     assert a == b
-                elif isinstance(a, LazyModule):
+                elif isinstance(a, LazyObject):
                     assert str(a) == str(b)
 
         _compare_dict(cfg, dumped_cfg)
@@ -968,7 +968,7 @@ class TestConfig:
         # Build runner with cfg
         cfg.work_dir = str(tmp_path)
         cfg._filename = 'test_train_runner.py'
-        assert isinstance(cfg.model.type, LazyModule)
+        assert isinstance(cfg.model.type, LazyObject)
         runner = Runner.from_cfg(cfg)
         runner.train()
 
@@ -978,3 +978,24 @@ class TestConfig:
             lazy_import=True)
         runner = Runner.from_cfg(cfg)
         runner.train()
+
+        # Test load config from mmdet
+        def test_lazy_import_mmdet():
+            try:
+                import mmdet.configs  # noqa F401
+            except ImportError:
+                return False
+            else:
+                return True
+
+        if test_lazy_import_mmdet():
+            cfg = Config.fromfile(
+                osp.join(self.data_path,
+                         'config/lazy_module_config/load_mmdet_config.py'),
+                lazy_import=True)
+            assert cfg.model.backbone.depth == 101
+            cfg.work_dir = str(tmp_path)
+            runner.from_cfg(cfg)
+        else:
+            pytest.skip('skip testing loading config from mmdet since mmdet '
+                        'is not installed or mmdet version is too low')

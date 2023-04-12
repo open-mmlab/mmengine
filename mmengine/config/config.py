@@ -21,10 +21,10 @@ from mmengine.fileio import dump, load
 from mmengine.logging import print_log
 from mmengine.utils import (check_file_exist, get_installed_path,
                             import_modules_from_strings, is_installed)
-from .lazy import LazyAttr, LazyModule
-from .lazy_ast import Transform, _gather_abs_import_lazymodule
-from .utils import (RemoveAssignFromAST, _get_external_cfg_base_path,
-                    _get_external_cfg_path, _get_package_and_cfg_path)
+from .lazy import LazyAttr, LazyObject
+from .utils import (RemoveAssignFromAST, Transform, _gather_abs_import_lazyobj,
+                    _get_external_cfg_base_path, _get_external_cfg_path,
+                    _get_package_and_cfg_path)
 
 BASE_KEY = '_base_'
 DELETE_KEY = '_delete_'
@@ -222,7 +222,7 @@ class Config:
         else:
             cfg_dict = Config._parse_lazy_import(filename)
             for key, value in list(cfg_dict.items()):
-                if isinstance(value, (LazyModule, LazyAttr, types.FunctionType,
+                if isinstance(value, (LazyObject, LazyAttr, types.FunctionType,
                                       types.ModuleType)):
                     cfg_dict.pop(key)
             return Config(cfg_dict, filename=filename)
@@ -242,7 +242,7 @@ class Config:
         # To avoid really importing the third party package like `torch`
         # during import `type` object, we use `_parse_lazy_import` to parse the
         # configuration file, which will not actually trigger the import
-        # process, but simply parse the imported `type`s as LazyModule objects.
+        # process, but simply parse the imported `type`s as LazyObject objects.
 
         # The overall pipeline of _parse_lazy_import is:
         # 1. Parse the base module from the config file.
@@ -260,11 +260,11 @@ class Config:
         #           'mmdet.configs.default_runtime': {...}
         #           'mmdet.configs.retinanet_r50_fpn_1x_coco': {...}
         #           ...
-        #       }, each item in base_dict is a dict of `LazyModule`
+        #       }, each item in base_dict is a dict of `LazyObject`
         # 3. parse the current config file filling the imported variable
         #    with the base_dict.
         with open(filename) as f:
-            global_dict = {'LazyModule': LazyModule}
+            global_dict = {'LazyObject': LazyObject}
             base_dict = {}
 
             code = ast.parse(f.read())
@@ -320,10 +320,10 @@ class Config:
             # transverse the imported module from base_cfg and merge then into
             # the global dict. After the ast transformation, most of import
             # syntax will be removed (except for the builtin import) and
-            # replaced with the `LazyModule`
+            # replaced with the `LazyObject`
             transform = Transform(global_dict=global_dict, base_dict=base_dict)
             modified_code = transform.visit(code)
-            modified_code = _gather_abs_import_lazymodule(modified_code)
+            modified_code = _gather_abs_import_lazyobj(modified_code)
             modified_code = ast.fix_missing_locations(modified_code)
             exec(
                 compile(modified_code, filename, mode='exec'), global_dict,
@@ -331,7 +331,7 @@ class Config:
 
             ret = {}
             for key, value in global_dict.items():
-                if key.startswith('__') or key in ['LazyModule']:
+                if key.startswith('__') or key in ['LazyObject']:
                     continue
                 ret[key] = value
             # convert dict to ConfigDict
@@ -795,7 +795,7 @@ class Config:
             if ('type' in cfg and '_module_' in cfg
                     and isinstance(cfg.type, str)):
                 module = cfg.pop('_module_')
-                cfg.type = LazyModule(module, cfg.type)
+                cfg.type = LazyObject(module, cfg.type)
         elif isinstance(cfg, tuple):
             cfg = tuple(
                 Config._dict_to_config_dict(_cfg, scope, has_scope=has_scope)
@@ -1015,7 +1015,7 @@ class Config:
         def _format_basic_types(k, v, use_mapping=False):
             if isinstance(v, str):
                 v_str = repr(v)
-            elif isinstance(v, LazyModule):
+            elif isinstance(v, LazyObject):
                 v_str = f"'{repr(v)}'"
             else:
                 v_str = str(v)
@@ -1063,7 +1063,7 @@ class Config:
             for idx, (k, v) in enumerate(input_dict.items()):
                 is_last = idx >= len(input_dict) - 1
                 end = '' if outest_level or is_last else ','
-                if isinstance(v, (LazyModule, LazyAttr)):
+                if isinstance(v, (LazyObject, LazyAttr)):
                     attr_str = _format_basic_types(k, v, use_mapping)
                     attr_str += f", _module_='{v._module}'" + end
                 elif isinstance(v, dict):
