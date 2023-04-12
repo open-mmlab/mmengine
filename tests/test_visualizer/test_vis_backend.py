@@ -243,6 +243,30 @@ class TestWandbVisBackend:
         wandb_vis_backend.close()
         shutil.rmtree('temp_dir')
 
+    @pytest.mark.parametrize(
+        ["auto_step", "step", "expect"], [(True, 5, None), (False, 5, 5)]
+    )
+    def test_auto_step(self, auto_step, step, expect):
+        # prepare data
+        image = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
+        name = 'acc'
+        val = 0.9
+        input_dict = {name: val}
+
+        # init
+        wandb_vis_backend = WandbVisBackend('temp_dir', auto_step=auto_step)
+
+        wandb_vis_backend.add_scalar(name, val, step=step)
+        assert wandb_vis_backend._wandb.log.call_args[1]["step"] == expect
+
+        wandb_vis_backend.add_scalars(input_dict, step=step)
+        assert wandb_vis_backend._wandb.log.call_args[1]["step"] == expect
+
+        wandb_vis_backend.add_image('img', image, step=step)
+        assert wandb_vis_backend._wandb.log.call_args[1]["step"] == expect
+
+        shutil.rmtree('temp_dir')
+
 
 class TestMLflowVisBackend:
 

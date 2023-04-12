@@ -368,6 +368,9 @@ class WandbVisBackend(BaseVisBackend):
             New in version 0.3.0.
         watch_kwargs (optional, dict): Agurments for ``wandb.watch``.
             New in version 0.4.0.
+        auto_step: (bool) Whether use auto step increment builtin wandb.log or not.
+            The built-in step will be reset to zero when the training is resumed.
+            Default: True
     """
 
     def __init__(self,
@@ -376,13 +379,15 @@ class WandbVisBackend(BaseVisBackend):
                  define_metric_cfg: Optional[dict] = None,
                  commit: Optional[bool] = True,
                  log_code_name: Optional[str] = None,
-                 watch_kwargs: Optional[dict] = None):
+                 watch_kwargs: Optional[dict] = None,
+                 auto_step: bool = True):
         super().__init__(save_dir)
         self._init_kwargs = init_kwargs
         self._define_metric_cfg = define_metric_cfg
         self._commit = commit
         self._log_code_name = log_code_name
         self._watch_kwargs = watch_kwargs if watch_kwargs is not None else {}
+        self._auto_step = auto_step
 
     def _init_env(self):
         """Setup env for wandb."""
@@ -448,11 +453,12 @@ class WandbVisBackend(BaseVisBackend):
             name (str): The image identifier.
             image (np.ndarray): The image to be saved. The format
                 should be RGB.
-            step (int): Useless parameter. Wandb does not
-                need this parameter. Defaults to 0.
+            step (int): Global step value to record. Defaults to 0.
+                This will be ignored if auto_step is True.
         """
         image = self._wandb.Image(image)
-        self._wandb.log({name: image}, commit=self._commit)
+        step = None if self._auto_step else step
+        self._wandb.log({name: image}, commit=self._commit, step=step)
 
     @force_init_env
     def add_scalar(self,
@@ -465,10 +471,11 @@ class WandbVisBackend(BaseVisBackend):
         Args:
             name (str): The scalar identifier.
             value (int, float, torch.Tensor, np.ndarray): Value to save.
-            step (int): Useless parameter. Wandb does not
-                need this parameter. Defaults to 0.
+            step (int): Global step value to record. Defaults to 0.
+                This will be ignored if auto_step is True.
         """
-        self._wandb.log({name: value}, commit=self._commit)
+        step = None if self._auto_step else step
+        self._wandb.log({name: value}, commit=self._commit, step=step)
 
     @force_init_env
     def add_scalars(self,
@@ -481,12 +488,13 @@ class WandbVisBackend(BaseVisBackend):
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Useless parameter. Wandb does not
-                need this parameter. Defaults to 0.
+            step (int): Global step value to record. Defaults to 0.
+                This will be ignored if auto_step is True.
             file_path (str, optional): Useless parameter. Just for
                 interface unification. Defaults to None.
         """
-        self._wandb.log(scalar_dict, commit=self._commit)
+        step = None if self._auto_step else step
+        self._wandb.log(scalar_dict, commit=self._commit, step=step)
 
     def close(self) -> None:
         """close an opened wandb object."""
