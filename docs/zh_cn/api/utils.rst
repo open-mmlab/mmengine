@@ -77,7 +77,6 @@ Progress Bar
    track_parallel_progress
    track_progress
 
-
 Progress Bar (rich enhanced)
 ----------------
 
