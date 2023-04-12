@@ -7,7 +7,7 @@ from math import inf
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
-from mmengine.dist import is_main_process
+from mmengine.dist import is_main_process, master_only
 from mmengine.fileio import FileClient, get_file_backend
 from mmengine.logging import print_log
 from mmengine.registry import HOOKS
@@ -347,6 +347,7 @@ class CheckpointHook(Hook):
             for key, best_ckpt in self.best_ckpt_path_dict.items():
                 self._publish_model(runner, best_ckpt)
 
+    @master_only
     def _publish_model(self, runner, ckpt_path: str) -> None:
         """Remove unnecessary keys from ckpt_path and save the new checkpoint.
 
