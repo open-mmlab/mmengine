@@ -368,9 +368,9 @@ class WandbVisBackend(BaseVisBackend):
             New in version 0.3.0.
         watch_kwargs (optional, dict): Agurments for ``wandb.watch``.
             New in version 0.4.0.
-        auto_step: (bool) Whether use auto step increment builtin wandb.log or not.
-            The built-in step will be reset to zero when the training is resumed.
-            Default: True
+        auto_step: (bool) Whether use auto step increment builtin
+            wandb.log or not. The built-in step will be reset to zero when
+            the training is resumed. Default: True
     """
 
     def __init__(self,
@@ -457,8 +457,10 @@ class WandbVisBackend(BaseVisBackend):
                 This will be ignored if auto_step is True.
         """
         image = self._wandb.Image(image)
-        step = None if self._auto_step else step
-        self._wandb.log({name: image}, commit=self._commit, step=step)
+        if self._auto_step:
+            self._wandb.log({name: image}, commit=self._commit)
+        else:
+            self._wandb.log({name: image}, commit=self._commit, step=step)
 
     @force_init_env
     def add_scalar(self,
@@ -474,8 +476,10 @@ class WandbVisBackend(BaseVisBackend):
             step (int): Global step value to record. Defaults to 0.
                 This will be ignored if auto_step is True.
         """
-        step = None if self._auto_step else step
-        self._wandb.log({name: value}, commit=self._commit, step=step)
+        if self._auto_step:
+            self._wandb.log({name: value}, commit=self._commit)
+        else:
+            self._wandb.log({name: value}, commit=self._commit, step=step)
 
     @force_init_env
     def add_scalars(self,
@@ -493,8 +497,10 @@ class WandbVisBackend(BaseVisBackend):
             file_path (str, optional): Useless parameter. Just for
                 interface unification. Defaults to None.
         """
-        step = None if self._auto_step else step
-        self._wandb.log(scalar_dict, commit=self._commit, step=step)
+        if self._auto_step:
+            self._wandb.log(scalar_dict, commit=self._commit)
+        else:
+            self._wandb.log(scalar_dict, commit=self._commit, step=step)
 
     def close(self) -> None:
         """close an opened wandb object."""
