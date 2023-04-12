@@ -368,8 +368,8 @@ class WandbVisBackend(BaseVisBackend):
             New in version 0.3.0.
         watch_kwargs (optional, dict): Agurments for ``wandb.watch``.
             New in version 0.4.0.
-        auto_step: (bool) Whether use auto step increment builtin
-            wandb.log or not. The built-in step will be reset to zero when
+        auto_step: (bool) Whether use auto step increment built-in
+            ``wandb.log`` or not. The built-in step will be reset to zero when
             the training is resumed. Default: True
     """
 
