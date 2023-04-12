@@ -3,8 +3,7 @@ import inspect
 import logging
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-from mmengine.config import Config, ConfigDict
-from mmengine.config.lazy import LazyAttr, LazyModule
+from mmengine.config import Config, ConfigDict, LazyAttr, LazyModule
 from mmengine.utils import ManagerMixin
 from .registry import Registry
 
@@ -141,14 +140,12 @@ def build_from_cfg(
             return obj
 
         except Exception as e:
-            print_log(f'Build {obj_cls.__name__} failed!', level=logging.ERROR)
-            raise e
             # Normal TypeError does not print class name.
             cls_location = '/'.join(
                 obj_cls.__module__.split('.'))  # type: ignore
             raise type(e)(
                 f'class `{obj_cls.__name__}` in '  # type: ignore
-                f'{cls_location}.py: {e}') from e
+                f'{cls_location}.py: {e}')
 
 
 def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],

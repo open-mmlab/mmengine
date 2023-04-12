@@ -4,6 +4,7 @@ import os.path as osp
 import sys
 from collections import defaultdict
 from importlib.util import find_spec
+from typing import List
 
 PYTHON_ROOT_DIR = osp.dirname(osp.dirname(sys.executable))
 
@@ -15,9 +16,11 @@ def _is_builtin_module(module_name: str) -> bool:
     spec = find_spec(module_name)
     if spec is None:
         raise ImportError(f'Cannot find module {module_name}')
-    origin_path = osp.abspath(spec.origin)
-    if ('site-package' in origin_path
-            or not origin_path.startswith(PYTHON_ROOT_DIR)):
+    origin_path = osp.abspath(getattr(spec, 'origin', None))
+    if origin_path is None:
+        return True
+    elif ('site-package' in origin_path
+          or not origin_path.startswith(PYTHON_ROOT_DIR)):
         return False
     else:
         return True
@@ -84,12 +87,12 @@ class Transform(ast.NodeTransformer):
         # `import mmdet.configs.default_runtime`
         # This will be parsed as
         # mmdet = LazyModule(['mmdet.configs.default_runtime', 'mmdet.configs])
-        # However, visit_Import cannnot gather other import information, so
+        # However, visit_Import cannot gather other import information, so
         # `_gather_abs_import_lazymodule` will gather all import information
         # from the same module and construct the LazyModule.
         alias_list = node.names
         assert len(alias_list) == 1, (
-            'Does not support import muiltiple modules in one line')
+            'Does not support import multiple modules in one line')
         # TODO Support multiline import
         alias = alias_list[0]
         if alias.asname is not None:
@@ -98,9 +101,9 @@ class Transform(ast.NodeTransformer):
         return node
 
 
-def _gather_abs_import_lazymodule(tree: ast.AST):
+def _gather_abs_import_lazymodule(tree: ast.Module):
     imported = defaultdict(list)
-    new_body = []
+    new_body: List[ast.stmt] = []
     for node in tree.body:
         if isinstance(node, ast.Import):
             for alias in node.names:

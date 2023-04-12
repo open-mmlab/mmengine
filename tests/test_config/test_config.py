@@ -943,7 +943,38 @@ class TestConfig:
         lazy_import_cfg_path = osp.join(
             self.data_path, 'config/lazy_module_config/toy_model.py')
         cfg = Config.fromfile(lazy_import_cfg_path, lazy_import=True)
+        # Dumpe config
+        dumped_cfg_path = tmp_path / 'test_dump_lazy.py'
+        cfg.dump(dumped_cfg_path)
+        dumped_cfg = Config.fromfile(dumped_cfg_path, lazy_import=True)
+
+        def _compare_dict(a, b):
+            if isinstance(a, dict):
+                assert len(a) == len(b)
+                for k, v in a.items():
+                    _compare_dict(v, b[k])
+            elif isinstance(a, list):
+                assert len(a) == len(b)
+                for item_a, item_b in zip(a, b):
+                    _compare_dict(item_a, item_b)
+            else:
+                if isinstance(a, str) and a != '_module_':
+                    assert a == b
+                elif isinstance(a, LazyModule):
+                    assert str(a) == str(b)
+
+        _compare_dict(cfg, dumped_cfg)
+
+        # Build runner with cfg
         cfg.work_dir = str(tmp_path)
+        cfg._filename = 'test_train_runner.py'
         assert isinstance(cfg.model.type, LazyModule)
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+
+        # Build runner with dumped cfg
+        cfg = Config.fromfile(
+            osp.join(runner.work_dir, osp.basename(cfg.filename)),
+            lazy_import=True)
         runner = Runner.from_cfg(cfg)
         runner.train()

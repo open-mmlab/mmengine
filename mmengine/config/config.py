@@ -59,6 +59,35 @@ class ConfigDict(Dict):
         else:
             return value
 
+    def merge(self, other: dict):
+        """Merge another dictionary into current dictionary.
+
+        Args:
+            other (dict): Another dictionary.
+        """
+        default = object()
+
+        def _merge_a_into_b(a, b):
+            if isinstance(a, dict):
+                if not isinstance(b, dict):
+                    a.pop('_delete_', None)
+                    return a
+                if DELETE_KEY in a:
+                    b.clear()
+                all_keys = list(b.keys()) + list(a.keys())
+                return {
+                    key:
+                    _merge_a_into_b(a.get(key, default), b.get(key, default))
+                    for key in all_keys if key != DELETE_KEY
+                }
+            else:
+                return a if a is not default else b
+
+        merged = _merge_a_into_b(copy.deepcopy(other), copy.deepcopy(self))
+        self.clear()
+        for key, value in merged.items():
+            self[key] = value
+
 
 def add_args(parser: ArgumentParser,
              cfg: dict,
@@ -192,6 +221,10 @@ class Config:
                 env_variables=env_variables)
         else:
             cfg_dict = Config._parse_lazy_import(filename)
+            for key, value in list(cfg_dict.items()):
+                if isinstance(value, (LazyModule, LazyAttr, types.FunctionType,
+                                      types.ModuleType)):
+                    cfg_dict.pop(key)
             return Config(cfg_dict, filename=filename)
 
     @classmethod
@@ -235,31 +268,15 @@ class Config:
             base_dict = {}
 
             code = ast.parse(f.read())
-            base_code = []
-            for inst in code.body:
-                if (isinstance(inst, ast.Assign)
-                        and isinstance(inst.targets[0], ast.Name)
-                        and inst.targets[0].id == BASE_KEY):
-                    base_code.append(inst)
-            variable_dict: dict = {}
-            base_code = ast.Module(body=base_code, type_ignores=[])
-            exec(
-                compile(base_code, filename, mode='exec'), variable_dict,
-                variable_dict)
-            # get base module from file.
-            # _base_ = ['a.b.c', 'b.d.e']
-            # base_modules = ['a.b.c', 'b.d.e']
-            base_modules = variable_dict.get('_base_', [])
-
-            if not isinstance(base_modules, list):
-                base_modules = [base_modules]
-            # get imported module path
+            # get the names of base modules, and remove the
+            # `if '_base_:'` statement
+            base_modules = Config._get_base_modules(code.body)
             for base_module in base_modules:
-                # If base_module means a relative import, assuming the level is 2,
-                # which means the module is imported like
+                # If base_module means a relative import, assuming the level is
+                # 2, which means the module is imported like
                 # "from ..a.b import c". we must ensure that c is an
                 # object `defined` in module b, and module b should not be a
-                # pacakge including `__init__` file but a single python file.
+                # package including `__init__` file but a single python file.
                 level = len(re.match(r'\.*', base_module).group())
                 if level > 0:
                     # Relative import
@@ -272,15 +289,15 @@ class Config:
                     module_list = base_module.split('.')
                     if len(module_list) == 1:
                         raise RuntimeError(
-                            'The imported configuaration file should not be '
+                            'The imported configuration file should not be '
                             f'an independent package {module_list[0]}. Here '
                             'is an example: '
-                            '"_base_ = mmdet.configs.retinanet_r50_fpn_1x_coco"'
+                            '"_base_ = mmdet.configs.retinanet_r50_fpn_1x_coco"'  # noqa: E501
                         )
                     else:
                         package = module_list[0]
                         root_path = get_installed_path(package)
-                        module_path = f'{osp.join(root_path, *module_list[1:])}.py'
+                        module_path = f'{osp.join(root_path, *module_list[1:])}.py'  # noqa: E501
                 if not osp.isfile(module_path):
                     raise FileNotFoundError(
                         'Incorrect module defined in '
@@ -317,8 +334,9 @@ class Config:
                 if key.startswith('__') or key in ['LazyModule']:
                     continue
                 ret[key] = value
-
+            # convert dict to ConfigDict
             cfg_dict = Config._dict_to_config_dict(ret)
+
             return cfg_dict
 
     @staticmethod
@@ -356,6 +374,56 @@ class Config:
         cfg = Config.fromfile(temp_file.name)
         os.remove(temp_file.name)  # manually delete the temporary file
         return cfg
+
+    @staticmethod
+    def _get_base_modules(codes: list) -> list:
+        """Get base module name from python file.
+
+        Args:
+            filename (str): Name of python config file.
+
+        Returns:
+            list: Name of base modules.
+        """
+
+        def _get_base_module_from_if(ifcodes: list) -> list:
+            """Get base module name from if statement in python file.
+
+            Args:
+                ifcodes (list): List of if statement.
+
+            Returns:
+                list: Name of base modules.
+            """
+            base_modules = []
+            for inst in ifcodes:
+                assert isinstance(inst, ast.ImportFrom), (
+                    'Only support import from statement in _base_')
+                assert inst.module is not None, (
+                    'You must import base file by from xxx import yyy')
+                base_modules.append(inst.level * '.' + inst.module)
+            return base_modules
+
+        for idx, inst in enumerate(codes):
+            if (isinstance(inst, ast.If)
+                    and isinstance(inst.test, ast.Constant)
+                    and inst.test.value == '_base_'):
+                # The original code:
+                # ```
+                # if _base_:
+                #     from .._base_.default_runtime import *
+                # ```
+                # The processed code:
+                # ```
+                # from .._base_.default_runtime import *
+                # ```
+                # As you can see, the if statement is removed and the
+                # from ... import statement will be unindent
+                for nested_idx, nested_inst in enumerate(inst.body):
+                    codes.insert(idx + nested_idx + 1, nested_inst)
+                codes.pop(idx)
+                return _get_base_module_from_if(inst.body)
+        return []
 
     @staticmethod
     def _validate_py_syntax(filename: str):
@@ -723,6 +791,11 @@ class Config:
             for key, value in cfg.items():
                 cfg[key] = Config._dict_to_config_dict(
                     value, scope=scope, has_scope=has_scope)
+            # Load from dumped lazy import config
+            if ('type' in cfg and '_module_' in cfg
+                    and isinstance(cfg.type, str)):
+                module = cfg.pop('_module_')
+                cfg.type = LazyModule(module, cfg.type)
         elif isinstance(cfg, tuple):
             cfg = tuple(
                 Config._dict_to_config_dict(_cfg, scope, has_scope=has_scope)
@@ -942,6 +1015,8 @@ class Config:
         def _format_basic_types(k, v, use_mapping=False):
             if isinstance(v, str):
                 v_str = repr(v)
+            elif isinstance(v, LazyModule):
+                v_str = f"'{repr(v)}'"
             else:
                 v_str = str(v)
 
@@ -988,7 +1063,10 @@ class Config:
             for idx, (k, v) in enumerate(input_dict.items()):
                 is_last = idx >= len(input_dict) - 1
                 end = '' if outest_level or is_last else ','
-                if isinstance(v, dict):
+                if isinstance(v, (LazyModule, LazyAttr)):
+                    attr_str = _format_basic_types(k, v, use_mapping)
+                    attr_str += f", _module_='{v._module}'" + end
+                elif isinstance(v, dict):
                     v_str = '\n' + _format_dict(v)
                     if use_mapping:
                         k_str = f"'{k}'" if isinstance(k, str) else str(k)
@@ -1008,9 +1086,6 @@ class Config:
             return r
 
         cfg_dict = self._cfg_dict.to_dict()
-        for key, value in list(cfg_dict.items()):
-            if isinstance(value, (LazyModule, LazyAttr)):
-                cfg_dict.pop(key)
         text = _format_dict(cfg_dict, outest_level=True)
         # copied from setup.cfg
         yapf_style = dict(

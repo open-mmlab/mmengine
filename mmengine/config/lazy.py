@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import importlib
-from typing import Any
+from typing import Any, Union
 
 
 class LazyModule:
@@ -44,17 +44,27 @@ class LazyModule:
         else:
             return self._module[0].split('.')[0]
 
+    __repr__ = __str__
+
 
 class LazyAttr:
 
-    def __init__(self, name, source) -> None:
+    def __init__(self, name: str, source: Union['LazyModule',
+                                                'LazyAttr']) -> None:
         self.name = name
         self.source = source
+        # import a.b as b
+        # b.c -> _module of c is `a.b`
+        # b.c.d -> _module of d = `a.b.c`
+        if isinstance(self.source, LazyModule):
+            self._module = self.source._module
+        elif isinstance(self.source, LazyAttr):
+            self._module = self.source._module + self.source.name
 
     def __call__(self, *args, **kwargs: Any) -> Any:
         raise RuntimeError()
 
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str) -> 'LazyAttr':
         return LazyAttr(name, self)
 
     def __deepcopy__(self, memo):
@@ -65,3 +75,5 @@ class LazyAttr:
 
     def __str__(self) -> str:
         return self.name
+
+    __repr__ = __str__
