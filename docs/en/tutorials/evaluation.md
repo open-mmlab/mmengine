@@ -1,22 +1,22 @@
 # Evaluation
 
-In model validation and model test, it is often necessary to make a quantitative evaluation of model accuracy. We can do this by specifying the metrics(type and arguments of `Metric`) in the configuration file.
+In model validation and testing, it is often necessary to make a quantitative evaluation of model accuracy. We can achieve this by specifying the metrics in the configuration file.
 
-## Evaluation in model training or test
+## Evaluation in model training or testing
 
 ### Using a single evaluation metric
 
-When training or testing a model based on MMEngine, users only need to specify the evaluation metrics for the validation and test stages in the configuration file via the `val_evaluator` and `test_evaluator` fields, respectively. For example, when training a classification model using [MMClassification](https://github.com/open-mmlab/mmclassification), you want to evaluate the top-1 and top-5 classification accuracy during the validation stage of the model,  and then you can configure it as follows:
+When training or testing a model based on MMEngine, users only need to specify the evaluation metrics for the validation and testing stages through the `val_evaluator` and `test_evaluator` fields in the configuration file. For example, when using [MMClassification](https://github.com/open-mmlab/mmclassification) to train a classification model, if the user wants to evaluate the top-1 and top-5 classification accuracy during the model validation stage, they can configure it as follows:
 
 ```python
 val_evaluator = dict(type='Accuracy', top_k=(1, 5))  # using classification accuracy evaluation metric
 ```
 
-For setting the parameters of specific evaluation metrics, users can consult the documentation of the relevant algorithm library. For example, in the above example [Accuracy documentation](https://mmclassification.readthedocs.io/en/1.x/api/generated/mmcls.evaluation.Accuracy.html#mmcls.evaluation.Accuracy).
+For specific parameter settings of evaluation metrics, users can refer to the documentation of the relevant algorithm libraries, such as the [Accuracy](https://mmpretrain.readthedocs.io/en/latest/api/generated/mmpretrain.evaluation.Accuracy.html#mmpretrain.evaluation.Accuracy) documentation in the above example.
 
 ### Using multiple evaluation metrics
 
-If you need to evaluate multiple metrics at the same time, you can also set `val_evaluator` or `test_evaluator` as a list, where each item is configuration information for one evaluation metric. For example, when training a panoramic segmentation model using [MMDetection](https://github.com/open-mmlab/mmdetection) and you want to evaluate both the object detection (COCO AP/AR) and the panoramic segmentation accuracy of the model during the model test stage, you can configure it as follows:
+If multiple evaluation metrics need to be evaluated simultaneously, `val_evaluator` or `test_evaluator` can be set as a list, with each item being the configuration information for an evaluation metric. For example, when using [MMDetection](https://github.com/open-mmlab/mmdetection) to train a panoptic segmentation model, if the user wants to evaluate both the object detection (COCO AP/AR) and panoptic segmentation accuracy during the model testing stage, they can configure it as follows:
 
 ```python
 test_evaluator = [
@@ -35,15 +35,15 @@ test_evaluator = [
 ]
 ```
 
-### Custom evaluation metrics
+### Customizing evaluation metrics
 
 If the common evaluation metrics provided in the algorithm library cannot meet the needs, users can also add custom evaluation metrics. As an example, we present the implementation of custom metrics with the simplified classification accuracy:
 
-1. When defining a new evaluation metric class, you need to inherit the base class [BaseMetric](mmengine.evaluator.BaseMetric) (for the introduction of this base class, you can refer to the [design document](../design/evaluation.md)). In addition, the evaluation metric class needs to be registered with the registrar `METRICS` (for a description of the registrar, please refer to the [Registry documentation](../advanced_tutorials/registry.md)).
+1. When defining a new evaluation metric class, you need to inherit the base class [BaseMetric](mmengine.evaluator.BaseMetric) (for an introduction to this base class, you can refer to the [design document](../design/evaluation.md)). In addition, the evaluation metric class needs to be registered with the registrar `METRICS` (for a description of the registrar, please refer to the [Registry documentation](../advanced_tutorials/registry.md)).
 
-2. Implement the `process()` method. This method has two input parameters, which are the test data samples of a batch `data_batch` and the model prediction results `data_samples`. We take the sample category labels and the classification prediction results from them and store them in `self.results` respectively.
+2. Implement the `process()` method. This method has two input parameters, which are a batch of test data samples, `data_batch`, and model prediction results, `data_samples`. We extract the sample category labels and the classification prediction results from them and store them in `self.results` respectively.
 
-3. Implement the `compute_metrics()` method. This method has one input parameter `results`, which holds the results of all batches of test data processed by the `process()` method. The sample category labels and classification predictions are extracted from the results to calculate the classification accuracy `acc`. Finally, the calculated evaluation metrics are returned in the form of a dictionary.
+3. Implement the `compute_metrics()` method. This method has one input parameter `results`, which holds the results of all batches of test data processed by the `process()` method. The sample category labels and classification predictions are extracted from the results to calculate the classification accuracy (`acc`). Finally, the calculated evaluation metrics are returned in the form of a dictionary.
 
 4. (Optional) You can assign a value to the class attribute `default_prefix`. This attribute is automatically prefixed to the output metric name (e.g. `defaut_prefix='my_metric'`, then the actual output metric name is `'my_metric/acc'`) to further distinguish the different metrics. This prefix can also be rewritten in the configuration file via the `prefix` parameter. We recommend describing the `default_prefix` value for the metric class and the names of all returned metrics in the docstring.
 
@@ -131,8 +131,7 @@ data = load('test_data.pkl')
 # The data format needs to refer to the metric used.
 data_samples = load('prediction.pkl')
 
-# Call the evaluator offline review interface and get the evaluation results
+# Call the evaluator offline evaluation interface and get the evaluation results
 # chunk_size indicates the number of samples processed at a time, which can be adjusted according to the memory size
 results = evaluator.offline_evaluate(data, data_samples, chunk_size=128)
-
 ```
