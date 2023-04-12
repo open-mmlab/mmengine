@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import atexit
 from collections.abc import Iterable
 from functools import partial
 from multiprocessing import Pool
@@ -13,17 +12,23 @@ from .timer import Timer
 
 
 class RichProgressBar:
-    """use rich to enhance progress bar."""
+    """use rich to enhance progress bar.
 
-    running_progress = False
-    bar = Progress()
+    This class uses the rich library to enhance the progressbar,
+    Do not instantiate two RichProgressbars at the same time.
+
+    Examples:
+        >>> import mmengine
+        >>> import time
+        >>> bar = mmengine.RichProgressBar()
+        >>> bar.add_task(10)
+        >>> for i in range(10):
+        >>>     bar.update()
+        >>>     time.sleep(1)
+    """
 
     def __init__(self):
-        if RichProgressBar.running_progress:
-            RichProgressBar.bar.stop()
-            RichProgressBar.bar = Progress()
-
-        RichProgressBar.running_progress = True
+        self.bar = Progress()
         self.tasks = []
         self.descriptions = []
         self.colors = []
@@ -31,21 +36,23 @@ class RichProgressBar:
         self.completed = 0
         self.infinite = False
 
-        self.bar.start()
-        atexit.register(self.cleanup)
-
-    def cleanup(self):
-        self.bar.stop()
-        RichProgressBar.running_progress = False
-
     @staticmethod
     def write(msg: str, color: str = 'blue'):
+        """Write the massage."""
         rich.print(f'[{color}]{msg}')
 
     def add_task(self,
                  total: int = None,
                  color: str = 'blue',
                  description: str = 'Process...') -> int:
+        """Adding tasks to RichProgressbar.
+
+        Args:
+            total (int): Number of total steps, When the input is None,
+             it indicates a task with unknown length.
+            color (str): Color of progress bar.
+            description (str): Description of progress bar.
+        """
         if total is not None:
             assert not self.infinite, (
                 'The prior task is an infinite task (total is None), '
@@ -76,6 +83,12 @@ class RichProgressBar:
         return task_id
 
     def update(self, task_id: int = 0, advance: int = 1):
+        """update progressbar.
+
+        Args:
+            task_id (int): Task ID that needs to be updated.
+            advance (int): Update step size.
+        """
         if advance <= 0:
             raise ValueError('advance should greater than zero.')
 
@@ -94,6 +107,10 @@ class RichProgressBar:
             assert task_id >= -1 and task_id < len(self.tasks), (
                 'The task_id must be within a valid range')
 
+            # Activate self.bar before all tasks have been updated.
+            if all(task.completed == 0 for task in self.bar.tasks):
+                self.bar.start()
+
             if task_id == -1:
                 task_id = self.bar.tasks[-1].id
 
@@ -106,7 +123,8 @@ class RichProgressBar:
                 f'{self.descriptions[task_id]}'
                 f'_{completed}/{total}')
 
-            if self.bar.finished:
+            # After all tasks are completed, deactivate self.bar.
+            if all(task.finished for task in self.bar.tasks):
                 self.bar.stop()
 
 
@@ -162,6 +180,7 @@ def track_progress_rich(func: Callable,
 
     prog_bar = RichProgressBar()
 
+    # Use single process when nproc is 1, else use multiprocess.
     if nproc == 1:
         prog_bar.add_task(task_num, color=color, description=description)
         results = []

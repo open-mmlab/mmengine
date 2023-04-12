@@ -8,7 +8,22 @@ from .timer import Timer
 
 
 class ProgressBar:
-    """A progress bar which can print the progress."""
+    """A progress bar which can print the progress.
+
+    Args:
+        task_num (int): Number of total steps.
+        bar_width (int): Width of the progress bar.
+        start (bool): Whether to start the progress bar in the constructor.
+        file (callable): Progress bar output mode.
+
+    Examples:
+        >>> import mmengine
+        >>> import time
+        >>> bar = mmengine.ProgressBar(10)
+        >>> for i in range(10):
+        >>>    bar.update()
+        >>>    time.sleep(1)
+    """
 
     def __init__(self, task_num=0, bar_width=50, start=True, file=sys.stdout):
         self.task_num = task_num
@@ -33,6 +48,11 @@ class ProgressBar:
         self.timer = Timer()
 
     def update(self, num_tasks=1):
+        """update progressbar.
+
+        Args:
+            num_tasks (int): Update step size.
+        """
         assert num_tasks > 0
         self.completed += num_tasks
         elapsed = self.timer.since_start()

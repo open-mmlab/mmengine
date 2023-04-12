@@ -10,10 +10,10 @@ class TestRichProgressBar:
 
     def test_init(self):
         prog_bar = mmengine.RichProgressBar()
-        assert mmengine.RichProgressBar.running_progress is True
         assert len(prog_bar.tasks) == 0
         assert len(prog_bar.colors) == 0
         assert len(prog_bar.descriptions) == 0
+        assert prog_bar.bar.live.is_started is False
         assert prog_bar.infinite is False
         assert prog_bar.timer is None
         assert prog_bar.completed == 0
