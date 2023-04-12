@@ -371,6 +371,7 @@ class WandbVisBackend(BaseVisBackend):
         auto_step: (bool) Whether use auto step increment built-in
             ``wandb.log`` or not. The built-in step will be reset to zero when
             the training is resumed. Default: True
+            New in version 0.7.3
 
     Note:
         If ``auto_step`` is False, ``log_metric_by_epoch`` in :cls:`mmengine.hook.LoggerHook` needs to be set to ``False`` too.
