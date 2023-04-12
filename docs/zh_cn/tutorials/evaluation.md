@@ -12,7 +12,7 @@
 val_evaluator = dict(type='Accuracy', top_k=(1, 5))  # 使用分类正确率评测指标
 ```
 
-关于具体评测指标的参数设置，用户可以查阅相关算法库的文档。如上例中的 [Accuracy 文档](https://mmclassification.readthedocs.io/en/1.x/api/generated/mmcls.evaluation.Accuracy.html#mmcls.evaluation.Accuracy)。
+关于具体评测指标的参数设置，用户可以查阅相关算法库的文档。如上例中的 [Accuracy 文档](https://mmpretrain.readthedocs.io/en/latest/api/generated/mmpretrain.evaluation.Accuracy.html#mmpretrain.evaluation.Accuracy)。
 
 ### 使用多个评测指标
 
