@@ -1547,7 +1547,7 @@ class Runner:
             return loop
         elif not isinstance(loop, dict):
             raise TypeError(
-                f'train_loop should be a Loop object or dict, but got {loop}')
+                f'test_loop should be a Loop object or dict, but got {loop}')
 
         loop_cfg = copy.deepcopy(loop)  # type: ignore
 
