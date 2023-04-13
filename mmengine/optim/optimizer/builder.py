@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 
 from mmengine.config import Config, ConfigDict
-from mmengine.device import is_npu_available, is_mlu_available
+from mmengine.device import is_npu_available
 from mmengine.registry import OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS
 from .optimizer_wrapper import OptimWrapper
 
