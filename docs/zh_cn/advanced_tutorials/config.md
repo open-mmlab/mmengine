@@ -25,6 +25,10 @@ wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/c
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/modify_base_var.py
 ```
 
+:::{note}
+如果你已经对配置文件的使用方式有了一定的了解，但是尚且不了解配置文件的 lazy_import 模式，可以跳转到 [python 风格配置文件](#python-风格的配置文件)一节进行阅读
+:::
+
 ## 配置文件读取
 
 配置类提供了统一的接口 `Config.fromfile()`，来读取和解析配置文件。
@@ -363,6 +367,8 @@ cfg.dump('dump_dict.py')
 a=1
 b=2
 ```
+
+## Python 风格的配置文件
 
 ## 其他进阶用法
 

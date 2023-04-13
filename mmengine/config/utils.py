@@ -178,7 +178,7 @@ class Transform(ast.NodeTransformer):
 
     Since you are already looking at this part of the code, I believe you must
     be interested in the mechanism of the ``lazy_import`` feature of
-    :class:`Config`. In this docstring, we will delve deeper into its
+    :class:`Config`. In this docstring, we will dive deeper into its
     principles.
 
     Most of OpenMMLab users maybe bothered with that:

@@ -139,6 +139,8 @@ class Config:
         filename (str or Path, optional): Name of config file.
             Defaults to None.
 
+    Here is a simple examples:
+
     Examples:
         >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
         >>> cfg.a
@@ -156,7 +158,11 @@ class Config:
         "Config [path: /home/username/projects/mmengine/tests/data/config/a.py]
         :"
         "{'item1': [1, 2], 'item2': {'a': 0}, 'item3': True, 'item4': 'test'}"
-    """
+
+    You can find more advance usage in the `config tutorial`_.
+
+    .. _config tutorial: https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html
+    """  # noqa: E501
 
     def __init__(self,
                  cfg_dict: dict = None,
@@ -226,118 +232,6 @@ class Config:
                                       types.ModuleType)):
                     cfg_dict.pop(key)
             return Config(cfg_dict, filename=filename)
-
-    @classmethod
-    def _parse_lazy_import(cls, filename):
-        # In lazy import mode, users can use the Python syntax `import` to
-        # implement inheritance between configuration files, which is easier
-        # for users to understand the hierarchical relationships between
-        # different configuration files.
-
-        # Besides, users can also using `import` syntax to import corresponding
-        # module which will be filled in the `type` field. It means users
-        # can directly navigate to the source of the module in the
-        # configuration file by clicking the `type` field.
-
-        # To avoid really importing the third party package like `torch`
-        # during import `type` object, we use `_parse_lazy_import` to parse the
-        # configuration file, which will not actually trigger the import
-        # process, but simply parse the imported `type`s as LazyObject objects.
-
-        # The overall pipeline of _parse_lazy_import is:
-        # 1. Parse the base module from the config file.
-        #                       ||
-        #                       \/
-        #       base_module = ['mmdet.configs.default_runtime']
-        #                       ||
-        #                       \/
-        # 2. recursively parse the base module and gather imported objects to
-        #    a dict.
-        #                       ||
-        #                       \/
-        #       The base_dict will be:
-        #       {
-        #           'mmdet.configs.default_runtime': {...}
-        #           'mmdet.configs.retinanet_r50_fpn_1x_coco': {...}
-        #           ...
-        #       }, each item in base_dict is a dict of `LazyObject`
-        # 3. parse the current config file filling the imported variable
-        #    with the base_dict.
-        with open(filename) as f:
-            global_dict = {'LazyObject': LazyObject}
-            base_dict = {}
-
-            code = ast.parse(f.read())
-            # get the names of base modules, and remove the
-            # `if '_base_:'` statement
-            base_modules = Config._get_base_modules(code.body)
-            for base_module in base_modules:
-                # If base_module means a relative import, assuming the level is
-                # 2, which means the module is imported like
-                # "from ..a.b import c". we must ensure that c is an
-                # object `defined` in module b, and module b should not be a
-                # package including `__init__` file but a single python file.
-                level = len(re.match(r'\.*', base_module).group())
-                if level > 0:
-                    # Relative import
-                    base_dir = osp.dirname(filename)
-                    module_path = osp.join(
-                        base_dir, *(['..'] * (level - 1)),
-                        f'{base_module[level:].replace(".", "/")}.py')
-                else:
-                    # Absolute import
-                    module_list = base_module.split('.')
-                    if len(module_list) == 1:
-                        raise RuntimeError(
-                            'The imported configuration file should not be '
-                            f'an independent package {module_list[0]}. Here '
-                            'is an example: '
-                            '"_base_ = mmdet.configs.retinanet_r50_fpn_1x_coco"'  # noqa: E501
-                        )
-                    else:
-                        package = module_list[0]
-                        root_path = get_installed_path(package)
-                        module_path = f'{osp.join(root_path, *module_list[1:])}.py'  # noqa: E501
-                if not osp.isfile(module_path):
-                    raise FileNotFoundError(
-                        'Incorrect module defined in '
-                        f"_base_ = ['{base_module}', ...], please "
-                        'make sure the base config module is valid '
-                        'and is consistent with the prior import '
-                        'logic')
-                base_cfg = cls._parse_lazy_import(module_path)
-                # The base_dict will be:
-                # {
-                #     'mmdet.configs.default_runtime': {...}
-                #     'mmdet.configs.retinanet_r50_fpn_1x_coco': {...}
-                #     ...
-                # }
-                base_dict[base_module] = base_cfg
-
-            # `base_dict` contains all the imported modules from `base_cfg`.
-            # In order to collect the specific imported module from `base_cfg`
-            # before parse the current file, we using AST Transform to
-            # transverse the imported module from base_cfg and merge then into
-            # the global dict. After the ast transformation, most of import
-            # syntax will be removed (except for the builtin import) and
-            # replaced with the `LazyObject`
-            transform = Transform(global_dict=global_dict, base_dict=base_dict)
-            modified_code = transform.visit(code)
-            modified_code = _gather_abs_import_lazyobj(modified_code)
-            modified_code = ast.fix_missing_locations(modified_code)
-            exec(
-                compile(modified_code, filename, mode='exec'), global_dict,
-                global_dict)
-
-            ret = {}
-            for key, value in global_dict.items():
-                if key.startswith('__') or key in ['LazyObject']:
-                    continue
-                ret[key] = value
-            # convert dict to ConfigDict
-            cfg_dict = Config._dict_to_config_dict(ret)
-
-            return cfg_dict
 
     @staticmethod
     def fromstring(cfg_str: str, file_format: str) -> 'Config':
@@ -767,6 +661,156 @@ class Config:
         return cfg_dict, cfg_text, env_variables
 
     @staticmethod
+    def _parse_lazy_import(filename):
+        """Transform file to variables dictionary.
+
+        Args:
+            filename (str): Name of config file.
+            use_predefined_variables (bool, optional): Whether to use
+                predefined variables. Defaults to True.
+
+        Returns:
+            Tuple[dict, str]: Variables dictionary and text of Config.
+        """
+        # In lazy import mode, users can use the Python syntax `import` to
+        # implement inheritance between configuration files, which is easier
+        # for users to understand the hierarchical relationships between
+        # different configuration files.
+
+        # Besides, users can also using `import` syntax to import corresponding
+        # module which will be filled in the `type` field. It means users
+        # can directly navigate to the source of the module in the
+        # configuration file by clicking the `type` field.
+
+        # To avoid really importing the third party package like `torch`
+        # during import `type` object, we use `_parse_lazy_import` to parse the
+        # configuration file, which will not actually trigger the import
+        # process, but simply parse the imported `type`s as LazyObject objects.
+
+        # The overall pipeline of _parse_lazy_import is:
+        # 1. Parse the base module from the config file.
+        #                       ||
+        #                       \/
+        #       base_module = ['mmdet.configs.default_runtime']
+        #                       ||
+        #                       \/
+        # 2. recursively parse the base module and gather imported objects to
+        #    a dict.
+        #                       ||
+        #                       \/
+        #       The base_dict will be:
+        #       {
+        #           'mmdet.configs.default_runtime': {...}
+        #           'mmdet.configs.retinanet_r50_fpn_1x_coco': {...}
+        #           ...
+        #       }, each item in base_dict is a dict of `LazyObject`
+        # 3. parse the current config file filling the imported variable
+        #    with the base_dict.
+        with open(filename) as f:
+            global_dict = {'LazyObject': LazyObject}
+            base_dict = {}
+
+            code = ast.parse(f.read())
+            # get the names of base modules, and remove the
+            # `if '_base_:'` statement
+            base_modules = Config._get_base_modules(code.body)
+            for base_module in base_modules:
+                # If base_module means a relative import, assuming the level is
+                # 2, which means the module is imported like
+                # "from ..a.b import c". we must ensure that c is an
+                # object `defined` in module b, and module b should not be a
+                # package including `__init__` file but a single python file.
+                level = len(re.match(r'\.*', base_module).group())
+                if level > 0:
+                    # Relative import
+                    base_dir = osp.dirname(filename)
+                    module_path = osp.join(
+                        base_dir, *(['..'] * (level - 1)),
+                        f'{base_module[level:].replace(".", "/")}.py')
+                else:
+                    # Absolute import
+                    module_list = base_module.split('.')
+                    if len(module_list) == 1:
+                        raise RuntimeError(
+                            'The imported configuration file should not be '
+                            f'an independent package {module_list[0]}. Here '
+                            'is an example: '
+                            '"_base_ = mmdet.configs.retinanet_r50_fpn_1x_coco"'  # noqa: E501
+                        )
+                    else:
+                        package = module_list[0]
+                        root_path = get_installed_path(package)
+                        module_path = f'{osp.join(root_path, *module_list[1:])}.py'  # noqa: E501
+                if not osp.isfile(module_path):
+                    raise FileNotFoundError(
+                        'Incorrect module defined in '
+                        f"_base_ = ['{base_module}', ...], please "
+                        'make sure the base config module is valid '
+                        'and is consistent with the prior import '
+                        'logic')
+                base_cfg = Config._parse_lazy_import(module_path)
+                # The base_dict will be:
+                # {
+                #     'mmdet.configs.default_runtime': {...}
+                #     'mmdet.configs.retinanet_r50_fpn_1x_coco': {...}
+                #     ...
+                # }
+                base_dict[base_module] = base_cfg
+
+            # `base_dict` contains all the imported modules from `base_cfg`.
+            # In order to collect the specific imported module from `base_cfg`
+            # before parse the current file, we using AST Transform to
+            # transverse the imported module from base_cfg and merge then into
+            # the global dict. After the ast transformation, most of import
+            # syntax will be removed (except for the builtin import) and
+            # replaced with the `LazyObject`
+            transform = Transform(global_dict=global_dict, base_dict=base_dict)
+            modified_code = transform.visit(code)
+            modified_code = _gather_abs_import_lazyobj(modified_code)
+            modified_code = ast.fix_missing_locations(modified_code)
+            exec(
+                compile(modified_code, filename, mode='exec'), global_dict,
+                global_dict)
+
+            ret = ConfigDict()
+            for key, value in global_dict.items():
+                if key.startswith('__') or key in ['LazyObject']:
+                    continue
+                ret[key] = value
+            # convert dict to ConfigDict
+            cfg_dict = Config._dict_to_config_dict_lazy(ret)
+
+            return cfg_dict
+
+    @staticmethod
+    def _dict_to_config_dict_lazy(cfg: dict):
+        """Recursively converts ``dict`` to :obj:`ConfigDict`. If filed
+        "_module_" and "type" in cfg, the type field will be converted to
+        LazyObject.
+
+        Args:
+            cfg (dict): Config dict.
+
+        Returns:
+            ConfigDict: Converted dict.
+        """
+        # Only the outer dict with key `type` should have the key `_scope_`.
+        if isinstance(cfg, dict):
+            cfg = ConfigDict({
+                key: Config._dict_to_config_dict(value)
+                for key, value in cfg.items()
+            })
+            # Load from dumped lazy import config
+            if ('type' in cfg and '_module_' in cfg
+                    and isinstance(cfg.type, str)):  # type: ignore
+                module = cfg.pop('_module_')
+                cfg.type = LazyObject(module, cfg.type)  # type: ignore
+            return cfg
+        if isinstance(cfg, (tuple, list)):
+            return type(cfg)(Config._dict_to_config_dict(_cfg) for _cfg in cfg)
+        return cfg
+
+    @staticmethod
     def _dict_to_config_dict(cfg: dict,
                              scope: Optional[str] = None,
                              has_scope=True):
@@ -1015,8 +1059,8 @@ class Config:
         def _format_basic_types(k, v, use_mapping=False):
             if isinstance(v, str):
                 v_str = repr(v)
-            elif isinstance(v, LazyObject):
-                v_str = f"'{repr(v)}'"
+            elif isinstance(v, (LazyObject, LazyAttr)):
+                v_str = f"'{str(v)}'"
             else:
                 v_str = str(v)
 

@@ -149,7 +149,7 @@ class LazyAttr:
             # xxx = LazyObject('xxx')
             # zzz = xxx.yyy.zzz
             # zzz._module = xxx.yyy._module + zzz.name
-            self._module = self.source._module + self.source.name
+            self._module = f'{self.source._module}.{self.source.name}'
 
     def __call__(self, *args, **kwargs: Any) -> Any:
         raise RuntimeError()
