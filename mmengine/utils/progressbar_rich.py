@@ -37,8 +37,13 @@ class RichProgressBar:
         self.infinite = False
 
     @staticmethod
-    def write(msg: str, color: str = 'blue'):
-        """Write the massage."""
+    def write(msg: str, color: str = 'blue') -> None:
+        """Write the massage.
+
+        Args:
+            msg (str): Output massage.
+            color (str): text color.
+        """
         rich.print(f'[{color}]{msg}')
 
     def add_task(self,
@@ -49,9 +54,12 @@ class RichProgressBar:
 
         Args:
             total (int): Number of total steps, When the input is None,
-             it indicates a task with unknown length.
-            color (str): Color of progress bar.
+                it indicates a task with unknown length. Defaults to None.
+            color (str): Color of progress bar. Defaults to "blue".
             description (str): Description of progress bar.
+                Defaults to "Process...".
+        Returns:
+            int: added task`s id.
         """
         if total is not None:
             assert not self.infinite, (
@@ -86,13 +94,16 @@ class RichProgressBar:
         """update progressbar.
 
         Args:
-            task_id (int): Task ID that needs to be updated.
-            advance (int): Update step size.
+            task_id (int): Task ID that needs to be updated. Defaults to 0.
+            advance (int): Update step size. Defaults to 1.
         """
         if advance <= 0:
-            raise ValueError('advance should greater than zero.')
+            raise ValueError('advance should be greater than zero.')
 
         if self.infinite:
+            if task_id != 0:
+                raise ValueError('In Infinite mode, task_ ID must be 0.')
+
             self.completed += advance
             elapsed = self.timer.since_start()
             if elapsed > 0:
@@ -104,15 +115,12 @@ class RichProgressBar:
                 f'elapsed: {int(elapsed + 0.5)}s, '
                 f'{fps:.1f} tasks/s', self.colors[task_id])
         else:
-            assert task_id >= -1 and task_id < len(self.tasks), (
-                'The task_id must be within a valid range')
+            if task_id < 0 or task_id > len(self.tasks):
+                raise ValueError('The task_id must be within a valid range')
 
             # Activate self.bar before all tasks have been updated.
             if all(task.completed == 0 for task in self.bar.tasks):
                 self.bar.start()
-
-            if task_id == -1:
-                task_id = self.bar.tasks[-1].id
 
             completed = self.bar.tasks[task_id].completed + advance
             total = self.bar.tasks[task_id].total
@@ -129,6 +137,7 @@ class RichProgressBar:
 
 
 def worker(params, function):
+    """Used for multithreaded functions."""
     result = function(*params)
     return result
 
@@ -136,7 +145,7 @@ def worker(params, function):
 def track_progress_rich(func: Callable,
                         tasks: Tuple[list],
                         nproc: int = 1,
-                        description: str = 'process...',
+                        description: str = 'Process...',
                         color: str = 'blue',
                         chunksize: int = 1,
                         skip_first: bool = False,
@@ -150,32 +159,35 @@ def track_progress_rich(func: Callable,
         func (callable): The function to be applied to each task.
         tasks (tuple[list]): A tuple of tasks.
         nproc (int): Process (worker) number, if nuproc is 1, use single
-            process. Default is 1.
+            process. Defaults to 1.
         description (str): The description of progress bar.
-        color (str): The color of progress bar.
+            Defaults to "Process".
+        color (str): The color of progress bar. Defaults to "blue".
         chunksize (int): Refer to :class:`multiprocessing.Pool` for details.
+            Defaults to 1.
         skip_first (bool): Whether to skip the first sample for each worker
             when estimating fps, since the initialization step may takes
-            longer.
+            longer. Defaults to False.
         keep_order (bool): If True, :func:`Pool.imap` is used, otherwise
-            :func:`Pool.imap_unordered` is used.
+            :func:`Pool.imap_unordered` is used. Defaults to True.
 
     Returns:
         list: The task results.
     """
-    assert is_seq_of(tasks,
-                     Iterable), 'The content of tasks must be iterable object'
-    assert nproc > 0, 'nproc must be a positive number'
+    if not is_seq_of(tasks, Iterable):
+        raise ValueError('The content of tasks must be iterable object')
+
+    if nproc <= 0:
+        raise ValueError('nproc must be a positive number')
 
     if not hasattr(tasks[0], '__len__'):
         task_num = None
     else:
-        assert len(
-            {len(arg)
-             for arg in tasks}
-        ) == 1, 'args must have the same length, ' \
-                'please check each argument in your ' \
-                'tasks has the same length'
+        if len({len(arg) for arg in tasks}) != 1:
+            raise ValueError('args must have the same length, '
+                             'please check each argument in your '
+                             'tasks has the same length')
+
         task_num = len(tasks[0])
 
     prog_bar = RichProgressBar()

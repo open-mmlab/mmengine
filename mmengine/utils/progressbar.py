@@ -11,10 +11,11 @@ class ProgressBar:
     """A progress bar which can print the progress.
 
     Args:
-        task_num (int): Number of total steps.
-        bar_width (int): Width of the progress bar.
+        task_num (int): Number of total steps. Defaults to 0.
+        bar_width (int): Width of the progress bar. Defaults to 50.
         start (bool): Whether to start the progress bar in the constructor.
-        file (callable): Progress bar output mode.
+            Defaults to True.
+        file (callable): Progress bar output mode. Defaults to "sys.stdout".
 
     Examples:
         >>> import mmengine
