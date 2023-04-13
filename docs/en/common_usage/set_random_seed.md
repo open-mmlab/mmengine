@@ -1,4 +1,4 @@
-# How to Set Random Seed
+# Set Random Seed
 
 As described in [PyTorch REPRODUCIBILITY](https://pytorch.org/docs/stable/notes/randomness.html), there are 2 factors affecting the reproducibility of an experiment, namely random number and nondeterministic algorithms.
 
