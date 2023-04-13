@@ -15,7 +15,7 @@ class TestAmp(unittest.TestCase):
 
     def test_autocast(self):
         if is_mlu_available():
-            device = "mlu"
+            device = 'mlu'
             with autocast(device_type=device):
                 # torch.autocast support mlu mode.
                 layer = nn.Conv2d(1, 1, 1).to(device)
