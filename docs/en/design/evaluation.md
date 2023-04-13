@@ -85,4 +85,4 @@ Usually, the process of model accuracy evaluation is shown in the figure below.
 
 In each algorithm library of OpenMMLab, common evaluation metrics have been implemented in the corresponding direction. For example, COCO metrics is provided in MMDetection and Accuracy, F1Score, etc. are provided in MMClassification.
 
-Users can also add custom metrics. For details, please refer to the examples given in the \[tutorial documentation\](../tutorials/evaluation.md#Custom evaluation metrics).
+Users can also add custom metrics. For details, please refer to the examples given in the [tutorial documentation](../tutorials/evaluation.md#Custom evaluation metrics).
