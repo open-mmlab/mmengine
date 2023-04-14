@@ -988,6 +988,13 @@ def collect_results_cpu(result_part: list,
 
     barrier()
 
+    for _rank in range(world_size):
+        if not osp.exists(f'part_{_rank}.pkl'):
+            raise FileNotFoundError(
+                f'{tmpdir} is not an shared directory for '
+                f'rank {rank}, please make sure {tmpdir} is a shared '
+                'directory for all ranks!')
+
     # collect all parts
     if rank != 0:
         return None
