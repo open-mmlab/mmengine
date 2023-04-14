@@ -161,7 +161,7 @@ class DumpResults(BaseMetric):
         collect_dir: (str, optional): Synchronize directory for collecting data
             from different ranks. This argument should only be configured when
             ``collect_device`` is 'cpu'. Defaults to None.
-            New in version v0.7.3
+            `New in version 0.7.3.`
     """
 
     def __init__(self,
