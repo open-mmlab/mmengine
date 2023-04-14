@@ -44,6 +44,7 @@ class ConfigDict(Dict):
     The Config class would transform the nested fields (dictionary-like fields)
     in config file into ``ConfigDict``.
     """
+    lazy = False
 
     def __missing__(self, name):
         raise KeyError(name)
@@ -51,6 +52,8 @@ class ConfigDict(Dict):
     def __getattr__(self, name):
         try:
             value = super().__getattr__(name)
+            if isinstance(value, (LazyAttr, LazyObject)) and not self.lazy:
+                value = value.build()
         except KeyError:
             raise AttributeError(f"'{self.__class__.__name__}' object has no "
                                  f"attribute '{name}'")
@@ -58,6 +61,35 @@ class ConfigDict(Dict):
             raise e
         else:
             return value
+
+    def __getitem__(self, key):
+        return self.unwrap_lazy(super().__getitem__(key))
+
+    def __deepcopy__(self, memo):
+        other = self.__class__()
+        memo[id(self)] = other
+        for key, value in super().items():
+            other[copy.deepcopy(key, memo)] = copy.deepcopy(value, memo)
+        return other
+
+    def get(self, key, default=None):
+        return self.unwrap_lazy(super().get(key, default))
+
+    def pop(self, key, default=None):
+        return self.unwrap_lazy(super().pop(key, default))
+
+    def unwrap_lazy(self, value):
+        if isinstance(value, (LazyAttr, LazyObject)) and not self.lazy:
+            value = value.build()
+        return value
+
+    def values(self):
+        for value in super().values():
+            yield self.unwrap_lazy(value)
+
+    def items(self):
+        for key, value in super().items():
+            yield key, self.unwrap_lazy(value)
 
     def merge(self, other: dict):
         """Merge another dictionary into current dictionary.
@@ -87,6 +119,23 @@ class ConfigDict(Dict):
         self.clear()
         for key, value in merged.items():
             self[key] = value
+
+    def to_dict(self):
+
+        def _to_dict(data):
+            if isinstance(data, ConfigDict):
+                return {
+                    key: _to_dict(value)
+                    for key, value in Dict.items(data)
+                }
+            elif isinstance(data, dict):
+                return {key: _to_dict(value) for key, value in data.items()}
+            elif isinstance(data, (list, tuple)):
+                return type(data)(_to_dict(item) for item in data)
+            else:
+                return data
+
+        return _to_dict(self)
 
 
 def add_args(parser: ArgumentParser,
@@ -179,7 +228,9 @@ class Config:
             if key in RESERVED_KEYS:
                 raise KeyError(f'{key} is reserved for config file')
 
-        super().__setattr__('_cfg_dict', ConfigDict(cfg_dict))
+        if not isinstance(cfg_dict, ConfigDict):
+            cfg_dict = ConfigDict(cfg_dict)
+        super().__setattr__('_cfg_dict', cfg_dict)
         super().__setattr__('_filename', filename)
         if cfg_text:
             text = cfg_text
@@ -226,11 +277,13 @@ class Config:
                 filename=filename,
                 env_variables=env_variables)
         else:
+            ConfigDict.lazy = True
             cfg_dict = Config._parse_lazy_import(filename)
-            for key, value in list(cfg_dict.items()):
+            for key, value in list(cfg_dict.to_dict().items()):
                 if isinstance(value, (LazyObject, LazyAttr, types.FunctionType,
                                       types.ModuleType)):
                     cfg_dict.pop(key)
+            ConfigDict.lazy = False
             return Config(cfg_dict, filename=filename)
 
     @staticmethod
@@ -661,7 +714,7 @@ class Config:
         return cfg_dict, cfg_text, env_variables
 
     @staticmethod
-    def _parse_lazy_import(filename):
+    def _parse_lazy_import(filename: str) -> ConfigDict:
         """Transform file to variables dictionary.
 
         Args:
@@ -772,7 +825,7 @@ class Config:
                 compile(modified_code, filename, mode='exec'), global_dict,
                 global_dict)
 
-            ret = ConfigDict()
+            ret: dict = {}
             for key, value in global_dict.items():
                 if key.startswith('__') or key in ['LazyObject']:
                     continue
@@ -796,18 +849,25 @@ class Config:
         """
         # Only the outer dict with key `type` should have the key `_scope_`.
         if isinstance(cfg, dict):
-            cfg = ConfigDict({
-                key: Config._dict_to_config_dict(value)
-                for key, value in cfg.items()
-            })
+            if isinstance(cfg, ConfigDict):
+                cfg = cfg.to_dict()
+            # We cannot use generative expression like:
+            # ConfigDict({...}) to create a ConfigDict object, because
+            # ConfigDict.__init__ will automatically convert dict value to
+            # ConfigDict, which cause the unwrapping of LazyObject
+            cfg_dict = ConfigDict()
+            for key, value in cfg.items():
+                cfg_dict[key] = Config._dict_to_config_dict_lazy(value)
             # Load from dumped lazy import config
-            if ('type' in cfg and '_module_' in cfg
-                    and isinstance(cfg.type, str)):  # type: ignore
-                module = cfg.pop('_module_')
-                cfg.type = LazyObject(module, cfg.type)  # type: ignore
-            return cfg
+            if ('type' in cfg_dict and '_module_' in cfg_dict
+                    and isinstance(cfg_dict.type, str)):  # type: ignore
+                module = cfg_dict.pop('_module_')
+                cfg_dict.type = LazyObject(module,
+                                           cfg_dict.type)  # type: ignore
+            return cfg_dict
         if isinstance(cfg, (tuple, list)):
-            return type(cfg)(Config._dict_to_config_dict(_cfg) for _cfg in cfg)
+            return type(cfg)(
+                Config._dict_to_config_dict_lazy(_cfg) for _cfg in cfg)
         return cfg
 
     @staticmethod

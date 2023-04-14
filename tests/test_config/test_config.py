@@ -968,7 +968,6 @@ class TestConfig:
         # Build runner with cfg
         cfg.work_dir = str(tmp_path)
         cfg._filename = 'test_train_runner.py'
-        assert isinstance(cfg.model.type, LazyObject)
         runner = Runner.from_cfg(cfg)
         runner.train()
 
