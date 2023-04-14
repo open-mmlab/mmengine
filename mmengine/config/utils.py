@@ -158,9 +158,10 @@ def _is_builtin_module(module_name: str) -> bool:
     """
     if module_name.startswith('.'):
         return False
-    spec = find_spec(module_name)
+    spec = find_spec(module_name.split('.')[0])
+    # Module not found
     if spec is None:
-        raise ImportError(f'Cannot find module {module_name}')
+        return False
     origin_path = osp.abspath(getattr(spec, 'origin', None))
     if origin_path is None:
         return True
