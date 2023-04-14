@@ -999,7 +999,7 @@ def collect_results_cpu(result_part: list,
             if not osp.exists(path):
                 raise FileNotFoundError(
                     f'{tmpdir} is not an shared directory for '
-                    f'rank {rank}, please make sure {tmpdir} is a shared '
+                    f'rank {i}, please make sure {tmpdir} is a shared '
                     'directory for all ranks!')
             with open(path, 'rb') as f:
                 part_list.append(pickle.load(f))
