@@ -414,8 +414,12 @@ def _broadcast_object_list(object_list: List[Any],
     is_nccl_backend = group_backend == torch_dist.Backend.NCCL
     current_device = torch.device('cpu')
     is_hccl_backend = group_backend == 'hccl'
+    is_cncl_backend = group_backend == 'cncl'
     if is_hccl_backend:
         current_device = torch.npu.current_device()
+        object_sizes_tensor = object_sizes_tensor.to(current_device)
+    elif is_cncl_backend:
+        current_device = torch.device('mlu', torch.mlu.current_device())
         object_sizes_tensor = object_sizes_tensor.to(current_device)
     elif is_nccl_backend:
         # See note about using torch.cuda.current_device() here in
@@ -436,7 +440,7 @@ def _broadcast_object_list(object_list: List[Any],
             dtype=torch.uint8,
         )
 
-    if is_nccl_backend or is_hccl_backend:
+    if is_nccl_backend or is_hccl_backend or is_cncl_backend:
         object_tensor = object_tensor.to(current_device)
     torch_dist.broadcast(object_tensor, src=src, group=group)
     # Deserialize objects using their stored sizes.
@@ -996,6 +1000,11 @@ def collect_results_cpu(result_part: list,
         part_list = []
         for i in range(world_size):
             path = osp.join(tmpdir, f'part_{i}.pkl')  # type: ignore
+            if not osp.exists(path):
+                raise FileNotFoundError(
+                    f'{tmpdir} is not an shared directory for '
+                    f'rank {i}, please make sure {tmpdir} is a shared '
+                    'directory for all ranks!')
             with open(path, 'rb') as f:
                 part_list.append(pickle.load(f))
         # sort the results
