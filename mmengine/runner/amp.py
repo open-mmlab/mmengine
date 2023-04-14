@@ -5,7 +5,8 @@ from typing import Optional
 
 import torch
 
-from mmengine.device import get_device, is_cuda_available, is_npu_available
+from mmengine.device import (get_device, is_cuda_available, is_mlu_available,
+                             is_npu_available)
 from mmengine.logging import print_log
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
@@ -75,9 +76,11 @@ def autocast(device_type: Optional[str] = None,
             digit_version('1.10.0')):
         # If pytorch version is between 1.5.0 and 1.10.0, the default value of
         # dtype for `torch.cuda.amp.autocast` is torch.float16.
-        assert device_type == 'cuda' or device_type is None, (
-            'Pytorch version under 1.10.0 only supports running automatic '
-            'mixed training with cuda')
+        assert (
+            device_type == 'cuda' or device_type == 'mlu'
+            or device_type is None), (
+                'Pytorch version under 1.10.0 only supports running automatic '
+                'mixed training with cuda or mlu')
         if dtype is not None or cache_enabled is not None:
             print_log(
                 f'{dtype} and {device_type} will not work for '
@@ -88,6 +91,9 @@ def autocast(device_type: Optional[str] = None,
 
         if is_npu_available():
             with torch.npu.amp.autocast(enabled=enabled):
+                yield
+        elif is_mlu_available():
+            with torch.mlu.amp.autocast(enabled=enabled):
                 yield
         elif is_cuda_available():
             with torch.cuda.amp.autocast(enabled=enabled):
