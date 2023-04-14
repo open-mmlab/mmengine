@@ -282,6 +282,25 @@ class TestWandbVisBackend:
         _, kwargs = wandb_vis_backend._wandb.log.call_args
         assert kwargs['step'] == expect
 
+        # auto_step == False and replace earlier step
+        wandb_vis_backend = WandbVisBackend('temp_dir', auto_step=False)
+        wandb_vis_backend.add_scalar('dummy', 0, step=10)
+
+        expect = 11
+        wandb_vis_backend.add_scalar(name, val, step=5)
+        _, kwargs = wandb_vis_backend._wandb.log.call_args
+        assert kwargs['step'] == expect
+
+        expect = 12
+        wandb_vis_backend.add_scalars(input_dict, step=5)
+        _, kwargs = wandb_vis_backend._wandb.log.call_args
+        assert kwargs['step'] == expect
+
+        expect = 13
+        wandb_vis_backend.add_image('img', image, step=5)
+        _, kwargs = wandb_vis_backend._wandb.log.call_args
+        assert kwargs['step'] == expect
+
         shutil.rmtree('temp_dir')
 
 

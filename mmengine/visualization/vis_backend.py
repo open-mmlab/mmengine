@@ -372,10 +372,6 @@ class WandbVisBackend(BaseVisBackend):
             ``wandb.log`` or not. The built-in step will be reset to zero when
             the training is resumed. Default: True
             New in version 0.7.3
-
-    Note:
-        If ``auto_step`` is False, ``log_metric_by_epoch`` in
-        :cls:`mmengine.hook.LoggerHook` needs to be set to ``False`` too.
     """
 
     def __init__(self,
@@ -393,6 +389,7 @@ class WandbVisBackend(BaseVisBackend):
         self._log_code_name = log_code_name
         self._watch_kwargs = watch_kwargs if watch_kwargs is not None else {}
         self._auto_step = auto_step
+        self._last_step = 0
 
     def _init_env(self):
         """Setup env for wandb."""
@@ -465,6 +462,9 @@ class WandbVisBackend(BaseVisBackend):
         if self._auto_step:
             self._wandb.log({name: image}, commit=self._commit)
         else:
+            if self._last_step > step:
+                step = self._last_step + 1
+            self._last_step = step
             self._wandb.log({name: image}, commit=self._commit, step=step)
 
     @force_init_env
@@ -484,6 +484,9 @@ class WandbVisBackend(BaseVisBackend):
         if self._auto_step:
             self._wandb.log({name: value}, commit=self._commit)
         else:
+            if self._last_step > step:
+                step = self._last_step + 1
+            self._last_step = step
             self._wandb.log({name: value}, commit=self._commit, step=step)
 
     @force_init_env
@@ -505,6 +508,9 @@ class WandbVisBackend(BaseVisBackend):
         if self._auto_step:
             self._wandb.log(scalar_dict, commit=self._commit)
         else:
+            if self._last_step > step:
+                step = self._last_step + 1
+            self._last_step = step
             self._wandb.log(scalar_dict, commit=self._commit, step=step)
 
     def close(self) -> None:
