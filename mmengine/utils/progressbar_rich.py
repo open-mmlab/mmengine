@@ -12,10 +12,10 @@ from .timer import Timer
 
 
 class RichProgressBar:
-    """use rich to enhance progress bar.
+    """Use rich to enhance progress bar.
 
     This class uses the rich library to enhance the progressbar,
-    Do not instantiate two RichProgressbars at the same time.
+    Do not update two RichProgressbars at the same time.
 
     Examples:
         >>> import mmengine
@@ -27,8 +27,8 @@ class RichProgressBar:
         >>>     time.sleep(1)
     """
 
-    def __init__(self):
-        self.bar = Progress()
+    def __init__(self, *args, **kwargs):
+        self.bar = Progress(*args, **kwargs)
         self.tasks = []
         self.descriptions = []
         self.colors = []
@@ -42,7 +42,7 @@ class RichProgressBar:
 
         Args:
             msg (str): Output massage.
-            color (str): text color.
+            color (str, optional): Text color.
         """
         rich.print(f'[{color}]{msg}')
 
@@ -53,13 +53,14 @@ class RichProgressBar:
         """Adding tasks to RichProgressbar.
 
         Args:
-            total (int): Number of total steps, When the input is None,
-                it indicates a task with unknown length. Defaults to None.
-            color (str): Color of progress bar. Defaults to "blue".
-            description (str): Description of progress bar.
+            total (int, optional): Number of total steps, When the input is
+                None, it indicates a task with unknown length. Defaults to
+                None.
+            color (str, optional): Color of progress bar. Defaults to "blue".
+            description (str, optional): Description of progress bar.
                 Defaults to "Process...".
         Returns:
-            int: added task`s id.
+            int: Added task`s id.
         """
         if total is not None:
             assert not self.infinite, (
@@ -90,12 +91,13 @@ class RichProgressBar:
             task_id = 0
         return task_id
 
-    def update(self, task_id: int = 0, advance: int = 1):
+    def update(self, task_id: int = 0, advance: int = 1) -> None:
         """update progressbar.
 
         Args:
-            task_id (int): Task ID that needs to be updated. Defaults to 0.
-            advance (int): Update step size. Defaults to 1.
+            task_id (int, optional): Task ID that needs to be updated.
+                Defaults to 0.
+            advance (int, optional): Update step size. Defaults to 1.
         """
         if advance <= 0:
             raise ValueError('advance should be greater than zero.')
@@ -157,19 +159,19 @@ def track_progress_rich(func: Callable,
 
     Args:
         func (callable): The function to be applied to each task.
-        tasks (tuple[list]): A tuple of tasks.
-        nproc (int): Process (worker) number, if nuproc is 1, use single
-            process. Defaults to 1.
-        description (str): The description of progress bar.
+        tasks (Tuple[list]): A tuple of tasks.
+        nproc (int, optional): Process (worker) number, if nuproc
+            is 1, use single process. Defaults to 1.
+        description (str, optional): The description of progress bar.
             Defaults to "Process".
-        color (str): The color of progress bar. Defaults to "blue".
-        chunksize (int): Refer to :class:`multiprocessing.Pool` for details.
-            Defaults to 1.
-        skip_first (bool): Whether to skip the first sample for each worker
-            when estimating fps, since the initialization step may takes
-            longer. Defaults to False.
-        keep_order (bool): If True, :func:`Pool.imap` is used, otherwise
-            :func:`Pool.imap_unordered` is used. Defaults to True.
+        color (str, optional): The color of progress bar. Defaults to "blue".
+        chunksize (int, optional): Refer to :class:`multiprocessing.Pool`
+            for details. Defaults to 1.
+        skip_first (bool, optional): Whether to skip the first sample for
+            each worker when estimating fps, since the initialization step
+            may takes longer. Defaults to False.
+        keep_order (bool, optional): If True, :func:`Pool.imap` is used,
+            otherwise :func:`Pool.imap_unordered` is used. Defaults to True.
 
     Returns:
         list: The task results.
@@ -214,12 +216,18 @@ def track_progress_rich(func: Callable,
             gen = pool.imap(work, param, chunksize)
         else:
             gen = pool.imap_unordered(work, param, chunksize)
-        for result in gen:
-            results.append(result)
-            if skip_first:
-                if len(results) <= nproc * chunksize:
-                    continue
-            prog_bar.update()
+
+        try:
+            for result in gen:
+                results.append(result)
+                if skip_first:
+                    if len(results) <= nproc * chunksize:
+                        continue
+                prog_bar.update()
+        except Exception as e:
+            prog_bar.bar.stop()
+            raise e
+
         pool.close()
         pool.join()
 
