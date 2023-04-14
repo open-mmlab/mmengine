@@ -988,13 +988,6 @@ def collect_results_cpu(result_part: list,
 
     barrier()
 
-    for _rank in range(world_size):
-        if not osp.exists(f'part_{_rank}.pkl'):
-            raise FileNotFoundError(
-                f'{tmpdir} is not an shared directory for '
-                f'rank {rank}, please make sure {tmpdir} is a shared '
-                'directory for all ranks!')
-
     # collect all parts
     if rank != 0:
         return None
@@ -1003,6 +996,11 @@ def collect_results_cpu(result_part: list,
         part_list = []
         for i in range(world_size):
             path = osp.join(tmpdir, f'part_{i}.pkl')  # type: ignore
+            if not osp.exists(path):
+                raise FileNotFoundError(
+                    f'{tmpdir} is not an shared directory for '
+                    f'rank {rank}, please make sure {tmpdir} is a shared '
+                    'directory for all ranks!')
             with open(path, 'rb') as f:
                 part_list.append(pickle.load(f))
         # sort the results
