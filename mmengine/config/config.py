@@ -43,6 +43,14 @@ class ConfigDict(Dict):
 
     The Config class would transform the nested fields (dictionary-like fields)
     in config file into ``ConfigDict``.
+
+    If the class attribute``lazy``  is ``False``, users will get the
+    object built by ``LazyObject`` or ``LazyAttr``, otherwise users will get
+    the ``LazyObject`` or ``LazyAttr`` itself.
+
+    The ``lazy`` should be set to ``True`` to avoid building the imported
+    object during configuration parsing, and it should be set to False outside
+    the Config to ensure that users do not experience the ``LazyObject``.
     """
     lazy = False
 
@@ -63,7 +71,7 @@ class ConfigDict(Dict):
             return value
 
     def __getitem__(self, key):
-        return self.unwrap_lazy(super().__getitem__(key))
+        return self.build_lazy(super().__getitem__(key))
 
     def __deepcopy__(self, memo):
         other = self.__class__()
@@ -72,24 +80,63 @@ class ConfigDict(Dict):
             other[copy.deepcopy(key, memo)] = copy.deepcopy(value, memo)
         return other
 
-    def get(self, key, default=None):
-        return self.unwrap_lazy(super().get(key, default))
+    def get(self, key: str, default: Optional[Any] = None) -> Any:
+        """Get the value of the key. If class attribute ``lazy`` is True, the
+        LazyObject will be built and returned.
+
+        Args:
+            key (str): The key.
+            default (any, optional): The default value. Defaults to None.
+
+        Returns:
+            Any: The value of the key.
+        """
+        return self.build_lazy(super().get(key, default))
 
     def pop(self, key, default=None):
-        return self.unwrap_lazy(super().pop(key, default))
+        """Pop the value of the key. If class attribute ``lazy`` is True, the
+        LazyObject will be built and returned.
 
-    def unwrap_lazy(self, value):
+        Args:
+            key (str): The key.
+            default (any, optional): _description_. Defaults to None.
+
+        Returns:
+            Any: The value of the key.
+        """
+        return self.build_lazy(super().pop(key, default))
+
+    def build_lazy(self, value: Any) -> Any:
+        """If class attribute ``lazy`` is False, the LazyObject will be built
+        and returned.
+
+        Args:
+            value (Any): The value to be built.
+
+        Returns:
+            Any: The built value.
+        """
         if isinstance(value, (LazyAttr, LazyObject)) and not self.lazy:
             value = value.build()
         return value
 
     def values(self):
+        """Yield the values of the dictionary.
+
+        If class attribute ``lazy`` is False, the value of ``LazyObject`` or
+        ``LazyAttr`` will be built and returned.
+        """
         for value in super().values():
-            yield self.unwrap_lazy(value)
+            yield self.build_lazy(value)
 
     def items(self):
+        """Yield the keys and values of the dictionary.
+
+        If class attribute ``lazy`` is False, the value of ``LazyObject`` or
+        ``LazyAttr`` will be built and returned.
+        """
         for key, value in super().items():
-            yield key, self.unwrap_lazy(value)
+            yield key, self.build_lazy(value)
 
     def merge(self, other: dict):
         """Merge another dictionary into current dictionary.
@@ -121,6 +168,8 @@ class ConfigDict(Dict):
             self[key] = value
 
     def to_dict(self):
+        """Convert the ConfigDict to a normal dictionary recursively, and keep
+        the ``LazyObject`` or ``LazyAttr`` object not built."""
 
         def _to_dict(data):
             if isinstance(data, ConfigDict):
@@ -837,9 +886,10 @@ class Config:
 
     @staticmethod
     def _dict_to_config_dict_lazy(cfg: dict):
-        """Recursively converts ``dict`` to :obj:`ConfigDict`. If filed
-        "_module_" and "type" in cfg, the type field will be converted to
-        LazyObject.
+        """Recursively converts ``dict`` to :obj:`ConfigDict`. The only
+        difference between ``_dict_to_config_dict_lazy`` and
+        ``_dict_to_config_dict_lazy`` is that the former one does not consider
+        the scope, and will not trigger the building of ``LazyObject``.
 
         Args:
             cfg (dict): Config dict.
@@ -874,7 +924,9 @@ class Config:
     def _dict_to_config_dict(cfg: dict,
                              scope: Optional[str] = None,
                              has_scope=True):
-        """Recursively converts ``dict`` to :obj:`ConfigDict`.
+        """Recursively converts ``dict`` to :obj:`ConfigDict`. If filed
+        "_module_" and "type" in cfg, the type field will be converted to
+        LazyObject.
 
         Args:
             cfg (dict): Config dict.
