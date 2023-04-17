@@ -937,10 +937,7 @@ class Runner:
             dataloader, DataLoader) else dataloader['batch_size']
         real_bs = self.world_size * bs
         base_bs = auto_scale_lr['base_batch_size']
-        base_ratio = float(real_bs) / float(base_bs)
-        self.logger.info(f'LR is set based on batch size of {base_bs} '
-                         f'and the current batch size is {real_bs}. '
-                         f'Scaling the original LR by {base_ratio}.')
+        bs_ratio = float(real_bs) / float(base_bs)
 
         def _is_built(schedulers):
             if isinstance(schedulers, dict):
@@ -960,9 +957,18 @@ class Runner:
         wrappers = list(optim_wrapper.values()) if isinstance(
             optim_wrapper, OptimWrapperDict) else [optim_wrapper]
         for wrapper in wrappers:
+            base_acc_counts = auto_scale_lr.get('accumulative_counts', 1)
+            real_acc_counts = wrapper._accumulative_counts
+            acc_counts_ratio = (real_acc_counts / base_acc_counts)
             for group in wrapper.optimizer.param_groups:
-                group['lr'] = (
-                    group['lr'] * wrapper._accumulative_counts * base_ratio)
+                ratio = acc_counts_ratio * bs_ratio
+                self.logger.info(
+                    f'LR is set based on batch size of {base_bs}, '
+                    f'accumulative counts of {base_acc_counts}'
+                    f'and the current batch size is {real_bs}, accumulative '
+                    f'counts of {real_acc_counts} Scaling the original LR '
+                    f'by {ratio}.')
+                group['lr'] = (group['lr'] * ratio)
 
     def build_optim_wrapper(
         self, optim_wrapper: Union[Optimizer, OptimWrapper, Dict]
