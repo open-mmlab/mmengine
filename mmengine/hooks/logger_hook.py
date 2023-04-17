@@ -2,6 +2,7 @@
 import logging
 import os
 import os.path as osp
+import shutil
 from collections import OrderedDict
 from pathlib import Path
 from typing import Dict, Optional, Sequence, Union
@@ -67,7 +68,9 @@ class LoggerHook(Hook):
         backend_args (dict, optional): Arguments to instantiate the
             prefix of uri corresponding backend. Defaults to None.
             New in v0.2.0.
-
+        phase (str): To identify which task the runner is processed,
+            Default to ''. If set, the value will be added as
+            the suffix of ``runner._log_dir``.
     Examples:
         >>> # The simplest LoggerHook config.
         >>> logger_hook_cfg = dict(interval=20)
@@ -83,7 +86,8 @@ class LoggerHook(Hook):
                  keep_local: bool = True,
                  file_client_args: Optional[dict] = None,
                  log_metric_by_epoch: bool = True,
-                 backend_args: Optional[dict] = None):
+                 backend_args: Optional[dict] = None,
+                 phase: str = ''):
 
         if not isinstance(interval, int):
             raise TypeError('interval must be an integer')
@@ -124,6 +128,8 @@ class LoggerHook(Hook):
             raise TypeError('out_suffix should be a string or a sequence of '
                             f'string, but got {type(out_suffix)}')
 
+        if phase != '' and phase not in ('train', 'val', 'test'):
+            raise ValueError('phase should be one of "train","val","test"')
         self.out_suffix = out_suffix
         self.out_dir = out_dir
         self.interval = interval
@@ -132,6 +138,7 @@ class LoggerHook(Hook):
         self.keep_local = keep_local
         self.file_client_args = file_client_args
         self.json_log_path: Optional[str] = None
+        self.phase = phase
 
         if self.out_dir is not None:
             self.file_client = FileClient.infer_client(file_client_args,
@@ -299,6 +306,13 @@ class LoggerHook(Hook):
 
         return processed_tags
 
+    def _close_handles(self, runner) -> None:
+        """Close file handler to avoid PermissionError on Windows."""
+
+        for handler in runner.logger.handlers:
+            if isinstance(handler, logging.FileHandler):
+                handler.close()
+
     def after_run(self, runner) -> None:
         """Copy logs to ``self.out_dir`` if ``self.out_dir is not None``
 
@@ -308,6 +322,11 @@ class LoggerHook(Hook):
         """
         # close the visualizer
         runner.visualizer.close()
+
+        if self.phase != '':
+            self._close_handles(runner)
+            shutil.move(runner._log_dir, ''.join(
+                (runner._log_dir, '_', self.phase)))
 
         # copy or upload logs to self.out_dir
         if self.out_dir is None:
@@ -331,10 +350,6 @@ class LoggerHook(Hook):
                                    f'the running logs in {out_filepath}')
 
         if not self.keep_local:
-            # Close file handler to avoid PermissionError on Windows.
-            for handler in runner.logger.handlers:
-                if isinstance(handler, logging.FileHandler):
-                    handler.close()
-
+            self._close_handles(runner)
             for file in removed_files:
                 os.remove(file)

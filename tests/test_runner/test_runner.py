@@ -2452,3 +2452,15 @@ class TestRunner(TestCase):
                       '(VERY_LOW    ) CheckpointHook                     \n')
         self.assertIn(target_str, runner.get_hooks_info(),
                       'target string is not in logged hooks information.')
+
+    def test_change_log_dir(self):
+        # When runner finished, the suffix will be added in log_dir
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_change_log_dir'
+        runner = Runner.from_cfg(cfg)
+        logger_cfg = dict(
+            type='LoggerHook', priority='BELOW_NORMAL', phase='train')
+        runner.register_hook(logger_cfg)
+        runner.train()
+        log_dir = runner.log_dir
+        assert os.path.exists(log_dir + '_train')
