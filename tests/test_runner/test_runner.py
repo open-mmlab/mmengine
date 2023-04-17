@@ -969,6 +969,20 @@ class TestRunner(TestCase):
         self.assertEqual(optim_wrapper.optimizer.param_groups[0]['lr'],
                          0.01 * (real_bs / 16))
 
+        # lr will be multiplied by accumulative counts
+        accumulative_counts = 2
+        auto_scale_lr = dict(
+            base_batch_size=16,
+            enable=True,
+            accumulative_counts=accumulative_counts)
+        real_bs = runner.world_size * cfg.train_dataloader['batch_size']
+        optim_wrapper = OptimWrapper(
+            SGD(runner.model.parameters(), lr=0.01),
+            accumulative_counts=accumulative_counts)
+        runner.scale_lr(optim_wrapper, auto_scale_lr)
+        self.assertEqual(optim_wrapper.optimizer.param_groups[0]['lr'],
+                         0.01 * (real_bs / 16) * accumulative_counts)
+
         # Test when optim_wrapper is an OptimWrapperDict
         optim_wrapper = OptimWrapper(SGD(runner.model.parameters(), lr=0.01))
         wrapper_dict = OptimWrapperDict(wrapper=optim_wrapper)
