@@ -956,8 +956,8 @@ class Runner:
             '`scale_lr should be called after building OptimWrapper'
         wrappers = list(optim_wrapper.values()) if isinstance(
             optim_wrapper, OptimWrapperDict) else [optim_wrapper]
+        base_acc_counts = auto_scale_lr.get('accumulative_counts', 1)
         for wrapper in wrappers:
-            base_acc_counts = auto_scale_lr.get('accumulative_counts', 1)
             real_acc_counts = wrapper._accumulative_counts
             acc_counts_ratio = (real_acc_counts / base_acc_counts)
             ratio = acc_counts_ratio * bs_ratio
