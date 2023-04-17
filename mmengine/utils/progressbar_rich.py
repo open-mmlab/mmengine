@@ -56,8 +56,8 @@ class RichProgressBar:
             total (int, optional): Number of total steps, When the input is
                 None, it indicates a task with unknown length. Defaults to
                 None.
-            color (str, optional): Color of progress bar. Defaults to "blue".
-            description (str, optional): Description of progress bar.
+            color (str): Color of progress bar. Defaults to "blue".
+            description (str): Description of progress bar.
                 Defaults to "Process...".
         Returns:
             int: Added task`s id.
@@ -95,9 +95,8 @@ class RichProgressBar:
         """update progressbar.
 
         Args:
-            task_id (int, optional): Task ID that needs to be updated.
-                Defaults to 0.
-            advance (int, optional): Update step size. Defaults to 1.
+            task_id (int): Task ID that needs to be updated. Defaults to 0.
+            advance (int): Update step size. Defaults to 1.
         """
         if advance <= 0:
             raise ValueError('advance should be greater than zero.')
@@ -160,18 +159,18 @@ def track_progress_rich(func: Callable,
     Args:
         func (callable): The function to be applied to each task.
         tasks (Tuple[list]): A tuple of tasks.
-        nproc (int, optional): Process (worker) number, if nuproc
-            is 1, use single process. Defaults to 1.
-        description (str, optional): The description of progress bar.
+        nproc (int): Process (worker) number, if nuproc is 1,
+            use single process. Defaults to 1.
+        description (str): The description of progress bar.
             Defaults to "Process".
-        color (str, optional): The color of progress bar. Defaults to "blue".
-        chunksize (int, optional): Refer to :class:`multiprocessing.Pool`
-            for details. Defaults to 1.
-        skip_first (bool, optional): Whether to skip the first sample for
-            each worker when estimating fps, since the initialization step
-            may takes longer. Defaults to False.
-        keep_order (bool, optional): If True, :func:`Pool.imap` is used,
-            otherwise :func:`Pool.imap_unordered` is used. Defaults to True.
+        color (str): The color of progress bar. Defaults to "blue".
+        chunksize (int): Refer to :class:`multiprocessing.Pool` for details.
+            Defaults to 1.
+        skip_first (bool): Whether to skip the first sample for each worker
+            when estimating fps, since the initialization step may takes
+            longer. Defaults to False.
+        keep_order (bool): If True, :func:`Pool.imap` is used, otherwise
+            :func:`Pool.imap_unordered` is used. Defaults to True.
 
     Returns:
         list: The task results.
