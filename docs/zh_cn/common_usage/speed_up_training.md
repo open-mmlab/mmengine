@@ -114,3 +114,19 @@ runner = Runner(
 ```{warning}
 `torch.compile` 目前仍然由 PyTorch 团队持续开发中，一些模型可能会编译失败。如果遇到了类似问题，你可以查阅 [PyTorch Dynamo FAQ](https://pytorch.org/docs/2.0/dynamo/faq.html) 解决常见问题，或参考 [TorchDynamo Troubleshooting](https://pytorch.org/docs/2.0/dynamo/troubleshooting.html) 向 PyTorch 提 issue.
 ```
+
+## 使用更快的优化器
+
+如果使用了昇腾的设备，可以使用昇腾的优化器从而缩短模型的训练时间。昇腾设备支持的优化器如下
+
+- NpuFusedAdadelta
+- NpuFusedAdam
+- NpuFusedAdamP
+- NpuFusedAdamW
+- NpuFusedBertAdam
+- NpuFusedLamb
+- NpuFusedRMSprop
+- NpuFusedRMSpropTF
+- NpuFusedSGD
+
+使用方式同原生优化器一样，MMEngine 中更详细的使用方式可参考 [optimizers](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/optim_wrapper.html?highlight=%E4%BC%98%E5%8C%96%E5%99%A8).
