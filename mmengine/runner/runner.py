@@ -960,8 +960,8 @@ class Runner:
             base_acc_counts = auto_scale_lr.get('accumulative_counts', 1)
             real_acc_counts = wrapper._accumulative_counts
             acc_counts_ratio = (real_acc_counts / base_acc_counts)
+            ratio = acc_counts_ratio * bs_ratio
             for group in wrapper.optimizer.param_groups:
-                ratio = acc_counts_ratio * bs_ratio
                 self.logger.info(
                     f'LR is set based on batch size of {base_bs}, '
                     f'accumulative counts of {base_acc_counts}'
