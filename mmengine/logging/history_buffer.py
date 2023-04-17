@@ -224,5 +224,6 @@ class HistoryBuffer:
             state (dict): State dict.
         """
         statistics_methods = state.pop('statistics_methods', {})
+        self._set_default_statistics()
         self._statistics_methods.update(statistics_methods)
         self.__dict__.update(state)
