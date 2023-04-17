@@ -966,7 +966,7 @@ class Runner:
                     f'LR is set based on batch size of {base_bs}, '
                     f'accumulative counts of {base_acc_counts}'
                     f'and the current batch size is {real_bs}, accumulative '
-                    f'counts of {real_acc_counts} Scaling the original LR '
+                    f'counts of {real_acc_counts}. Scaling the original LR '
                     f'by {ratio}.')
                 group['lr'] = (group['lr'] * ratio)
 
