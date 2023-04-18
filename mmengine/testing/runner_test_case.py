@@ -128,7 +128,9 @@ class RunnerTestCase(TestCase):
             train_cfg=dict(by_epoch=True, max_epochs=2, val_interval=1),
             val_cfg=dict(),
             test_cfg=dict(),
-            default_hooks=dict(logger=dict(type='LoggerHook', interval=1)),
+            default_hooks=dict(
+                logger=dict(
+                    type='LoggerHook', interval=1, change_log_dir=False)),
             custom_hooks=[],
             env_cfg=dict(dist_cfg=dict(backend='nccl')),
             experiment_name='test1')
@@ -145,7 +147,7 @@ class RunnerTestCase(TestCase):
 
         self.iter_based_cfg.train_cfg = dict(by_epoch=False, max_iters=12)
         self.iter_based_cfg.default_hooks = dict(
-            logger=dict(type='LoggerHook', interval=1),
+            logger=dict(type='LoggerHook', interval=1, keep_local=False),
             checkpoint=dict(
                 type='CheckpointHook', interval=12, by_epoch=False))
 

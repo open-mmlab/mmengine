@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import weakref
 from abc import ABCMeta, abstractmethod
 from typing import Any, Dict, Union
 
@@ -18,7 +19,7 @@ class BaseLoop(metaclass=ABCMeta):
     """
 
     def __init__(self, runner, dataloader: Union[DataLoader, Dict]) -> None:
-        self._runner = runner
+        self._runner = weakref.ref(runner)
         if isinstance(dataloader, dict):
             # Determine whether or not different ranks use different seed.
             diff_rank_seed = runner._randomness_cfg.get(
@@ -30,7 +31,7 @@ class BaseLoop(metaclass=ABCMeta):
 
     @property
     def runner(self):
-        return self._runner
+        return self._runner()
 
     @abstractmethod
     def run(self) -> Any:

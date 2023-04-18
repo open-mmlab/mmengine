@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
-import gc
 import logging
 import os
 import os.path as osp
@@ -418,7 +417,7 @@ class TestRunner(TestCase):
             default_hooks=dict(
                 runtime_info=dict(type='RuntimeInfoHook'),
                 timer=dict(type='IterTimerHook'),
-                logger=dict(type='LoggerHook', keep_local=False),
+                logger=dict(type='LoggerHook', change_log_dir=False),
                 param_scheduler=dict(type='ParamSchedulerHook'),
                 checkpoint=dict(
                     type='CheckpointHook', interval=1, by_epoch=True),
@@ -438,7 +437,7 @@ class TestRunner(TestCase):
         self.iter_based_cfg.default_hooks = dict(
             runtime_info=dict(type='RuntimeInfoHook'),
             timer=dict(type='IterTimerHook'),
-            logger=dict(type='LoggerHook', keep_local=False),
+            logger=dict(type='LoggerHook', change_log_dir=False),
             param_scheduler=dict(type='ParamSchedulerHook'),
             checkpoint=dict(type='CheckpointHook', interval=1, by_epoch=False),
             sampler_seed=dict(type='DistSamplerSeedHook'))
@@ -1242,7 +1241,7 @@ class TestRunner(TestCase):
             sampler=dict(type='DefaultSampler', shuffle=True),
             batch_size=1,
             num_workers=0)
-        seed = np.random.randint(2**31)
+        seed = np.random.randint(2 ** 31)
         dataloader = runner.build_dataloader(cfg, seed=seed)
         self.assertIsInstance(dataloader, DataLoader)
         self.assertIsInstance(dataloader.dataset, ToyDataset)
@@ -1977,7 +1976,7 @@ class TestRunner(TestCase):
 
         # `priority` is Priority
         logger_cfg = dict(
-            type='LoggerHook', priority='BELOW_NORMAL', keep_local=False)
+            type='LoggerHook', priority='BELOW_NORMAL', change_log_dir=False)
         runner.register_hook(logger_cfg, priority=Priority.VERY_LOW)
         self.assertEqual(len(runner._hooks), 4)
         self.assertTrue(isinstance(runner._hooks[3], LoggerHook))
@@ -2465,5 +2464,4 @@ class TestRunner(TestCase):
         runner.test()
         log_dir = runner.log_dir
         del runner
-        gc.collect()
         assert os.path.exists(log_dir + '_train_test')

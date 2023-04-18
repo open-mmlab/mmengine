@@ -387,7 +387,8 @@ class TestCheckpointHook(RunnerTestCase):
             type='CheckpointHook',
             interval=save_iterval,
             by_epoch=training_type == 'epoch')
-        cfg.default_hooks = dict(checkpoint=checkpoint_cfg)
+        cfg.default_hooks = dict(
+            checkpoint=checkpoint_cfg, logger=cfg.default_hooks.logger)
         runner = self.build_runner(cfg)
         runner.train()
 

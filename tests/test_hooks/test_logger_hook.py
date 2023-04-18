@@ -198,7 +198,8 @@ class TestLoggerHook(RunnerTestCase):
     def test_with_runner(self):
         # Test dumped the json exits
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.default_hooks.logger = dict(type='LoggerHook')
+        cfg.default_hooks.logger = dict(
+            type='LoggerHook', change_log_dir=False)
         cfg.train_cfg.max_epochs = 10
         runner = self.build_runner(cfg)
         runner.train()
@@ -209,7 +210,8 @@ class TestLoggerHook(RunnerTestCase):
         # Test out_dir
         out_dir = osp.join(cfg.work_dir, 'test')
         mkdir_or_exist(out_dir)
-        cfg.default_hooks.logger = dict(type='LoggerHook', out_dir=out_dir)
+        cfg.default_hooks.logger = dict(
+            type='LoggerHook', out_dir=out_dir, change_log_dir=False)
         runner = self.build_runner(cfg)
         runner.train()
         self.assertTrue(os.listdir(out_dir))
@@ -219,7 +221,10 @@ class TestLoggerHook(RunnerTestCase):
 
         # Test out_suffix
         cfg.default_hooks.logger = dict(
-            type='LoggerHook', out_dir=out_dir, out_suffix='.log')
+            type='LoggerHook',
+            out_dir=out_dir,
+            out_suffix='.log',
+            change_log_dir=False)
         runner = self.build_runner(cfg)
         runner.train()
         filenames = scandir(out_dir, recursive=True)
@@ -228,7 +233,10 @@ class TestLoggerHook(RunnerTestCase):
 
         # Test keep_local=False
         cfg.default_hooks.logger = dict(
-            type='LoggerHook', out_dir=out_dir, keep_local=False)
+            type='LoggerHook',
+            out_dir=out_dir,
+            keep_local=False,
+            change_log_dir=False)
         runner = self.build_runner(cfg)
         runner.train()
         filenames = scandir(runner._log_dir, recursive=True)

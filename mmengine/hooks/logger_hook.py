@@ -68,9 +68,7 @@ class LoggerHook(Hook):
         backend_args (dict, optional): Arguments to instantiate the
             prefix of uri corresponding backend. Defaults to None.
             New in v0.2.0.
-        phase (str): To identify which task the runner is processed,
-            Default to ''. If set, the value will be added as
-            the suffix of ``runner._log_dir``.
+        change_log_dir (bool): Whether to add suffix to log dir.
     Examples:
         >>> # The simplest LoggerHook config.
         >>> logger_hook_cfg = dict(interval=20)
@@ -86,7 +84,10 @@ class LoggerHook(Hook):
                  keep_local: bool = True,
                  file_client_args: Optional[dict] = None,
                  log_metric_by_epoch: bool = True,
-                 backend_args: Optional[dict] = None):
+                 backend_args: Optional[dict] = None,
+                 change_log_dir: bool = True):
+
+        self._task_list: List[str] = []
 
         if not isinstance(interval, int):
             raise TypeError('interval must be an integer')
@@ -135,8 +136,9 @@ class LoggerHook(Hook):
         self.keep_local = keep_local
         self.file_client_args = file_client_args
         self.json_log_path: Optional[str] = None
+        self.change_log_dir = change_log_dir
         self._log_dir: Optional[str] = None
-        self._task_list: List[str] = []
+
         if self.out_dir is not None:
             self.file_client = FileClient.infer_client(file_client_args,
                                                        self.out_dir)
@@ -353,5 +355,5 @@ class LoggerHook(Hook):
     def __del__(self):
         if len(self._task_list) > 0:
             new_log_dir = '_'.join([self._log_dir] + self._task_list)
-            if self.keep_local:
+            if self.keep_local and self.change_log_dir:
                 shutil.move(self._log_dir, new_log_dir)
