@@ -270,6 +270,8 @@ class Runner:
         experiment_name: Optional[str] = None,
         cfg: Optional[ConfigType] = None,
     ):
+        # Record call sequence of task processes
+        self._task_list: List[str] = []
         self._work_dir = osp.abspath(work_dir)
         mmengine.mkdir_or_exist(self._work_dir)
 
@@ -1712,6 +1714,7 @@ class Runner:
 
         model = self.train_loop.run()  # type: ignore
         self.call_hook('after_run')
+        self._task_list.append('train')
         return model
 
     def val(self) -> dict:
@@ -1735,6 +1738,7 @@ class Runner:
 
         metrics = self.val_loop.run()  # type: ignore
         self.call_hook('after_run')
+        self._task_list.append('val')
         return metrics
 
     def test(self) -> dict:
@@ -1758,6 +1762,7 @@ class Runner:
 
         metrics = self.test_loop.run()  # type: ignore
         self.call_hook('after_run')
+        self._task_list.append('test')
         return metrics
 
     def call_hook(self, fn_name: str, **kwargs) -> None:

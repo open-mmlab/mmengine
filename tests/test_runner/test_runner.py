@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import gc
 import logging
 import os
 import os.path as osp
@@ -417,7 +418,7 @@ class TestRunner(TestCase):
             default_hooks=dict(
                 runtime_info=dict(type='RuntimeInfoHook'),
                 timer=dict(type='IterTimerHook'),
-                logger=dict(type='LoggerHook'),
+                logger=dict(type='LoggerHook', keep_local=False),
                 param_scheduler=dict(type='ParamSchedulerHook'),
                 checkpoint=dict(
                     type='CheckpointHook', interval=1, by_epoch=True),
@@ -437,7 +438,7 @@ class TestRunner(TestCase):
         self.iter_based_cfg.default_hooks = dict(
             runtime_info=dict(type='RuntimeInfoHook'),
             timer=dict(type='IterTimerHook'),
-            logger=dict(type='LoggerHook'),
+            logger=dict(type='LoggerHook', keep_local=False),
             param_scheduler=dict(type='ParamSchedulerHook'),
             checkpoint=dict(type='CheckpointHook', interval=1, by_epoch=False),
             sampler_seed=dict(type='DistSamplerSeedHook'))
@@ -1975,7 +1976,8 @@ class TestRunner(TestCase):
             get_priority(runner._hooks[2].priority), get_priority('VERY_LOW'))
 
         # `priority` is Priority
-        logger_cfg = dict(type='LoggerHook', priority='BELOW_NORMAL')
+        logger_cfg = dict(
+            type='LoggerHook', priority='BELOW_NORMAL', keep_local=False)
         runner.register_hook(logger_cfg, priority=Priority.VERY_LOW)
         self.assertEqual(len(runner._hooks), 4)
         self.assertTrue(isinstance(runner._hooks[3], LoggerHook))
@@ -2457,10 +2459,11 @@ class TestRunner(TestCase):
         # When runner finished, the suffix will be added in log_dir
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_change_log_dir'
+        cfg.default_hooks.pop('logger')
         runner = Runner.from_cfg(cfg)
-        logger_cfg = dict(
-            type='LoggerHook', priority='BELOW_NORMAL', phase='train')
-        runner.register_hook(logger_cfg)
         runner.train()
+        runner.test()
         log_dir = runner.log_dir
-        assert os.path.exists(log_dir + '_train')
+        del runner
+        gc.collect()
+        assert os.path.exists(log_dir + '_train_test')

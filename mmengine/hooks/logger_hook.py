@@ -5,7 +5,7 @@ import os.path as osp
 import shutil
 from collections import OrderedDict
 from pathlib import Path
-from typing import Dict, Optional, Sequence, Union
+from typing import Dict, List, Optional, Sequence, Union
 
 import numpy as np
 import torch
@@ -86,8 +86,7 @@ class LoggerHook(Hook):
                  keep_local: bool = True,
                  file_client_args: Optional[dict] = None,
                  log_metric_by_epoch: bool = True,
-                 backend_args: Optional[dict] = None,
-                 phase: str = ''):
+                 backend_args: Optional[dict] = None):
 
         if not isinstance(interval, int):
             raise TypeError('interval must be an integer')
@@ -128,8 +127,6 @@ class LoggerHook(Hook):
             raise TypeError('out_suffix should be a string or a sequence of '
                             f'string, but got {type(out_suffix)}')
 
-        if phase != '' and phase not in ('train', 'val', 'test'):
-            raise ValueError('phase should be one of "train","val","test"')
         self.out_suffix = out_suffix
         self.out_dir = out_dir
         self.interval = interval
@@ -138,8 +135,8 @@ class LoggerHook(Hook):
         self.keep_local = keep_local
         self.file_client_args = file_client_args
         self.json_log_path: Optional[str] = None
-        self.phase = phase
-
+        self._log_dir: Optional[str] = None
+        self._task_list: List[str] = []
         if self.out_dir is not None:
             self.file_client = FileClient.infer_client(file_client_args,
                                                        self.out_dir)
@@ -314,7 +311,8 @@ class LoggerHook(Hook):
                 handler.close()
 
     def after_run(self, runner) -> None:
-        """Copy logs to ``self.out_dir`` if ``self.out_dir is not None``
+        """Copy logs to ``self.out_dir`` if ``self.out_dir`` is not None and
+        record which process has been called.
 
         Args:
             runner (Runner): The runner of the training/testing/validation
@@ -323,10 +321,8 @@ class LoggerHook(Hook):
         # close the visualizer
         runner.visualizer.close()
 
-        if self.phase != '':
-            self._close_handles(runner)
-            shutil.move(runner._log_dir, ''.join(
-                (runner._log_dir, '_', self.phase)))
+        self._log_dir = runner._log_dir
+        self._task_list = runner._task_list
 
         # copy or upload logs to self.out_dir
         if self.out_dir is None:
@@ -353,3 +349,9 @@ class LoggerHook(Hook):
             self._close_handles(runner)
             for file in removed_files:
                 os.remove(file)
+
+    def __del__(self):
+        if len(self._task_list) > 0:
+            new_log_dir = '_'.join([self._log_dir] + self._task_list)
+            if self.keep_local:
+                shutil.move(self._log_dir, new_log_dir)
