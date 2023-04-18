@@ -1241,7 +1241,7 @@ class TestRunner(TestCase):
             sampler=dict(type='DefaultSampler', shuffle=True),
             batch_size=1,
             num_workers=0)
-        seed = np.random.randint(2 ** 31)
+        seed = np.random.randint(2**31)
         dataloader = runner.build_dataloader(cfg, seed=seed)
         self.assertIsInstance(dataloader, DataLoader)
         self.assertIsInstance(dataloader.dataset, ToyDataset)
