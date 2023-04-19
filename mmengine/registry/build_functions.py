@@ -111,39 +111,19 @@ def build_from_cfg(
             raise TypeError(
                 f'type must be a str or valid type, but got {type(obj_type)}')
 
-        try:
-            # If `obj_cls` inherits from `ManagerMixin`, it should be
-            # instantiated by `ManagerMixin.get_instance` to ensure that it
-            # can be accessed globally.
-            if inspect.isclass(obj_cls) and \
-                    issubclass(obj_cls, ManagerMixin):  # type: ignore
-                obj = obj_cls.get_instance(**args)  # type: ignore
-            else:
-                obj = obj_cls(**args)  # type: ignore
+        if inspect.isclass(obj_cls) and \
+                issubclass(obj_cls, ManagerMixin):  # type: ignore
+            obj = obj_cls.get_instance(**args)  # type: ignore
+        else:
+            obj = obj_cls(**args)  # type: ignore
 
-            if (inspect.isclass(obj_cls) or inspect.isfunction(obj_cls)
-                    or inspect.ismethod(obj_cls)):
-                print_log(
-                    f'An `{obj_cls.__name__}` instance is built from '  # type: ignore # noqa: E501
-                    'registry, and its implementation can be found in '
-                    f'{obj_cls.__module__}',  # type: ignore
-                    logger='current',
-                    level=logging.DEBUG)
-            else:
-                print_log(
-                    'An instance is built from registry, and its constructor '
-                    f'is {obj_cls}',
-                    logger='current',
-                    level=logging.DEBUG)
-            return obj
-
-        except Exception as e:
-            # Normal TypeError does not print class name.
-            cls_location = '/'.join(
-                obj_cls.__module__.split('.'))  # type: ignore
-            raise type(e)(
-                f'class `{obj_cls.__name__}` in '  # type: ignore
-                f'{cls_location}.py: {e}')
+        print_log(
+            f'An `{obj_cls.__name__}` instance is built from '  # type: ignore # noqa: E501
+            'registry, and its implementation can be found in '
+            f'{obj_cls.__module__}',  # type: ignore
+            logger='current',
+            level=logging.DEBUG)
+        return obj
 
 
 def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],

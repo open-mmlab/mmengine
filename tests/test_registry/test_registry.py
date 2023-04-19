@@ -167,6 +167,11 @@ class TestRegistry:
         assert 'muchkin0' in CATS
         assert len(CATS) == 11
 
+        # register duplicated name partial function
+        with pytest.raises(KeyError):
+            CATS.register_module('muchkin0', False, muchkin0)
+        CATS.register_module('muchkin0', True, muchkin0)
+
     def _build_registry(self):
         """A helper function to build a Hierarchical Registry."""
         #        Hierarchical Registry

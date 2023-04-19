@@ -610,6 +610,11 @@ class Registry:
                 existed_module = self.module_dict[name]
                 raise KeyError(f'{name} is already registered in {self.name} '
                                f'at {existed_module.__module__}')
+            if not hasattr(module, '__module__'):
+                module_name = str(inspect.getmodule(sys._getframe(2)))
+                if module_name is None:
+                    module_name = '__main__'
+                module.__module__ = module_name
             self._module_dict[name] = module
 
     def register_module(
