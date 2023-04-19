@@ -162,6 +162,11 @@ class TestRegistry:
         # lambda functions can be registered
         CATS.register_module(name='unknown cat', module=lambda: 'unknown')
 
+        # name must be provided when module does not have `__name__` attribute.
+        with pytest.raises(AssertionError):
+            muchkin1 = functools.partial(muchkin, size=0)
+            CATS.register_module(module=muchkin1)
+
         assert CATS.get('muchkin0') is muchkin0
         assert 'unknown cat' in CATS
         assert 'muchkin0' in CATS
