@@ -3,6 +3,8 @@ import copy
 import os
 import os.path as osp
 import re
+import sys
+from unittest.mock import MagicMock, patch
 
 import torch
 from parameterized import parameterized
@@ -311,6 +313,55 @@ class TestCheckpointHook(RunnerTestCase):
         # after_val_epoch should not save last_checkpoint
         self.assertFalse(
             osp.isfile(osp.join(runner.work_dir, 'last_checkpoint')))
+
+        # There should only one best checkpoint be reserved
+        # dist backend
+        for by_epoch, cfg in [(True, self.epoch_based_cfg),
+                              (False, self.iter_based_cfg)]:
+            self.clear_work_dir()
+            cfg = copy.deepcopy(cfg)
+            runner = self.build_runner(cfg)
+            checkpoint_hook = CheckpointHook(
+                interval=2, by_epoch=by_epoch, save_best='acc')
+            checkpoint_hook.before_train(runner)
+            checkpoint_hook.after_val_epoch(runner, metrics)
+            all_files = os.listdir(runner.work_dir)
+            best_ckpts = [
+                file for file in all_files if file.startswith('best')
+            ]
+            self.assertTrue(len(best_ckpts) == 1)
+
+        # petrel backend
+        # TODO use real petrel oss bucket to test
+        petrel_client = MagicMock()
+        sys.modules['petrel_client'] = petrel_client
+        for by_epoch, cfg in [(True, self.epoch_based_cfg),
+                              (False, self.iter_based_cfg)]:
+            isfile = MagicMock(return_value=True)
+            self.clear_work_dir()
+            with patch('mmengine.fileio.backends.PetrelBackend.put') as put_mock, \
+                    patch('mmengine.fileio.backends.PetrelBackend.remove') as remove_mock, \
+                    patch('mmengine.fileio.backends.PetrelBackend.isfile') as isfile:  # noqa: E501
+                cfg = copy.deepcopy(cfg)
+                runner = self.build_runner(cfg)
+                metrics = dict(acc=0.5)
+                petrel_client.client.Client = MagicMock(
+                    return_value=petrel_client)
+                checkpoint_hook = CheckpointHook(
+                    interval=2,
+                    by_epoch=by_epoch,
+                    save_best='acc',
+                    backend_args=dict(backend='petrel'))
+                checkpoint_hook.before_train(runner)
+                checkpoint_hook.after_val_epoch(runner, metrics)
+                put_mock.assert_called_once()
+                metrics['acc'] += 0.1
+                runner.train_loop._epoch += 1
+                runner.train_loop._iter += 1
+                checkpoint_hook.after_val_epoch(runner, metrics)
+                isfile.assert_called_once()
+                remove_mock.assert_called_once()
+        sys.modules.pop('petrel_client')
 
     def test_after_train_epoch(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)

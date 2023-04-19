@@ -756,7 +756,7 @@ def save_checkpoint(checkpoint,
             file_backend = get_file_backend(
                 filename, backend_args=backend_args)
         else:
-            file_backend = file_client
+            file_backend = file_client.client
 
         with io.BytesIO() as f:
             torch.save(checkpoint, f)
