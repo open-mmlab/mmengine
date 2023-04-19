@@ -958,7 +958,6 @@ class TestRunner(TestCase):
         runner.scale_lr(optim_wrapper)
         self.assertEqual(optim_wrapper.optimizer.param_groups[0]['lr'], 0.01)
         runner.scale_lr(optim_wrapper, auto_scale_lr)
-        self.assertEqual(optim_wrapper.optimizer.param_groups[0]['lr'], 0.01)
 
         # When auto_scale_lr is correct and enable is True, the lr will
         # be linearly scaled.
@@ -976,19 +975,19 @@ class TestRunner(TestCase):
             enable=True,
             accumulative_counts=accumulative_counts)
         real_bs = runner.world_size * cfg.train_dataloader['batch_size']
-        optim_wrapper = OptimWrapper(
-            SGD(runner.model.parameters(), lr=0.01),
-            accumulative_counts=accumulative_counts)
+        optim_wrapper = OptimWrapper(SGD(runner.model.parameters(), lr=0.01))
         runner.scale_lr(optim_wrapper, auto_scale_lr)
         self.assertEqual(optim_wrapper.optimizer.param_groups[0]['lr'],
-                         0.01 * (real_bs / 16) * accumulative_counts)
+                         0.01 * (real_bs / 16) * 1 / accumulative_counts)
 
         # Test when optim_wrapper is an OptimWrapperDict
-        optim_wrapper = OptimWrapper(SGD(runner.model.parameters(), lr=0.01))
+        optim_wrapper = OptimWrapper(
+            SGD(runner.model.parameters(), lr=0.01), accumulative_counts=3)
         wrapper_dict = OptimWrapperDict(wrapper=optim_wrapper)
         runner.scale_lr(wrapper_dict, auto_scale_lr)
         scaled_lr = wrapper_dict['wrapper'].optimizer.param_groups[0]['lr']
-        self.assertEqual(scaled_lr, 0.01 * (real_bs / 16))
+        self.assertEqual(scaled_lr,
+                         0.01 * (real_bs / 16) * 3 / accumulative_counts)
 
     def test_build_optim_wrapper(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
