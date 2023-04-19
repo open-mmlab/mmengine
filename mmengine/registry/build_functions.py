@@ -182,23 +182,14 @@ def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
             raise TypeError(
                 f'type must be a str or valid type, but got {type(obj_type)}')
 
-        try:
-            runner = runner_cls.from_cfg(args)  # type: ignore
-            print_log(
-                f'An `{runner_cls.__name__}` instance is built from '  # type: ignore # noqa: E501
-                'registry, its implementation can be found in'
-                f'{runner_cls.__module__}',  # type: ignore
-                logger='current',
-                level=logging.DEBUG)
-            return runner
-
-        except Exception as e:
-            # Normal TypeError does not print class name.
-            cls_location = '/'.join(
-                runner_cls.__module__.split('.'))  # type: ignore
-            raise type(e)(
-                f'class `{runner_cls.__name__}` in '  # type: ignore
-                f'{cls_location}.py: {e}')
+        runner = runner_cls.from_cfg(args)  # type: ignore
+        print_log(
+            f'An `{runner_cls.__name__}` instance is built from '  # type: ignore # noqa: E501
+            'registry, its implementation can be found in'
+            f'{runner_cls.__module__}',  # type: ignore
+            logger='current',
+            level=logging.DEBUG)
+        return runner
 
 
 def build_model_from_cfg(
