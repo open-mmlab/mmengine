@@ -3,6 +3,7 @@ import copy
 import logging
 import os
 import os.path as osp
+import random
 import shutil
 import tempfile
 from unittest import TestCase, skipIf
@@ -352,6 +353,11 @@ def custom_collate(data_batch, pad_value):
     return pseudo_collate(data_batch)
 
 
+def custom_worker_init(worker_id):
+    np.random.seed(worker_id)
+    random.seed(worker_id)
+
+
 class TestRunner(TestCase):
 
     def setUp(self):
@@ -376,6 +382,7 @@ class TestRunner(TestCase):
         RUNNERS.register_module(module=CustomRunner, force=True)
         EVALUATOR.register_module(module=ToyEvaluator, force=True)
         FUNCTIONS.register_module(module=custom_collate, force=True)
+        FUNCTIONS.register_module(module=custom_worker_init, force=True)
 
         self.temp_dir = tempfile.mkdtemp()
         epoch_based_cfg = dict(
@@ -459,6 +466,7 @@ class TestRunner(TestCase):
         RUNNERS.module_dict.pop('CustomRunner')
         EVALUATOR.module_dict.pop('ToyEvaluator')
         FUNCTIONS.module_dict.pop('custom_collate')
+        FUNCTIONS.module_dict.pop('custom_worker_init')
 
         logging.shutdown()
         MMLogger._instance_dict.clear()
@@ -1245,6 +1253,16 @@ class TestRunner(TestCase):
             cfg, seed=seed, diff_rank_seed=True)
         self.assertNotEqual(dataloader.sampler.seed, seed)
 
+        # custom worker_init_fn
+        cfg = dict(
+            dataset=dict(type='ToyDataset'),
+            sampler=dict(type='DefaultSampler', shuffle=True),
+            worker_init_fn=dict(type='custom_worker_init'),
+            batch_size=1,
+            num_workers=2)
+        dataloader = runner.build_dataloader(cfg)
+        self.assertIs(dataloader.worker_init_fn.func, custom_worker_init)
+
     def test_build_train_loop(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_train_loop'
@@ -1686,6 +1704,14 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_train10.2'
         cfg.train_dataloader.update(
             collate_fn=dict(type='custom_collate', pad_value=100))
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+
+        # 10.3 Test build dataloader with custom worker_init function
+        cfg = copy.deepcopy(self.iter_based_cfg)
+        cfg.experiment_name = 'test_train10.3'
+        cfg.train_dataloader.update(
+            worker_init_fn=dict(type='custom_worker_init'))
         runner = Runner.from_cfg(cfg)
         runner.train()
 
