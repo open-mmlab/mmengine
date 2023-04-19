@@ -334,14 +334,14 @@ class TestCheckpointHook(RunnerTestCase):
         # petrel backend
         # TODO use real petrel oss bucket to test
         petrel_client = MagicMock()
-        sys.modules['petrel_client'] = petrel_client
         for by_epoch, cfg in [(True, self.epoch_based_cfg),
                               (False, self.iter_based_cfg)]:
             isfile = MagicMock(return_value=True)
             self.clear_work_dir()
-            with patch('mmengine.fileio.backends.PetrelBackend.put') as put_mock, \
-                    patch('mmengine.fileio.backends.PetrelBackend.remove') as remove_mock, \
-                    patch('mmengine.fileio.backends.PetrelBackend.isfile') as isfile:  # noqa: E501
+            with patch.dict(sys.modules, {'petrel_client': petrel_client}), \
+                 patch('mmengine.fileio.backends.PetrelBackend.put') as put_mock, \
+                 patch('mmengine.fileio.backends.PetrelBackend.remove') as remove_mock, \
+                 patch('mmengine.fileio.backends.PetrelBackend.isfile') as isfile:  # noqa: E501
                 cfg = copy.deepcopy(cfg)
                 runner = self.build_runner(cfg)
                 metrics = dict(acc=0.5)
@@ -361,7 +361,6 @@ class TestCheckpointHook(RunnerTestCase):
                 checkpoint_hook.after_val_epoch(runner, metrics)
                 isfile.assert_called_once()
                 remove_mock.assert_called_once()
-        sys.modules.pop('petrel_client')
 
     def test_after_train_epoch(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
