@@ -187,6 +187,7 @@ class RunnerTestCase(TestCase):
         os.environ['LOCAL_RANK'] = self.dist_cfg['LOCAL_RANK']
 
     def clear_work_dir(self):
+        logging.shutdown()
         for filename in os.listdir(self.temp_dir.name):
             filepath = os.path.join(self.temp_dir.name, filename)
             if os.path.isfile(filepath):
