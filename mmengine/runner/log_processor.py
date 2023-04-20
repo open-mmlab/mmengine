@@ -341,6 +341,7 @@ class LogProcessor:
         Returns:
             dict: Statistical values of logs.
         """
+        custom_cfg = copy.deepcopy(custom_cfg)
         tag = OrderedDict()
         # history_scalars of train/val/test phase.
         history_scalars = runner.message_hub.log_scalars
