@@ -92,7 +92,6 @@ def main():
         val_dataloader=val_dataloader,
         val_cfg=dict(),
         val_evaluator=dict(type=Accuracy),
-        resume=True,
         launcher=args.launcher,
     )
     runner.train()
