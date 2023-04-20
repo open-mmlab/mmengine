@@ -84,6 +84,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Upgrade pip
         run: python -m pip install pip --upgrade
+      - name: Upgrade wheel
+        run: python -m pip install wheel --upgrade
       - name: Install PyTorch
         run: pip install torch==${{matrix.torch}}+cpu torchvision==${{matrix.torchvision}}+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
       - name: Build MMEngine from source
@@ -93,8 +95,6 @@ jobs:
           pip install -r requirements/tests.txt
           pip install openmim
           mim install 'mmcv>=2.0.0rc1'
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
       - name: Run unittests and generate coverage report
         run: |
           coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist
@@ -239,6 +239,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Upgrade pip
         run: pip install pip --upgrade
+      - name: Upgrade wheel
+        run: pip install wheel --upgrade
       - name: Install PyTorch
         run: pip install torch==${{ matrix.torch }} torchvision==${{ matrix.torchvision }}
       - name: Build MMEngine from source
