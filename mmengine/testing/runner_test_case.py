@@ -2,6 +2,7 @@
 import copy
 import logging
 import os
+import shutil
 import tempfile
 import time
 from unittest import TestCase
@@ -184,3 +185,12 @@ class RunnerTestCase(TestCase):
         os.environ['RANK'] = self.dist_cfg['RANK']
         os.environ['WORLD_SIZE'] = self.dist_cfg['WORLD_SIZE']
         os.environ['LOCAL_RANK'] = self.dist_cfg['LOCAL_RANK']
+
+    def clear_work_dir(self):
+        logging.shutdown()
+        for filename in os.listdir(self.temp_dir.name):
+            filepath = os.path.join(self.temp_dir.name, filename)
+            if os.path.isfile(filepath):
+                os.remove(filepath)
+            else:
+                shutil.rmtree(filepath)

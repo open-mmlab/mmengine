@@ -20,9 +20,6 @@ from mmengine.runner.checkpoint import (CheckpointLoader,
                                         load_from_local, load_from_pavi,
                                         save_checkpoint)
 
-sys.modules['petrel_client'] = MagicMock()
-sys.modules['petrel_client.client'] = MagicMock()
-
 
 @MODEL_WRAPPERS.register_module()
 class DDPWrapper:
@@ -150,9 +147,8 @@ def test_get_state_dict():
                         wrapped_model.module.conv.module.bias)
 
 
+@patch.dict(sys.modules, {'pavi': MagicMock()})
 def test_load_pavimodel_dist():
-    sys.modules['pavi'] = MagicMock()
-    sys.modules['pavi.modelcloud'] = MagicMock()
     pavimodel = Mockpavimodel()
     import pavi
     pavi.modelcloud.get = MagicMock(return_value=pavimodel)
@@ -296,6 +292,7 @@ def test_load_checkpoint_metadata():
     assert torch.allclose(model_v2.conv1.weight, model_v2_conv1_weight)
 
 
+@patch.dict(sys.modules, {'petrel_client': MagicMock()})
 def test_checkpoint_loader():
     filenames = [
         'http://xx.xx/xx.pth', 'https://xx.xx/xx.pth',
