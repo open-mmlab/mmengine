@@ -256,8 +256,11 @@ def gather(data: Tensor,
             if get_rank(group) == dst:
                 gather_list = torch.cuda.comm.gather(data, dst, group)
             else:
-                torch.cuda.comm.gather(data, dst, group)
-                gather_list = []
+                all_gather_list = all_gather(data, group)
+                if get_rank(group) == dst:
+                    gather_list = all_gather_list
+                else:
+                    gather_list = []
     else:
         torch_dist.gather(data, gather_list, dst, group)
 
