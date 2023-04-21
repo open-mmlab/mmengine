@@ -129,4 +129,4 @@ runner = Runner(
 - NpuFusedRMSpropTF
 - NpuFusedSGD
 
-使用方式同原生优化器一样，MMEngine 中更详细的使用方式可参考 [optimizers](https://mmengine.readthedocs.io/zh_CN/latest/tutorials/optim_wrapper.html?highlight=%E4%BC%98%E5%8C%96%E5%99%A8).
+使用方式同原生优化器一样，可参考[优化器的使用](../tutorials/optim_wrapper.md#在执行器中配置优化器封装)。

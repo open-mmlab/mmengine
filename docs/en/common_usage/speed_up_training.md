@@ -128,4 +128,4 @@ If Ascend's equipment is used, Ascend's optimizer can be used to reduce the trai
 - NpuFusedRMSpropTF
 - NpuFusedSGD
 
-The usage method is the same as the native optimizer, and the more detailed usage method in MMEngine can be referred to [optimizers](https://mmengine.readthedocs.io/en/latest/tutorials/optim_wrapper.html).
+The usage method is the same as the native optimizer, please refer to [use of optimizers](../tutorials/optim_wrapper.md#configure-the-optimwapper-in-runner)
