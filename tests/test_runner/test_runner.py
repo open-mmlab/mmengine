@@ -21,7 +21,7 @@ from mmengine.evaluator import BaseMetric, Evaluator
 from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
                             IterTimerHook, LoggerHook, ParamSchedulerHook,
                             RuntimeInfoHook)
-from mmengine.logging import MessageHub, MMLogger
+from mmengine.logging import HistoryBuffer, MessageHub, MMLogger
 from mmengine.model import BaseDataPreprocessor, BaseModel, ImgDataPreprocessor
 from mmengine.optim import (DefaultOptimWrapperConstructor, MultiStepLR,
                             OptimWrapper, OptimWrapperDict, StepLR)
@@ -2290,7 +2290,7 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         runner.train()
 
-        # 2.1 test `save_checkpoint` which is called by `CheckpointHook`
+        # 2.1.1 test `save_checkpoint` which is called by `CheckpointHook`
         path = osp.join(self.temp_dir, 'iter_12.pth')
         self.assertTrue(osp.exists(path))
         self.assertFalse(osp.exists(osp.join(self.temp_dir, 'epoch_13.pth')))
@@ -2304,6 +2304,10 @@ class TestRunner(TestCase):
         message_hub.load_state_dict(ckpt['message_hub'])
         self.assertEqual(message_hub.get_info('epoch'), 0)
         self.assertEqual(message_hub.get_info('iter'), 11)
+        # 2.1.2 check class attribute _statistic_methods can be saved
+        HistoryBuffer._statistics_methods.clear()
+        ckpt = torch.load(path)
+        self.assertIn('min', HistoryBuffer._statistics_methods)
 
         # 2.2 test `load_checkpoint`
         cfg = copy.deepcopy(self.iter_based_cfg)

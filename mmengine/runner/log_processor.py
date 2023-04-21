@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import datetime
+import re
 from collections import OrderedDict
 from itertools import chain
 from typing import List, Optional, Tuple
@@ -59,6 +60,9 @@ class LogProcessor:
             ``train/loss``, and accuracy will be saved as ``val/accuracy``.
             Defaults to False.
             `New in version 0.7.0.`
+        mean_pattern (str): This is a regular expression used to match the log
+            that need to be included in the smoothing statistics.
+            `New in version 0.7.3.`
 
     Examples:
         >>> # `log_name` is defined, `loss_large_window` will be an additional
@@ -106,12 +110,14 @@ class LogProcessor:
                  by_epoch=True,
                  custom_cfg: Optional[List[dict]] = None,
                  num_digits: int = 4,
-                 log_with_hierarchy: bool = False):
+                 log_with_hierarchy: bool = False,
+                 mean_pattern=r'.*(loss|time|data_time|grad_norm).*'):
         self.window_size = window_size
         self.by_epoch = by_epoch
         self.custom_cfg = custom_cfg if custom_cfg else []
         self.num_digits = num_digits
         self.log_with_hierarchy = log_with_hierarchy
+        self.mean_pattern = re.compile(mean_pattern)
         self._check_custom_cfg()
 
     def get_log_after_iter(self, runner, batch_idx: int,
@@ -280,14 +286,11 @@ class LogProcessor:
         # Count the averaged time and data_time by epoch
         if 'time' not in custom_keys:
             custom_cfg_copy.append(
-                dict(
-                    data_src=f'{mode}/time',
-                    window_size='epoch',
-                    method_name='mean'))
+                dict(data_src='time', window_size='epoch', method_name='mean'))
         if 'data_time' not in custom_keys:
             custom_cfg_copy.append(
                 dict(
-                    data_src=f'{mode}/data_time',
+                    data_src='data_time',
                     window_size='epoch',
                     method_name='mean'))
         parsed_cfg = self._parse_windows_size(runner, batch_idx,
@@ -358,18 +361,19 @@ class LogProcessor:
                 mode_history_scalars[key] = log_buffer
         for key in mode_history_scalars:
             # Update the latest learning rate and smoothed time logs.
-            if 'loss' in key or key in ('time', 'data_time', 'grad_norm'):
+            if re.search(self.mean_pattern, key) is not None:
                 tag[key] = mode_history_scalars[key].mean(self.window_size)
             else:
                 # Default statistic method is current.
                 tag[key] = mode_history_scalars[key].current()
         # Update custom keys.
         for log_cfg in custom_cfg:
-            data_src = log_cfg.pop('data_src')
-            if 'log_name' in log_cfg:
-                log_name = log_cfg.pop('log_name')
+            if not reserve_prefix:
+                data_src = log_cfg.pop('data_src')
+                log_name = f"{log_cfg.pop('log_name', data_src)}"
             else:
-                log_name = data_src
+                data_src = f"{mode}/{log_cfg.pop('data_src')}"
+                log_name = f"{mode}/{log_cfg.pop('log_name', data_src)}"
             # log item in custom_cfg could only exist in train or val
             # mode.
             if data_src in mode_history_scalars:
