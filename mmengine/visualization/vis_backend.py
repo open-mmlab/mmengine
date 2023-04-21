@@ -855,7 +855,7 @@ class ClearMLVisBackend(BaseVisBackend):
         self._init_kwargs = init_kwargs
         self._artifact_suffix = artifact_suffix
 
-    def _init_env(self):
+    def _init_env(self) -> None:
         if not os.path.exists(self._save_dir):
             os.makedirs(self._save_dir, exist_ok=True)
         try:
