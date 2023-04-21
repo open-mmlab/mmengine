@@ -113,3 +113,19 @@ This feature is only available for PyTorch >= 2.0.0.
 ```{warning}
 `torch.compile` is still under development by PyTorch team. Some models may fail compilation. If you encounter errors during compilation, you can refer to [PyTorch Dynamo FAQ](https://pytorch.org/docs/2.0/dynamo/faq.html) for quick fix, or [TorchDynamo Troubleshooting](https://pytorch.org/docs/2.0/dynamo/troubleshooting.html) to post an issue in PyTorch.
 ```
+
+## Using faster Optimizers
+
+If Ascend devices are used, you can use the Ascend optimizers to shorten the training time of the model. The optimizers supported by Ascend devices are as follows:
+
+- NpuFusedAdadelta
+- NpuFusedAdam
+- NpuFusedAdamP
+- NpuFusedAdamW
+- NpuFusedBertAdam
+- NpuFusedLamb
+- NpuFusedRMSprop
+- NpuFusedRMSpropTF
+- NpuFusedSGD
+
+The usage is the same as native optimizers, and you can refer to [Using Optimizers](../tutorials/optim_wrapper.md#configure-the-optimwapper-in-runner) for more information.
