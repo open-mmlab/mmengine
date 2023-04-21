@@ -188,7 +188,7 @@ class TestLogProcessor:
         custom_cfg = [
             dict(data_src='time', method_name='max', log_name='time_max')
         ]
-        logger_hook = LogProcessor(custom_cfg=custom_cfg)
+        log_processor = LogProcessor(custom_cfg=custom_cfg)
         # Collect with prefix.
         log_scalars = {
             'train/time': history_time_buffer,
@@ -197,19 +197,33 @@ class TestLogProcessor:
             'val/metric': history_metric_buffer
         }
         self.runner.message_hub._log_scalars = log_scalars
-        tag = logger_hook._collect_scalars(
+        tag = log_processor._collect_scalars(
             copy.deepcopy(custom_cfg), self.runner, mode='train')
-        # Test training key in tag.
+        # Training key in tag.
         assert list(tag.keys()) == ['time', 'loss_cls', 'time_max']
         # Test statistics lr with `current`, loss and time with 'mean'
         assert tag['time'] == time_scalars[-10:].mean()
         assert tag['time_max'] == time_scalars.max()
         assert tag['loss_cls'] == loss_cls_scalars[-10:].mean()
 
-        tag = logger_hook._collect_scalars(
+        # Validation key in tag
+        tag = log_processor._collect_scalars(
             copy.deepcopy(custom_cfg), self.runner, mode='val')
         assert list(tag.keys()) == ['metric']
         assert tag['metric'] == metric_scalars[-1]
+
+        # reserve_prefix=True
+        tag = log_processor._collect_scalars(
+            copy.deepcopy(custom_cfg),
+            self.runner,
+            mode='train',
+            reserve_prefix=True)
+        assert list(
+            tag.keys()) == ['train/time', 'train/loss_cls', 'train/time_max']
+        # Test statistics lr with `current`, loss and time with 'mean'
+        assert tag['train/time'] == time_scalars[-10:].mean()
+        assert tag['train/time_max'] == time_scalars.max()
+        assert tag['train/loss_cls'] == loss_cls_scalars[-10:].mean()
 
     def test_collect_non_scalars(self):
         metric1 = np.random.rand(10)
