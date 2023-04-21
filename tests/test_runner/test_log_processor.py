@@ -5,12 +5,14 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 import torch
+from parameterized import parameterized
 
 from mmengine.logging import HistoryBuffer, MessageHub, MMLogger
 from mmengine.runner import LogProcessor
+from mmengine.testing import RunnerTestCase
 
 
-class TestLogProcessor:
+class TestLogProcessor(RunnerTestCase):
 
     def test_init(self):
         log_processor = LogProcessor(
@@ -69,12 +71,13 @@ class TestLogProcessor:
         with pytest.raises(TypeError):
             log_processor._parse_windows_size(self.runner, 1, custom_cfg)
 
-    @pytest.mark.parametrize(
-        'by_epoch,mode,log_with_hierarchy',
+    # yapf: disable
+    @parameterized.expand(
         ([True, 'train', True], [True, 'train', False], [False, 'train', True],
          [False, 'train', False], [True, 'val', True], [True, 'val', False],
          [False, 'val', True], [False, 'val', False], [True, 'test', True],
          [True, 'test', False], [False, 'test', True], [False, 'test', False]))
+    # yapf: enable
     def test_get_log_after_iter(self, by_epoch, mode, log_with_hierarchy):
         # Prepare LoggerHook
         log_processor = LogProcessor(
@@ -141,8 +144,7 @@ class TestLogProcessor:
                 log_str += f"loss_cls: {train_logs['loss_cls']:.4f}"
             assert out == log_str
 
-    @pytest.mark.parametrize(
-        'by_epoch,mode,log_with_hierarchy',
+    @parameterized.expand(
         ([True, 'val', True], [True, 'val', False], [False, 'val', True],
          [False, 'val', False], [True, 'test', True], [False, 'test', False]))
     def test_log_val(self, by_epoch, mode, log_with_hierarchy):
@@ -282,7 +284,7 @@ class TestLogProcessor:
         loop = log_processor._get_cur_loop(self.runner, 'test')
         assert len(loop.dataloader) == 5
 
-    def setup_method(self):
+    def setUp(self):
         runner = MagicMock()
         runner.epoch = 1
         runner.max_epochs = 10
@@ -303,3 +305,36 @@ class TestLogProcessor:
             message_hub.update_scalar('val/acc', i * 0.1)
         runner.message_hub = message_hub
         self.runner = runner
+        super().setUp()
+
+    def test_with_runner(self):
+        cfg = self.epoch_based_cfg.copy()
+        cfg.log_processor = dict(
+            custom_cfg=[
+                dict(
+                    data_src='time',
+                    window_size='epoch',
+                    log_name='iter_time',
+                    method_name='mean')
+            ],
+            log_with_hierarchy=True)
+        runner = self.build_runner(cfg)
+        runner.train()
+        runner.val()
+        runner.test()
+
+        cfg = self.iter_based_cfg.copy()
+        cfg.log_processor = dict(
+            by_epoch=False,
+            custom_cfg=[
+                dict(
+                    data_src='time',
+                    window_size=100,
+                    log_name='iter_time',
+                    method_name='mean')
+            ],
+            log_with_hierarchy=True)
+        runner = self.build_runner(cfg)
+        runner.train()
+        runner.val()
+        runner.test()

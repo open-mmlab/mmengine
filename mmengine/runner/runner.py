@@ -2191,7 +2191,11 @@ class Runner:
                     checkpoint['param_schedulers'].append(state_dict)
 
         self.call_hook('before_save_checkpoint', checkpoint=checkpoint)
-        save_checkpoint(checkpoint, filepath)
+        save_checkpoint(
+            checkpoint,
+            filepath,
+            file_client_args=file_client_args,
+            backend_args=backend_args)
 
     @master_only
     def dump_config(self) -> None:
