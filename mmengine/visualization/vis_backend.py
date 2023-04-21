@@ -818,15 +818,15 @@ class MLflowVisBackend(BaseVisBackend):
         return items
 
 @VISBACKENDS.register_module()
-class ClearmlVisBackend(BaseVisBackend):
+class ClearMLVisBackend(BaseVisBackend):
     """Clearml visualization backend class.
     It requires `clearml`_ to be installed.
     
     Examples:
-        >>> from mmengine.visualization import ClearmlVisBackend
+        >>> from mmengine.visualization import ClearMLVisBackend
         >>> from mmengine import Config
         >>> import numpy as np
-        >>> vis_backend = ClearmlVisBackend(save_dir='temp_dir')
+        >>> vis_backend = ClearMLVisBackend(save_dir='temp_dir')
         >>> img = np.random.randint(0, 256, size=(10, 10, 3))
         >>> vis_backend.add_image('img.png', img)
         >>> vis_backend.add_scalar('mAP', 0.6)
@@ -864,7 +864,7 @@ class ClearmlVisBackend(BaseVisBackend):
             raise ImportError(
                 'Please run "pip install clearml" to install clearml')
 
-        task_kwargs = self._init_kwargs if self._init_kwargs else {}
+        task_kwargs = self._init_kwargs if self._init_kwargs is not None else {}
         self._clearml = clearml
         self._task = self._clearml.Task.init(**task_kwargs)
         self._logger = self._task.get_logger()
@@ -884,6 +884,7 @@ class ClearmlVisBackend(BaseVisBackend):
         self._cfg = config
         self._logger.report_text(os.path.basename(self._cfg.filename), self._cfg.pretty_text)
 
+    @force_init_env
     def add_image(self,
                   name: str,
                   image: np.ndarray,
@@ -933,14 +934,11 @@ class ClearmlVisBackend(BaseVisBackend):
 
     def close(self) -> None:
         """Close the clearml."""
-        file_paths = dict()
-        for filename in scandir(self._cfg.work_dir, self._artifact_suffix, False):
-            file_path = osp.join(self._cfg.work_dir, filename)
-            relative_path = os.path.relpath(file_path, self._cfg.work_dir)
-            dir_path = os.path.dirname(relative_path)
-            file_paths[file_path] = dir_path
+        file_paths = list()
+        for filename in scandir(self._save_dir, self._artifact_suffix, False):
+            file_path = osp.join(self._save_dir, filename)
 
-        for file_path, dir_path in file_paths.items():
+        for file_path in file_paths:
             self._task.upload_artifact(os.path.basename(file_path), file_path)
 
         if hasattr(self, '_clearml'):

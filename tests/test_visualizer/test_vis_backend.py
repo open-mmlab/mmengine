@@ -13,7 +13,7 @@ from mmengine import Config
 from mmengine.fileio import load
 from mmengine.registry import VISBACKENDS
 from mmengine.visualization import (LocalVisBackend, MLflowVisBackend,
-                                    TensorboardVisBackend, WandbVisBackend, ClearmlVisBackend)
+                                    TensorboardVisBackend, WandbVisBackend, ClearMLVisBackend)
 
 
 class TestLocalVisBackend:
@@ -286,35 +286,35 @@ class TestMLflowVisBackend:
         mlflow_vis_backend.close()
         shutil.rmtree('temp_dir')
 
-class TestClearmlVisBackend:
+class TestClearMLVisBackend:
 
     def test_init(self):
-        ClearmlVisBackend('temp_dir')
-        VISBACKENDS.build(dict(type='ClearmlVisBackend', save_dir='temp_dir'))
+        ClearMLVisBackend('temp_dir')
+        VISBACKENDS.build(dict(type='ClearMLVisBackend', save_dir='temp_dir'))
 
     def test_experiment(self):
-        clearml_vis_backend = ClearmlVisBackend('temp_dir')
+        clearml_vis_backend = ClearMLVisBackend('temp_dir')
         assert clearml_vis_backend.experiment == clearml_vis_backend._clearml
 
     def test_add_config(self):
         cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
-        clearml_vis_backend = ClearmlVisBackend('temp_dir')
+        clearml_vis_backend = ClearMLVisBackend('temp_dir')
         clearml_vis_backend.add_config(cfg)
 
     def test_add_image(self):
         image = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
-        clearml_vis_backend = ClearmlVisBackend('temp_dir')
+        clearml_vis_backend = ClearMLVisBackend('temp_dir')
         clearml_vis_backend.add_image('img.png', image)
 
     def test_add_scalar(self):
-        clearml_vis_backend = ClearmlVisBackend('temp_dir')
+        clearml_vis_backend = ClearMLVisBackend('temp_dir')
         clearml_vis_backend.add_scalar('map', 0.9)
         # test append mode
         clearml_vis_backend.add_scalar('map', 0.9)
         clearml_vis_backend.add_scalar('map', 0.95)
 
     def test_add_scalars(self):
-        clearml_vis_backend = ClearmlVisBackend('temp_dir')
+        clearml_vis_backend = ClearMLVisBackend('temp_dir')
         input_dict = {'map': 0.7, 'acc': 0.9}
         clearml_vis_backend.add_scalars(input_dict)
         # test append mode
@@ -322,7 +322,7 @@ class TestClearmlVisBackend:
 
     def test_close(self):
         cfg = Config(dict(work_dir='temp_dir'))
-        clearml_vis_backend = ClearmlVisBackend('temp_dir')
+        clearml_vis_backend = ClearMLVisBackend('temp_dir')
         clearml_vis_backend._init_env()
         clearml_vis_backend.add_config(cfg)
         clearml_vis_backend.close()

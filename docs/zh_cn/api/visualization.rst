@@ -34,4 +34,4 @@ visualization Backend
    MLflowVisBackend
    TensorboardVisBackend
    WandbVisBackend
-   ClearmlVisBackend
+   ClearMLVisBackend
