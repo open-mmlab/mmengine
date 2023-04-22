@@ -676,7 +676,8 @@ def complexity_stats_table(
 
 def get_model_complexity_info(
     model: nn.Module,
-    input_shape: Union[Tuple[int, ...], Tuple[Tuple[int, ...]], None] = None,
+    input_shape: Union[Tuple[int, ...], Tuple[Tuple[int, ...], ...],
+                       None] = None,
     inputs: Union[torch.Tensor, Tuple[torch.Tensor, ...], Tuple[Any, ...],
                   None] = None,
     show_table: bool = True,
