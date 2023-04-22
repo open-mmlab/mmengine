@@ -677,7 +677,8 @@ def complexity_stats_table(
 def get_model_complexity_info(
     model: nn.Module,
     input_shape: Union[Tuple[int, ...], Tuple[Tuple[int, ...]], None] = None,
-    inputs: Union[torch.Tensor, Tuple[torch.Tensor, ...], None] = None,
+    inputs: Union[torch.Tensor, Tuple[torch.Tensor, ...], Tuple[Any, ...],
+                  None] = None,
     show_table: bool = True,
     show_arch: bool = True,
 ):
@@ -707,7 +708,8 @@ def get_model_complexity_info(
             The input shape of the model.
             If "inputs" is not specified, the "input_shape" should be set.
             Defaults to None.
-        inputs (torch.Tensor or tuple[torch.Tensor, ...], optional]):
+        inputs (torch.Tensor, tuple[torch.Tensor, ...] or Tuple[Any, ...],\
+            optional]):
             The input tensor(s) of the model. If not given the input tensor
             will be generated automatically with the given input_shape.
             Defaults to None.
