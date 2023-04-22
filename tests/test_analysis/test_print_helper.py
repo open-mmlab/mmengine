@@ -6,6 +6,8 @@ import torch.nn as nn
 
 from mmengine.analysis.complexity_analysis import FlopAnalyzer, parameter_count
 from mmengine.analysis.print_helper import get_model_complexity_info
+from mmengine.utils import digit_version
+from mmengine.utils.dl_utils import TORCH_VERSION
 
 
 class NetAcceptOneTensor(nn.Module):
@@ -113,7 +115,10 @@ class TestGetModelCompexityInfo(unittest.TestCase):
         """Test a network that accept one tensor and one scalar as input."""
         model = NetAcceptOneTensorNOneScalar()
         input = self.t1
-        scalar = self.scalar
+        # For pytorch<1.9, a scalar input is not acceptable for torch.jit,
+        # wrap it to `torch.tensor`. See https://github.com/pytorch/pytorch/blob/cd9dd653e98534b5d3a9f2576df2feda40916f1d/torch/csrc/jit/python/python_arg_flatten.cpp#L90. # noqa: E501
+        scalar = torch.tensor([self.scalar]) if digit_version(
+            TORCH_VERSION) < digit_version('1.9.0') else self.scalar
         dict_complexity = get_model_complexity_info(
             model=model, inputs=(input, scalar))
         self.assertEqual(
