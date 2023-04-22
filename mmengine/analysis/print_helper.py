@@ -683,18 +683,29 @@ def get_model_complexity_info(
 ):
     """Interface to get the complexity of a model.
 
+    The parameter `inputs` are fed to the forward method of model.
+    If `input` is not specified, the `input_shape` is required and
+    it will be used to construct the dummy input fed to model.
+    If the forward of model requires two or more inputs, the `inputs`
+    should be a tuple of tensor or the `input_shape` should be a tuple
+    of tuple which each element will be constructed into a dumpy input.
+
+    Examples:
+        >>> # the forward of model accepts only one input
+        >>> input_shapes = (3, 224, 224)
+        >>> # the following tuple of one tensor will be constructed
+        >>> inputs = tuple(torch.randn(1, 3, 224, 224),)
+        >>>
+        >>> # the forward of model accepts two or more inputs
+        >>> input_shapes = ((3, 224, 224), (3, 10))
+        >>> # the following tuple of tensors will be constructed
+        >>> inputs = tuple(torch.randn(1, 3, 224, 224), torch.randn(1, 3, 10))
+
     Args:
         model (nn.Module): The model to analyze.
         input_shape (Union[Tuple[int, ...], Tuple[Tuple[int, ...]], None]):
             The input shape of the model.
             If "inputs" is not specified, the "input_shape" should be set.
-            If the input_shape is a "tuple of int", one tensor will be
-            constructed. If the input_shape is a "tuple of tuple of int",
-            multiple tensors will be constructed. For example, assume
-                >>> input_shape = ((5,6), (7,8))
-            a "inputs" tuple consists of two tensors
-                >>> inputs = (torch.randn(1, 5, 6), torch.randn(1, 7, 8))
-            will be constructed and fed into the model.
             Defaults to None.
         inputs (torch.Tensor or tuple[torch.Tensor, ...], optional]):
             The input tensor(s) of the model. If not given the input tensor
