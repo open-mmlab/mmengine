@@ -134,3 +134,9 @@ class TestGetModelCompexityInfo(unittest.TestCase):
             model=model,
             inputs=input,
             input_shape=input_shape)
+
+    def test_provideNoneOfInputsNInputshape(self) -> None:
+        """The function `get_model_complexity_info()` should throw `ValueError`
+        when neithor `inputs` nor `input_shape` is specified."""
+        model = NetAcceptOneTensor()
+        self.assertRaises(ValueError, get_model_complexity_info, model=model)
