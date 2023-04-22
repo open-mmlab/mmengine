@@ -14,7 +14,7 @@ class NetAcceptOneTensor(nn.Module):
         super().__init__()
         self.l1 = nn.Linear(in_features=5, out_features=6)
 
-    def forward(self, x) -> None:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         out = self.l1(x)
         return out
 
@@ -26,7 +26,7 @@ class NetAcceptTwoTensors(nn.Module):
         self.l1 = nn.Linear(in_features=5, out_features=6)
         self.l2 = nn.Linear(in_features=7, out_features=6)
 
-    def forward(self, x1, x2) -> None:
+    def forward(self, x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
         out = self.l1(x1) + self.l2(x2)
         return out
 
@@ -38,7 +38,7 @@ class NetAcceptOneTensorNOneScalar(nn.Module):
         self.l1 = nn.Linear(in_features=5, out_features=6)
         self.l2 = nn.Linear(in_features=5, out_features=6)
 
-    def forward(self, x1, r) -> None:
+    def forward(self, x1: torch.Tensor, r) -> torch.Tensor:
         out = r * self.l1(x1) + (1 - r) * self.l2(x1)
         return out
 
