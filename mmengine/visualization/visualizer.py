@@ -243,7 +243,7 @@ class Visualizer(ManagerMixin):
             continue_key (str): The key for users to continue. Defaults to
                 the space key.
             backend (str): The backend to show the image. Defaults to
-                'matplotlib'. New in version 0.7.3.
+                'matplotlib'. `New in version 0.7.3.`
         """
         if backend == 'matplotlib':
             import matplotlib.pyplot as plt
