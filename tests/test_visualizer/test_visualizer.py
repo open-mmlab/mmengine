@@ -607,7 +607,7 @@ class TestVisualizer(TestCase):
             ]
             wait_continue.assert_has_calls(calls)
 
-            # test matplotlib backend
+            # matplotlib backend
             visualizer.show(
                 drawn_img=img,
                 win_name='test_show',
@@ -626,10 +626,18 @@ class TestVisualizer(TestCase):
             ]
             wait_continue.assert_has_calls(calls)
 
-            # test cv2 backend
+            # cv2 backend
             visualizer.show(
                 drawn_img=img,
                 win_name='test_show',
                 wait_time=0,
                 backend='cv2')
             cv2.imshow.assert_called_once_with(str(id(visualizer)), img)
+
+            # unknown backend
+            with pytest.raises(ValueError):
+                visualizer.show(
+                    drawn_img=img,
+                    win_name='test_show',
+                    wait_time=0,
+                    backend='unknown')
