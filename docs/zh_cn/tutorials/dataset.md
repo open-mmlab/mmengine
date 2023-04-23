@@ -184,7 +184,7 @@ runner = Runner(
 ```
 
 ```{note}
-上述例子中大量使用了[注册机制](../advanced_tutorials/registry.md)，并且用到了 MMEngine 中的 [Compose](mmengine.dataset.Compose)。如果你急需在配置文件中使用 `torchvision` 数据集，你可以参考上述代码并略作修改。但我们更加推荐你有需要时在下游库（如 [MMDet](https://github.com/open-mmlab/mmdetection) 和 [MMCls](https://github.com/open-mmlab/mmclassification) 等）中寻找对应的数据集实现，从而获得更好的使用体验。
+上述例子中大量使用了[注册机制](../advanced_tutorials/registry.md)，并且用到了 MMEngine 中的 [Compose](mmengine.dataset.Compose)。如果你急需在配置文件中使用 `torchvision` 数据集，你可以参考上述代码并略作修改。但我们更加推荐你有需要时在下游库（如 [MMDet](https://github.com/open-mmlab/mmdetection) 和 [MMPretrain](https://github.com/open-mmlab/mmpretrain) 等）中寻找对应的数据集实现，从而获得更好的使用体验。
 ```
 
 ### 自定义数据集

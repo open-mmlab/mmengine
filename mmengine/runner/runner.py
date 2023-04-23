@@ -819,7 +819,7 @@ class Runner:
     def wrap_model(
             self, model_wrapper_cfg: Optional[Dict],
             model: nn.Module) -> Union[DistributedDataParallel, nn.Module]:
-        """Wrap the model to :obj:``MMDistributedDataParallel`` or other custom
+        """Wrap the model to :obj:`MMDistributedDataParallel` or other custom
         distributed data-parallel module wrappers.
 
         An example of ``model_wrapper_cfg``::

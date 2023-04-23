@@ -4,7 +4,7 @@
 
 在调试代码的过程中，有时需要训练几个 epoch，例如调试验证过程或者权重的保存是否符合期望。然而如果数据集太大，需要花费较长时间才能训完一个 epoch，这种情况下可以设置数据集的长度。注意，只有继承自 [BaseDataset](mmengine.dataset.BaseDataset) 的 Dataset 才支持这个功能，`BaseDataset` 的用法可阅读 [数据集基类（BASEDATASET）](../advanced_tutorials/basedataset.md)。
 
-以 `MMClassification` 为例（参考[文档](https://mmclassification.readthedocs.io/zh_CN/dev-1.x/get_started.html#id2)安装 MMClassification）。
+以 `MMPretrain` 为例（参考[文档](https://mmpretrain.readthedocs.io/zh_CN/latest/get_started.html)安装 MMPretrain）。
 
 启动训练命令
 
@@ -20,7 +20,7 @@ python tools/train.py configs/resnet/resnet18_8xb16_cifar10.py
 02/20 14:43:14 - mmengine - INFO - Epoch(train)   [1][ 300/3125]  lr: 1.0000e-01  eta: 3:46:27  time: 0.0146  data_time: 0.0003  memory: 214  loss: 1.9858
 ```
 
-关掉训练，然后修改 [configs/_base_/datasets/cifar10_bs16.py](https://github.com/open-mmlab/mmclassification/blob/dev-1.x/configs/_base_/datasets/cifar10_bs16.py) 中的 `dataset` 字段，设置 `indices=5000`。
+关掉训练，然后修改 [configs/_base_/datasets/cifar10_bs16.py](https://github.com/open-mmlab/mmpretrain/blob/main/configs/_base_/datasets/cifar100_bs16.py) 中的 `dataset` 字段，设置 `indices=5000`。
 
 ```python
 train_dataloader = dict(
