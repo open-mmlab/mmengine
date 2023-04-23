@@ -127,6 +127,15 @@ class TestLoggerHook:
         logger_hook.after_train_iter(runner, batch_idx=999)
         runner.logger.info.assert_called()
 
+        # Test print training log when the num of iterations is smaller than the default interval
+        runner = MagicMock()
+        runner.log_processor.get_log_after_iter = MagicMock(
+            return_value=(dict(), 'log_str'))
+        runner.train_dataloader = [0] * 9
+        logger_hook = LoggerHook()
+        logger_hook.after_train_iter(runner, batch_idx=8)
+        runner.log_processor.get_log_after_iter.assert_called()
+
     def test_after_val_epoch(self):
         logger_hook = LoggerHook()
         runner = MagicMock()
