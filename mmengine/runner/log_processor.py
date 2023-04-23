@@ -201,6 +201,8 @@ class LogProcessor:
                 cur_iter_str = str(batch_idx + 1).rjust(
                     len(str(dataloader_len)))
                 log_str = (f'Iter({mode}) [{cur_iter_str}/{dataloader_len}]  ')
+        # Add global iter.
+        tag['iter'] = runner.iter + 1
         # Concatenate lr, momentum string with log header.
         log_str += f'{lr_str}  '
         # If IterTimerHook used in runner, eta, time, and data_time should be

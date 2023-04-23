@@ -355,6 +355,12 @@ class WandbVisBackend(BaseVisBackend):
             See `wandb define_metric <https://docs.wandb.ai/ref/python/
             run#define_metric>`_ for details.
             Default: None
+        define_metric_cfgs (list, optional):
+            A list of dicts. Each dict should be valid arguments of
+            the ``define_metrics``.
+            See `wandb define_metric <https://docs.wandb.ai/ref/python/
+            run#define_metric>`_ for details.
+            New in version 0.7.4.
         commit: (bool, optional) Save the metrics dict to the wandb server
             and increment the step.  If false `wandb.log` just updates the
             current metrics dict with the row argument and metrics won't be
@@ -374,12 +380,14 @@ class WandbVisBackend(BaseVisBackend):
                  save_dir: str,
                  init_kwargs: Optional[dict] = None,
                  define_metric_cfg: Optional[dict] = None,
+                 define_metric_cfgs: Optional[dict] = None,
                  commit: Optional[bool] = True,
                  log_code_name: Optional[str] = None,
                  watch_kwargs: Optional[dict] = None):
         super().__init__(save_dir)
         self._init_kwargs = init_kwargs
         self._define_metric_cfg = define_metric_cfg
+        self._define_metric_cfgs = define_metric_cfgs
         self._commit = commit
         self._log_code_name = log_code_name
         self._watch_kwargs = watch_kwargs if watch_kwargs is not None else {}
@@ -402,6 +410,9 @@ class WandbVisBackend(BaseVisBackend):
         if self._define_metric_cfg is not None:
             for metric, summary in self._define_metric_cfg.items():
                 wandb.define_metric(metric, summary=summary)
+        if self._define_metric_cfgs is not None:
+            for metric_cfg in self._define_metric_cfgs:
+                wandb.define_metric(**metric_cfg)
         self._wandb = wandb
 
     @property  # type: ignore
