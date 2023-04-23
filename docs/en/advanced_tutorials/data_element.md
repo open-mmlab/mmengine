@@ -27,7 +27,7 @@ for img, data_sample in dataloader:
 
 The abstracted interface unifies and simplifies the interface between modules in the algorithm library, and can be used to pass data between datasets, models, visualizers, evaluates, or even within different modules in one model.
 
-Besides the basic add, delete, change and check functions, this interface also supports migration between different devices and the operation of class dictionaries and tensors, which can fully satisfy the requirements of the algorithm library.
+Besides the basic add, delete, change and check functions, this interface also supports migration between different devices and the operation of `dict and `torch.Tensor`, which can fully satisfy the requirements of the algorithm library.
 
 The MMEngine based algirthm library can inherit from this design and implement its own interfaces to meet the characteristics and practical needs of data in different algorithms, improving the expandability while maintaining a unified interface.
 
