@@ -33,7 +33,7 @@ class NetAcceptTwoTensors(nn.Module):
         return out
 
 
-class NetAcceptOneTensorNOneScalar(nn.Module):
+class NetAcceptOneTensorAndOneScalar(nn.Module):
 
     def __init__(self) -> None:
         super().__init__()
@@ -113,7 +113,7 @@ class TestGetModelCompexityInfo(unittest.TestCase):
 
     def test_oneTensorNOneScalar(self) -> None:
         """Test a network that accept one tensor and one scalar as input."""
-        model = NetAcceptOneTensorNOneScalar()
+        model = NetAcceptOneTensorAndOneScalar()
         input = self.t1
         # For pytorch<1.9, a scalar input is not acceptable for torch.jit,
         # wrap it to `torch.tensor`. See https://github.com/pytorch/pytorch/blob/cd9dd653e98534b5d3a9f2576df2feda40916f1d/torch/csrc/jit/python/python_arg_flatten.cpp#L90. # noqa: E501
