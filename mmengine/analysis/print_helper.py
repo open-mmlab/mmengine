@@ -732,11 +732,11 @@ def get_model_complexity_info(
             inputs = (torch.randn(1, *input_shape), )
         elif is_tuple_of(input_shape, tuple) and all([
                 is_tuple_of(one_input_shape, int)
-                for one_input_shape in input_shape
+                for one_input_shape in input_shape  # type: ignore
         ]):  # tuple of tuple of int, construct multiple tensors
             inputs = tuple([
                 torch.randn(1, *one_input_shape)
-                for one_input_shape in input_shape
+                for one_input_shape in input_shape  # type: ignore
             ])
         else:
             raise ValueError(
