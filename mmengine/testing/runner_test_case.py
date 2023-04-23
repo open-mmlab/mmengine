@@ -147,7 +147,7 @@ class RunnerTestCase(TestCase):
 
         self.iter_based_cfg.train_cfg = dict(by_epoch=False, max_iters=12)
         self.iter_based_cfg.default_hooks = dict(
-            logger=dict(type='LoggerHook', interval=1, keep_local=False),
+            logger=dict(type='LoggerHook', interval=1, change_log_dir=False),
             checkpoint=dict(
                 type='CheckpointHook', interval=12, by_epoch=False))
 
