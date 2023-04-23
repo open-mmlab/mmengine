@@ -12,7 +12,7 @@ from rich.console import Console
 from rich.table import Table
 from torch import nn
 
-from ..utils import is_tuple_of
+from mmengine.utils import is_tuple_of
 from .complexity_analysis import (ActivationAnalyzer, FlopAnalyzer,
                                   parameter_count)
 
