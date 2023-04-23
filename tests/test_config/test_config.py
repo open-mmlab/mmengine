@@ -942,11 +942,11 @@ class TestConfig:
     def test_lazy_import(self, tmp_path):
         lazy_import_cfg_path = osp.join(
             self.data_path, 'config/lazy_module_config/toy_model.py')
-        cfg = Config.fromfile(lazy_import_cfg_path, lazy_import=True)
+        cfg = Config.fromfile(lazy_import_cfg_path)
         # Dumpe config
         dumped_cfg_path = tmp_path / 'test_dump_lazy.py'
         cfg.dump(dumped_cfg_path)
-        dumped_cfg = Config.fromfile(dumped_cfg_path, lazy_import=True)
+        dumped_cfg = Config.fromfile(dumped_cfg_path)
 
         def _compare_dict(a, b):
             if isinstance(a, dict):
@@ -990,8 +990,7 @@ class TestConfig:
         if test_lazy_import_mmdet():
             cfg = Config.fromfile(
                 osp.join(self.data_path,
-                         'config/lazy_module_config/load_mmdet_config.py'),
-                lazy_import=True)
+                         'config/lazy_module_config/load_mmdet_config.py'))
             assert cfg.model.backbone.depth == 101
             cfg.work_dir = str(tmp_path)
             runner.from_cfg(cfg)

@@ -24,7 +24,7 @@ from mmengine.utils import (check_file_exist, get_installed_path,
 from .lazy import LazyAttr, LazyObject
 from .utils import (RemoveAssignFromAST, Transform, _gather_abs_import_lazyobj,
                     _get_external_cfg_base_path, _get_external_cfg_path,
-                    _get_package_and_cfg_path)
+                    _get_package_and_cfg_path, _is_builtin_module)
 
 BASE_KEY = '_base_'
 DELETE_KEY = '_delete_'
@@ -298,7 +298,7 @@ class Config:
                  use_predefined_variables: bool = True,
                  import_custom_modules: bool = True,
                  use_environment_variables: bool = True,
-                 lazy_import=False) -> 'Config':
+                 lazy_import: Optional[bool] = None) -> 'Config':
         """Build a Config instance from config file.
 
         Args:
@@ -306,12 +306,15 @@ class Config:
             use_predefined_variables (bool, optional): Whether to use
                 predefined variables. Defaults to True.
             import_custom_modules (bool, optional): Whether to support
-                importing custom modules in config. Defaults to True.
+                importing custom modules in config. Defaults to None. If it
+                is None, it will be deduced by the config file style.
 
         Returns:
             Config: Config instance built from config file.
         """
         filename = str(filename) if isinstance(filename, Path) else filename
+        if lazy_import is None:
+            lazy_import = Config._is_lazy_import(filename)
         if not lazy_import:
             cfg_dict, cfg_text, env_variables = Config._file2dict(
                 filename, use_predefined_variables, use_environment_variables)
@@ -1378,6 +1381,29 @@ class Config:
             '_cfg_dict',
             Config._merge_a_into_b(
                 option_cfg_dict, cfg_dict, allow_list_keys=allow_list_keys))
+
+    @staticmethod
+    def _is_lazy_import(filename):
+        with open(filename) as f:
+            codes = ast.parse(f.read())
+        for node in ast.walk(codes):
+            if (isinstance(node, ast.If)
+                    and isinstance(node.test, ast.Constant)
+                    and node.test.value == '_base_'):
+                return True
+            if isinstance(node, ast.ImportFrom):
+                if node.level != 0:
+                    return True
+                if (node.module == 'mmengine' and len(node.names) == 1
+                        and node.names[0].name == 'Config'):
+                    continue
+                if not _is_builtin_module(node.module):
+                    return True
+            if isinstance(node, ast.Import):
+                for name in node.names:
+                    if not _is_builtin_module(name.name):
+                        return True
+        return False
 
 
 class DictAction(Action):

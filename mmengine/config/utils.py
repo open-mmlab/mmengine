@@ -158,6 +158,8 @@ def _is_builtin_module(module_name: str) -> bool:
     """
     if module_name.startswith('.'):
         return False
+    if module_name.startswith('mmengine.config'):
+        return True
     spec = find_spec(module_name.split('.')[0])
     # Module not found
     if spec is None:
