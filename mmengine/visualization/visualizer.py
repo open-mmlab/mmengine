@@ -229,8 +229,8 @@ class Visualizer(ManagerMixin):
              drawn_img: Optional[np.ndarray] = None,
              win_name: str = 'image',
              wait_time: float = 0.,
-             continue_key=' ',
-             backend='matplotlib') -> None:
+             continue_key: str = ' ',
+             backend: str = 'matplotlib') -> None:
         """Show the drawn image.
 
         Args:
@@ -243,7 +243,7 @@ class Visualizer(ManagerMixin):
             continue_key (str): The key for users to continue. Defaults to
                 the space key.
             backend (str): The backend to show the image. Defaults to
-                'matplotlib'. New in version 0.7.1.
+                'matplotlib'. New in version 0.7.3.
         """
         if backend == 'matplotlib':
             import matplotlib.pyplot as plt
