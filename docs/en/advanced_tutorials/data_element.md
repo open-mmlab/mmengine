@@ -221,7 +221,7 @@ bboxes: tensor([[0.9204, 0.2110, 0.2886, 0.7925],
 
 ### 4. Delete and modify attributes
 
-Users can modify the `data` of `BaseDataElement` as if it were an instance property. However, with the same reason we mentioned in adding and querying attributes, users should only use `set_metainfo` to do the modifications.
+Users can modify the `data` of `BaseDataElement` as if it were an instance property. However, with the same reason we mentioned in adding and querying attributes, users should only use `set_metainfo` to modify the `metainfo`.
 
 For the ease of use, users can use `del` to delete the data in `data` and `metainfo` directly. `pop` is also supported to delete attributes after the access.
 
