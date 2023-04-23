@@ -36,7 +36,7 @@ During the implementation, there are two types of the data interfaces for the al
 - A collection of all the annotation and prediction information of a training or test sample. For example, the output of a dataset, a model, and the input of a visualizer. MMEngine defines it as a `DataSample`.
 - A single type of prediction or annotation information which is usually the output of a sub-module of a model, such as the output of a RPN in two-stage detection algorithm, the result of a semantic segmentation model, the production of a key point branch, and the output of a generator of a GAN model, etc. MMEngine defines these data as a data element (`XXXData`).
 
-The following section first introduces the base class [BaseDataElement](mmengine.structures.BaseDataElement) for data samples and elements.
+The following section first introduces the base class [BaseDataElement](mmengine.structures.BaseDataElement) for `DataSample` and `XXXData`.
 
 ## BaseDataElement
 
