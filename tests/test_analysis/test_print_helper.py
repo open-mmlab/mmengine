@@ -51,7 +51,7 @@ def test_get_model_complexity_info():
     input2 = torch.randn(1, 9, 7)
     input_shape2 = (9, 7)
     scalar = 0.3
-    
+
     # test a network that accepts one tensor as input
     model = NetAcceptOneTensor()
     complexity_info = get_model_complexity_info(model=model, inputs=input1)
@@ -59,37 +59,37 @@ def test_get_model_complexity_info():
     params = parameter_count(model=model)['']
     assert complexity_info['flops'] == flops
     assert complexity_info['params'] == params
-    
-    complexity_info = get_model_complexity_info(model=model,
-                                                input_shap=input_shape1)
-    flops = FlopAnalyzer(model=model,
-                         inputs=(torch.randn(1, *input_shape), )).total()
+
+    complexity_info = get_model_complexity_info(
+        model=model, input_shape=input_shape1)
+    flops = FlopAnalyzer(
+        model=model, inputs=(torch.randn(1, *input_shape1), )).total()
     assert complexity_info['flops'] == flops
 
     # test a network that accepts two tensors as input
     model = NetAcceptTwoTensors()
-    complexity_info = get_model_complexity_info(model=model,
-                                                inputs=(input1, input2))
-    flops = FlopAnalyzer(model=model,
-                         inputs=(input1, input2)).total()
+    complexity_info = get_model_complexity_info(
+        model=model, inputs=(input1, input2))
+    flops = FlopAnalyzer(model=model, inputs=(input1, input2)).total()
     params = parameter_count(model=model)['']
     assert complexity_info['flops'] == flops
     assert complexity_info['params'] == params
-    
+
     complexity_info = get_model_complexity_info(
         model=model, input_shape=(input_shape1, input_shape2))
     inputs = (torch.randn(1, *input_shape1), torch.randn(1, *input_shape2))
     flops = FlopAnalyzer(model=model, inputs=inputs).total()
     assert complexity_info['flops'] == flops
-    
+
     # test a network that accepts one tensor and one scalar as input
     model = NetAcceptOneTensorAndOneScalar()
     # For pytorch<1.9, a scalar input is not acceptable for torch.jit,
     # wrap it to `torch.tensor`. See https://github.com/pytorch/pytorch/blob/cd9dd653e98534b5d3a9f2576df2feda40916f1d/torch/csrc/jit/python/python_arg_flatten.cpp#L90. # noqa: E501
-    scalar = torch.tensor([scalar]) if digit_version(
-        TORCH_VERSION) < digit_version('1.9.0') else scalar
-    complexity_info = get_model_complexity_info(model=model,
-                                                inputs=(input1, scalar))
+    scalar = torch.tensor([
+        scalar
+    ]) if digit_version(TORCH_VERSION) < digit_version('1.9.0') else scalar
+    complexity_info = get_model_complexity_info(
+        model=model, inputs=(input1, scalar))
     flops = FlopAnalyzer(model=model, inputs=(input1, scalar)).total()
     params = parameter_count(model=model)['']
     assert complexity_info['flops'] == flops
@@ -99,9 +99,10 @@ def test_get_model_complexity_info():
     # when neithor `inputs` nor `input_shape` is specified
     with pytest.raises(ValueError, match='should be set'):
         get_model_complexity_info(model)
-    
+
     # `get_model_complexity_info()` should throw `ValueError`
     # when both `inputs` and `input_shape` are specified
     model = NetAcceptOneTensor()
     with pytest.raises(ValueError, match='cannot be both set'):
-        get_model_complexity_info(model, inputs=input1, input_shape=input_shapes)
+        get_model_complexity_info(
+            model, inputs=input1, input_shape=input_shape1)
