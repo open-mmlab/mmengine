@@ -114,7 +114,7 @@ For adding `data` attributes, users can add them as adding class attributes insi
 
 For querying, users can access keys that exists only in `data` via `keys`, `values`, and `items`. You can also use `metainfo_keys`, `metainfo_values`, and `metainfo_items` to access those only exists in `metainfo`.
 
-Moreover, for the ease of use, users can access `data` and `metainfo` as if they were working with class properties, or through the `get()` interface as class dictionaries.
+Moreover, for the ease of use, users can access `data` and `metainfo` as if they were working with class properties, or through the `get()` interface as `dict`.
 
 **Note:**
 
