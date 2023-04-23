@@ -694,11 +694,11 @@ def get_model_complexity_info(
 
     Examples:
         >>> # the forward of model accepts only one input
-        >>> input_shapes = (3, 224, 224)
-        >>> get_model_complexity_info(model, input_shapes)
+        >>> input_shape = (3, 224, 224)
+        >>> get_model_complexity_info(model, input_shape=input_shape)
         >>> # the forward of model accepts two or more inputs
-        >>> input_shapes = ((3, 224, 224), (3, 10))
-        >>> get_model_complexity_info(model, input_shapes)
+        >>> input_shape = ((3, 224, 224), (3, 10))
+        >>> get_model_complexity_info(model, input_shape=input_shape)
 
     Args:
         model (nn.Module): The model to analyze.
