@@ -383,7 +383,7 @@ class WandbVisBackend(BaseVisBackend):
                  save_dir: str,
                  init_kwargs: Optional[dict] = None,
                  define_metric_cfg: Optional[dict] = None,
-                 define_metric_cfgs: Optional[dict] = None,
+                 define_metric_cfgs: Optional[list] = None,
                  commit: Optional[bool] = True,
                  log_code_name: Optional[str] = None,
                  watch_kwargs: Optional[dict] = None):
