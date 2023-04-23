@@ -355,9 +355,12 @@ class WandbVisBackend(BaseVisBackend):
             See `wandb define_metric <https://docs.wandb.ai/ref/python/
             run#define_metric>`_ for details.
             Default: None
-        define_metric_cfgs (list, optional):
-            A list of dicts. Each dict should be valid arguments of
-            the ``define_metrics``.
+        define_metric_cfgs (list[dict], optional):
+            A list of define_metric arguments.
+            Each dict should be a valid argument of the ``define_metric``.
+            The following example changes the x-axis of the "loss" plot
+            from the default step to epoch.
+            ``define_metric_cfgs=[dict(name="loss", step_metric='epoch')]``
             See `wandb define_metric <https://docs.wandb.ai/ref/python/
             run#define_metric>`_ for details.
             New in version 0.7.4.
