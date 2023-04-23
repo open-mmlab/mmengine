@@ -127,7 +127,8 @@ class TestLoggerHook:
         logger_hook.after_train_iter(runner, batch_idx=999)
         runner.logger.info.assert_called()
 
-        # Test print training log when the num of iterations is smaller than the default interval
+        # Test print training log when the num of
+        # iterations is smaller than the default interval
         runner = MagicMock()
         runner.log_processor.get_log_after_iter = MagicMock(
             return_value=(dict(), 'log_str'))
