@@ -95,6 +95,14 @@ class ConfigDict(Dict):
         else:
             return value
 
+    def __setattr__(self, name, value):
+        value = self._hook(value)
+        return super().__setattr__(name, value)
+
+    def __setitem__(self, name, value):
+        value = self._hook(value)
+        return super().__setitem__(name, value)
+
     def __getitem__(self, key):
         return self.build_lazy(super().__getitem__(key))
 
@@ -147,7 +155,7 @@ class ConfigDict(Dict):
         for k, v in other.items():
             if ((k not in self) or (not isinstance(self[k], dict))
                     or (not isinstance(v, dict))):
-                self[k] = v
+                self[k] = self._hook(v)
             else:
                 self[k].update(v)
 
@@ -449,24 +457,29 @@ class Config:
             return base_modules
 
         for idx, inst in enumerate(codes):
-            if (isinstance(inst, ast.If)
-                    and isinstance(inst.test, ast.Constant)
-                    and inst.test.value == '_base_'):
-                # The original code:
-                # ```
-                # if _base_:
-                #     from .._base_.default_runtime import *
-                # ```
-                # The processed code:
-                # ```
-                # from .._base_.default_runtime import *
-                # ```
-                # As you can see, the if statement is removed and the
-                # from ... import statement will be unindent
-                for nested_idx, nested_inst in enumerate(inst.body):
-                    codes.insert(idx + nested_idx + 1, nested_inst)
-                codes.pop(idx)
-                return _get_base_module_from_if(inst.body)
+            if not isinstance(inst, ast.If):
+                continue
+            value = inst.test
+            if isinstance(value, ast.Constant) and not value.value == '_base_':
+                continue
+            if isinstance(value, ast.Str) and not value.s == '_base_':
+                continue
+
+            # The original code:
+            # ```
+            # if _base_:
+            #     from .._base_.default_runtime import *
+            # ```
+            # The processed code:
+            # ```
+            # from .._base_.default_runtime import *
+            # ```
+            # As you can see, the if statement is removed and the
+            # from ... import statement will be unindent
+            for nested_idx, nested_inst in enumerate(inst.body):
+                codes.insert(idx + nested_idx + 1, nested_inst)
+            codes.pop(idx)
+            return _get_base_module_from_if(inst.body)
         return []
 
     @staticmethod
@@ -948,14 +961,12 @@ class Config:
         # Only the outer dict with key `type` should have the key `_scope_`.
         if isinstance(cfg, dict):
             if isinstance(cfg, ConfigDict):
+                # Use to_dict to avoid build lazy object.
                 cfg = cfg.to_dict()
-            # We cannot use generative expression like:
-            # ConfigDict({...}) to create a ConfigDict object, because
-            # ConfigDict.__init__ will automatically convert dict value to
-            # ConfigDict, which cause the unwrapping of LazyObject
-            cfg_dict = ConfigDict()
-            for key, value in cfg.items():
-                cfg_dict[key] = Config._dict_to_config_dict_lazy(value)
+            cfg_dict = ConfigDict({
+                key: Config._dict_to_config_dict_lazy(value)
+                for key, value in cfg.items()
+            })
             # Load from dumped lazy import config
             if ('type' in cfg_dict and '_module_' in cfg_dict
                     and isinstance(cfg_dict.type, str)):  # type: ignore
