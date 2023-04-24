@@ -6,6 +6,7 @@ import os.path as osp
 import random
 import shutil
 import tempfile
+from functools import partial
 from unittest import TestCase, skipIf
 
 import numpy as np
@@ -1262,6 +1263,43 @@ class TestRunner(TestCase):
             num_workers=2)
         dataloader = runner.build_dataloader(cfg)
         self.assertIs(dataloader.worker_init_fn.func, custom_worker_init)
+
+        # collate_fn is a dict
+        cfg = dict(
+            dataset=dict(type='ToyDataset'),
+            sampler=dict(type='DefaultSampler', shuffle=True),
+            worker_init_fn=dict(type='custom_worker_init'),
+            batch_size=1,
+            num_workers=2,
+            collate_fn=dict(type='pseudo_collate'))
+        dataloader = runner.build_dataloader(cfg)
+        self.assertIsInstance(dataloader.collate_fn, partial)
+
+        # collate_fn is a callable object
+        def custom_collate(data_batch):
+            return data_batch
+
+        cfg = dict(
+            dataset=dict(type='ToyDataset'),
+            sampler=dict(type='DefaultSampler', shuffle=True),
+            worker_init_fn=dict(type='custom_worker_init'),
+            batch_size=1,
+            num_workers=2,
+            collate_fn=custom_collate)
+        dataloader = runner.build_dataloader(cfg)
+        self.assertIs(dataloader.collate_fn, custom_collate)
+        # collate_fn is a invalid value
+        with self.assertRaisesRegex(
+                TypeError, 'collate_fn should be a dict or callable object'):
+            cfg = dict(
+                dataset=dict(type='ToyDataset'),
+                sampler=dict(type='DefaultSampler', shuffle=True),
+                worker_init_fn=dict(type='custom_worker_init'),
+                batch_size=1,
+                num_workers=2,
+                collate_fn='collate_fn')
+            dataloader = runner.build_dataloader(cfg)
+            self.assertIsInstance(dataloader.collate_fn, partial)
 
     def test_build_train_loop(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)

@@ -1421,9 +1421,17 @@ class Runner:
         # samples into a dict without stacking the batch tensor.
         collate_fn_cfg = dataloader_cfg.pop('collate_fn',
                                             dict(type='pseudo_collate'))
-        collate_fn_type = collate_fn_cfg.pop('type')
-        collate_fn = FUNCTIONS.get(collate_fn_type)
-        collate_fn = partial(collate_fn, **collate_fn_cfg)  # type: ignore
+        if isinstance(collate_fn_cfg, dict):
+            collate_fn_type = collate_fn_cfg.pop('type')
+            collate_fn = FUNCTIONS.get(collate_fn_type)
+            collate_fn = partial(collate_fn, **collate_fn_cfg)  # type: ignore
+        elif callable(collate_fn_cfg):
+            collate_fn = collate_fn_cfg
+        else:
+            raise TypeError(
+                'collate_fn should be a dict or callable object, but got '
+                f'{collate_fn_cfg}')
+
         data_loader = DataLoader(
             dataset=dataset,
             sampler=sampler if batch_sampler is None else None,
