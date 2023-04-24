@@ -1,10 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
 
-import torch
-import torch.amp
-import torch.functional
-import torch.nn as nn
+import numpy
+import numpy.compat
+import numpy.linalg as linalg
 
-from mmengine.dataset import BaseDataset as Dataset
-from mmengine.model import BaseModel
+from mmengine.fileio import LocalBackend as local
+from mmengine.fileio import PetrelBackend

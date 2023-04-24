@@ -2,18 +2,19 @@
 import ast
 import os
 import os.path as osp
+import sys
+from importlib import import_module
 from unittest import TestCase
 
-import torch
-import torch.amp as amp
-import torch.functional as functional
+import numpy
+import numpy.compat
+import numpy.linalg as linalg
 
 import mmengine
 import mmengine.model
 from mmengine.config.lazy import LazyAttr, LazyObject
 from mmengine.config.utils import Transform, _gather_abs_import_lazyobj
-from mmengine.dataset import BaseDataset
-from mmengine.model import BaseModel
+from mmengine.fileio import LocalBackend, PetrelBackend
 
 
 class TestTransform(TestCase):
@@ -38,30 +39,30 @@ class TestTransform(TestCase):
         exec(compile(codeobj, cfg_path, mode='exec'), global_dict, global_dict)
         # 1. absolute import
         # 1.1 import module as LazyObject
-        lazy_torch = global_dict['torch']
-        self.assertIsInstance(lazy_torch, LazyObject)
+        lazy_numpy = global_dict['numpy']
+        self.assertIsInstance(lazy_numpy, LazyObject)
 
         # 1.2 getattr as LazyAttr
-        self.assertIsInstance(lazy_torch.amp, LazyAttr)
-        self.assertIsInstance(lazy_torch.functional, LazyAttr)
+        self.assertIsInstance(lazy_numpy.linalg, LazyAttr)
+        self.assertIsInstance(lazy_numpy.compat, LazyAttr)
 
         # 1.3 Build module from LazyObject. amp and functional can be accessed
-        imported_torch = lazy_torch.build()
-        self.assertIs(imported_torch.amp, amp)
-        self.assertIs(imported_torch.functional, functional)
+        imported_numpy = lazy_numpy.build()
+        self.assertIs(imported_numpy.linalg, linalg)
+        self.assertIs(imported_numpy.compat, numpy.compat)
 
         # 1.4 Build module from LazyAttr
-        imported_amp = lazy_torch.amp.build()
-        imported_functional = lazy_torch.functional.build()
-        self.assertIs(imported_amp, amp)
-        self.assertIs(imported_functional, functional)
+        imported_linalg = lazy_numpy.linalg.build()
+        imported_compat = lazy_numpy.compat.build()
+        self.assertIs(imported_compat, numpy.compat)
+        self.assertIs(imported_linalg, linalg)
 
         # 1.5 import ... as, and build module from LazyObject
-        lazy_nn = global_dict['nn']
-        self.assertIsInstance(lazy_nn, LazyObject)
-        self.assertIs(lazy_nn.build(), torch.nn)
-        self.assertIsInstance(lazy_nn.Conv2d, LazyAttr)
-        self.assertIs(lazy_nn.Conv2d.build(), torch.nn.Conv2d)
+        lazy_linalg = global_dict['linalg']
+        self.assertIsInstance(lazy_linalg, LazyObject)
+        self.assertIs(lazy_linalg.build(), linalg)
+        self.assertIsInstance(lazy_linalg.norm, LazyAttr)
+        self.assertIs(lazy_linalg.norm.build(), linalg.norm)
 
         # 1.6 import built in module
         imported_os = global_dict['os']
@@ -69,22 +70,22 @@ class TestTransform(TestCase):
 
         # 2. Relative import
         # 2.1 from ... import ...
-        lazy_BaseModel = global_dict['BaseModel']
-        self.assertIsInstance(lazy_BaseModel, LazyObject)
-        self.assertIs(lazy_BaseModel.build(), BaseModel)
+        lazy_local_backend = global_dict['local']
+        self.assertIsInstance(lazy_local_backend, LazyObject)
+        self.assertIs(lazy_local_backend.build(), LocalBackend)
 
         # 2.2 from ... import ... as ...
-        lazy_Dataset = global_dict['Dataset']
-        self.assertIsInstance(lazy_Dataset, LazyObject)
-        self.assertIs(lazy_Dataset.build(), BaseDataset)
+        lazy_petrel_backend = global_dict['PetrelBackend']
+        self.assertIsInstance(lazy_petrel_backend, LazyObject)
+        self.assertIs(lazy_petrel_backend.build(), PetrelBackend)
 
 
 class TestLazyObject(TestCase):
 
     def test_init(self):
         LazyObject('mmengine')
-        LazyObject('mmengine.model')
-        LazyObject('mmengine.model', 'BaseModule')
+        LazyObject('mmengine.fileio')
+        LazyObject('mmengine.fileio', 'LocalBackend')
 
         # module must be str
         with self.assertRaises(TypeError):
@@ -97,14 +98,24 @@ class TestLazyObject(TestCase):
     def test_build(self):
         lazy_mmengine = LazyObject('mmengine')
         self.assertIs(lazy_mmengine.build(), mmengine)
-        lazy_mmengine_models = LazyObject('mmengine')
-        self.assertIs(lazy_mmengine_models.build(),
-                      __import__('mmengine.model'))
-        lazy_base_model = LazyObject('mmengine.model', 'BaseModel')
-        self.assertIs(lazy_base_model.build(), BaseModel)
 
-        mmengine_module = LazyObject(['mmengine.model', 'mmengine'])
-        self.assertIs(mmengine_module.build(), mmengine)
+        sys.modules.pop('mmengine.fileio')
+        sys.modules.pop('mmengine')
+        lazy_mmengine_fileio = LazyObject('mmengine.fileio')
+        self.assertIs(lazy_mmengine_fileio.build(),
+                      import_module('mmengine.fileio'))
+
+        lazy_local_backend = LazyObject('mmengine.fileio', 'LocalBackend')
+        self.assertIs(lazy_local_backend.build(), LocalBackend)
+
+        sys.modules.pop('mmengine.config')
+        sys.modules.pop('mmengine.fileio')
+        sys.modules.pop('mmengine')
+        lazy_mmengine = LazyObject(['mmengine.fileio', 'mmengine.config'])
+        self.assertIs(lazy_mmengine.build().config,
+                      import_module('mmengine.config'))
+        self.assertIs(lazy_mmengine.build().fileio,
+                      import_module('mmengine.fileio'))
 
 
 class TestLazyAttr(TestCase):
@@ -112,7 +123,5 @@ class TestLazyAttr(TestCase):
     # the build method here.
     def test_build(self):
         lazy_mmengine = LazyObject('mmengine')
-        mmengine_model = lazy_mmengine.model
-        self.assertIs(mmengine_model.build(), mmengine.model)
-        lazy_base_model = lazy_mmengine.model.base_model
-        self.assertIs(lazy_base_model.build(), mmengine.model.base_model)
+        local_backend = lazy_mmengine.fileio.LocalBackend
+        self.assertIs(local_backend.build(), LocalBackend)
