@@ -1,5 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from collections import namedtuple
+
+import numpy as np
 import pytest
+import torch
 
 from mmengine import MMLogger
 # yapf: disable
@@ -294,4 +298,32 @@ def test_apply_to():
     # Test with nested data
     data = dict(a=[dict(c=1)], b=2.0)
     result = apply_to(data, lambda x: isinstance(x, int), lambda x: x + 1)
-    assert dict(a=[dict(c=2)], b=2.0)
+    assert result == dict(a=[dict(c=2)], b=2.0)
+
+    # Tensor to numpy
+    data = dict(a=[dict(c=torch.tensor(1))], b=torch.tensor(2))
+    result = apply_to(data, lambda x: isinstance(x, torch.Tensor),
+                      lambda x: x.numpy())
+    assert isinstance(result['b'], np.ndarray)
+    assert isinstance(result['a'][0]['c'], np.ndarray)
+
+    # Tuple and convert string
+    data = (1, dict(a=[dict(b=2.0)]), 'test')
+    result = apply_to(
+        data, lambda x: isinstance(x, int) or x == 'test',
+        lambda x: torch.Tensor(x) if isinstance(x, int) else 'train')
+    assert isinstance(result, tuple)
+    assert isinstance(result[0], torch.Tensor)
+    assert isinstance(result[1]['a'][0]['b'], float)
+    assert result[2] == 'train'
+
+    # Named Tuple
+    dataclass = namedtuple('Data', ['a', 'b'])
+    data = dataclass('test', dict(a=[dict(c=1)], b=2.0))
+    result = apply_to(
+        data, lambda x: isinstance(x, int) or x == 'test',
+        lambda x: torch.Tensor(x) if isinstance(x, int) else 'train')
+    assert isinstance(result, dataclass)
+    assert result[0] == 'train'
+    assert isinstance(result.b['a'][0]['c'], torch.Tensor)
+    assert isinstance(result.b['b'], float)

@@ -247,8 +247,6 @@ def apply_to(data: Any, expr: Callable, apply_func: Callable):
         for key, value in data.items():
             res[key] = apply_to(value, expr, apply_func)
         return res
-    elif isinstance(data, (str, bytes)) or data is None:
-        return data
     elif isinstance(data, tuple) and hasattr(data, '_fields'):
         # namedtuple
         return type(data)(*(apply_to(sample, expr, apply_func) for sample in data))  # type: ignore  # noqa: E501  # yapf:disable

@@ -625,6 +625,7 @@ def weights_to_cpu(state_dict):
     """
     state_dict = apply_to(state_dict, lambda x: hasattr(x, 'cpu'),
                           lambda x: x.cpu())
+    # Keep metadata in state_dict
     state_dict._metadata = getattr(state_dict, '_metadata', OrderedDict())
     return state_dict
 
