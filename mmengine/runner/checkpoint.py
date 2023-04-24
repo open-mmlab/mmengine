@@ -71,48 +71,54 @@ def load_state_dict(module, state_dict, strict=False, logger=None):
             message. If not specified, print function will be used.
     """
     unexpected_keys = []
-    all_missing_keys = []
+    missing_keys = []
     err_msg = []
 
+    # copy state_dict so _load_from_state_dict can modify it
     metadata = getattr(state_dict, '_metadata', None)
     state_dict = state_dict.copy()
     if metadata is not None:
         state_dict._metadata = metadata
 
     # use _load_from_state_dict to enable checkpoint version control
-    def load(module, prefix=''):
+    def load(module, local_state_dict, prefix=''):
         # recursively check parallel module in case that the model has a
         # complicated structure, e.g., nn.Module(nn.Module(DDP))
         if is_model_wrapper(module) or isinstance(module, BaseTTAModel):
             module = module.module
         local_metadata = {} if metadata is None else metadata.get(
             prefix[:-1], {})
-        module._load_from_state_dict(state_dict, prefix, local_metadata, True,
-                                     all_missing_keys, unexpected_keys,
+        module._load_from_state_dict(local_state_dict, prefix, local_metadata,
+                                     True, missing_keys, unexpected_keys,
                                      err_msg)
         for name, child in module._modules.items():
             if child is not None:
-                load(child, prefix + name + '.')
+                child_prefix = prefix + name + '.'
+                child_state_dict = {
+                    k: v
+                    for k, v in local_state_dict.items()
+                    if k.startswith(child_prefix)
+                }
+                load(child, child_state_dict, child_prefix)
 
-    load(module)
+        # Note that the hook can modify missing_keys and unexpected_keys.
+        incompatible_keys = _IncompatibleKeys(missing_keys, unexpected_keys)
+        if hasattr(module, '_load_state_dict_post_hooks'):
+            for hook in module._load_state_dict_post_hooks.values():
+                out = hook(module, incompatible_keys)
+                assert out is None, (
+                    'Hooks registered with '
+                    '``register_load_state_dict_post_hook`` are not expected '
+                    'to return new values, if incompatible_keys need to be '
+                    'modified, it should be done inplace.')
+
+    load(module, state_dict)
     load = None  # break load->load reference cycle
 
     # ignore "num_batches_tracked" of BN layers
     missing_keys = [
-        key for key in all_missing_keys if 'num_batches_tracked' not in key
+        key for key in missing_keys if 'num_batches_tracked' not in key
     ]
-
-    incompatible_keys = _IncompatibleKeys(missing_keys, unexpected_keys)
-    if hasattr(module, '_load_state_dict_post_hooks'):
-        for hook in module._load_state_dict_post_hooks.values():
-            out = hook(module, incompatible_keys)
-            assert out is None, (
-                'Hooks registered with ``register_load_state_dict_post_hook`` '
-                'are notexpected to return new values, if incompatible_keys '
-                'need to be modified, it should be done inplace.')
-
-    unexpected_keys = incompatible_keys.unexpected_keys
-    missing_keys = incompatible_keys.missing_keys
 
     if unexpected_keys:
         err_msg.append('unexpected key in source '
