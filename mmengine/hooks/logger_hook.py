@@ -185,7 +185,8 @@ class LoggerHook(Hook):
             tag, log_str = runner.log_processor.get_log_after_iter(
                 runner, batch_idx, 'train')
         elif (self.end_of_epoch(runner.train_dataloader, batch_idx)
-              and not self.ignore_last):
+              and (not self.ignore_last
+                   or len(runner.train_dataloader) <= self.interval)):
             # `runner.max_iters` may not be divisible by `self.interval`. if
             # `self.ignore_last==True`, the log of remaining iterations will
             # be recorded (Epoch [4][1000/1007], the logs of 998-1007
