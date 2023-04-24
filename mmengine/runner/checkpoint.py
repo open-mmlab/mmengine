@@ -5,7 +5,7 @@ import os
 import os.path as osp
 import pkgutil
 import re
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from importlib import import_module
 from tempfile import TemporaryDirectory
 from typing import Callable, Dict, Optional
@@ -30,6 +30,17 @@ from mmengine.utils.dl_utils import load_url
 ENV_MMENGINE_HOME = 'MMENGINE_HOME'
 ENV_XDG_CACHE_HOME = 'XDG_CACHE_HOME'
 DEFAULT_CACHE_DIR = '~/.cache'
+
+
+class _IncompatibleKeys(
+        namedtuple('IncompatibleKeys', ['missing_keys', 'unexpected_keys'])):
+
+    def __repr__(self):
+        if not self.missing_keys and not self.unexpected_keys:
+            return '<All keys matched successfully>'
+        return super().__repr__()
+
+    __str__ = __repr__
 
 
 def _get_mmengine_home():
@@ -90,6 +101,18 @@ def load_state_dict(module, state_dict, strict=False, logger=None):
     missing_keys = [
         key for key in all_missing_keys if 'num_batches_tracked' not in key
     ]
+
+    incompatible_keys = _IncompatibleKeys(missing_keys, unexpected_keys)
+    if hasattr(module, '_load_state_dict_post_hooks'):
+        for hook in module._load_state_dict_post_hooks.values():
+            out = hook(module, incompatible_keys)
+            assert out is None, (
+                'Hooks registered with ``register_load_state_dict_post_hook`` '
+                'are notexpected to return new values, if incompatible_keys '
+                'need to be modified, it should be done inplace.')
+
+    unexpected_keys = incompatible_keys.unexpected_keys
+    missing_keys = incompatible_keys.missing_keys
 
     if unexpected_keys:
         err_msg.append('unexpected key in source '
