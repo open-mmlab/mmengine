@@ -1734,7 +1734,7 @@ class TestRunner(TestCase):
         cfg.default_hooks = dict(logger=dict(type='LoggerHook', interval=5))
         runner = Runner.from_cfg(cfg)
         runner.train()
-        with open(runner.logger._log_file, 'r') as f:
+        with open(runner.logger._log_file) as f:
             log = f.read()
         self.assertIn('Epoch(train) [1][4/4]', log)
 
