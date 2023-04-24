@@ -1,7 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import json
 import os.path as osp
-from unittest.mock import MagicMock
+import sys
+from unittest.mock import MagicMock, patch
 
 import pytest
 import torch
@@ -60,6 +62,27 @@ class TestBaseDataset:
             data_root=osp.join(osp.dirname(__file__), '../data/'),
             data_prefix=dict(img_path=''),
             ann_file='annotations/dummy_annotation.json')
+        assert dataset._fully_initialized
+        assert hasattr(dataset, 'data_list')
+        assert hasattr(dataset, 'data_address')
+
+        # test the instantiation of self.base_dataset with `backend_args`
+        petrel_client = MagicMock()
+        with patch.dict(
+            sys.modules, {'petrel_client': petrel_client}), \
+                patch('mmengine.fileio.backends.PetrelBackend.get_text') as get_text_mock:  # noqa: E501
+            ann_path = osp.join(
+                osp.dirname(__file__),
+                '../data/annotations/dummy_annotation.json')
+            with open(ann_path) as f:
+                mocked_value = json.dumps(json.load(f))
+            get_text_mock.return_value = mocked_value
+            dataset = BaseDataset(
+                data_root=osp.join(osp.dirname(__file__), '../data/'),
+                data_prefix=dict(img_path='imgs'),
+                ann_file='annotations/dummy_annotation.json',
+                backend_args=dict(backend='petrel'))
+            get_text_mock.assert_called()
         assert dataset._fully_initialized
         assert hasattr(dataset, 'data_list')
         assert hasattr(dataset, 'data_address')
