@@ -1727,12 +1727,16 @@ class TestRunner(TestCase):
         with self.assertRaisesRegex(AssertionError, 'If you want to validate'):
             runner.train()
 
-        # 13 Test the logs will be output when the length of
-        # the train dataloader is smaller than the log interval
+        # 13 Test the logs will be printed when the length of
+        # train_dataloader is smaller than the interval set in LoggerHook
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_train13'
+        cfg.default_hooks = dict(logger=dict(type='LoggerHook', interval=5))
         runner = Runner.from_cfg(cfg)
         runner.train()
+        with open(runner.logger._log_file, 'r') as f:
+            log = f.read()
+        self.assertIn('Epoch(train) [1][4/4]', log)
 
     @skipIf(
         SKIP_TEST_COMPILE,
