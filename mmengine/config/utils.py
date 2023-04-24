@@ -372,8 +372,8 @@ class Transform(ast.NodeTransformer):
         # TODO Support multiline import
         alias = alias_list[0]
         if alias.asname is not None:
-            return ast.parse(f'{alias.asname} = LazyObject("{alias.name}")'
-                             ).body[0]  # type: ignore
+            return ast.parse(  # type: ignore
+                f'{alias.asname} = LazyObject("{alias.name}")').body[0]
         return node
 
 
