@@ -54,6 +54,31 @@ class ConfigDict(Dict):
     """
     lazy = False
 
+    def __init__(__self, *args, **kwargs):
+        object.__setattr__(__self, '__parent', kwargs.pop('__parent', None))
+        object.__setattr__(__self, '__key', kwargs.pop('__key', None))
+        object.__setattr__(__self, '__frozen', False)
+        for arg in args:
+            if not arg:
+                continue
+            # Since ConfigDict.items will convert LazyObject to real object
+            # automatically, we need to call super().items() to make sure
+            # the LazyObject will not be converted.
+            if isinstance(arg, ConfigDict):
+                for key, val in dict.items(arg):
+                    __self[key] = __self._hook(val)
+            elif isinstance(arg, dict):
+                for key, val in arg.items():
+                    __self[key] = __self._hook(val)
+            elif isinstance(arg, tuple) and (not isinstance(arg[0], tuple)):
+                __self[arg[0]] = __self._hook(arg[1])
+            else:
+                for key, val in iter(arg):
+                    __self[key] = __self._hook(val)
+
+        for key, val in kwargs.items():
+            __self[key] = __self._hook(val)
+
     def __missing__(self, name):
         raise KeyError(name)
 
@@ -105,6 +130,26 @@ class ConfigDict(Dict):
             Any: The value of the key.
         """
         return self.build_lazy(super().pop(key, default))
+
+    def update(self, *args, **kwargs) -> None:
+        """Override this method to make sure the LazyObject will not be built
+        during updating."""
+        other = {}
+        if args:
+            if len(args) > 1:
+                raise TypeError('update only accept one positional argument')
+            # Avoid to used self.items to build LazyObject
+            for key, value in dict.items(args[0]):
+                other[key] = value
+
+        for key, value in dict(kwargs).items():
+            other[key] = value
+        for k, v in other.items():
+            if ((k not in self) or (not isinstance(self[k], dict))
+                    or (not isinstance(v, dict))):
+                self[k] = v
+            else:
+                self[k].update(v)
 
     def build_lazy(self, value: Any) -> Any:
         """If class attribute ``lazy`` is False, the LazyObject will be built
