@@ -367,8 +367,9 @@ class Runner:
         mmengine.mkdir_or_exist(self._log_dir)
         # Used to reset registries location. See :meth:`Registry.build` for
         # more details.
-        self.default_scope = DefaultScope.get_instance(
-            self._experiment_name, scope_name=default_scope)
+        if default_scope is not None:
+            self.default_scope = DefaultScope.get_instance(
+                self._experiment_name, scope_name=default_scope)
         # Build log processor to format message.
         log_processor = dict() if log_processor is None else log_processor
         self.log_processor = self.build_log_processor(log_processor)
@@ -1384,7 +1385,14 @@ class Runner:
         if 'worker_init_fn' in dataloader_cfg:
             worker_init_fn_cfg = dataloader_cfg.pop('worker_init_fn')
             worker_init_fn_type = worker_init_fn_cfg.pop('type')
-            worker_init_fn = FUNCTIONS.get(worker_init_fn_type)
+            if isinstance(worker_init_fn_type, str):
+                worker_init_fn = FUNCTIONS.get(worker_init_fn_type)
+            elif callable(worker_init_fn_type):
+                worker_init_fn = worker_init_fn_type
+            else:
+                raise TypeError(
+                    'type of worker_init_fn should be string or callable '
+                    'object!')
             assert callable(worker_init_fn)
             init_fn = partial(worker_init_fn,
                               **worker_init_fn_cfg)  # type: ignore
@@ -1431,7 +1439,6 @@ class Runner:
             raise TypeError(
                 'collate_fn should be a dict or callable object, but got '
                 f'{collate_fn_cfg}')
-
         data_loader = DataLoader(
             dataset=dataset,
             sampler=sampler if batch_sampler is None else None,
