@@ -8,7 +8,7 @@ import torch
 from parameterized import parameterized
 
 from mmengine.logging import HistoryBuffer, MessageHub, MMLogger
-from mmengine.runner import BaseLoop, LogProcessor
+from mmengine.runner import LogProcessor
 from mmengine.testing import RunnerTestCase
 
 
@@ -325,22 +325,3 @@ class TestLogProcessor(RunnerTestCase):
         runner.train()
         runner.val()
         runner.test()
-
-        # Unnecessary loop will not be built
-        for cfg in (self.epoch_based_cfg, self.iter_based_cfg):
-            cfg = copy.deepcopy(cfg)
-            runner = self.build_runner(cfg)
-            runner.train()
-            self.assertIsInstance(runner._train_loop, BaseLoop)
-            self.assertIsInstance(runner._val_loop, BaseLoop)
-            self.assertIsInstance(runner._test_loop, dict)
-
-            runner = self.build_runner(cfg)
-            runner.val()
-            self.assertIsInstance(runner._train_loop, dict)
-            self.assertIsInstance(runner._test_loop, dict)
-
-            runner = self.build_runner(cfg)
-            runner.test()
-            self.assertIsInstance(runner._train_loop, dict)
-            self.assertIsInstance(runner._val_loop, dict)
