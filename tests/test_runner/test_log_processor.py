@@ -253,6 +253,19 @@ class TestLogProcessor(RunnerTestCase):
         torch.cuda.max_memory_allocated.assert_called()
         torch.cuda.reset_peak_memory_stats.assert_called()
 
+    def test_get_iter(self):
+        log_processor = LogProcessor()
+        # Get global iter when `inner_iter=False`
+        iter = log_processor._get_iter(self.runner)
+        assert iter == 11
+        # Get inner iter
+        iter = log_processor._get_iter(self.runner, 1)
+        assert iter == 2
+        # Still get global iter when `logger_hook.by_epoch==False`
+        log_processor.by_epoch = False
+        iter = log_processor._get_iter(self.runner, 1)
+        assert iter == 11
+
     def test_get_epoch(self):
         log_processor = LogProcessor()
         epoch = log_processor._get_epoch(self.runner, 'train')
