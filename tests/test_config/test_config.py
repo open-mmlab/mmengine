@@ -1069,7 +1069,7 @@ class TestConfigDict(TestCase):
         new_dict = ConfigDict(cfg_dict)
         self._check(new_dict)
 
-        # Update the ConfigDict by setitem and setattr
+        # Update the ConfigDict by __setitem__ and __setattr__
         new_dict['b']['h'] = LazyObject('mmengine')
         new_dict['b']['k'] = dict(l=dict(n=LazyObject('mmengine')))
         new_dict.b.e[0].i = LazyObject('mmengine')
