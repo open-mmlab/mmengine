@@ -8,7 +8,7 @@ import torch
 from parameterized import parameterized
 
 from mmengine.logging import HistoryBuffer, MessageHub, MMLogger
-from mmengine.runner import LogProcessor
+from mmengine.runner import BaseLoop, LogProcessor
 from mmengine.testing import RunnerTestCase
 
 
@@ -253,19 +253,6 @@ class TestLogProcessor(RunnerTestCase):
         torch.cuda.max_memory_allocated.assert_called()
         torch.cuda.reset_peak_memory_stats.assert_called()
 
-    def test_get_iter(self):
-        log_processor = LogProcessor()
-        # Get global iter when `inner_iter=False`
-        iter = log_processor._get_iter(self.runner)
-        assert iter == 11
-        # Get inner iter
-        iter = log_processor._get_iter(self.runner, 1)
-        assert iter == 2
-        # Still get global iter when `logger_hook.by_epoch==False`
-        log_processor.by_epoch = False
-        iter = log_processor._get_iter(self.runner, 1)
-        assert iter == 11
-
     def test_get_epoch(self):
         log_processor = LogProcessor()
         epoch = log_processor._get_epoch(self.runner, 'train')
@@ -338,3 +325,22 @@ class TestLogProcessor(RunnerTestCase):
         runner.train()
         runner.val()
         runner.test()
+
+        # Unnecessary loop will not be built
+        for cfg in (self.epoch_based_cfg, self.iter_based_cfg):
+            cfg = copy.deepcopy(cfg)
+            runner = self.build_runner(cfg)
+            runner.train()
+            self.assertIsInstance(runner._train_loop, BaseLoop)
+            self.assertIsInstance(runner._val_loop, BaseLoop)
+            self.assertIsInstance(runner._test_loop, dict)
+
+            runner = self.build_runner(cfg)
+            runner.val()
+            self.assertIsInstance(runner._train_loop, dict)
+            self.assertIsInstance(runner._test_loop, dict)
+
+            runner = self.build_runner(cfg)
+            runner.test()
+            self.assertIsInstance(runner._train_loop, dict)
+            self.assertIsInstance(runner._val_loop, dict)
