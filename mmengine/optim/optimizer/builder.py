@@ -33,6 +33,34 @@ def register_torch_optimizers() -> List[str]:
 TORCH_OPTIMIZERS = register_torch_optimizers()
 
 
+def register_torch_npu_optimizers() -> List[str]:
+    """Register optimizers in ``torch npu`` to the ``OPTIMIZERS`` registry.
+
+    Returns:
+        List[str]: A list of registered optimizers' name.
+    """
+    if not is_npu_available():
+        return []
+
+    import torch_npu
+    if not hasattr(torch_npu, 'optim'):
+        return []
+
+    torch_npu_optimizers = []
+    for module_name in dir(torch_npu.optim):
+        if module_name.startswith('__') or module_name in OPTIMIZERS:
+            continue
+        _optim = getattr(torch_npu.optim, module_name)
+        if inspect.isclass(_optim) and issubclass(_optim,
+                                                  torch.optim.Optimizer):
+            OPTIMIZERS.register_module(module=_optim)
+            torch_npu_optimizers.append(module_name)
+    return torch_npu_optimizers
+
+
+NPU_OPTIMIZERS = register_torch_npu_optimizers()
+
+
 def register_dadaptation_optimizers() -> List[str]:
     """Register optimizers in ``dadaptation`` to the ``OPTIMIZERS`` registry.
 

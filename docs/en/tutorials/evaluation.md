@@ -6,7 +6,7 @@ In model validation and testing, it is often necessary to make a quantitative ev
 
 ### Using a single evaluation metric
 
-When training or testing a model based on MMEngine, users only need to specify the evaluation metrics for the validation and testing stages through the `val_evaluator` and `test_evaluator` fields in the configuration file. For example, when using [MMClassification](https://github.com/open-mmlab/mmclassification) to train a classification model, if the user wants to evaluate the top-1 and top-5 classification accuracy during the model validation stage, they can configure it as follows:
+When training or testing a model based on MMEngine, users only need to specify the evaluation metrics for the validation and testing stages through the `val_evaluator` and `test_evaluator` fields in the configuration file. For example, when using [MMPretrain](https://github.com/open-mmlab/mmpretrain) to train a classification model, if the user wants to evaluate the top-1 and top-5 classification accuracy during the model validation stage, they can configure it as follows:
 
 ```python
 # using classification accuracy evaluation metric

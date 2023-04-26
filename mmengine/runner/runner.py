@@ -35,14 +35,14 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, FUNCTIONS,
                                HOOKS, LOG_PROCESSORS, LOOPS, MODEL_WRAPPERS,
                                MODELS, OPTIM_WRAPPERS, PARAM_SCHEDULERS,
                                RUNNERS, VISUALIZERS, DefaultScope)
-from mmengine.utils import digit_version, get_git_hash, is_seq_of
+from mmengine.utils import apply_to, digit_version, get_git_hash, is_seq_of
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
                                      set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
-                         find_latest_checkpoint, get_state_dict,
-                         save_checkpoint, weights_to_cpu)
+                         find_latest_checkpoint, save_checkpoint,
+                         weights_to_cpu)
 from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
@@ -819,7 +819,7 @@ class Runner:
     def wrap_model(
             self, model_wrapper_cfg: Optional[Dict],
             model: nn.Module) -> Union[DistributedDataParallel, nn.Module]:
-        """Wrap the model to :obj:``MMDistributedDataParallel`` or other custom
+        """Wrap the model to :obj:`MMDistributedDataParallel` or other custom
         distributed data-parallel module wrappers.
 
         An example of ``model_wrapper_cfg``::
@@ -1421,9 +1421,17 @@ class Runner:
         # samples into a dict without stacking the batch tensor.
         collate_fn_cfg = dataloader_cfg.pop('collate_fn',
                                             dict(type='pseudo_collate'))
-        collate_fn_type = collate_fn_cfg.pop('type')
-        collate_fn = FUNCTIONS.get(collate_fn_type)
-        collate_fn = partial(collate_fn, **collate_fn_cfg)  # type: ignore
+        if isinstance(collate_fn_cfg, dict):
+            collate_fn_type = collate_fn_cfg.pop('type')
+            collate_fn = FUNCTIONS.get(collate_fn_type)
+            collate_fn = partial(collate_fn, **collate_fn_cfg)  # type: ignore
+        elif callable(collate_fn_cfg):
+            collate_fn = collate_fn_cfg
+        else:
+            raise TypeError(
+                'collate_fn should be a dict or callable object, but got '
+                f'{collate_fn_cfg}')
+
         data_loader = DataLoader(
             dataset=dataset,
             sampler=sampler if batch_sampler is None else None,
@@ -2156,14 +2164,20 @@ class Runner:
             model = self.model
 
         checkpoint = {
-            'meta': meta,
-            'state_dict': weights_to_cpu(get_state_dict(model)),
-            'message_hub': self.message_hub.state_dict()
+            'meta':
+            meta,
+            'state_dict':
+            weights_to_cpu(model.state_dict()),
+            'message_hub':
+            apply_to(self.message_hub.state_dict(),
+                     lambda x: hasattr(x, 'cpu'), lambda x: x.cpu()),
         }
         # save optimizer state dict to checkpoint
         if save_optimizer:
             if isinstance(self.optim_wrapper, OptimWrapper):
-                checkpoint['optimizer'] = self.optim_wrapper.state_dict()
+                checkpoint['optimizer'] = apply_to(
+                    self.optim_wrapper.state_dict(),
+                    lambda x: hasattr(x, 'cpu'), lambda x: x.cpu())
             else:
                 raise TypeError(
                     'self.optim_wrapper should be an `OptimWrapper` '
@@ -2191,7 +2205,11 @@ class Runner:
                     checkpoint['param_schedulers'].append(state_dict)
 
         self.call_hook('before_save_checkpoint', checkpoint=checkpoint)
-        save_checkpoint(checkpoint, filepath)
+        save_checkpoint(
+            checkpoint,
+            filepath,
+            file_client_args=file_client_args,
+            backend_args=backend_args)
 
     @master_only
     def dump_config(self) -> None:

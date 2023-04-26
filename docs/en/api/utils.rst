@@ -131,3 +131,4 @@ Miscellaneous
    requires_executable
    requires_package
    check_time
+   apply_to

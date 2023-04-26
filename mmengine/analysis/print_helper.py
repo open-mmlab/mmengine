@@ -12,6 +12,7 @@ from rich.console import Console
 from rich.table import Table
 from torch import nn
 
+from mmengine.utils import is_tuple_of
 from .complexity_analysis import (ActivationAnalyzer, FlopAnalyzer,
                                   parameter_count)
 
@@ -675,19 +676,38 @@ def complexity_stats_table(
 
 def get_model_complexity_info(
     model: nn.Module,
-    input_shape: Optional[tuple] = None,
-    inputs: Union[torch.Tensor, Tuple[torch.Tensor, ...], None] = None,
+    input_shape: Union[Tuple[int, ...], Tuple[Tuple[int, ...], ...],
+                       None] = None,
+    inputs: Union[torch.Tensor, Tuple[torch.Tensor, ...], Tuple[Any, ...],
+                  None] = None,
     show_table: bool = True,
     show_arch: bool = True,
 ):
     """Interface to get the complexity of a model.
 
+    The parameter `inputs` are fed to the forward method of model.
+    If `inputs` is not specified, the `input_shape` is required and
+    it will be used to construct the dummy input fed to model.
+    If the forward of model requires two or more inputs, the `inputs`
+    should be a tuple of tensor or the `input_shape` should be a tuple
+    of tuple which each element will be constructed into a dumpy input.
+
+    Examples:
+        >>> # the forward of model accepts only one input
+        >>> input_shape = (3, 224, 224)
+        >>> get_model_complexity_info(model, input_shape=input_shape)
+        >>> # the forward of model accepts two or more inputs
+        >>> input_shape = ((3, 224, 224), (3, 10))
+        >>> get_model_complexity_info(model, input_shape=input_shape)
+
     Args:
         model (nn.Module): The model to analyze.
-        input_shape (tuple, optional): The input shape of the model.
-            If inputs is not specified, the input_shape should be set.
+        input_shape (Union[Tuple[int, ...], Tuple[Tuple[int, ...]], None]):
+            The input shape of the model.
+            If "inputs" is not specified, the "input_shape" should be set.
             Defaults to None.
-        inputs (torch.Tensor or tuple[torch.Tensor, ...], optional]):
+        inputs (torch.Tensor, tuple[torch.Tensor, ...] or Tuple[Any, ...],\
+            optional]):
             The input tensor(s) of the model. If not given the input tensor
             will be generated automatically with the given input_shape.
             Defaults to None.
@@ -705,7 +725,21 @@ def get_model_complexity_info(
         raise ValueError('"input_shape" and "inputs" cannot be both set.')
 
     if inputs is None:
-        inputs = (torch.randn(1, *input_shape), )
+        if is_tuple_of(input_shape, int):  # tuple of int, construct one tensor
+            inputs = (torch.randn(1, *input_shape), )
+        elif is_tuple_of(input_shape, tuple) and all([
+                is_tuple_of(one_input_shape, int)
+                for one_input_shape in input_shape  # type: ignore
+        ]):  # tuple of tuple of int, construct multiple tensors
+            inputs = tuple([
+                torch.randn(1, *one_input_shape)
+                for one_input_shape in input_shape  # type: ignore
+            ])
+        else:
+            raise ValueError(
+                '"input_shape" should be either a `tuple of int` (to construct'
+                'one input tensor) or a `tuple of tuple of int` (to construct'
+                'multiple input tensors).')
 
     flop_handler = FlopAnalyzer(model, inputs)
     activation_handler = ActivationAnalyzer(model, inputs)

@@ -18,10 +18,7 @@ from mmengine.runner.checkpoint import (CheckpointLoader,
                                         _load_checkpoint_with_prefix,
                                         get_state_dict, load_checkpoint,
                                         load_from_local, load_from_pavi,
-                                        save_checkpoint)
-
-sys.modules['petrel_client'] = MagicMock()
-sys.modules['petrel_client.client'] = MagicMock()
+                                        load_state_dict, save_checkpoint)
 
 
 @MODEL_WRAPPERS.register_module()
@@ -150,9 +147,8 @@ def test_get_state_dict():
                         wrapped_model.module.conv.module.bias)
 
 
+@patch.dict(sys.modules, {'pavi': MagicMock()})
 def test_load_pavimodel_dist():
-    sys.modules['pavi'] = MagicMock()
-    sys.modules['pavi.modelcloud'] = MagicMock()
     pavimodel = Mockpavimodel()
     import pavi
     pavi.modelcloud.get = MagicMock(return_value=pavimodel)
@@ -296,6 +292,7 @@ def test_load_checkpoint_metadata():
     assert torch.allclose(model_v2.conv1.weight, model_v2_conv1_weight)
 
 
+@patch.dict(sys.modules, {'petrel_client': MagicMock()})
 def test_checkpoint_loader():
     filenames = [
         'http://xx.xx/xx.pth', 'https://xx.xx/xx.pth',
@@ -409,3 +406,30 @@ def test_load_from_local():
     assert_tensor_equal(checkpoint['block.conv.weight'],
                         model.block.conv.weight)
     os.remove(checkpoint_path)
+
+
+def test_load_state_dict_post_hooks():
+    module = Block()
+
+    state_dict = {
+        'conv.weight': torch.empty((3, 3, 1, 1), dtype=torch.float32),
+        'conv.bias': torch.empty((3, ), dtype=torch.float32),
+        'norm.weight': torch.empty([3], dtype=torch.float32),
+        'norm.bias': torch.empty([3], dtype=torch.float32),
+        'norm.running_mean': torch.empty([3], dtype=torch.float32),
+        'norm.running_var': torch.empty([3], dtype=torch.float32),
+    }
+    state_dict.pop('norm.running_var')
+
+    with patch('mmengine.runner.checkpoint.print_log') as mock:
+        load_state_dict(module, state_dict, strict=False)
+        mock.assert_called_once()
+
+    def post_hook(_, incompatible_keys):
+        incompatible_keys.missing_keys.remove('norm.running_var')
+
+    module._load_state_dict_post_hooks = {0: post_hook}
+
+    with patch('mmengine.runner.checkpoint.print_log') as mock:
+        load_state_dict(module, state_dict, strict=False)
+        mock.assert_not_called()
