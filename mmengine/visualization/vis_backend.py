@@ -347,23 +347,20 @@ class WandbVisBackend(BaseVisBackend):
             input parameters.
             See `wandb.init <https://docs.wandb.ai/ref/python/init>`_ for
             details. Defaults to None.
-        define_metric_cfg (dict, optional):
-            A dict of metrics and summary for wandb.define_metric.
+        define_metric_cfg (dict | list[dict], optional):
+            When a dict is set, it is a dict of metrics and summary for
+            wandb.define_metric.
             The key is metric and the value is summary.
+            When a list is set, each dict should be a valid argument of
+            the ``define_metric``.
             When ``define_metric_cfg={'coco/bbox_mAP': 'max'}``,
             The maximum value of ``coco/bbox_mAP`` is logged on wandb UI.
+            When ``define_metric_cfg=[dict(name="loss",
+            step_metric='epoch')]``,
+            the "loss” will be plotted against the epoch.
             See `wandb define_metric <https://docs.wandb.ai/ref/python/
             run#define_metric>`_ for details.
             Default: None
-        define_metric_cfgs (list[dict], optional):
-            A list of define_metric arguments.
-            Each dict should be a valid argument of the ``define_metric``.
-            The following example changes the x-axis of the "loss" plot
-            from the default step to epoch.
-            ``define_metric_cfgs=[dict(name="loss", step_metric='epoch')]``
-            See `wandb define_metric <https://docs.wandb.ai/ref/python/
-            run#define_metric>`_ for details.
-            New in version 0.7.4.
         commit: (bool, optional) Save the metrics dict to the wandb server
             and increment the step.  If false `wandb.log` just updates the
             current metrics dict with the row argument and metrics won't be
@@ -382,15 +379,13 @@ class WandbVisBackend(BaseVisBackend):
     def __init__(self,
                  save_dir: str,
                  init_kwargs: Optional[dict] = None,
-                 define_metric_cfg: Optional[dict] = None,
-                 define_metric_cfgs: Optional[list] = None,
+                 define_metric_cfg: Optional[Union[dict, list]] = None,
                  commit: Optional[bool] = True,
                  log_code_name: Optional[str] = None,
                  watch_kwargs: Optional[dict] = None):
         super().__init__(save_dir)
         self._init_kwargs = init_kwargs
         self._define_metric_cfg = define_metric_cfg
-        self._define_metric_cfgs = define_metric_cfgs
         self._commit = commit
         self._log_code_name = log_code_name
         self._watch_kwargs = watch_kwargs if watch_kwargs is not None else {}
@@ -411,11 +406,14 @@ class WandbVisBackend(BaseVisBackend):
 
         wandb.init(**self._init_kwargs)
         if self._define_metric_cfg is not None:
-            for metric, summary in self._define_metric_cfg.items():
-                wandb.define_metric(metric, summary=summary)
-        if self._define_metric_cfgs is not None:
-            for metric_cfg in self._define_metric_cfgs:
-                wandb.define_metric(**metric_cfg)
+            if isinstance(self._define_metric_cfg, dict):
+                for metric, summary in self._define_metric_cfg.items():
+                    wandb.define_metric(metric, summary=summary)
+            elif isinstance(self._define_metric_cfg, list):
+                for metric_cfg in self._define_metric_cfg:
+                    wandb.define_metric(**metric_cfg)
+            else:
+                raise ValueError('define_metric_cfg should be dict or list')
         self._wandb = wandb
 
     @property  # type: ignore
