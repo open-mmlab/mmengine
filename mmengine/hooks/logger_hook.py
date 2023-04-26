@@ -254,14 +254,14 @@ class LoggerHook(Hook):
         runner.logger.info(log_str)
         if self.log_metric_by_epoch:
             # Avoid to build train_loop during validation
-            if isinstance(runner._train_loop, dict):
+            if isinstance(runner._train_loop, (dict, type(None))):
                 epoch = 0
             else:
                 epoch = runner.epoch
             runner.visualizer.add_scalars(
                 tag, step=epoch, file_path=self.json_log_path)
         else:
-            if isinstance(runner._train_loop, dict):
+            if isinstance(runner._train_loop, (dict, type(None))):
                 iter = 0
             else:
                 iter = runner.iter

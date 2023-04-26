@@ -175,7 +175,7 @@ class LogProcessor:
             cur_iter_str = str(cur_iter).rjust(len(str(dataloader_len)))
             if mode in ['train', 'val']:
                 cur_epoch = self._get_epoch(runner, mode)
-                if not isinstance(runner._train_loop, dict):
+                if not isinstance(runner._train_loop, (dict, type(None))):
                     # Right Align the epoch log:
                     # Epoch(train)   [9][100/270]
                     # ...             ||
@@ -527,7 +527,7 @@ class LogProcessor:
         if mode == 'train':
             epoch = runner.epoch + 1
         elif mode == 'val':
-            if isinstance(runner._train_loop, dict):
+            if isinstance(runner._train_loop, (dict, type(None))):
                 epoch = 0
             else:
                 # normal val mode
