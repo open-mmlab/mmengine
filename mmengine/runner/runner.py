@@ -35,14 +35,14 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, FUNCTIONS,
                                HOOKS, LOG_PROCESSORS, LOOPS, MODEL_WRAPPERS,
                                MODELS, OPTIM_WRAPPERS, PARAM_SCHEDULERS,
                                RUNNERS, VISUALIZERS, DefaultScope)
-from mmengine.utils import digit_version, get_git_hash, is_seq_of
+from mmengine.utils import apply_to, digit_version, get_git_hash, is_seq_of
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
                                      set_multi_processing)
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
-                         find_latest_checkpoint, get_state_dict,
-                         save_checkpoint, weights_to_cpu)
+                         find_latest_checkpoint, save_checkpoint,
+                         weights_to_cpu)
 from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
@@ -2164,14 +2164,20 @@ class Runner:
             model = self.model
 
         checkpoint = {
-            'meta': meta,
-            'state_dict': weights_to_cpu(get_state_dict(model)),
-            'message_hub': self.message_hub.state_dict()
+            'meta':
+            meta,
+            'state_dict':
+            weights_to_cpu(model.state_dict()),
+            'message_hub':
+            apply_to(self.message_hub.state_dict(),
+                     lambda x: hasattr(x, 'cpu'), lambda x: x.cpu()),
         }
         # save optimizer state dict to checkpoint
         if save_optimizer:
             if isinstance(self.optim_wrapper, OptimWrapper):
-                checkpoint['optimizer'] = self.optim_wrapper.state_dict()
+                checkpoint['optimizer'] = apply_to(
+                    self.optim_wrapper.state_dict(),
+                    lambda x: hasattr(x, 'cpu'), lambda x: x.cpu())
             else:
                 raise TypeError(
                     'self.optim_wrapper should be an `OptimWrapper` '

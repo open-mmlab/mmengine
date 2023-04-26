@@ -18,7 +18,8 @@ from mmengine.fileio import FileClient, get_file_backend
 from mmengine.fileio import load as load_file
 from mmengine.logging import print_log
 from mmengine.model import BaseTTAModel, is_model_wrapper
-from mmengine.utils import deprecated_function, digit_version, mkdir_or_exist
+from mmengine.utils import (apply_to, deprecated_function, digit_version,
+                            mkdir_or_exist)
 from mmengine.utils.dl_utils import load_url
 
 # `MMENGINE_HOME` is the highest priority directory to save checkpoints
@@ -622,12 +623,11 @@ def weights_to_cpu(state_dict):
     Returns:
         OrderedDict: Model weights on GPU.
     """
-    state_dict_cpu = OrderedDict()
-    for key, val in state_dict.items():
-        state_dict_cpu[key] = val.cpu()
+    state_dict = apply_to(state_dict, lambda x: hasattr(x, 'cpu'),
+                          lambda x: x.cpu())
     # Keep metadata in state_dict
-    state_dict_cpu._metadata = getattr(state_dict, '_metadata', OrderedDict())
-    return state_dict_cpu
+    state_dict._metadata = getattr(state_dict, '_metadata', OrderedDict())
+    return state_dict
 
 
 @deprecated_function(
