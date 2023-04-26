@@ -272,6 +272,31 @@ output = model(input)
 print(output)
 ```
 
+### How does the parent node know about child registry?
+
+When working in our `MMAlpha` it might be necessary to use the `Runner` class defined in MMENGINE. This class is in charge of building most of the objects. If this objects are added to the child registry (`MMAlpha`), how is  `MMEngine` able to find them? It cannot, `MMEngine` needs to switch to the Registry from `MMEngine` to `MMAlpha` according to the scope which is defined in default_runtime.py for searching the target class.
+
+We can also init the scope accordingly, see example below:
+
+```python
+from mmalpha.registry import MODELS
+from mmengine.registry import init_default_scope
+
+@MODELS.register_module()
+class LogSoftmax(nn.Module):
+    def __init__(self, dim=None):
+        super().__init__()
+
+    def forward(self, x):
+        print('call LogSoftmax.forward')
+        return x
+
+assert "LogSoftmax" in MODELS # This fails since registry is looking only in parent class
+
+init_default_scope('mmalpha')
+assert "LogSoftmax" in MODELS # This works because we have updated the scope
+```
+
 ### Use the module of a sibling node
 
 In addition to using the module of the parent nodes, users can also call the module of a sibling node.
