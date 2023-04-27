@@ -274,7 +274,7 @@ print(output)
 
 ### How does the parent node know about child registry?
 
-When working in our `MMAlpha` it might be necessary to use the `Runner` class defined in MMENGINE. This class is in charge of building most of the objects. If this objects are added to the child registry (`MMAlpha`), how is  `MMEngine` able to find them? It cannot, `MMEngine` needs to switch to the Registry from `MMEngine` to `MMAlpha` according to the scope which is defined in default_runtime.py for searching the target class.
+When working in our `MMAlpha` it might be necessary to use the `Runner` class defined in MMEngine. This class is in charge of building most of the objects. If this objects are added to the child registry (`MMAlpha`), how is  `MMEngine` able to find them? It cannot, `MMEngine` needs to switch to the Registry from `MMEngine` to `MMAlpha` according to the `default_scope` argument when building the runner (commonly defined in `default_runtime.py` of downstream repositories) for searching the target class.
 
 We can also init the scope accordingly, see example below:
 
