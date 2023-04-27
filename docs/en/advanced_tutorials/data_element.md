@@ -855,7 +855,7 @@ We take MMDet as an example to illustrate the use of the `DataSample` in downstr
 
 - Annotation Information
   - gt_instance(InstanceData): Instance annotation information includes the instance class, bounding box, etc. The type constraint is `InstanceData`.
-  - gt_panoptic_seg(PixelData): Panoptic segmentation annotation information. The type constraint is `PixelData`.
+  - gt_panoptic_seg(PixelData): For panoptic segmentation annotation information, the required type is PixelData.
   - gt_semantic_seg(PixelData): Semantic segmentation annotation information. The type constraint is `PixelData`.
 - Prediction Results
   - pred_instance(InstanceData): Instance prediction results includes the instance class, bounding boxes, etc. The type constraint is `InstanceData`.
