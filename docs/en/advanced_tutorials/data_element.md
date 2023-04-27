@@ -389,7 +389,7 @@ MMEngine extended `InstanceData` based on the above assumption, including:
 - supports basic indexing, slicing and other advanced querying features
 - supports concatenation of data with the **same `key`** but different `InstanceData`
 
-These extensions support not only basic data structures such as `torch.Tensor`, `numpy.dnarry`, `list`, `str`, and `tuple`, but also support customized data structures as long as they have `__len__`, `__getitem__`, and `cat` implemented.
+These extensions support not only basic data structures such as `torch.Tensor`, `numpy.dnarry`, `list`, `str`, and `tuple`, but also support customized data structures as long as they implement `__len__`, `__getitem__`, and `cat` methods.
 
 #### Data verification
 
