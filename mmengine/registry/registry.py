@@ -613,6 +613,10 @@ class Registry:
                 existed_module = self.module_dict[name]
                 raise KeyError(f'{name} is already registered in {self.name} '
                                f'at {existed_module.__module__}')
+            # If module is a partial function or user defined callable
+            # object, it may not have `__module__` and `__name__` attributes.
+            # We set the `__module__` and `__name__` attributes for them to
+            # provide more information.
             if not hasattr(module, '__module__'):
                 module_name = str(inspect.getmodule(sys._getframe(2)))
                 if module_name is None:
