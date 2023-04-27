@@ -257,14 +257,16 @@ class LoggerHook(Hook):
             # the construction of the train_loop. Therefore, to avoid
             # triggering the construction of the train_loop during
             # validation, check before accessing the epoch.
-            if isinstance(runner._train_loop, (dict, type(None))):
+            if (isinstance(runner._train_loop, dict)
+                    or runner._train_loop is None):
                 epoch = 0
             else:
                 epoch = runner.epoch
             runner.visualizer.add_scalars(
                 tag, step=epoch, file_path=self.json_log_path)
         else:
-            if isinstance(runner._train_loop, (dict, type(None))):
+            if (isinstance(runner._train_loop, dict)
+                    or runner._train_loop is None):
                 iter = 0
             else:
                 iter = runner.iter
