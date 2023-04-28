@@ -10,6 +10,7 @@ from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 import numpy as np
 from torch.utils.data import Dataset
 
+from mmengine.fileio import dump as fileio_dump
 from mmengine.fileio import list_from_file, load
 from mmengine.logging import print_log
 from mmengine.registry import TRANSFORMS
@@ -828,3 +829,22 @@ class BaseDataset(Dataset):
                                                   copy.deepcopy(value, memo))
 
         return other
+
+    @classmethod
+    def load(cls, pkl_file: str) -> None:
+        """Load data list from pickle file.
+
+        Args:
+            pkl_file (str): Pickle file path.
+        """
+        obj = cls.__new__(cls)
+        obj.__dict__.update(load(pkl_file))
+        return obj
+
+    def dump(self, pkl_file: str) -> None:
+        """Dump data list to pickle file.
+
+        Args:
+            pkl_file (str): Pickle file path.
+        """
+        fileio_dump(self.__dict__, pkl_file, file_format='pkl')
