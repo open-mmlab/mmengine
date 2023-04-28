@@ -135,7 +135,6 @@ class LogProcessor:
             recorded by :obj:`runner.message_hub` and :obj:`runner.visualizer`.
         """
         assert mode in ['train', 'test', 'val']
-        cur_iter = self._get_iter(runner, batch_idx=batch_idx)
         # Overwrite ``window_size`` defined in ``custom_cfg`` to int value.
         parsed_cfg = self._parse_windows_size(runner, batch_idx,
                                               self.custom_cfg)
@@ -172,19 +171,23 @@ class LogProcessor:
             # ...                 ||| |||
             # Epoch(train)  [ 10][100/270]
             dataloader_len = self._get_dataloader_size(runner, mode)
+            cur_iter = self._get_iter(runner, batch_idx)
             cur_iter_str = str(cur_iter).rjust(len(str(dataloader_len)))
-
             if mode in ['train', 'val']:
-                # Right Align the epoch log:
-                # Epoch(train)   [9][100/270]
-                # ...             ||
-                # Epoch(train) [100][100/270]
                 cur_epoch = self._get_epoch(runner, mode)
-                max_epochs = runner.max_epochs
-                # 3 means the three characters: "[", "]", and " " occupied in
-                # " [{max_epochs}]"
-                cur_epoch_str = f'[{cur_epoch}]'.rjust(
-                    len(str(max_epochs)) + 3, ' ')
+                if not (isinstance(runner._train_loop, dict)
+                        or runner._train_loop is None):
+                    # Right Align the epoch log:
+                    # Epoch(train)   [9][100/270]
+                    # ...             ||
+                    # Epoch(train) [100][100/270]
+                    max_epochs = runner.max_epochs
+                    # 3 means the three characters: "[", "]", and " " occupied
+                    # in " [{max_epochs}]"
+                    cur_epoch_str = f'[{cur_epoch}]'.rjust(
+                        len(str(max_epochs)) + 3, ' ')
+                else:
+                    cur_epoch_str = f'[{cur_epoch}]'
                 tag['epoch'] = cur_epoch
                 log_str = (f'Epoch({mode}){cur_epoch_str}'
                            f'[{cur_iter_str}/{dataloader_len}]  ')
@@ -193,6 +196,7 @@ class LogProcessor:
                            f'[{cur_iter_str}/{dataloader_len}]  ')
         else:
             if mode == 'train':
+                cur_iter = self._get_iter(runner, batch_idx)
                 cur_iter_str = str(cur_iter).rjust(len(str(runner.max_iters)))
                 log_str = (f'Iter({mode}) '
                            f'[{cur_iter_str}/{runner.max_iters}]  ')
@@ -492,19 +496,19 @@ class LogProcessor:
         device = getattr(runner.model, 'output_device', None)
         return get_max_cuda_memory(device)
 
-    def _get_iter(self, runner, batch_idx: int = None) -> int:
+    def _get_iter(self, runner, batch_idx: int) -> int:
         """Get current iteration index.
 
         Args:
             runner (Runner): The runner of the training/testing/validation
                 process.
-            batch_idx (int, optional): The iteration index of current
+            batch_idx (int): The iteration index of current
                 dataloader. Defaults to None.
 
         Returns:
             int: The current global iter or inner iter.
         """
-        if self.by_epoch and batch_idx is not None:
+        if self.by_epoch:
             current_iter = batch_idx + 1
         else:
             current_iter = runner.iter + 1
@@ -524,9 +528,13 @@ class LogProcessor:
         if mode == 'train':
             epoch = runner.epoch + 1
         elif mode == 'val':
-            # normal val mode
-            # runner.epoch += 1 has been done before validation
-            epoch = runner.epoch
+            if (isinstance(runner._train_loop, dict)
+                    or runner._train_loop is None):
+                epoch = 0
+            else:
+                # normal val mode
+                # runner.epoch += 1 has been done before validation
+                epoch = runner.epoch
         else:
             raise ValueError(
                 f"runner mode should be 'train' or 'val', but got {mode}")
