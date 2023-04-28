@@ -225,9 +225,6 @@ class BaseDataset(Dataset):
         self._metainfo = self._load_metainfo(copy.deepcopy(metainfo))
         self.data_root = data_root
         data_prefix = copy.copy(data_prefix)
-        if 'img_path' in data_prefix and data_prefix['img_path'] is None:
-            data_prefix['img_path'] = ''
-
         self.data_prefix = data_prefix
         self.filter_cfg = copy.deepcopy(filter_cfg)
         self._indices = indices
