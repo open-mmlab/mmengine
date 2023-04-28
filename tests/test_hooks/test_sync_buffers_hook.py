@@ -39,7 +39,7 @@ class TestSyncBuffersHook(MultiProcessTestCase, RunnerTestCase):
 
     def test_sync_buffers_hook(self):
         self.setup_dist_env()
-        runner = MagicMock
+        runner = MagicMock()
         runner.model = ToyModuleWithNorm()
         runner.model.init_weights()
 
