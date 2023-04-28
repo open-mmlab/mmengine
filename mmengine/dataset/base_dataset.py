@@ -181,6 +181,8 @@ class BaseDataset(Dataset):
         max_refetch (int, optional): If ``Basedataset.prepare_data`` get a
             None img. The maximum extra number of cycles to get a valid
             image. Defaults to 1000.
+        backend_args (dict, optional): Arguments to instantiate the
+            corresponding backend. Defaults to None.
 
     Note:
         BaseDataset collects meta information from ``annotation file`` (the
@@ -224,7 +226,8 @@ class BaseDataset(Dataset):
                  pipeline: List[Union[dict, Callable]] = [],
                  test_mode: bool = False,
                  lazy_init: bool = False,
-                 max_refetch: int = 1000):
+                 max_refetch: int = 1000,
+                 backend_args: Optional[dict] = None):
 
         self.data_root = data_root
         self.data_prefix = copy.copy(data_prefix)
@@ -234,6 +237,7 @@ class BaseDataset(Dataset):
         self.serialize_data = serialize_data
         self.test_mode = test_mode
         self.max_refetch = max_refetch
+        self.backend_args = backend_args
         self.data_list: List[dict] = []
         self.data_bytes: np.ndarray
 
@@ -435,7 +439,7 @@ class BaseDataset(Dataset):
         """  # noqa: E501
         # `self.ann_file` denotes the absolute annotation file path if
         # `self.root=None` or relative path if `self.root=/path/to/data/`.
-        annotations = load(self.ann_file)
+        annotations = load(self.ann_file, backend_args=self.backend_args)
         if not isinstance(annotations, dict):
             raise TypeError(f'The annotations loaded from annotation file '
                             f'should be a dict, but got {type(annotations)}!')
