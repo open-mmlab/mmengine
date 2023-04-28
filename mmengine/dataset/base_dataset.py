@@ -530,15 +530,15 @@ class BaseDataset(Dataset):
         """
         # Automatically join annotation file path with `self.root` if
         # `self.ann_file` is not an absolute path.
-        if self.ann_file and self.data_root and not is_abs(self.ann_file):
-            self.ann_file = osp.join(self.data_root, self.ann_file)
+        if self.ann_file and not is_abs(self.ann_file):
+            self.ann_file = osp.join(self.data_root or '', self.ann_file)
         # Automatically join data directory with `self.root` if path value in
         # `self.data_prefix` is not an absolute path.
         for data_key, prefix in self.data_prefix.items():
             if isinstance(prefix, str):
                 if not is_abs(prefix):
                     self.data_prefix[data_key] = osp.join(
-                        self.data_root, prefix)
+                        self.data_root or '', prefix)
                 else:
                     self.data_prefix[data_key] = prefix
             else:
