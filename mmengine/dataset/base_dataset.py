@@ -221,17 +221,8 @@ class BaseDataset(Dataset):
                  test_mode: bool = False,
                  lazy_init: bool = False,
                  max_refetch: int = 1000):
-        # 1. Set `ann_file` to '' by default.
-        # 2. Set `data_root` to '' by default.
-        # 3. Set 'img_path' of `data_prefix` to '' by default.
-        # Although set these variables to None by default will be more proper,
-        # we set these variables to empty string to keep backward
-        # compatibility.
-        if ann_file is None:
-            ann_file = ''
         self.ann_file = ann_file
-        if data_root is None:
-            data_root = ''
+        self._metainfo = self._load_metainfo(copy.deepcopy(metainfo))
         self.data_root = data_root
         data_prefix = copy.copy(data_prefix)
         if 'img_path' in data_prefix and data_prefix['img_path'] is None:
@@ -247,7 +238,6 @@ class BaseDataset(Dataset):
         self.data_bytes: np.ndarray
 
         # Set meta information.
-        self._metainfo = self._load_metainfo(copy.deepcopy(metainfo))
 
         # Join paths.
         self._join_prefix()
@@ -543,7 +533,7 @@ class BaseDataset(Dataset):
         """
         # Automatically join annotation file path with `self.root` if
         # `self.ann_file` is not an absolute path.
-        if not is_abs(self.ann_file) and self.ann_file:
+        if self.ann_file and self.data_root and not is_abs(self.ann_file):
             self.ann_file = osp.join(self.data_root, self.ann_file)
         # Automatically join data directory with `self.root` if path value in
         # `self.data_prefix` is not an absolute path.
