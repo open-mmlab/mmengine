@@ -12,17 +12,16 @@ from datasets import load_dataset
 
 
 class MMBertForClassify(BaseModel):
+
     def __init__(self, model):
         super().__init__()
         self.model = model
 
     def forward(self, label, input_ids, token_type_ids, attention_mask, mode):
-        output = self.model(
-            input_ids=input_ids,
-            token_type_ids=token_type_ids,
-            attention_mask=attention_mask,
-            labels=label
-        )
+        output = self.model(input_ids=input_ids,
+                            token_type_ids=token_type_ids,
+                            attention_mask=attention_mask,
+                            labels=label)
         if mode == 'loss':
             return {'loss': output.loss}
         elif mode == 'predict':
@@ -44,18 +43,17 @@ class Accuracy(BaseMetric):
         return dict(accuracy=100 * total_correct / total_size)
 
 
-
 def parse_args():
     parser = argparse.ArgumentParser(description='Distributed Training')
-    parser.add_argument(
-        '--launcher',
-        choices=['none', 'pytorch', 'slurm', 'mpi'],
-        default='none',
-        help='job launcher')
+    parser.add_argument('--launcher',
+                        choices=['none', 'pytorch', 'slurm', 'mpi'],
+                        default='none',
+                        help='job launcher')
     parser.add_argument('--local_rank', type=int, default=0)
 
     args = parser.parse_args()
     return args
+
 
 def collect_fn(data):
     labels = []
@@ -67,36 +65,41 @@ def collect_fn(data):
         input_ids.append(torch.tensor(item['input_ids']))
         token_type_ids.append(torch.tensor(item['token_type_ids']))
         attention_mask.append(torch.tensor(item['attention_mask']))
-    
+
     input_ids = torch.stack(input_ids)
     token_type_ids = torch.stack(token_type_ids)
     attention_mask = torch.stack(attention_mask)
     label = torch.tensor(labels)
-    return dict(label=label, input_ids=input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask)
+    return dict(label=label,
+                input_ids=input_ids,
+                token_type_ids=token_type_ids,
+                attention_mask=attention_mask)
+
 
 def main():
     args = parse_args()
-    model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=2)
+    model = BertForSequenceClassification.from_pretrained('bert-base-uncased',
+                                                          num_labels=2)
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
     train_set = load_dataset('imdb', split='train')
     test_set = load_dataset('imdb', split='test')
-    
-    train_set = train_set.map(lambda x: tokenizer(x['text'], truncation=True, padding=True, max_length=128), batched=True)
-    test_set = test_set.map(lambda x: tokenizer(x['text'], truncation=True, padding=True, max_length=128), batched=True)
-    
-    train_loader = dict(
-        batch_size=32,
-        dataset=train_set,
-        sampler=dict(type='DefaultSampler', shuffle=True),
-        collate_fn=collect_fn
-    )
-    test_loader = dict(
-        batch_size=32,
-        dataset=test_set,
-        sampler=dict(type='DefaultSampler', shuffle=False),
-        collate_fn=collect_fn
-    )
+
+    train_set = train_set.map(lambda x: tokenizer(
+        x['text'], truncation=True, padding=True, max_length=128),
+                              batched=True)
+    test_set = test_set.map(lambda x: tokenizer(
+        x['text'], truncation=True, padding=True, max_length=128),
+                            batched=True)
+
+    train_loader = dict(batch_size=32,
+                        dataset=train_set,
+                        sampler=dict(type='DefaultSampler', shuffle=True),
+                        collate_fn=collect_fn)
+    test_loader = dict(batch_size=32,
+                       dataset=test_set,
+                       sampler=dict(type='DefaultSampler', shuffle=False),
+                       collate_fn=collect_fn)
     runner = Runner(
         model=MMBertForClassify(model),
         train_dataloader=train_loader,
