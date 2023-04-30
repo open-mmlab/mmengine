@@ -1,8 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
 
-import torch.nn.functional as F
-from torch.optim import Adam
 import torch
 from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
