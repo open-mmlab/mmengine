@@ -781,7 +781,12 @@ class MLflowVisBackend(BaseVisBackend):
         assert isinstance(scalar_dict, dict)
         assert 'step' not in scalar_dict, 'Please set it directly ' \
                                           'through the step parameter'
-        self._mlflow.log_metrics(scalar_dict, step)
+                                          
+        scalar_dict_fixed = dict()
+        for k, v in scalar_dict.items():
+            scalar_dict_fixed[k.replace('@', '_at_')] = v
+                                          
+        self._mlflow.log_metrics(scalar_dict_fixed, step)
 
     def close(self) -> None:
         """Close the mlflow."""
