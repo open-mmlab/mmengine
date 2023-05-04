@@ -87,11 +87,15 @@ class LazyObject:
     def __str__(self) -> str:
         if self._imported is not None:
             return str(self._imported)
+        return self.module
+
+    __repr__ = __str__
+
+    @property
+    def module(self):
         if isinstance(self._module, str):
             return self._module
         return self._module[0].split('.')[0]
-
-    __repr__ = __str__
 
 
 class LazyAttr:
@@ -173,3 +177,7 @@ class LazyAttr:
         return self.name
 
     __repr__ = __str__
+
+    @property
+    def module(self):
+        self._module

@@ -1,5 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from mmengine.dataset import DefaultSampler
+from mmengine.hooks import EMAHook
+from mmengine.model import MomentumAnnealingEMA
 from mmengine.testing.runner_test_case import ToyDataset, ToyMetric
 
 if '_base_':
@@ -31,3 +33,13 @@ test_dataloader = dict(
     num_workers=0)
 
 test_evaluator = [dict(type=ToyMetric)]
+
+custom_hooks = [
+    dict(
+        type=EMAHook,
+        ema_type=MomentumAnnealingEMA,
+        momentum=0.0002,
+        update_buffers=True,
+        strict_load=False,
+        priority=49)
+]

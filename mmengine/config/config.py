@@ -974,16 +974,13 @@ class Config:
             if isinstance(cfg, ConfigDict):
                 # Use to_dict to avoid build lazy object.
                 cfg = cfg.to_dict()
-            cfg_dict = ConfigDict({
-                key: Config._dict_to_config_dict_lazy(value)
-                for key, value in cfg.items()
-            })
-            # Load from dumped lazy import config
-            if ('type' in cfg_dict and '_module_' in cfg_dict
-                    and isinstance(cfg_dict.type, str)):  # type: ignore
-                module = cfg_dict.pop('_module_')
-                cfg_dict.type = LazyObject(module,
-                                           cfg_dict.type)  # type: ignore
+            cfg_dict = ConfigDict()
+            for key, value in cfg.items():
+                if isinstance(value, str) and '::' in value:
+                    module, cfg_type = value.split('::')
+                    cfg_dict[key] = LazyObject(module, cfg_type)
+                else:
+                    cfg_dict[key] = Config._dict_to_config_dict_lazy(value)
             return cfg_dict
         if isinstance(cfg, (tuple, list)):
             return type(cfg)(
@@ -994,9 +991,7 @@ class Config:
     def _dict_to_config_dict(cfg: dict,
                              scope: Optional[str] = None,
                              has_scope=True):
-        """Recursively converts ``dict`` to :obj:`ConfigDict`. If filed
-        "_module_" and "type" in cfg, the type field will be converted to
-        LazyObject.
+        """Recursively converts ``dict`` to :obj:`ConfigDict`.
 
         Args:
             cfg (dict): Config dict.
@@ -1017,11 +1012,6 @@ class Config:
             for key, value in cfg.items():
                 cfg[key] = Config._dict_to_config_dict(
                     value, scope=scope, has_scope=has_scope)
-            # Load from dumped lazy import config
-            if ('type' in cfg and '_module_' in cfg
-                    and isinstance(cfg.type, str)):
-                module = cfg.pop('_module_')
-                cfg.type = LazyObject(module, cfg.type)
         elif isinstance(cfg, tuple):
             cfg = tuple(
                 Config._dict_to_config_dict(_cfg, scope, has_scope=has_scope)
@@ -1242,7 +1232,7 @@ class Config:
             if isinstance(v, str):
                 v_str = repr(v)
             elif isinstance(v, (LazyObject, LazyAttr)):
-                v_str = f"'{str(v)}'"
+                v_str = f"'{v.module}::{str(v)}'"
             else:
                 v_str = str(v)
 
@@ -1299,8 +1289,7 @@ class Config:
                 is_last = idx >= len(input_dict) - 1
                 end = '' if outest_level or is_last else ','
                 if isinstance(v, (LazyObject, LazyAttr)):
-                    attr_str = _format_basic_types(k, v, use_mapping)
-                    attr_str += f", _module_='{v._module}'" + end
+                    attr_str = _format_basic_types(k, v, use_mapping) + end
                 elif isinstance(v, dict):
                     v_str = '\n' + _format_dict(v)
                     if use_mapping:
@@ -1326,8 +1315,7 @@ class Config:
         yapf_style = dict(
             based_on_style='pep8',
             blank_line_before_nested_class_or_def=True,
-            split_before_expression_after_opening_paren=True,
-            column_limit=79)
+            split_before_expression_after_opening_paren=True)
         try:
             text, _ = FormatCode(text, style_config=yapf_style, verify=True)
         except SyntaxError:
