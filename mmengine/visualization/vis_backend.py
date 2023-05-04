@@ -347,15 +347,15 @@ class WandbVisBackend(BaseVisBackend):
             input parameters.
             See `wandb.init <https://docs.wandb.ai/ref/python/init>`_ for
             details. Defaults to None.
-        define_metric_cfg (dict | list[dict], optional):
+        define_metric_cfg (dict or list[dict], optional):
             When a dict is set, it is a dict of metrics and summary for
-            wandb.define_metric.
+            ``wandb.define_metric``.
             The key is metric and the value is summary.
             When a list is set, each dict should be a valid argument of
             the ``define_metric``.
-            When ``define_metric_cfg={'coco/bbox_mAP': 'max'}``,
-            The maximum value of ``coco/bbox_mAP`` is logged on wandb UI.
-            When ``define_metric_cfg=[dict(name="loss",
+            For example, ``define_metric_cfg={'coco/bbox_mAP': 'max'}``,
+            means the maximum value of ``coco/bbox_mAP`` is logged on wandb UI.
+            When ``define_metric_cfg=[dict(name='loss',
             step_metric='epoch')]``,
             the "loss” will be plotted against the epoch.
             See `wandb define_metric <https://docs.wandb.ai/ref/python/
@@ -379,7 +379,7 @@ class WandbVisBackend(BaseVisBackend):
     def __init__(self,
                  save_dir: str,
                  init_kwargs: Optional[dict] = None,
-                 define_metric_cfg: Optional[Union[dict, list]] = None,
+                 define_metric_cfg: Union[dict, list, None] = None,
                  commit: Optional[bool] = True,
                  log_code_name: Optional[str] = None,
                  watch_kwargs: Optional[dict] = None):
