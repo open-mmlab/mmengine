@@ -1658,7 +1658,7 @@ class Runner:
             self.load_checkpoint(self._load_from)
             self._has_loaded = True
 
-    def train(self) -> nn.Module:
+    def train(self, call_hook_after_run: bool = True) -> nn.Module:
         """Launch training.
 
         Returns:
@@ -1719,10 +1719,12 @@ class Runner:
         self._maybe_compile('train_step')
 
         model = self.train_loop.run()  # type: ignore
-        self.call_hook('after_run')
+        
+        if call_hook_after_run:
+            self.call_hook('after_run')
         return model
 
-    def val(self) -> dict:
+    def val(self, call_hook_after_run: bool = True) -> dict:
         """Launch validation.
 
         Returns:
@@ -1742,10 +1744,11 @@ class Runner:
         self.load_or_resume()
 
         metrics = self.val_loop.run()  # type: ignore
-        self.call_hook('after_run')
+        if call_hook_after_run:
+            self.call_hook('after_run')
         return metrics
 
-    def test(self) -> dict:
+    def test(self, call_hook_after_run: bool = True) -> dict:
         """Launch test.
 
         Returns:
@@ -1765,7 +1768,8 @@ class Runner:
         self.load_or_resume()
 
         metrics = self.test_loop.run()  # type: ignore
-        self.call_hook('after_run')
+        if call_hook_after_run:
+            self.call_hook('after_run')
         return metrics
 
     def call_hook(self, fn_name: str, **kwargs) -> None:
