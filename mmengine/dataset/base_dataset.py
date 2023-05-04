@@ -233,8 +233,6 @@ class BaseDataset(Dataset):
         self.data_list: List[dict] = []
         self.data_bytes: np.ndarray
 
-        # Set meta information.
-
         # Join paths.
         self._join_prefix()
 
@@ -534,12 +532,9 @@ class BaseDataset(Dataset):
         # Automatically join data directory with `self.root` if path value in
         # `self.data_prefix` is not an absolute path.
         for data_key, prefix in self.data_prefix.items():
+            data_root = self.data_root if self.data_root is not None else ''
             if isinstance(prefix, str):
-                if not is_abs(prefix):
-                    self.data_prefix[data_key] = osp.join(
-                        self.data_root or '', prefix)
-                else:
-                    self.data_prefix[data_key] = prefix
+                self.data_prefix[data_key] = osp.join(data_root, prefix)
             else:
                 raise TypeError('prefix should be a string, but got '
                                 f'{type(prefix)}')
