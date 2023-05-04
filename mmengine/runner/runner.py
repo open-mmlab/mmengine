@@ -1431,7 +1431,10 @@ class Runner:
                                             dict(type='pseudo_collate'))
         if isinstance(collate_fn_cfg, dict):
             collate_fn_type = collate_fn_cfg.pop('type')
-            collate_fn = FUNCTIONS.get(collate_fn_type)
+            if isinstance(collate_fn_type, str):
+                collate_fn = FUNCTIONS.get(collate_fn_type)
+            else:
+                collate_fn = collate_fn_type
             collate_fn = partial(collate_fn, **collate_fn_cfg)  # type: ignore
         elif callable(collate_fn_cfg):
             collate_fn = collate_fn_cfg
