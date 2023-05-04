@@ -3,7 +3,6 @@ import copy
 import functools
 import gc
 import logging
-import os.path as osp
 import pickle
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
@@ -335,8 +334,8 @@ class BaseDataset(Dataset):
             assert prefix_key in raw_data_info, (
                 f'raw_data_info: {raw_data_info} dose not contain prefix key'
                 f'{prefix_key}, please check your data_prefix.')
-            raw_data_info[prefix_key] = osp.join(prefix,
-                                                 raw_data_info[prefix_key])
+            raw_data_info[prefix_key] = join_path(prefix,
+                                                  raw_data_info[prefix_key])
         return raw_data_info
 
     def filter_data(self) -> List[dict]:
@@ -536,7 +535,7 @@ class BaseDataset(Dataset):
         # Automatically join annotation file path with `self.root` if
         # `self.ann_file` is not an absolute path.
         if self.ann_file and not is_abs(self.ann_file) and self.data_root:
-            self.ann_file = osp.join(self.data_root, self.ann_file)
+            self.ann_file = join_path(self.data_root, self.ann_file)
         # Automatically join data directory with `self.root` if path value in
         # `self.data_prefix` is not an absolute path.
         for data_key, prefix in self.data_prefix.items():
