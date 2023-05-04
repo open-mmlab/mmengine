@@ -3,14 +3,13 @@ import copy
 import functools
 import gc
 import logging
-import os.path as osp
 import pickle
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from torch.utils.data import Dataset
 
-from mmengine.fileio import list_from_file, load
+from mmengine.fileio import join_path, list_from_file, load
 from mmengine.logging import print_log
 from mmengine.registry import TRANSFORMS
 from mmengine.utils import is_abs
@@ -155,17 +154,16 @@ class BaseDataset(Dataset):
         }
 
     Args:
-        ann_file (str): Annotation file path. Defaults to ''.
+        ann_file (str, optional): Annotation file path. Defaults to ''.
         metainfo (dict, optional): Meta information for dataset, such as class
             information. Defaults to None.
-        data_root (str): The root directory for ``data_prefix`` and
+        data_root (str, optional): The root directory for ``data_prefix`` and
             ``ann_file``. Defaults to ''.
         data_prefix (dict): Prefix for training data. Defaults to
             dict(img_path='').
         filter_cfg (dict, optional): Config for filter data. Defaults to None.
         indices (int or Sequence[int], optional): Support using first few
             data in annotation file to facilitate training/testing on a smaller
-            dataset. Defaults to None which means using all ``data_infos``.
         serialize_data (bool, optional): Whether to hold memory using
             serialized objects, when enabled, data loader workers can use
             shared RAM from master process instead of making a copy. Defaults
@@ -214,9 +212,9 @@ class BaseDataset(Dataset):
     _fully_initialized: bool = False
 
     def __init__(self,
-                 ann_file: str = '',
+                 ann_file: Optional[str] = '',
                  metainfo: Optional[dict] = None,
-                 data_root: str = '',
+                 data_root: Optional[str] = '',
                  data_prefix: dict = dict(img_path=''),
                  filter_cfg: Optional[dict] = None,
                  indices: Optional[Union[int, Sequence[int]]] = None,
@@ -225,10 +223,10 @@ class BaseDataset(Dataset):
                  test_mode: bool = False,
                  lazy_init: bool = False,
                  max_refetch: int = 1000):
-
+        self.ann_file = ann_file
+        self._metainfo = self._load_metainfo(copy.deepcopy(metainfo))
         self.data_root = data_root
         self.data_prefix = copy.copy(data_prefix)
-        self.ann_file = ann_file
         self.filter_cfg = copy.deepcopy(filter_cfg)
         self._indices = indices
         self.serialize_data = serialize_data
@@ -236,9 +234,6 @@ class BaseDataset(Dataset):
         self.max_refetch = max_refetch
         self.data_list: List[dict] = []
         self.data_bytes: np.ndarray
-
-        # Set meta information.
-        self._metainfo = self._load_metainfo(copy.deepcopy(metainfo))
 
         # Join paths.
         self._join_prefix()
@@ -339,8 +334,8 @@ class BaseDataset(Dataset):
             assert prefix_key in raw_data_info, (
                 f'raw_data_info: {raw_data_info} dose not contain prefix key'
                 f'{prefix_key}, please check your data_prefix.')
-            raw_data_info[prefix_key] = osp.join(prefix,
-                                                 raw_data_info[prefix_key])
+            raw_data_info[prefix_key] = join_path(prefix,
+                                                  raw_data_info[prefix_key])
         return raw_data_info
 
     def filter_data(self) -> List[dict]:
@@ -539,20 +534,18 @@ class BaseDataset(Dataset):
         """
         # Automatically join annotation file path with `self.root` if
         # `self.ann_file` is not an absolute path.
-        if not is_abs(self.ann_file) and self.ann_file:
-            self.ann_file = osp.join(self.data_root, self.ann_file)
+        if self.ann_file and not is_abs(self.ann_file) and self.data_root:
+            self.ann_file = join_path(self.data_root, self.ann_file)
         # Automatically join data directory with `self.root` if path value in
         # `self.data_prefix` is not an absolute path.
         for data_key, prefix in self.data_prefix.items():
-            if isinstance(prefix, str):
-                if not is_abs(prefix):
-                    self.data_prefix[data_key] = osp.join(
-                        self.data_root, prefix)
-                else:
-                    self.data_prefix[data_key] = prefix
-            else:
+            if not isinstance(prefix, str):
                 raise TypeError('prefix should be a string, but got '
                                 f'{type(prefix)}')
+            if not is_abs(prefix) and self.data_root:
+                self.data_prefix[data_key] = join_path(self.data_root, prefix)
+            else:
+                self.data_prefix[data_key] = prefix
 
     @force_full_init
     def get_subset_(self, indices: Union[Sequence[int], int]) -> None:

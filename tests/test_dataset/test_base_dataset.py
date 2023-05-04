@@ -159,6 +159,9 @@ class TestBaseDataset:
             lazy_init=True)
         assert not dataset.ann_file
 
+        # Test `ann_file` and `data_root` could be None.
+        dataset = BaseDataset(ann_file=None, data_root=None, lazy_init=True)
+
     def test_meta(self):
         # test dataset.metainfo with setting the metainfo from annotation file
         # as the metainfo of self.base_dataset.
