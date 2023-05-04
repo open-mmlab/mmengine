@@ -976,8 +976,8 @@ class Config:
                 cfg = cfg.to_dict()
             cfg_dict = ConfigDict()
             for key, value in cfg.items():
-                if isinstance(value, str) and '::' in value:
-                    module, cfg_type = value.split('::')
+                if isinstance(value, str) and ':::' in value:
+                    module, cfg_type = value.split(':::')
                     cfg_dict[key] = LazyObject(module, cfg_type)
                 else:
                     cfg_dict[key] = Config._dict_to_config_dict_lazy(value)
@@ -1232,7 +1232,7 @@ class Config:
             if isinstance(v, str):
                 v_str = repr(v)
             elif isinstance(v, (LazyObject, LazyAttr)):
-                v_str = f"'{v.module}::{str(v)}'"
+                v_str = f"'{v.module}:::{str(v)}'"
             else:
                 v_str = str(v)
 
@@ -1454,24 +1454,36 @@ class Config:
     @staticmethod
     def _is_lazy_import(filename):
         with open(filename) as f:
-            codes = ast.parse(f.read())
+            codes_str = f.read()
+            codes = ast.parse(codes_str)
         for node in ast.walk(codes):
+            if (isinstance(node, ast.Assign)
+                    and isinstance(node.targets[0], ast.Name)
+                    and node.targets[0].id == BASE_KEY):
+                return False
             if (isinstance(node, ast.If)
                     and isinstance(node.test, ast.Constant)
                     and node.test.value == '_base_'):
                 return True
             if isinstance(node, ast.ImportFrom):
+                # relative import -> lazy_import
                 if node.level != 0:
                     return True
+                # Skip checkking when using `mmengine.config` in cfg file
                 if (node.module == 'mmengine' and len(node.names) == 1
                         and node.names[0].name == 'Config'):
                     continue
+                # non-builtin module -> lazy_import
                 if not _is_builtin_module(node.module):
                     return True
             if isinstance(node, ast.Import):
                 for name in node.names:
                     if not _is_builtin_module(name.name):
                         return True
+        if ':::' in codes_str:
+            # The dumped_cfg defines the `type` field like this:
+            # `type='mmengine.hooks.sampler_seed_hook::DistSamplerSeedHook'`
+            return True
         return False
 
 
