@@ -1255,21 +1255,30 @@ class Config:
 
             return attr_str
 
-        def _format_list(k, v, use_mapping=False):
+        def _format_list_tuple(k, v, use_mapping=False):
             # check if all items in the list are dict
-            if all(isinstance(_, dict) for _ in v):
-                v_str = '[\n'
-                v_str += '\n'.join(
-                    f'dict({_indent(_format_dict(v_), indent)}),'
-                    for v_ in v).rstrip(',')
-                if use_mapping:
-                    k_str = f"'{k}'" if isinstance(k, str) else str(k)
-                    attr_str = f'{k_str}: {v_str}'
+            v_str = '[\n'
+            for item in v:
+                if isinstance(item, dict):
+                    v_str += f'dict({_indent(_format_dict(item), indent)}),\n'
+                elif isinstance(item, tuple):
+                    v_str += f'({_indent(_format_list_tuple(None, item), indent)}),\n'  # noqa: 501
+                elif isinstance(item, list):
+                    v_str += f'[{_indent(_format_list_tuple(None, item), indent)}],\n'  # noqa: 501
+                elif isinstance(item, str):
+                    v_str += f'{_indent(repr(item), indent)},\n'
+                elif isinstance(item, (LazyObject, LazyAttr)):
+                    v_str += f"'{str(item)}',\n"
                 else:
-                    attr_str = f'{str(k)}={v_str}'
-                attr_str = _indent(attr_str, indent) + ']'
+                    v_str += str(item) + ',\n'
+            if k is None:
+                return _indent(v_str, indent) + ']'
+            if use_mapping:
+                k_str = f"'{k}'" if isinstance(k, str) else str(k)
+                attr_str = f'{k_str}: {v_str}'
             else:
-                attr_str = _format_basic_types(k, v, use_mapping)
+                attr_str = f'{str(k)}={v_str}'
+            attr_str = _indent(attr_str, indent) + ']'
             return attr_str
 
         def _contain_invalid_identifier(dict_str):
@@ -1301,7 +1310,7 @@ class Config:
                         attr_str = f'{str(k)}=dict({v_str}'
                     attr_str = _indent(attr_str, indent) + ')' + end
                 elif isinstance(v, list):
-                    attr_str = _format_list(k, v, use_mapping) + end
+                    attr_str = _format_list_tuple(k, v, use_mapping) + end
                 else:
                     attr_str = _format_basic_types(k, v, use_mapping) + end
 
@@ -1317,8 +1326,13 @@ class Config:
         yapf_style = dict(
             based_on_style='pep8',
             blank_line_before_nested_class_or_def=True,
-            split_before_expression_after_opening_paren=True)
-        text, _ = FormatCode(text, style_config=yapf_style, verify=True)
+            split_before_expression_after_opening_paren=True,
+            column_limit=79)
+        try:
+            text, _ = FormatCode(text, style_config=yapf_style, verify=True)
+        except SyntaxError:
+            raise SyntaxError('Failed to format the config file, please '
+                              f'check the syntax of: \n{text}')
 
         return text
 
