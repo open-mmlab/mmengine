@@ -1309,7 +1309,7 @@ class Config:
                     else:
                         attr_str = f'{str(k)}=dict({v_str}'
                     attr_str = _indent(attr_str, indent) + ')' + end
-                elif isinstance(v, list):
+                elif isinstance(v, (list, tuple)):
                     attr_str = _format_list_tuple(k, v, use_mapping) + end
                 else:
                     attr_str = _format_basic_types(k, v, use_mapping) + end
