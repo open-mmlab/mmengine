@@ -774,7 +774,7 @@ class TestBuilder(TestCase):
     reason='ZeRO requires pytorch>=1.8 with torch.distributed.rpc available.')
 class TestZeroOptimizer(MultiProcessTestCase):
 
-    def setUp(self) -> None:
+    def setUp(self):
         super().setUp()
         self._spawn_processes()
 
