@@ -3,6 +3,7 @@ import copy
 import time
 from typing import Any
 from unittest import TestCase
+from unittest.mock import MagicMock, call, patch
 
 import numpy as np
 import pytest
@@ -10,6 +11,7 @@ import torch
 import torch.nn as nn
 
 from mmengine import VISBACKENDS, Config
+from mmengine.logging import MMLogger
 from mmengine.visualization import Visualizer
 
 
@@ -68,10 +70,8 @@ class TestVisualizer(TestCase):
         visualizer.get_image()
 
         # test save_dir
-        with pytest.warns(
-                Warning,
-                match='`Visualizer` backend is not initialized '
-                'because save_dir is None.'):
+        # Warning should be raised since no backend is initialized.
+        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
             Visualizer()
 
         visualizer = Visualizer(
@@ -183,7 +183,7 @@ class TestVisualizer(TestCase):
         with pytest.raises(TypeError):
             visualizer.draw_points(positions=[1, 2])
         with pytest.raises(AssertionError):
-            visualizer.draw_points(positions=np.array([1, 2, 3]))
+            visualizer.draw_points(positions=np.array([1, 2, 3], dtype=object))
         # test color
         visualizer.draw_points(
             positions=torch.tensor([[1, 1], [3, 3]]),
@@ -583,3 +583,61 @@ class TestVisualizer(TestCase):
         visualizer = Visualizer()
         visualizer.dataset_meta = {'class': 'cat'}
         assert visualizer.dataset_meta['class'] == 'cat'
+
+    def test_show(self):
+        cv2 = MagicMock()
+        wait_continue = MagicMock()
+        visualizer = Visualizer('test_show')
+        img = np.ones([1, 1, 1])
+        with patch('mmengine.visualization.visualizer.cv2', cv2), \
+             patch('mmengine.visualization.visualizer.wait_continue',
+                   wait_continue):
+            # test default backend
+            visualizer.show(
+                drawn_img=img,
+                win_name='test_show',
+                wait_time=0,
+                backend='matplotlib')
+            assert hasattr(visualizer, 'manager')
+            calls = [
+                call(
+                    visualizer.manager.canvas.figure,
+                    timeout=0,
+                    continue_key=' ')
+            ]
+            wait_continue.assert_has_calls(calls)
+
+            # matplotlib backend
+            visualizer.show(
+                drawn_img=img,
+                win_name='test_show',
+                wait_time=0,
+                backend='matplotlib')
+            assert hasattr(visualizer, 'manager')
+            calls = [
+                call(
+                    visualizer.manager.canvas.figure,
+                    timeout=0,
+                    continue_key=' '),
+                call(
+                    visualizer.manager.canvas.figure,
+                    timeout=0,
+                    continue_key=' ')
+            ]
+            wait_continue.assert_has_calls(calls)
+
+            # cv2 backend
+            visualizer.show(
+                drawn_img=img,
+                win_name='test_show',
+                wait_time=0,
+                backend='cv2')
+            cv2.imshow.assert_called_once_with(str(id(visualizer)), img)
+
+            # unknown backend
+            with pytest.raises(ValueError):
+                visualizer.show(
+                    drawn_img=img,
+                    win_name='test_show',
+                    wait_time=0,
+                    backend='unknown')

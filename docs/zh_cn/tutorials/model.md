@@ -86,7 +86,7 @@ for data_batch in val_dataloader:
 metrics = evaluator.evaluate(len(val_dataloader.dataset))
 ```
 
-没错，抛开 Hook 不谈，[loop](mmengine.runner.loop) 调用 model 的过程和上述代码一模一样！看到这，我们再回过头去看 [15 分钟上手 MMEngine](../get_started/15_minutes.md) 里的模型定义部分，就有一种看山不是山的感觉：
+没错，抛开 Hook 不谈，[loop](mmengine.runner.EpochBasedTrainLoop) 调用 model 的过程和上述代码一模一样！看到这，我们再回过头去看 [15 分钟上手 MMEngine](../get_started/15_minutes.md) 里的模型定义部分，就有一种看山不是山的感觉：
 
 ```python
 import torch.nn.functional as F

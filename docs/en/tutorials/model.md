@@ -2,7 +2,7 @@
 
 ## Runner and model
 
-As mentioned in [basic dataflow](./runner.md#bassic-dataflow), the dataflow between DataLoader, model and evaluator follows some rules. Don't remember clearly? Let's review it:
+As mentioned in [basic dataflow](./runner.md#basic-dataflow), the dataflow between DataLoader, model and evaluator follows some rules. Don't remember clearly? Let's review it:
 
 ```python
 # Training process
@@ -66,7 +66,7 @@ def train_step(self, data, optim_wrapper):
     # Parse the loss dict and return the parsed losses for optimization
     # and log_vars for logging
     parsed_losses, log_vars = self.parse_losses()
-    optim_wrapper.update_params(parsed_losses)  # 更新参数
+    optim_wrapper.update_params(parsed_losses)
     return log_vars
 ```
 

@@ -1,4 +1,4 @@
-# Initialization
+# Weight initialization
 
 Usually, we'll customize our module based on [nn.Module](https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module), which is implemented by Native PyTorch. Also, [torch.nn.init](https://pytorch.org/docs/stable/nn.init.html) could help us initialize the parameters of the model easily. To simplify the process of model construction and initialization, MMEngine designed the [BaseModule](mmengine.model.BaseModule) to help us define and initialize the model from config easily.
 
@@ -36,13 +36,13 @@ Currently, we support the following initialization methods:
 <tr>
   <td><a class="reference internal" href="../api/generated/mmengine.model.TruncNormalInit.html#mmengine.model.TruncNormalInit">TruncNormalInit</a></td>
   <td>TruncNormal</td>
-  <td>Initialize the weight by truncated normal distribution, and initialize the bias with a constant，commonly used for Transformer</td>
+  <td>Initialize the weight by truncated normal distribution, and initialize the bias with a constant, commonly used for Transformer</td>
 </tr>
 
 <tr>
   <td><a class="reference internal" href="../api/generated/mmengine.model.UniformInit.html#mmengine.model.UniformInit">UniformInit</a></td>
   <td>Uniform</td>
-  <td>Initialize the weight by uniform distribution, and initialize the bias with a constant，commonly used for convolution</td>
+  <td>Initialize the weight by uniform distribution, and initialize the bias with a constant, commonly used for convolution</td>
 </tr>
 
 <tr>
@@ -106,6 +106,10 @@ toy_net.init_weights()
 
 If `init_cfg` is a `dict`, `type` means a kind of initializer registered in `WEIGHT_INITIALIZERS`. The `Pretrained` means `PretrainedInit`, which could help us to load the target checkpoint.
 All initializers have the same mapping relationship like `Pretrained` -> `PretrainedInit`, which strips the suffix `Init` of the class name. The `checkpoint` argument of `PretrainedInit` means the path of the checkpoint. It could be a local path or a URL.
+
+```{note}
+`PretrainedInit` has a higher priority than any other initializer. The loaded pretrained weights will overwrite the previous initialized weights.
+```
 
 ### Commonly used initialization methods
 
@@ -349,7 +353,7 @@ from mmengine.model import normal_init
 normal_init(model, mean=0, std=0.01, bias=0)
 ```
 
-Similarly, we could also use [Kaiming](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf) initialization and  [Xavier](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf) initialization：
+Similarly, we could also use [Kaiming](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf) initialization and  [Xavier](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf) initialization:
 
 ```python
 from mmengine.model import kaiming_init, xavier_init
@@ -383,12 +387,12 @@ Currently, MMEngine provide the following initialization function:
 
 <tr>
   <td><a class="reference internal" href="../api/generated/mmengine.model.trunc_normal_init.html#mmengine.model.trunc_normal_init">trunc_normal_init</a></td>
-  <td>Initialize the weight by truncated normal distribution, and initialize the bias with a constant，commonly used for Transformer</td>
+  <td>Initialize the weight by truncated normal distribution, and initialize the bias with a constant, commonly used for Transformer</td>
 </tr>
 
 <tr>
   <td><a class="reference internal" href="../api/generated/mmengine.model.uniform_init.html#mmengine.model.uniform_init">uniform_init</a></td>
-  <td>Initialize the weight by uniform distribution, and initialize the bias with a constant，commonly used for convolution</td>
+  <td>Initialize the weight by uniform distribution, and initialize the bias with a constant, commonly used for convolution</td>
 </tr>
 
 <tr>

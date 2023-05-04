@@ -4,11 +4,13 @@ import os
 import re
 import sys
 from collections import OrderedDict
+from contextlib import contextmanager
 from unittest.mock import patch
 
 import pytest
 
 from mmengine.logging import MMLogger, print_log
+from mmengine.logging.logger import _get_device_id
 
 
 class TestLogger:
@@ -49,10 +51,13 @@ class TestLogger:
         MMLogger._instance_dict.clear()
 
     @patch('mmengine.logging.logger._get_rank', lambda: 1)
+    @patch('mmengine.logging.logger._get_device_id', lambda: 1)
+    @patch('mmengine.logging.logger._get_world_size', lambda: 2)
+    @patch('mmengine.logging.logger._get_host_info', lambda: 'test')
     def test_init_rank1(self, tmp_path):
         # If `rank!=1`, the `loglevel` of file_handler is `logging.ERROR`.
         tmp_file = tmp_path / 'tmp_file.log'
-        log_path = tmp_path / 'tmp_file_rank1.log'
+        log_path = tmp_path / 'tmp_file_test_device1_rank1.log'
         logger = MMLogger.get_instance(
             'rank1.pkg2', log_level='INFO', log_file=str(tmp_file))
         assert len(logger.handlers) == 1
@@ -64,7 +69,7 @@ class TestLogger:
         assert logger.handlers[0].level == logging.ERROR
         assert logger.handlers[1].level == logging.INFO
         assert len(logger.handlers) == 2
-        assert os.path.exists(log_path)
+        assert os.path.exists(str(log_path))
         # `FileHandler` should be closed in Windows, otherwise we cannot
         # delete the temporary directory
         logging.shutdown()
@@ -91,7 +96,8 @@ class TestLogger:
         logger = MMLogger.get_instance(
             instance_name, log_level=log_level, log_file=tmp_file)
         logger.log(level=log_level, msg='welcome')
-        with open(tmp_path / 'tmp_file.log') as f:
+
+        with open(tmp_file) as f:
             log_text = f.read()
             match = re.fullmatch(
                 self.file_handler_regex_time +
@@ -184,3 +190,70 @@ class TestLogger:
         logger.warning('hello')
         out, _ = capsys.readouterr()
         assert 'WARNING' in out
+
+    def test_filter(self, capsys):
+        logger = MMLogger.get_instance('test_filter')
+        logger.warning('hello')
+        out, _ = capsys.readouterr()
+        assert 'WARNING' in out
+        # Filter repeated warning.
+        logger.warning('hello')
+        out, _ = capsys.readouterr()
+        assert not out
+        # Pass new warning
+        logger.warning('hello1')
+        out, _ = capsys.readouterr()
+        assert 'WARNING' in out
+
+
+@patch('torch.cuda.device_count', lambda: 4)
+def test_get_device_id():
+
+    @contextmanager
+    def patch_env(local_rank, cuda_visible_devices):
+        ori_local_rank = os.getenv('LOCAL_RANK', None)
+        ori_cuda_visible_devices = os.getenv('CUDA_VISIBLE_DEVICES', None)
+
+        if local_rank is not None:
+            os.environ['LOCAL_RANK'] = local_rank
+        if cuda_visible_devices is not None:
+            os.environ['CUDA_VISIBLE_DEVICES'] = cuda_visible_devices
+        yield
+        if ori_local_rank is not None:
+            os.environ['LOCAL_RANK'] = ori_local_rank
+        elif 'LOCAL_RANK' in os.environ:
+            os.environ.pop('LOCAL_RANK')
+        if ori_cuda_visible_devices is not None:
+            os.environ['CUDA_VISIBLE_DEVICES'] = ori_cuda_visible_devices
+        elif 'CUDA_VISIBLE_DEVICES' in os.environ:
+            os.environ.pop('CUDA_VISIBLE_DEVICES')
+
+    # cuda is not available and local_rank is not set
+    with patch('torch.cuda.is_available', lambda: False), \
+         patch_env(None, '0,1,2,3'):
+        assert _get_device_id() == 0
+
+    # cuda is not available and local_rank is set
+    with patch('torch.cuda.is_available', lambda: False), \
+         patch_env('1', '0,1,2,3'):
+        assert _get_device_id() == 1
+
+    # CUDA_VISIBLE_DEVICES will not influence non-cuda device
+    with patch('torch.cuda.is_available', lambda: False), \
+         patch_env('1', '0,100,2,3'):
+        assert _get_device_id() == 1
+
+    # cuda is available and local_rank is not set
+    with patch('torch.cuda.is_available', lambda: True), \
+         patch_env(None, '0,1,2,3'):
+        assert _get_device_id() == 0
+
+    # cuda is available and local_rank is set
+    with patch('torch.cuda.is_available', lambda: True), \
+         patch_env('2', '0,1,2,3'):
+        assert _get_device_id() == 2
+
+    # CUDA_VISIBLE_DEVICES worked
+    with patch('torch.cuda.is_available', lambda: True), \
+         patch_env('2', '0,1,3,5'):
+        assert _get_device_id() == 3

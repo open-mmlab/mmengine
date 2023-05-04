@@ -117,10 +117,10 @@ MMengine 中提供了 2 种内置的 `collate_fn`：
 - `pseudo_collate`，缺省时的默认参数。它不会将数据沿着 `batch` 的维度合并。详细说明可以参考 [pseudo_collate](mmengine.dataset.pseudo_collate)
 - `default_collate`，与 PyTorch 中的 `default_collate` 行为几乎完全一致，会将数据转化为 `Tensor` 并沿着 `batch` 维度合并。一些细微不同和详细说明可以参考 [default_collate](mmengine.dataset.default_collate)
 
-如果你想要使用自定义的 `collate_fn`，你也可以将它注册到 `COLLATE_FUNCTIONS` 根注册器中来使用
+如果你想要使用自定义的 `collate_fn`，你也可以将它注册到 `FUNCTIONS` 根注册器中来使用
 
 ```python
-@COLLATE_FUNCTIONS.register_module()
+@FUNCTIONS.register_module()
 def my_collate_func(data_batch: Sequence) -> Any:
     pass
 
@@ -184,7 +184,7 @@ runner = Runner(
 ```
 
 ```{note}
-上述例子中大量使用了[注册机制](../advanced_tutorials/registry.md)，并且用到了 MMEngine 中的 [Compose](mmengine.dataset.Compose)。如果你急需在配置文件中使用 `torchvision` 数据集，你可以参考上述代码并略作修改。但我们更加推荐你有需要时在下游库（如 [MMDet](https://github.com/open-mmlab/mmdetection) 和 [MMCls](https://github.com/open-mmlab/mmclassification) 等）中寻找对应的数据集实现，从而获得更好的使用体验。
+上述例子中大量使用了[注册机制](../advanced_tutorials/registry.md)，并且用到了 MMEngine 中的 [Compose](mmengine.dataset.Compose)。如果你急需在配置文件中使用 `torchvision` 数据集，你可以参考上述代码并略作修改。但我们更加推荐你有需要时在下游库（如 [MMDet](https://github.com/open-mmlab/mmdetection) 和 [MMPretrain](https://github.com/open-mmlab/mmpretrain) 等）中寻找对应的数据集实现，从而获得更好的使用体验。
 ```
 
 ### 自定义数据集

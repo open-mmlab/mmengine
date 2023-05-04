@@ -15,7 +15,7 @@ processed data as a dictionary. A simple example is as belows:
 ```{note}
 In MMEngine, we don't have the implementations of data transforms. you can find the base data transform class
 and many other data transforms in MMCV. So you need to install MMCV before learning this tutorial, see the
-{external+mmcv:doc}`MMCV installation guild <get_started/installation>`.
+{external+mmcv:doc}`MMCV installation guide <get_started/installation>`.
 ```
 
 ```python
@@ -41,7 +41,7 @@ Usually, a data pipeline consists of the following parts:
 3. Data processing and augmentation, like [`RandomResize`](mmcv.transforms.RandomResize).
 4. Data formatting, we use different data transforms for different tasks. And the data transform for specified
    task is implemented in the corresponding repository. For example, the data formatting transform for image
-   classification task is `PackClsInputs` and it's in MMClassification.
+   classification task is `PackClsInputs` and it's in MMPretrain.
 
 Here, taking the classification task as an example, we show a typical data pipeline in the figure below. For
 each sample, the basic information stored in the dataset is a dictionary as shown on the far left side of the

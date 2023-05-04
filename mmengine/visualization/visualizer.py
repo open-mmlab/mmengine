@@ -1,22 +1,21 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
 import warnings
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
+
+if TYPE_CHECKING:
+    from matplotlib.font_manager import FontProperties
+
+import logging
 
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-from matplotlib.backends.backend_agg import FigureCanvasAgg
-from matplotlib.collections import (LineCollection, PatchCollection,
-                                    PolyCollection)
-from matplotlib.figure import Figure
-from matplotlib.patches import Circle
-from matplotlib.pyplot import new_figure_manager
 
 from mmengine.config import Config
 from mmengine.dist import master_only
+from mmengine.logging import print_log
 from mmengine.registry import VISBACKENDS, VISUALIZERS
 from mmengine.structures import BaseDataElement
 from mmengine.utils import ManagerMixin
@@ -75,7 +74,7 @@ class Visualizer(ManagerMixin):
         image (np.ndarray, optional): the origin image to draw. The format
             should be RGB. Defaults to None.
         vis_backends (list, optional): Visual backend config list.
-            Default to None.
+            Defaults to None.
         save_dir (str, optional): Save file dir for all storage backends.
             If it is None, the backend storage will not save any data.
         fig_save_cfg (dict): Keyword parameters of figure for saving.
@@ -167,8 +166,11 @@ class Visualizer(ManagerMixin):
         self._vis_backends: Union[Dict, Dict[str, 'BaseVisBackend']] = dict()
 
         if save_dir is None:
-            warnings.warn('`Visualizer` backend is not initialized '
-                          'because save_dir is None.')
+            print_log(
+                '`Visualizer` backend is not initialized '
+                'because save_dir is None.',
+                logger='current',
+                level=logging.WARNING)
         elif vis_backends is not None:
             assert len(vis_backends) > 0, 'empty list'
             names = [
@@ -226,8 +228,9 @@ class Visualizer(ManagerMixin):
     def show(self,
              drawn_img: Optional[np.ndarray] = None,
              win_name: str = 'image',
-             wait_time: int = 0,
-             continue_key=' ') -> None:
+             wait_time: float = 0.,
+             continue_key: str = ' ',
+             backend: str = 'matplotlib') -> None:
         """Show the drawn image.
 
         Args:
@@ -235,27 +238,43 @@ class Visualizer(ManagerMixin):
                 is None, it will show the image got by Visualizer. Defaults
                 to None.
             win_name (str):  The image title. Defaults to 'image'.
-            wait_time (int): Delay in milliseconds. 0 is the special
+            wait_time (float): Delay in seconds. 0 is the special
                 value that means "forever". Defaults to 0.
             continue_key (str): The key for users to continue. Defaults to
                 the space key.
+            backend (str): The backend to show the image. Defaults to
+                'matplotlib'. `New in version 0.7.3.`
         """
-        is_inline = 'inline' in plt.get_backend()
-        img = self.get_image() if drawn_img is None else drawn_img
-        self._init_manager(win_name)
-        fig = self.manager.canvas.figure
-        # remove white edges by set subplot margin
-        fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
-        fig.clear()
-        ax = fig.add_subplot()
-        ax.axis(False)
-        ax.imshow(img)
-        self.manager.canvas.draw()
+        if backend == 'matplotlib':
+            import matplotlib.pyplot as plt
+            is_inline = 'inline' in plt.get_backend()
+            img = self.get_image() if drawn_img is None else drawn_img
+            self._init_manager(win_name)
+            fig = self.manager.canvas.figure
+            # remove white edges by set subplot margin
+            fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
+            fig.clear()
+            ax = fig.add_subplot()
+            ax.axis(False)
+            ax.imshow(img)
+            self.manager.canvas.draw()
 
-        # Find a better way for inline to show the image
-        if is_inline:
-            return fig
-        wait_continue(fig, timeout=wait_time, continue_key=continue_key)
+            # Find a better way for inline to show the image
+            if is_inline:
+                return fig
+            wait_continue(fig, timeout=wait_time, continue_key=continue_key)
+        elif backend == 'cv2':
+            # Keep images are shown in the same window, and the title of window
+            # will be updated with `win_name`.
+            cv2.namedWindow(winname=f'{id(self)}')
+            cv2.setWindowTitle(f'{id(self)}', win_name)
+            cv2.imshow(
+                str(id(self)),
+                self.get_image() if drawn_img is None else drawn_img)
+            cv2.waitKey(int(np.ceil(wait_time * 1000)))
+        else:
+            raise ValueError('backend should be "matplotlib" or "cv2", '
+                             f'but got {backend} instead')
 
     @master_only
     def set_image(self, image: np.ndarray) -> None:
@@ -302,7 +321,8 @@ class Visualizer(ManagerMixin):
         Returns:
              tuple: build canvas figure and axes.
         """
-
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        from matplotlib.figure import Figure
         fig = Figure(**fig_cfg)
         ax = fig.add_subplot()
         ax.axis(False)
@@ -318,6 +338,8 @@ class Visualizer(ManagerMixin):
         Args:
             win_name (str): The window name.
         """
+        from matplotlib.figure import Figure
+        from matplotlib.pyplot import new_figure_manager
         if getattr(self, 'manager', None) is None:
             self.manager = new_figure_manager(
                 num=1, FigureClass=Figure, **self.fig_show_cfg)
@@ -394,15 +416,18 @@ class Visualizer(ManagerMixin):
 
     @master_only
     def draw_texts(
-            self,
-            texts: Union[str, List[str]],
-            positions: Union[np.ndarray, torch.Tensor],
-            font_sizes: Optional[Union[int, List[int]]] = None,
-            colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-            vertical_alignments: Union[str, List[str]] = 'top',
-            horizontal_alignments: Union[str, List[str]] = 'left',
-            font_families: Union[str, List[str]] = 'sans-serif',
-            bboxes: Optional[Union[dict, List[dict]]] = None) -> 'Visualizer':
+        self,
+        texts: Union[str, List[str]],
+        positions: Union[np.ndarray, torch.Tensor],
+        font_sizes: Optional[Union[int, List[int]]] = None,
+        colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+        vertical_alignments: Union[str, List[str]] = 'top',
+        horizontal_alignments: Union[str, List[str]] = 'left',
+        font_families: Union[str, List[str]] = 'sans-serif',
+        bboxes: Optional[Union[dict, List[dict]]] = None,
+        font_properties: Optional[Union['FontProperties',
+                                        List['FontProperties']]] = None
+    ) -> 'Visualizer':
         """Draw single or multiple text boxes.
 
         Args:
@@ -451,7 +476,20 @@ class Visualizer(ManagerMixin):
                 the texts will have the same bbox. Reference to
                 https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.FancyBboxPatch.html#matplotlib.patches.FancyBboxPatch
                 for more details. Defaults to None.
-        """
+            font_properties (Union[FontProperties, List[FontProperties]], optional):
+                The font properties of texts. FontProperties is
+                a ``font_manager.FontProperties()`` object.
+                If you want to draw Chinese texts, you need to prepare
+                a font file that can show Chinese characters properly.
+                For example: `simhei.ttf`, `simsun.ttc`, `simkai.ttf` and so on.
+                Then set ``font_properties=matplotlib.font_manager.FontProperties(fname='path/to/font_file')``
+                ``font_properties`` can have the same length with texts or
+                just single value. If ``font_properties`` is single value,
+                all the texts will have the same font properties.
+                Defaults to None.
+                `New in version 0.6.0.`
+        """  # noqa: E501
+        from matplotlib.font_manager import FontProperties
         check_type('texts', texts, (str, list))
         if isinstance(texts, str):
             texts = [texts]
@@ -492,6 +530,14 @@ class Visualizer(ManagerMixin):
                               num_text)
         font_families = value2list(font_families, str, num_text)
 
+        if font_properties is None:
+            font_properties = [None for _ in range(num_text)]  # type: ignore
+        else:
+            check_type_and_length('font_properties', font_properties,
+                                  (FontProperties, list), num_text)
+            font_properties = value2list(font_properties, FontProperties,
+                                         num_text)
+
         if bboxes is None:
             bboxes = [None for _ in range(num_text)]  # type: ignore
         else:
@@ -508,6 +554,7 @@ class Visualizer(ManagerMixin):
                 verticalalignment=vertical_alignments[i],
                 horizontalalignment=horizontal_alignments[i],
                 family=font_families[i],
+                fontproperties=font_properties[i],
                 color=colors[i])
         return self
 
@@ -546,6 +593,7 @@ class Visualizer(ManagerMixin):
                 If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 2.
         """
+        from matplotlib.collections import LineCollection
         check_type('x_datas', x_datas, (np.ndarray, torch.Tensor))
         x_datas = tensor2ndarray(x_datas)
         check_type('y_datas', y_datas, (np.ndarray, torch.Tensor))
@@ -610,10 +658,12 @@ class Visualizer(ManagerMixin):
                 If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
-                The face colors. Default to None.
+                The face colors. Defaults to None.
             alpha (Union[int, float]): The transparency of circles.
                 Defaults to 0.8.
         """
+        from matplotlib.collections import PatchCollection
+        from matplotlib.patches import Circle
         check_type('center', center, (np.ndarray, torch.Tensor))
         center = tensor2ndarray(center)
         check_type('radius', radius, (np.ndarray, torch.Tensor))
@@ -760,6 +810,7 @@ class Visualizer(ManagerMixin):
             alpha (Union[int, float]): The transparency of polygons.
                 Defaults to 0.8.
         """
+        from matplotlib.collections import PolyCollection
         check_type('polygons', polygons, (list, np.ndarray, torch.Tensor))
         edge_colors = color_val_matplotlib(edge_colors)  # type: ignore
         face_colors = color_val_matplotlib(face_colors)  # type: ignore
@@ -885,7 +936,7 @@ class Visualizer(ManagerMixin):
           it will compress featmap to single channel image and weighted
           sum to `overlaid_image`.
 
-        -  if `channel_reduction` is None
+        - If `channel_reduction` is None
 
           - If topk <= 0, featmap is assert to be one or three
             channel and treated as image and will be weighted sum
@@ -898,7 +949,7 @@ class Visualizer(ManagerMixin):
             featmap (torch.Tensor): The featmap to draw which format is
                 (C, H, W).
             overlaid_image (np.ndarray, optional): The overlaid image.
-                Default to None.
+                Defaults to None.
             channel_reduction (str, optional): Reduce multiple channels to a
                 single channel. The optional value is 'squeeze_mean'
                 or 'select_max'. Defaults to 'squeeze_mean'.
@@ -909,13 +960,14 @@ class Visualizer(ManagerMixin):
             arrangement (Tuple[int, int]): The arrangement of featmap when
                 channel_reduction is not None and topk > 0. Defaults to (4, 5).
             resize_shape (tuple, optional): The shape to scale the feature map.
-                Default to None.
+                Defaults to None.
             alpha (Union[int, List[int]]): The transparency of featmap.
                 Defaults to 0.5.
 
         Returns:
             np.ndarray: RGB image.
         """
+        import matplotlib.pyplot as plt
         assert isinstance(featmap,
                           torch.Tensor), (f'`featmap` should be torch.Tensor,'
                                           f' but got {type(featmap)}')
@@ -1034,8 +1086,8 @@ class Visualizer(ManagerMixin):
         Args:
             name (str): The image identifier.
             image (np.ndarray, optional): The image to be saved. The format
-                should be RGB. Default to None.
-            step (int): Global step value to record. Default to 0.
+                should be RGB. Defaults to None.
+            step (int): Global step value to record. Defaults to 0.
         """
         for vis_backend in self._vis_backends.values():
             vis_backend.add_image(name, image, step)  # type: ignore
@@ -1051,7 +1103,7 @@ class Visualizer(ManagerMixin):
         Args:
             name (str): The scalar identifier.
             value (float, int): Value to save.
-            step (int): Global step value to record. Default to 0.
+            step (int): Global step value to record. Defaults to 0.
         """
         for vis_backend in self._vis_backends.values():
             vis_backend.add_scalar(name, value, step, **kwargs)  # type: ignore
@@ -1067,11 +1119,11 @@ class Visualizer(ManagerMixin):
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Global step value to record. Default to 0.
+            step (int): Global step value to record. Defaults to 0.
             file_path (str, optional): The scalar's data will be
                 saved to the `file_path` file at the same time
                 if the `file_path` parameter is specified.
-                Default to None.
+                Defaults to None.
         """
         for vis_backend in self._vis_backends.values():
             vis_backend.add_scalars(scalar_dict, step, file_path, **kwargs)

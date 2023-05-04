@@ -33,6 +33,78 @@ def register_torch_optimizers() -> List[str]:
 TORCH_OPTIMIZERS = register_torch_optimizers()
 
 
+def register_torch_npu_optimizers() -> List[str]:
+    """Register optimizers in ``torch npu`` to the ``OPTIMIZERS`` registry.
+
+    Returns:
+        List[str]: A list of registered optimizers' name.
+    """
+    if not is_npu_available():
+        return []
+
+    import torch_npu
+    if not hasattr(torch_npu, 'optim'):
+        return []
+
+    torch_npu_optimizers = []
+    for module_name in dir(torch_npu.optim):
+        if module_name.startswith('__') or module_name in OPTIMIZERS:
+            continue
+        _optim = getattr(torch_npu.optim, module_name)
+        if inspect.isclass(_optim) and issubclass(_optim,
+                                                  torch.optim.Optimizer):
+            OPTIMIZERS.register_module(module=_optim)
+            torch_npu_optimizers.append(module_name)
+    return torch_npu_optimizers
+
+
+NPU_OPTIMIZERS = register_torch_npu_optimizers()
+
+
+def register_dadaptation_optimizers() -> List[str]:
+    """Register optimizers in ``dadaptation`` to the ``OPTIMIZERS`` registry.
+
+    Returns:
+        List[str]: A list of registered optimizers' name.
+    """
+    dadaptation_optimizers = []
+    try:
+        import dadaptation
+    except ImportError:
+        pass
+    else:
+        for module_name in ['DAdaptAdaGrad', 'DAdaptAdam', 'DAdaptSGD']:
+            _optim = getattr(dadaptation, module_name)
+            if inspect.isclass(_optim) and issubclass(_optim,
+                                                      torch.optim.Optimizer):
+                OPTIMIZERS.register_module(module=_optim)
+                dadaptation_optimizers.append(module_name)
+    return dadaptation_optimizers
+
+
+DADAPTATION_OPTIMIZERS = register_dadaptation_optimizers()
+
+
+def register_lion_optimizers() -> List[str]:
+    """Register Lion optimizer to the ``OPTIMIZERS`` registry.
+
+    Returns:
+        List[str]: A list of registered optimizers' name.
+    """
+    optimizers = []
+    try:
+        from lion_pytorch import Lion
+    except ImportError:
+        pass
+    else:
+        OPTIMIZERS.register_module(module=Lion)
+        optimizers.append('Lion')
+    return optimizers
+
+
+LION_OPTIMIZERS = register_lion_optimizers()
+
+
 def build_optim_wrapper(model: nn.Module,
                         cfg: Union[dict, Config, ConfigDict]) -> OptimWrapper:
     """Build function of OptimWrapper.

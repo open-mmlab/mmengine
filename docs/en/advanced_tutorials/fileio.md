@@ -66,7 +66,7 @@ class TxtHandler1(BaseFileHandler):
         return str(obj)
 ```
 
-Here is an example of `PickleHandler`.
+Here is an example of `PickleHandler`:
 
 ```python
 from mmengine import BaseFileHandler
@@ -108,7 +108,7 @@ e
 
 ### Load from disk
 
-Use `list_from_file` to load the list from `a.txt`.
+Use `list_from_file` to load the list from `a.txt`:
 
 ```python
 from mmengine import list_from_file
@@ -131,7 +131,7 @@ For example `b.txt` is a text file with 3 lines.
 3 panda
 ```
 
-Then use `dict_from_file` to load the dict from `b.txt`.
+Then use `dict_from_file` to load the dict from `b.txt`:
 
 ```python
 from mmengine import dict_from_file
@@ -144,7 +144,7 @@ print(dict_from_file('b.txt', key_type=int))
 
 ### Load from other backends
 
-Use `list_from_file` to load the list from `s3://bucket-name/a.txt`.
+Use `list_from_file` to load the list from `s3://bucket-name/a.txt`:
 
 ```python
 from mmengine import list_from_file
@@ -172,7 +172,7 @@ print(dict_from_file('s3://bucket-name/b.txt', key_type=int))
 
 ## Load and dump checkpoints
 
-We can read the checkpoints from disk or internet in the following way.
+We can read the checkpoints from disk or internet in the following way:
 
 ```python
 import torch
@@ -180,16 +180,16 @@ import torch
 filepath1 = '/path/of/your/checkpoint1.pth'
 filepath2 = 'http://path/of/your/checkpoint3.pth'
 
-# read filepath1 from disk
+# read checkpoints from disk
 checkpoint = torch.load(filepath1)
 # save checkpoints to disk
 torch.save(checkpoint, filepath1)
 
-# read filepath2 from internet
+# read checkpoints from internet
 checkpoint = torch.utils.model_zoo.load_url(filepath2)
 ```
 
-In `MMEngine`, reading and writing checkpoints in different storage forms can be uniformly implemented with `load_checkpoint` and `save_checkpoint`.
+In `MMEngine`, reading and writing checkpoints in different storage forms can be uniformly implemented with `load_checkpoint` and `save_checkpoint`:
 
 ```python
 from mmengine import load_checkpoint, save_checkpoint
@@ -200,12 +200,12 @@ filepath3 = 'http://path/of/your/checkpoint3.pth'
 
 # read checkpoints from disk
 checkpoint = load_checkpoint(filepath1)
-# save checkpoints from disk
+# save checkpoints to disk
 save_checkpoint(checkpoint, filepath1)
 
 # read checkpoints from s3
 checkpoint = load_checkpoint(filepath2)
-# save checkpoints from s3
+# save checkpoints to s3
 save_checkpoint(checkpoint, filepath2)
 
 # read checkpoints from internet

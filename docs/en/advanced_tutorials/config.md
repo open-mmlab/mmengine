@@ -14,6 +14,8 @@ wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/c
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/my_module.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/optimizer_cfg.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/predefined_var.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/replace_data_root.py
+wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/replace_num_classes.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/refer_base_var.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50_delete_key.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50_lr0.01.py
@@ -29,7 +31,7 @@ wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/c
 
 A valid configuration file should define a set of key-value pairs, and here are a few examples:
 
-Python：
+Python:
 
 ```Python
 test_int = 1
@@ -37,7 +39,7 @@ test_list = [1, 2, 3]
 test_dict = dict(key1='value1', key2=0.1)
 ```
 
-Json：
+Json:
 
 ```json
 {
@@ -47,7 +49,7 @@ Json：
 }
 ```
 
-YAML：
+YAML:
 
 ```yaml
 test_int: 1
@@ -107,7 +109,7 @@ We can use the `Config` combination with the [Registry](./registry.md) to build 
 
 Here is an example of defining optimizers in a configuration file.
 
-`config_sgd.py`：
+`config_sgd.py`:
 
 ```python
 optimizer = dict(type='SGD', lr=0.1, momentum=0.9, weight_decay=0.0001)
@@ -154,13 +156,13 @@ We address these issues with inheritance mechanism, detailed as below.
 
 Here is an example to illustrate the inheritance mechanism.
 
-`optimizer_cfg.py`：
+`optimizer_cfg.py`:
 
 ```python
 optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
 ```
 
-`resnet50.py`：
+`resnet50.py`:
 
 ```python
 _base_ = ['optimizer_cfg.py']
@@ -180,13 +182,13 @@ print(cfg.optimizer)
 
 `_base_` is a reserved field for the configuration file. It specifies the inherited base files for the current file. Inheriting multiple files will get all the fields at the same time, but it requires that there are no repeated fields defined in all base files.
 
-`runtime_cfg.py`：
+`runtime_cfg.py`:
 
 ```python
 gpu_ids = [0, 1]
 ```
 
-`resnet50_runtime.py`：
+`resnet50_runtime.py`:
 
 ```python
 _base_ = ['optimizer_cfg.py', 'runtime_cfg.py']
@@ -212,7 +214,7 @@ Sometimes, we want to modify some of the fields in the inherited files. For exam
 
 In this case, you can simply redefine the fields in the new configuration file. Note that since the optimizer field is a dictionary, we only need to redefine the modified fields. This rule also applies to adding fields.
 
-`resnet50_lr0.01.py`：
+`resnet50_lr0.01.py`:
 
 ```python
 _base_ = ['optimizer_cfg.py', 'runtime_cfg.py']
@@ -243,7 +245,7 @@ gpu_ids = [0]
 
 Sometimes we not only want to modify or add the keys, but also want to delete them. In this case, we need to set `_delete_=True` in the target field(`dict`) to delete all the keys that do not appear in the newly defined dictionary.
 
-`resnet50_delete_key.py`：
+`resnet50_delete_key.py`:
 
 ```python
 _base_ = ['optimizer_cfg.py', 'runtime_cfg.py']
@@ -296,7 +298,7 @@ a['type'] = 'MobileNet'
 
 The `Config` is not able to parse such a configuration file (it will raise an error when parsing). The `Config` provides a more `pythonic` way to modify base variables for `python` configuration files.
 
-`modify_base_var.py`：
+`modify_base_var.py`:
 
 ```python
 _base_ = ['resnet50.py']
@@ -333,7 +335,7 @@ optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
 model = dict(type='ResNet', depth=50)
 ```
 
-Similarly, we can dump configuration files in `json`, `yaml` format：
+Similarly, we can dump configuration files in `json`, `yaml` format:
 
 `resnet50_dump.yaml`
 
@@ -350,15 +352,16 @@ optimizer:
 
 `resnet50_dump.json`
 
-````json
+```json
 {"optimizer": {"type": "SGD", "lr": 0.02, "momentum": 0.9, "weight_decay": 0.0001}, "model": {"type": "ResNet", "depth": 50}}
+```
 
 In addition, `dump` can also dump `cfg` loaded from a dictionary.
 
 ```python
 cfg = Config(dict(a=1, b=2))
 cfg.dump('dump_dict.py')
-````
+```
 
 `dump_dict.py`
 
@@ -489,6 +492,98 @@ Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1
 ```
 
 :::
+
+### Replace fields with environment variables
+
+When a field is deeply nested, we need to add a long prefix at the command line to locate it. To alleviate this problem, MMEngine allows users to substitute fields in configuration with environment variables.
+
+Before parsing the configuration file, the program will search all `{{$ENV_VAR:DEF_VAL}}` fields and substitute those sections with environment variables. Here, `ENV_VAR` is the name of the environment variable used to replace this section, `DEF_VAL` is the default value if `ENV_VAR` is not set.
+
+When we want to modify the dataset path at the command line, we can take `replace_data_root.py` as an example:
+
+```python
+dataset_type = 'CocoDataset'
+data_root = '{{$DATASET:/data/coco/}}'
+dataset=dict(ann_file= data_root + 'train.json')
+```
+
+If we run `demo_train.py` to parse this configuration file.
+
+```bash
+python demo_train.py replace_data_root.py
+```
+
+```
+Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/data/coco/', 'dataset': {'ann_file': '/data/coco/train.json'}}
+```
+
+Here, we don't set the environment variable `DATASET`. Thus, the program directly replaces `{{$DATASET:/data/coco/}}` with the default value `/data/coco/`. If we set `DATASET` at the command line:
+
+```bash
+DATASET=/new/dataset/path/ python demo_train.py replace_data_root.py
+```
+
+```
+Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/new/dataset/path/', 'dataset': {'ann_file': '/new/dataset/path/train.json'}}
+```
+
+The value of `data_root` has been substituted with the value of `DATASET` as `/new/dataset/path`.
+
+It is noteworthy that both `--cfg-options` and `{{$ENV_VAR:DEF_VAL}}` allow users to modify fields in command line. But there is a small difference between those two methods. Environment variable substitution occurs before the configuration parsing. If the replaced field is also involved in other fields assignment, the environment variable substitution will also affect the other fields.
+
+We take `demo_train.py` and `replace_data_root.py` for example. If we replace `data_root` by setting `--cfg-options data_root='/new/dataset/path'`:
+
+```bash
+python demo_train.py replace_data_root.py --cfg-options data_root='/new/dataset/path/'
+```
+
+```
+Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/new/dataset/path/', 'dataset': {'ann_file': '/data/coco/train.json'}}
+```
+
+As we can see, only `data_root` has been modified. `dataset.ann_file` is still the default value.
+
+In contrast, if we replace `data_root` by setting `DATASET=/new/dataset/path`:
+
+```bash
+DATASET=/new/dataset/path/ python demo_train.py replace_data_root.py
+```
+
+```
+Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/new/dataset/path/', 'dataset': {'ann_file': '/new/dataset/path/train.json'}}
+```
+
+Both `data_root` and `dataset.ann_file` have been modified.
+
+Environment variables can also be used to replace other types of fields. We can use `{{'$ENV_VAR:DEF_VAL'}}` or `{{"$ENV_VAR:DEF_VAL"}}` format to ensure the configuration file conforms to python syntax.
+
+We can take `replace_num_classes.py` as an example:
+
+```
+model=dict(
+    bbox_head=dict(
+        num_classes={{'$NUM_CLASSES:80'}}))
+```
+
+If we run `demo_train.py` to parse this configuration file.
+
+```bash
+python demo_train.py replace_num_classes.py
+```
+
+```
+Config (path: replace_num_classes.py): {'model': {'bbox_head': {'num_classes': 80}}}
+```
+
+Let us set the environment variable `NUM_CLASSES`
+
+```bash
+NUM_CLASSES=20 python demo_train.py replace_num_classes.py
+```
+
+```
+Config (path: replace_num_classes.py): {'model': {'bbox_head': {'num_classes': 20}}}
+```
 
 ### import the custom module
 

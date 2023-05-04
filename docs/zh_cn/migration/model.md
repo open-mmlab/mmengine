@@ -214,7 +214,7 @@ class MMEngineToyModel(BaseModel):
 </thead>
 </table>
 
-关于等效代码中的[数据处理器（data_preprocessor）](mmengine.model.BaseDataPreprocessor) 和[优化器封装（optim_wrapper）](mmengine.optim.OptimWrapper) 的说明，详见[模型教程](../tutorials/model.md#数据处理器（DataPreprocessor）)和[优化器封装教程](../tutorials/optim_wrapper.md)。
+关于等效代码中的[数据处理器（data_preprocessor）](mmengine.model.BaseDataPreprocessor)和[优化器封装（optim_wrapper）](mmengine.optim.OptimWrapper)的说明，详见[模型教程](../tutorials/model.md#数据预处理器datapreprocessor)和[优化器封装教程](../tutorials/optim_wrapper.md)。
 
 模型具体差异如下：
 
@@ -312,7 +312,7 @@ class MMEngineToyModel(BaseModel):
 </thead>
 </table>
 
-二者的区别主要在于优化器的使用方式。此外，`train_step` 接口返回值的差异和[上一节](参数更新流程统一的深度学习任务)提到的一致。
+二者的区别主要在于优化器的使用方式。此外，`train_step` 接口返回值的差异和[上一节](#常用的参数更新流程)提到的一致。
 
 ## 验证/测试流程的迁移
 

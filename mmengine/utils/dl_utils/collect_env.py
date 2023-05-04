@@ -4,7 +4,6 @@ import os.path as osp
 import subprocess
 import sys
 from collections import OrderedDict, defaultdict
-from distutils import errors
 
 import cv2
 import numpy as np
@@ -47,6 +46,8 @@ def collect_env():
             - OpenCV (optional): OpenCV version.
             - MMENGINE: MMENGINE version.
     """
+    from distutils import errors
+
     env_info = OrderedDict()
     env_info['sys.platform'] = sys.platform
     env_info['Python'] = sys.version.replace('\n', '')
@@ -94,6 +95,7 @@ def collect_env():
         # Check C++ Compiler.
         # For Unix-like, sysconfig has 'CC' variable like 'gcc -pthread ...',
         # indicating the compiler used, we use this to get the compiler name
+        import io
         import sysconfig
         cc = sysconfig.get_config_var('CC')
         if cc:
@@ -118,6 +120,12 @@ def collect_env():
             env_info['GCC'] = 'n/a'
     except (subprocess.CalledProcessError, errors.DistutilsPlatformError):
         env_info['GCC'] = 'n/a'
+    except io.UnsupportedOperation as e:
+        # JupyterLab on Windows changes sys.stdout, which has no `fileno` attr
+        # Refer to: https://github.com/open-mmlab/mmengine/issues/931
+        # TODO: find a solution to get compiler info in Windows JupyterLab,
+        # while preserving backward-compatibility in other systems.
+        env_info['MSVC'] = f'n/a, reason: {str(e)}'
 
     env_info['PyTorch'] = torch.__version__
     env_info['PyTorch compiling details'] = get_build_config()

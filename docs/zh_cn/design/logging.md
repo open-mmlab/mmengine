@@ -10,7 +10,7 @@
 
 ![image](https://user-images.githubusercontent.com/57566630/163441489-47999f3a-3259-44ab-949c-77a8a599faa5.png)
 
-训练过程中的产生的损失、学习率等数据由历史缓冲区管理和封装，汇总后交给消息枢纽维护。日志处理器将消息枢纽中的数据进行格式化，最后通过[记录器钩子（LoggerHook）](mmengine.hook.LoggerHook) 展示到各种可视化后端。**一般情况下用户无需感知数据处理流程，可以直接通过配置日志处理器来选择日志的统计方式**。在介绍 MMEngine 的日志系统的设计之前，可以先阅读[记录日志教程](../tutorials/logging.md) 了解日志系统的基本用法。
+训练过程中的产生的损失、学习率等数据由历史缓冲区管理和封装，汇总后交给消息枢纽维护。日志处理器将消息枢纽中的数据进行格式化，最后通过[记录器钩子（LoggerHook）](mmengine.hooks.LoggerHook) 展示到各种可视化后端。**一般情况下用户无需感知数据处理流程，可以直接通过配置日志处理器来选择日志的统计方式**。在介绍 MMEngine 的日志系统的设计之前，可以先阅读[记录日志教程](../advanced_tutorials/logging.md) 了解日志系统的基本用法。
 
 ## 历史缓冲区（HistoryBuffer）
 
@@ -412,17 +412,17 @@ logger = MMLogger.get_instance('mmengine', log_file='tmp.log', distributed=True,
 
 ```text
 #  共享存储
-./tmp
-├── tmp.log
-├── tmp_rank1.log
-├── tmp_rank2.log
-├── tmp_rank3.log
-├── tmp_rank4.log
-├── tmp_rank5.log
-├── tmp_rank6.log
-└── tmp_rank7.log
+work_dir/20230228_141908
+├── 20230306_183634_${hostname}_device0_rank0.log
+├── 20230306_183634_${hostname}_device1_rank1.log
+├── 20230306_183634_${hostname}_device2_rank2.log
+├── 20230306_183634_${hostname}_device3_rank3.log
+├── 20230306_183634_${hostname}_device4_rank4.log
+├── 20230306_183634_${hostname}_device5_rank5.log
+├── 20230306_183634_${hostname}_device6_rank6.log
+├── 20230306_183634_${hostname}_device7_rank7.log
 ...
-└── tmp_rank63.log
+├── 20230306_183634_${hostname}_device7_rank63.log
 ```
 
 多机多卡，独立存储的情况：
@@ -430,21 +430,24 @@ logger = MMLogger.get_instance('mmengine', log_file='tmp.log', distributed=True,
 ```text
 # 独立存储
 # 设备0：
-work_dir/
-└── exp_name_logs
-    ├── exp_name.log
-    ├── exp_name_rank1.log
-    ├── exp_name_rank2.log
-    ├── exp_name_rank3.log
-    ...
-    └── exp_name_rank7.log
+work_dir/20230228_141908
+├── 20230306_183634_${hostname}_device0_rank0.log
+├── 20230306_183634_${hostname}_device1_rank1.log
+├── 20230306_183634_${hostname}_device2_rank2.log
+├── 20230306_183634_${hostname}_device3_rank3.log
+├── 20230306_183634_${hostname}_device4_rank4.log
+├── 20230306_183634_${hostname}_device5_rank5.log
+├── 20230306_183634_${hostname}_device6_rank6.log
+├── 20230306_183634_${hostname}_device7_rank7.log
 
 # 设备7：
-work_dir/
-└── exp_name_logs
-    ├── exp_name_rank56.log
-    ├── exp_name_rank57.log
-    ├── exp_name_rank58.log
-    ...
-    └── exp_name_rank63.log
+work_dir/20230228_141908
+├── 20230306_183634_${hostname}_device0_rank56.log
+├── 20230306_183634_${hostname}_device1_rank57.log
+├── 20230306_183634_${hostname}_device2_rank58.log
+├── 20230306_183634_${hostname}_device3_rank59.log
+├── 20230306_183634_${hostname}_device4_rank60.log
+├── 20230306_183634_${hostname}_device5_rank61.log
+├── 20230306_183634_${hostname}_device6_rank62.log
+├── 20230306_183634_${hostname}_device7_rank63.log
 ```

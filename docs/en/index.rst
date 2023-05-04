@@ -12,12 +12,23 @@ You can switch between Chinese and English documents in the lower-left corner of
 
 .. toctree::
    :maxdepth: 1
+   :caption: Examples
+
+   examples/train_a_gan.md
+
+.. toctree::
+   :maxdepth: 1
    :caption: Common Usage
 
-   examples/resume_training.md
-   examples/speed_up_training.md
-   examples/save_gpu_memory.md
-   examples/train_a_gan.md
+   common_usage/resume_training.md
+   common_usage/speed_up_training.md
+   common_usage/save_gpu_memory.md
+   common_usage/visualize_training_log.md
+   common_usage/set_random_seed.md
+   common_usage/debug_tricks.md
+   common_usage/model_analysis.md
+   common_usage/set_interval.md
+   common_usage/epoch_to_iter.md
 
 .. toctree::
    :maxdepth: 3
@@ -48,6 +59,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    advanced_tutorials/manager_mixin.md
    advanced_tutorials/cross_library.md
    advanced_tutorials/test_time_augmentation.md
+   advanced_tutorials/model_analysis.md
 
 .. toctree::
    :maxdepth: 1
@@ -58,6 +70,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    design/evaluation.md
    design/visualization.md
    design/logging.md
+   design/infer.md
 
 .. toctree::
    :maxdepth: 1
@@ -73,6 +86,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    :maxdepth: 2
    :caption: API Reference
 
+   mmengine.analysis <api/analysis>
    mmengine.registry <api/registry>
    mmengine.config <api/config>
    mmengine.runner <api/runner>
@@ -82,6 +96,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    mmengine.evaluator <api/evaluator>
    mmengine.structures <api/structures>
    mmengine.dataset <api/dataset>
+   mmengine.infer <api/infer>
    mmengine.device <api/device>
    mmengine.hub <api/hub>
    mmengine.logging <api/logging>

@@ -68,15 +68,15 @@ if TORCH_VERSION != 'parrots' and digit_version(TORCH_VERSION) < digit_version(
             map_location (optional): a function or a dict specifying how to
                 remap storage locations (see torch.load)
             progress (bool, optional): whether or not to display a progress bar
-                to stderr. Default: True
+                to stderr. Defaults to True
             check_hash(bool, optional): If True, the filename part of the URL
                 should follow the naming convention ``filename-<sha256>.ext``
                 where ``<sha256>`` is the first eight or more digits of the
                 SHA256 hash of the contents of the file. The hash is used to
                 ensure unique names and to verify the contents of the file.
-                Default: False
+                Defaults to False
             file_name (str, optional): name for the downloaded file. Filename
-                from ``url`` will be used if not set. Default: None.
+                from ``url`` will be used if not set. Defaults to None.
         Example:
             >>> url = ('https://s3.amazonaws.com/pytorch/models/resnet18-5c106'
             ...        'cde.pth')

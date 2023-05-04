@@ -201,4 +201,4 @@ There are 22 mount points in the [Base Hook](mmengine.hooks.Hook).
 - before_save_checkpoint
 - after_load_checkpoint
 
-Further readings: [Hook tutorial](../tutorials/hook.md) and [Hook API documentations](mmengine.hooks)
+Further readings: [Hook tutorial](../tutorials/hook.md) and [Hook API documentations](../api/hooks)

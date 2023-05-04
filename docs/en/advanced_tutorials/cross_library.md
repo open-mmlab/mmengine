@@ -1,27 +1,27 @@
 # Use modules from other libraries
 
 Based on MMEngine's [Registry](registry.md) and [Config](config.md), users can build modules across libraries.
-For example, use [MMClassification](https://github.com/open-mmlab/mmclassification)'s backbones in [MMDetection](https://github.com/open-mmlab/mmdetection), or [MMDetection](https://github.com/open-mmlab/mmdetection)'s data transforms in [MMRotate](https://github.com/open-mmlab/mmrotate), or using [MMDetection](https://github.com/open-mmlab/mmdetection)'s detectors in [MMTracking](https://github.com/open-mmlab/mmtracking).
+For example, use [MMPretrain](https://github.com/open-mmlab/mmpretrain)'s backbones in [MMDetection](https://github.com/open-mmlab/mmdetection), or [MMDetection](https://github.com/open-mmlab/mmdetection)'s data transforms in [MMRotate](https://github.com/open-mmlab/mmrotate), or using [MMDetection](https://github.com/open-mmlab/mmdetection)'s detectors in [MMTracking](https://github.com/open-mmlab/mmtracking).
 
 Modules registered in the same registry tree can be called across libraries by adding the **package name prefix** before the module's type in the config. Here are some common examples:
 
 ## Use backbone across libraries
 
-Taking the example of using MMClassification's ConvNeXt in MMDetection:
+Taking the example of using MMPretrain's ConvNeXt in MMDetection:
 
-Firstly, adding the `custom_imports` field to the config to register the backbones of MMClassification to the registry.
+Firstly, adding the `custom_imports` field to the config to register the backbones of MMPretrain to the registry.
 
-Secondly, adding the package name of MMClassification `mmcls` to the `type` of the backbone as a prefix: `mmcls.ConvNeXt`
+Secondly, adding the package name of MMPretrain `mmpretrain` to the `type` of the backbone as a prefix: `mmpretrain.ConvNeXt`
 
 ```python
-# Use custom_imports to register mmcls models to the registry
-custom_imports = dict(imports=['mmcls.models'], allow_failed_imports=False)
+# Use custom_imports to register mmpretrain models to the registry
+custom_imports = dict(imports=['mmpretrain.models'], allow_failed_imports=False)
 
 model = dict(
   type='MaskRCNN',
   data_preprocessor=dict(...),
   backbone=dict(
-      type='mmcls.ConvNeXt', # Add mmcls prefix to enable cross-library mechanism
+      type='mmpretrain.ConvNeXt', # Add mmpretrain prefix to enable cross-library mechanism
       arch='tiny',
       out_indices=[0, 1, 2, 3],
       drop_path_rate=0.4,

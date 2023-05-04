@@ -4,7 +4,7 @@
 
 在模型验证和模型测试中，通常需要对模型精度做定量评测。在 MMEngine 中实现了评测指标（Metric）和评测器（Evaluator）来完成这一功能。
 
-- **评测指标** 用于根据测试数据和模型预测结果，完成特定模型精度指标的计算。在 OpenMMLab 各算法库中提供了对应任务的常用评测指标，如 [MMClassification](https://github.com/open-mmlab/mmclassification) 中提供了[Accuracy](https://mmclassification.readthedocs.io/en/1.x/api/generated/mmcls.evaluation.Accuracy.html#mmcls.evaluation.Accuracy) 用于计算分类模型的 Top-k 分类正确率；MMDetection 中提供了 [COCOMetric](https://github.com/open-mmlab/mmdetection/blob/3.x/mmdet/evaluation/metrics/coco_metric.py) 用于计算目标检测模型的 AP，AR 等评测指标。评测指标与数据集解耦，如 COCOMetric 也可用于 COCO 以外的目标检测数据集上。
+- **评测指标** 用于根据测试数据和模型预测结果，完成特定模型精度指标的计算。在 OpenMMLab 各算法库中提供了对应任务的常用评测指标，如 [MMPretrain](https://github.com/open-mmlab/mmpretrain) 中提供了[Accuracy](https://mmpretrain.readthedocs.io/en/latest/api/generated/mmpretrain.evaluation.Accuracy.html#mmpretrain.evaluation.Accuracy) 用于计算分类模型的 Top-k 分类正确率；[MMDetection](https://github.com/open-mmlab/mmdetection) 中提供了 [COCOMetric](https://github.com/open-mmlab/mmdetection/blob/main/mmdet/evaluation/metrics/coco_metric.py) 用于计算目标检测模型的 AP，AR 等评测指标。评测指标与数据集解耦，如 COCOMetric 也可用于 COCO 以外的目标检测数据集上。
 
 - **评测器** 是评测指标的上层模块，通常包含一个或多个评测指标。评测器的作用是在模型评测时完成必要的数据格式转换，并调用评测指标计算模型精度。评测器通常由[执行器](../tutorials/runner.md)或测试脚本构建，分别用于在线评测和离线评测。
 
@@ -83,6 +83,6 @@ class BaseMetric(metaclass=ABCMeta):
 
 ## 增加自定义评测指标
 
-在 OpenMMLab 的各个算法库中，已经实现了对应方向的常用评测指标。如 MMDetection 中提供了 COCO 评测指标，MMClassification 中提供了 Accuracy、F1Score 等评测指标等。
+在 OpenMMLab 的各个算法库中，已经实现了对应方向的常用评测指标。如 MMDetection 中提供了 COCO 评测指标，MMPretrain 中提供了 Accuracy、F1Score 等评测指标等。
 
 用户也可以增加自定义的评测指标。具体方法可以参考[教程文档](../tutorials/evaluation.md#自定义评测指标)中给出的示例。

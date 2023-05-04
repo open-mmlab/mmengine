@@ -4,7 +4,7 @@
 
 ## 灵活的日志统计方式
 
-我们可以通过在构建执行器时候配置[日志处理器](mmengine.logging.LogProcessor)，来灵活地选择日志统计方式。如果不为执行器配置日志处理器，则会按照日志处理器的默认参数构建实例，效果等价于：
+我们可以通过在构建执行器时候配置[日志处理器](mmengine.runner.LogProcessor)，来灵活地选择日志统计方式。如果不为执行器配置日志处理器，则会按照日志处理器的默认参数构建实例，效果等价于：
 
 ```python
 log_processor = dict(window_size=10, by_epoch=True, custom_cfg=None, num_digits=4)
@@ -187,7 +187,7 @@ runner.train()
 08/21 03:17:26 - mmengine - INFO - Epoch(train) [1][20/25]  lr: 1.0000e-02  eta: 0:00:00  time: 0.0024  data_time: 0.0010  loss1: 0.5464  loss2: 0.7251  loss: 1.2715  loss1_local_max: 2.8872  loss1_global_max: 2.8872
 ```
 
-更多配置规则见[日志处理器文档](mmengine.logging.LogProcessor)
+更多配置规则见[日志处理器文档](mmengine.runner.LogProcessor)
 
 ## 自定义统计内容
 

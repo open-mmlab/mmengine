@@ -119,10 +119,10 @@ MMEngine provides 2 built-in `collate_fn`:
 - `pseudo_collate`: Default value in MMEngine. It won't concatenate data through `batch` index. Detailed explanations can be found in [pseudo_collate API doc](mmengine.dataset.pseudo_collate)
 - `default_collate`: It behaves almost identically to PyTorch's `default_collate`. It will transfer data into `Tensor` and concatenate them through `batch` index. More details and slight differences from PyTorch can be found in [default_collate API doc](mmengine.dataset.default_collate)
 
-If you want to use a custom `collate_fn`, you can register it to `COLLATE_FUNCTIONS` registry.
+If you want to use a custom `collate_fn`, you can register it to `FUNCTIONS` registry.
 
 ```python
-@COLLATE_FUNCTIONS.register_module()
+@FUNCTIONS.register_module()
 def my_collate_func(data_batch: Sequence) -> Any:
     pass
 
@@ -186,7 +186,7 @@ runner = Runner(
 ```
 
 ```{note}
-The above example makes extensive use of the registry mechanism and borrows the [Compose](mmengine.dataset.Compose) module from MMEngine. If you urge to use torchvision dataset in your config files, you can refer to it and make some slight modifications. However, we recommend you borrow datasets from downstream repos such as [MMDet](https://github.com/open-mmlab/mmdetection), [MMCls](https://github.com/open-mmlab/mmclassification), etc. This may give you a better experience.
+The above example makes extensive use of the registry mechanism and borrows the [Compose](mmengine.dataset.Compose) module from MMEngine. If you urge to use torchvision dataset in your config files, you can refer to it and make some slight modifications. However, we recommend you borrow datasets from downstream repos such as [MMDet](https://github.com/open-mmlab/mmdetection), [MMPretrain](https://github.com/open-mmlab/mmpretrain), etc. This may give you a better experience.
 ```
 
 ### Customize your dataset

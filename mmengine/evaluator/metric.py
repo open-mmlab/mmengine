@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import warnings
+import logging
 from abc import ABCMeta, abstractmethod
 from typing import Any, List, Optional, Sequence, Union
 
@@ -32,20 +32,34 @@ class BaseMetric(metaclass=ABCMeta):
             names to disambiguate homonymous metrics of different evaluators.
             If prefix is not provided in the argument, self.default_prefix
             will be used instead. Default: None
+        collect_dir: (str, optional): Synchronize directory for collecting data
+            from different ranks. This argument should only be configured when
+            ``collect_device`` is 'cpu'. Defaults to None.
+            `New in version 0.7.3.`
     """
 
     default_prefix: Optional[str] = None
 
     def __init__(self,
                  collect_device: str = 'cpu',
-                 prefix: Optional[str] = None) -> None:
+                 prefix: Optional[str] = None,
+                 collect_dir: Optional[str] = None) -> None:
+        if collect_dir is not None and collect_device != 'cpu':
+            raise ValueError('`collec_dir` could only be configured when '
+                             "`collect_device='cpu'`")
+
         self._dataset_meta: Union[None, dict] = None
         self.collect_device = collect_device
         self.results: List[Any] = []
         self.prefix = prefix or self.default_prefix
+        self.collect_dir = collect_dir
+
         if self.prefix is None:
-            warnings.warn('The prefix is not set in metric class '
-                          f'{self.__class__.__name__}.')
+            print_log(
+                'The prefix is not set in metric class '
+                f'{self.__class__.__name__}.',
+                logger='current',
+                level=logging.WARNING)
 
     @property
     def dataset_meta(self) -> Optional[dict]:
@@ -97,12 +111,21 @@ class BaseMetric(metaclass=ABCMeta):
             names of the metrics, and the values are corresponding results.
         """
         if len(self.results) == 0:
-            warnings.warn(
+            print_log(
                 f'{self.__class__.__name__} got empty `self.results`. Please '
                 'ensure that the processed results are properly added into '
-                '`self.results` in `process` method.')
+                '`self.results` in `process` method.',
+                logger='current',
+                level=logging.WARNING)
 
-        results = collect_results(self.results, size, self.collect_device)
+        if self.collect_device == 'cpu':
+            results = collect_results(
+                self.results,
+                size,
+                self.collect_device,
+                tmpdir=self.collect_dir)
+        else:
+            collect_results(self.results, size, self.collect_device)
 
         if is_main_process():
             # cast all tensors in results list to cpu
@@ -135,12 +158,18 @@ class DumpResults(BaseMetric):
         collect_device (str): Device name used for collecting results from
             different ranks during distributed training. Must be 'cpu' or
             'gpu'. Defaults to 'cpu'.
+        collect_dir: (str, optional): Synchronize directory for collecting data
+            from different ranks. This argument should only be configured when
+            ``collect_device`` is 'cpu'. Defaults to None.
+            `New in version 0.7.3.`
     """
 
     def __init__(self,
                  out_file_path: str,
-                 collect_device: str = 'cpu') -> None:
-        super().__init__(collect_device=collect_device)
+                 collect_device: str = 'cpu',
+                 collect_dir: Optional[str] = None) -> None:
+        super().__init__(
+            collect_device=collect_device, collect_dir=collect_dir)
         if not out_file_path.endswith(('.pkl', '.pickle')):
             raise ValueError('The output file must be a pkl file.')
         self.out_file_path = out_file_path
