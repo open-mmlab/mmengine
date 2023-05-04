@@ -24,7 +24,7 @@ class CustomInferencer(BaseInferencer)
     ...
 ```
 
-For specific details, please refer to the [Development Specification](#Development_Specification_of_Inference_Interface).
+For specific details, please refer to the [Development Specification](#Development-Specification-of-Inference-Interface).
 
 ### Building an Inferencer
 
