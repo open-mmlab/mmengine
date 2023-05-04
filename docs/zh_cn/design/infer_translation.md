@@ -232,7 +232,7 @@ Output：
 
 ### `__call__()`
 
-Input arguements：
+Input arguements： 
 
 - inputs：The input data, usually a list of image paths or image data. Each element in `inputs` can also be other types of data as long as it can be processed by the `pipeline` returned by [_init_pipeline](#_init_pipeline). When there is only one inference data in `inputs`, it does not have to be a `list`, `__call__` will internally wrap it into a list for further processing.
 - return_datasample：Whether to return datasample as a `dict`.
