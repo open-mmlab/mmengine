@@ -224,8 +224,7 @@ class BaseDataset(Dataset):
         self.ann_file = ann_file
         self._metainfo = self._load_metainfo(copy.deepcopy(metainfo))
         self.data_root = data_root
-        data_prefix = copy.copy(data_prefix)
-        self.data_prefix = data_prefix
+        self.data_prefix = copy.copy(data_prefix)
         self.filter_cfg = copy.deepcopy(filter_cfg)
         self._indices = indices
         self.serialize_data = serialize_data
@@ -530,8 +529,8 @@ class BaseDataset(Dataset):
         """
         # Automatically join annotation file path with `self.root` if
         # `self.ann_file` is not an absolute path.
-        if self.ann_file and not is_abs(self.ann_file):
-            self.ann_file = osp.join(self.data_root or '', self.ann_file)
+        if self.ann_file and not is_abs(self.ann_file) and self.data_root:
+            self.ann_file = osp.join(self.data_root, self.ann_file)
         # Automatically join data directory with `self.root` if path value in
         # `self.data_prefix` is not an absolute path.
         for data_key, prefix in self.data_prefix.items():
