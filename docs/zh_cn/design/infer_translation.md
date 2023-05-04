@@ -147,7 +147,7 @@ class CustomInferencer(BaseInferencer):
 In OpenMMLab's algorithm repositories, the Inferencer must be registered to the downstream repository's registry instead of the root registry of MMEngine to avoid naming conflicts.
 ```
 
-**Core Interface Explanation**：
+**Core Interface Explanation**:
 
 ### `__init__()`
 
@@ -171,13 +171,13 @@ Initializes and returns the `visualizer` required by the inferencer, which is eq
 
 ### `preprocess()`
 
-Input arguements: 
+Input arguements:
 
 - inputs：Input data, passed into `__call__`, usually a list of image paths or image data.
 - batch_size：batch size, passed in by the user when calling `__call__`.
 - Other parameters: specified by the user and included in `preprocess_kwargs`.
 
-Output: 
+Output:
 
 - Generator that yields one batch of data per iteration.
 
@@ -185,7 +185,7 @@ The `preprocess` function is a generator function by default, which applies the 
 
 ### `forward()`
 
-Input arguements：
+Input arguements:
 
 - inputs：The batch data processed by `preprocess` function.
 - Other parameters: Specified by the user and indicated in `forward_kwargs`.
@@ -202,14 +202,14 @@ Calls `model.test_step` to perform forward inference and returns the inference r
 Abstract method that subclasses must implement.
 ```
 
-Input arguements：
+Input arguements:
 
 - inputs：The input data, which is the raw data without preprocessing.
 - preds：Predicted results of the model.
 - show：Whether to visualize.
 - Other parameters: Specified by the user in `visualize_kwargs`.
 
-Output：
+Output:
 
 - The visualization result, usually of type `List[np.ndarray]`. Taking object detection as an example, each element in the list should be an image with detection boxes drawn, which can be visualized using `cv2.imshow`. The visualization process may vary for different tasks, and `visualize` should return results that are suitable for common visualization processes in that field.
 
@@ -219,7 +219,7 @@ Output：
 Abstract method that subclasses must implement.
 ```
 
-Input arguements：
+Input arguements:
 
 - preds：The predicted results of the model, which is a `list` type. Each element in the list represents the prediction result of a piece of data. In the OpenMMLab algorithm library series, the type of each element in the prediction result is `BaseDataElement`.
 - visualization：Visualization results
@@ -232,13 +232,13 @@ Output：
 
 ### `__call__()`
 
-Input arguements： 
+Input arguements:
 
 - inputs：The input data, usually a list of image paths or image data. Each element in `inputs` can also be other types of data as long as it can be processed by the `pipeline` returned by [_init_pipeline](#_init_pipeline). When there is only one inference data in `inputs`, it does not have to be a `list`, `__call__` will internally wrap it into a list for further processing.
 - return_datasample：Whether to return datasample as a `dict`.
 - batch_size：Batch size for inference, which will be further passed to the `preprocess` function.
 - Extra arguments to be passed to `preprocess`, `forward`, `visualize`, and `postprocess` functions.
 
-Output：
+Output:
 
 - The visualized and predicted results returned by `postprocess`, in the form of a dictionary. OpenMMLab requires the returned dictionary to contain two keys: `predictions` and `visualization`.
