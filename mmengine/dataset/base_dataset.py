@@ -10,7 +10,7 @@ from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 import numpy as np
 from torch.utils.data import Dataset
 
-from mmengine.fileio import list_from_file, load
+from mmengine.fileio import join_path, list_from_file, load
 from mmengine.registry import TRANSFORMS
 from mmengine.utils import is_abs
 
@@ -532,12 +532,13 @@ class BaseDataset(Dataset):
         # Automatically join data directory with `self.root` if path value in
         # `self.data_prefix` is not an absolute path.
         for data_key, prefix in self.data_prefix.items():
-            data_root = self.data_root if self.data_root is not None else ''
-            if isinstance(prefix, str):
-                self.data_prefix[data_key] = osp.join(data_root, prefix)
-            else:
+            if not isinstance(prefix, str):
                 raise TypeError('prefix should be a string, but got '
                                 f'{type(prefix)}')
+            if not is_abs(prefix) and self.data_root:
+                self.data_prefix[data_key] = join_path(self.data_root, prefix)
+            else:
+                self.data_prefix[data_key] = prefix
 
     @force_full_init
     def get_subset_(self, indices: Union[Sequence[int], int]) -> None:
