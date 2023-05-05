@@ -3,6 +3,7 @@ import sys
 from collections.abc import Iterable
 from multiprocessing import Pool
 from shutil import get_terminal_size
+from typing import Callable, Union
 
 from .timer import Timer
 
@@ -26,7 +27,11 @@ class ProgressBar:
         >>>    time.sleep(1)
     """
 
-    def __init__(self, task_num=0, bar_width=50, start=True, file=sys.stdout):
+    def __init__(self,
+                 task_num: int = 0,
+                 bar_width: int = 50,
+                 start: bool = True,
+                 file=sys.stdout):
         self.task_num = task_num
         self.bar_width = bar_width
         self.completed = 0
@@ -48,7 +53,7 @@ class ProgressBar:
         self.file.flush()
         self.timer = Timer()
 
-    def update(self, num_tasks=1):
+    def update(self, num_tasks: int = 1):
         """update progressbar.
 
         Args:
@@ -82,7 +87,11 @@ class ProgressBar:
         self.file.flush()
 
 
-def track_progress(func, tasks, bar_width=50, file=sys.stdout, **kwargs):
+def track_progress(func: Callable,
+                   tasks: Union[list, Iterable],
+                   bar_width: int = 50,
+                   file=sys.stdout,
+                   **kwargs):
     """Track the progress of tasks execution with a progress bar.
 
     Tasks are done with a simple for-loop.
@@ -102,7 +111,7 @@ def track_progress(func, tasks, bar_width=50, file=sys.stdout, **kwargs):
         assert isinstance(tasks[1], int)
         task_num = tasks[1]
         tasks = tasks[0]
-    elif isinstance(tasks, Iterable):
+    elif isinstance(tasks, list):
         task_num = len(tasks)
     else:
         raise TypeError(
@@ -127,15 +136,15 @@ def init_pool(process_num, initializer=None, initargs=None):
         return Pool(process_num, initializer, initargs)
 
 
-def track_parallel_progress(func,
-                            tasks,
-                            nproc,
-                            initializer=None,
-                            initargs=None,
-                            bar_width=50,
-                            chunksize=1,
-                            skip_first=False,
-                            keep_order=True,
+def track_parallel_progress(func: Callable,
+                            tasks: Union[list, Iterable],
+                            nproc: int,
+                            initializer: Callable = None,
+                            initargs: tuple = None,
+                            bar_width: int = 50,
+                            chunksize: int = 1,
+                            skip_first: bool = False,
+                            keep_order: bool = True,
                             file=sys.stdout):
     """Track the progress of parallel task execution with a progress bar.
 
@@ -168,7 +177,7 @@ def track_parallel_progress(func,
         assert isinstance(tasks[1], int)
         task_num = tasks[1]
         tasks = tasks[0]
-    elif isinstance(tasks, Iterable):
+    elif isinstance(tasks, list):
         task_num = len(tasks)
     else:
         raise TypeError(
@@ -197,7 +206,9 @@ def track_parallel_progress(func,
     return results
 
 
-def track_iter_progress(tasks, bar_width=50, file=sys.stdout):
+def track_iter_progress(tasks: Union[list, Iterable],
+                        bar_width: int = 50,
+                        file=sys.stdout):
     """Track the progress of tasks iteration or enumeration with a progress
     bar.
 
@@ -217,7 +228,7 @@ def track_iter_progress(tasks, bar_width=50, file=sys.stdout):
         assert isinstance(tasks[1], int)
         task_num = tasks[1]
         tasks = tasks[0]
-    elif isinstance(tasks, Iterable):
+    elif isinstance(tasks, list):
         task_num = len(tasks)
     else:
         raise TypeError(
