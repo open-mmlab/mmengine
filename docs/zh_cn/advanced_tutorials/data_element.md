@@ -117,8 +117,7 @@ label in data_element2 is True
 
 **注意：**
 
-1. `BaseDataElement` 不支持 metainfo 和 data 属性中有同名的字段，所以用户应当避免 metainfo 和 data 属性中设置相同的字段，否则 `BaseDataElement` 会报错。
-2. 考虑到 `InstanceData` 和 `PixelData` 支持对数据进行切片操作，为了避免 `[]` 用法的不一致，同时减少同种需求的不同方法，`BaseDataElement` 不支持像字典那样访问和设置它的属性，所以类似 `BaseDataElement[name]` 的取值赋值操作是不被支持的。
+`BaseDataElement` 不支持 metainfo 和 data 属性中有同名的字段，所以用户应当避免 metainfo 和 data 属性中设置相同的字段，否则 `BaseDataElement` 会报错。
 
 ```python
 data_element = BaseDataElement()
@@ -373,23 +372,23 @@ print(instance_data)
 
 ## 数据元素(xxxData)
 
-MMEngine 将数据元素情况划分为三个类别:
+MMEngine 将数据元素情况划分为三个类别：
 
-- 实例数据(InstanceData): 主要针对的是上层任务(high-level)中，对图像中所有实例相关的数据进行封装，比如检测框(bounding boxes), 物体类别(box labels),实例掩码(instance masks), 关键点(key points), 文字边界(polygons), 跟踪id(tracking ids) 等. 所有实例相关的数据的**长度一致**，均为图像中实例的个数。
-- 像素数据(PixelData): 主要针对底层任务(low-level) 以及需要感知像素级别标签的部分上层任务。像素数据对像素级相关的数据进行封装，比如语义分割中的分割图（segmentation map）, 光流任务中的光流图（flow map）, 全景分割中的全景分割图（panoptic seg map）；底层任务中生成的各种图像，比如超分辨图，去噪图，以及生成的各种风格图。这些数据的特点是都是三维或四维数组，最后两维度为数据的高度(height)和宽度(width)，且具有相同的height和width
-- 标签数据(LabelData): 主要针对标签级别的数据进行封装，比如图像分类，多分类中的类别，图像生成中生成图像的类别内容，或者文字识别中的文本等。
+- 实例数据 (InstanceData) : 主要针对的是上层任务 (high-level) 中，对图像中所有实例相关的数据进行封装，比如检测框 (bounding boxes)，物体类别 (box labels)，实例掩码 (instance masks)，关键点 (key points)，文字边界 (polygons)，跟踪 id (tracking ids) 等。所有实例相关的数据的**长度一致**，均为图像中实例的个数。
+- 像素数据 (PixelData) : 主要针对底层任务 (low-level) 以及需要感知像素级别标签的部分上层任务。像素数据对像素级相关的数据进行封装，比如语义分割中的分割图 (segmentation map), 光流任务中的光流图 (flow map), 全景分割中的全景分割图 (panoptic seg map)；底层任务中生成的各种图像，比如超分辨图，去噪图，以及生成的各种风格图。这些数据的特点是都是三维或四维数组，最后两维度为数据的高度 (height) 和宽度 (width)，且具有相同的 height 和 width
+- 标签数据 (LabelData) : 主要针对标签级别的数据进行封装，比如图像分类，多分类中的类别，图像生成中生成图像的类别内容，或者文字识别中的文本等。
 
 ### InstanceData
 
-[`InstanceData`](mmengine.structures.InstanceData) 在 `BaseDataElement` 的基础上，对 `data` 存储的数据做了限制，即要求存储在 `data` 中的数据的长度一致。比如在目标检测中, 假设一张图像中有 N 个目标(instance)，可以将图像的所有边界框(bbox)，类别(label)等存储在 `InstanceData` 中, `InstanceData` 的 bbox 和 label 的长度相同。
-基于上述假定对 `InstanceData`进行了扩展，包括：
+[`InstanceData`](mmengine.structures.InstanceData) 在 `BaseDataElement` 的基础上对 `data` 存储的数据做了限制，要求存储在 `data` 中的数据的长度一致。比如在目标检测中, 假设一张图像中有 N 个目标 (instance)，可以将图像的所有边界框 (bbox)，类别 (label) 等存储在 `InstanceData` 中, `InstanceData` 的 bbox 和 label 的长度相同。
+MMEngine 对 `InstanceData` 加入了如下支持：
 
 - 对 `InstanceData` 中 data 所存储的数据进行了长度校验
 - data 部分支持类字典访问和设置它的属性
 - 支持基础索引，切片以及高级索引功能
-- 支持具有**相同的 `key`** 但是不同 `InstanceData` 的拼接功能。
+- 支持具有**相同的 `key`** 但是不同的 `InstanceData` 进行拼接的功能。
 
-这些扩展功能除了支持基础的数据结构， 比如`torch.tensor`, `numpy.dnarray`, `list`, `str`, `tuple`, 也可以是自定义的数据结构，只要自定义数据结构实现了 `__len__`, `__getitem__` and `cat`.
+这些扩展功能除了支持基础的数据结构， 比如 `torch.tensor`, `numpy.dnarray`, `list`, `str` 和 `tuple`, 也可以是自定义的数据结构，只要自定义数据结构实现了 `__len__`, `__getitem__` 和 `cat` 字段。
 
 #### 数据校验
 
@@ -723,7 +722,7 @@ print(InstanceData.cat([instance_data, instance_data]))
 
 [`PixelData`](mmengine.structures.PixelData) 在 `BaseDataElement` 的基础上，同样对对 data 中存储的数据做了限制:
 
-- 所有 data 内的数据均为 3 维，并且顺序为 (通道，高， 宽)
+- 所有 data 内的数据均为 3 维，并且顺序为 (通道，高，宽)
 - 所有在 data 内的数据要有相同的长和宽
 
 基于上述假定对 `PixelData`进行了扩展，包括：
@@ -845,9 +844,9 @@ print(f'{onehot} is convert to ', index)
 tensor([0, 1, 0, 0, 0, 0, 0, 0, 0, 0]) is convert to tensor([1])
 ```
 
-## 数据样本(DataSample)
+## 数据样本(xxxDataSample)
 
-数据样本作为不同模块最外层的接口，提供了 xxxDataSample 用于单任务中各模块之间统一格式的传递，同时为了各个模块从统一字段获取或写入信息，数据样本中的命名以及类型要进行约束和统一，保证各模块接口的统一性。 OpenMMLab 中各个算法库的命名规范可以参考 [`OpenMMLab` 中的命名规范](TODO)。
+一份样本中可能存在不同类型的标签，例如一张图片里可能同时存在实例级别的标签（Box），像素系别的标签（SegMap），因此在 PixelData、InstanceData、PixelData 之上，还会有一层更加高级封装，用来表示图像级别的标签。OpenMMLab 系列项目将这层封装命名为 XXDataSample。以检测任务为例，MMDet 就实现了 DetDataSample。训练过程中所有的标签都会被封装在 XXXDataSample 中，这样能够保证不同的深度学习任务能够保持统一的数据流和统一的数据操作方式。
 
 ### 下游库使用
 

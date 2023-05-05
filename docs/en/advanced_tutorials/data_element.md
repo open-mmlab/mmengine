@@ -27,7 +27,7 @@ for img, data_sample in dataloader:
 
 The abstracted interface unifies and simplifies the interface between modules in the algorithm library, and can be used to pass data between datasets, models, visualizers, evaluates, or even within different modules in one model.
 
-Besides the basic add, delete, change and check functions, this interface also supports migration between different devices and the operation of `dict and `torch.Tensor`, which can fully satisfy the requirements of the algorithm library.
+Besides the basic add, delete, change and check functions, this interface also supports migration between different devices and the operation of `dict and `torch.Tensor\`, which can fully satisfy the requirements of the algorithm library.
 
 The MMEngine based algirthm library can inherit from this design and implement its own interfaces to meet the characteristics and practical needs of data in different algorithms, improving the expandability while maintaining a unified interface.
 
@@ -118,8 +118,7 @@ Moreover, for the ease of use, users can access `data` and `metainfo` as if they
 
 **Note:**
 
-1. `BaseDataElement` does not support fields with the same name in `metainfo` and `data` attributes, which makes users should avoid setting the same fields which already existed. Otherwise `BaseDataElement` will throw out an error.
-2. Considering the `InstanceData` and `PixelData` support data slicing, and to avoid the inconsistent use of `[]` and to reduce different methods for the same requirement, `BaseDataElement` does not support accessing and setting its properties like a dictionary. Therefore, you cannot use operations like `BaseDataElement[name]`.
+BaseDataElement does not allow users to use the same name to set fields in metainfo and data. Otherwise, it will throw out an error.
 
 ```python
 data_element = BaseDataElement()
@@ -380,16 +379,18 @@ MMEngine divides the data elements into three categories:
 
 ### InstanceData
 
-[`InstanceData`](mmengine.structures.InstanceData) builds on `BaseDataElement` and places restrictions on the data stored in `data`. It requires the data stored in `data` to have the same length. So, for example, in object detection tasks, suppose there are N targets (instances) in an image. Users can store all the bboxes and labels in `InstanceData`, and the lengths of the bboxes and labels are same.
+[`InstanceData`](mmengine.structures.InstanceData) builds on top of the `BaseDataElement` and restricts the stored data to have the same length.
 
-MMEngine extended `InstanceData` based on the above assumption, including:
+For example, in object detection tasks, suppose there are N instances in one image. All the bboxes and labels of the image can be stored in `InstanceData`, and the bboxes and labels of `InstanceData` have the same length.
 
-- length checking of the data store in `InstanceData`
-- supports dictionary-like access and setting of its properties
+In this way, MMEngine added the following features to `InstanceData`:
+
+- supports length checking of the data store in `InstanceData`
+- supports dictionary-like accessing and editing
 - supports basic indexing, slicing and other advanced querying features
-- supports concatenation of data with the **same `key`** but different `InstanceData`
+- supports concatenation of data with the **same `key`** but from different `InstanceData`
 
-These extensions support not only basic data structures such as `torch.Tensor`, `numpy.dnarry`, `list`, `str`, and `tuple`, but also support customized data structures as long as they implement `__len__`, `__getitem__`, and `cat` methods.
+These extended functions support both basic data structures such as `torch.tensor`, `numpy.dnarray`, `list`, `str` and `tuple`, and customized data structures, as long as they have implemented the `__len__`, `__getitem__` and `cat` fields.
 
 #### Data verification
 
@@ -845,9 +846,9 @@ print(f'{onehot} is convert to ', index)
 tensor([0, 1, 0, 0, 0, 0, 0, 0, 0, 0]) is convert to tensor([1])
 ```
 
-## DataSample
+## xxxDataSample
 
-As the outermost interface of different modules, `DataSample` provides `xxxDataSample` for passing a uniform format between modules in a single task. Meanwhile, for each module to obtain or write information from a uniform field, the naming and type in the `DataSample` should be constrained and unified to ensure the uniformity of the interface of each module. The naming convention of the OpenMMLab can be found at [`The naming convention in OpenMMLab`](TODO).
+There may be different types of labels in one sample, for example, there may be both instance-level labels (Box) and pixel-level labels (SegMap) in one image. Therefore, we need to have a higher-level encapsulation on top of PixelData, InstanceData, and PixelData to represent the image-level labels. This layer is named as `XXXDataSample` across the OpenMMLab series algorithms. In MMDet we have DetDataSample. All the labels are encapsulated in `XXXDataSample` during the training process, so different deep learning tasks can maintain a uniform data flow and data processing method.
 
 ### Downstream library usage
 
