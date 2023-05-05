@@ -7,10 +7,11 @@ from .default_constructor import DefaultOptimWrapperConstructor
 from .optimizer_wrapper import OptimWrapper
 from .optimizer_wrapper_dict import OptimWrapperDict
 from .zero_optimizer import ZeroRedundancyOptimizer
+from .ds_optimizer_wrapper import DSOptimWrapper
 
 __all__ = [
     'OPTIM_WRAPPER_CONSTRUCTORS', 'OPTIMIZERS',
     'DefaultOptimWrapperConstructor', 'build_optim_wrapper', 'OptimWrapper',
     'AmpOptimWrapper', 'ApexOptimWrapper', 'OptimWrapperDict',
-    'ZeroRedundancyOptimizer'
+    'ZeroRedundancyOptimizer', 'DSOptimWrapper'
 ]

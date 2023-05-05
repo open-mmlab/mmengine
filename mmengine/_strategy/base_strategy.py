@@ -2,19 +2,21 @@ from abc import ABCMeta, abstractmethod
 from typing import Union, Dict, List, Sequence, Optional, Callable
 from collections import OrderedDict
 import copy
-
+import os.path as osp
 import torch
 import torch.nn as nn
+import time
 from torch.optim import Optimizer
+import platform
 
 from mmengine.config import Config, ConfigDict
 from mmengine.registry import MODELS, PARAM_SCHEDULERS
 from mmengine.utils import digit_version
-from mmengine.utils.dl_utils import TORCH_VERSION
+from mmengine.utils.dl_utils import TORCH_VERSION, set_multi_processing
 from mmengine.logging import MMLogger
 from mmengine.model.wrappers import is_model_wrapper
 from mmengine.model import revert_sync_batchnorm
-from mmengine.dist import broadcast
+from mmengine.dist import broadcast, get_dist_info, is_distributed
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 
@@ -36,17 +38,6 @@ class BaseStrategy(metaclass=ABCMeta):
                  **kwargs,
                  ):
         self.compile = compile
-        self._logger = None
-
-    @property
-    def logger(self):
-        if self._logger is None:
-            self._logger = MMLogger.get_current_instance()
-        return self._logger
-
-    @logger.setter
-    def logger(self, logger):
-        self._logger = logger
 
     @abstractmethod
     def prepare(self,
@@ -90,6 +81,76 @@ class BaseStrategy(metaclass=ABCMeta):
             max_iters (int, optional): Number of iterations. Defaults to None.
             cur_iter (int, optional): Current iteration. Defaults to None.
         """
+
+    def setup_env(self,
+                  *,
+                  launcher: str = 'none',
+                  distributed: bool = False,
+                  cudnn_benchmark: bool = False,
+                  mp_cfg: Optional[dict] = None,
+                  dist_cfg: Optional[dict] = None,
+                  resource_limit: int = 4096,
+                  randomness: dict = dict(seed=None)):
+        """Setup environment.
+        
+        1. setup multi-processing
+        2. setup distributed
+        3. set random seed
+        """
+        if cudnn_benchmark:
+            torch.backends.cudnn.benchmark = True
+
+        mp_cfg = mp_cfg if mp_cfg is not None else {}
+        set_multi_processing(**mp_cfg, distributed=distributed)
+
+        # init distributed env first, since logger depends on the dist info.
+        if distributed and not is_distributed():
+            dist_cfg = dist_cfg if dist_cfg is not None else {}
+            self.setup_distributed(launcher, **dist_cfg)
+
+        self._rank, self._world_size = get_dist_info()
+
+        timestamp = torch.tensor(time.time(), dtype=torch.float64)
+        # broadcast timestamp from 0 process to other processes
+        broadcast(timestamp)
+        self._timestamp = time.strftime('%Y%m%d_%H%M%S',
+                                        time.localtime(timestamp.item()))
+
+        # https://github.com/pytorch/pytorch/issues/973
+        # set resource limit
+        if platform.system() != 'Windows':
+            import resource
+            rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+            base_soft_limit = rlimit[0]
+            hard_limit = rlimit[1]
+            soft_limit = min(max(resource_limit, base_soft_limit), hard_limit)
+            resource.setrlimit(resource.RLIMIT_NOFILE,
+                               (soft_limit, hard_limit))
+
+        self.set_randomness(**randomness)
+
+    def set_randomness(self,
+                       seed,
+                       diff_rank_seed: bool = False,
+                       deterministic: bool = False) -> None:
+        """Set random seed to guarantee reproducible results.
+
+        Args:
+            seed (int): A number to set random modules.
+            diff_rank_seed (bool): Whether or not set different seeds according
+                to global rank. Defaults to False.
+            deterministic (bool): Whether to set the deterministic option for
+                CUDNN backend, i.e., set `torch.backends.cudnn.deterministic`
+                to True and `torch.backends.cudnn.benchmark` to False.
+                Defaults to False.
+                See https://pytorch.org/docs/stable/notes/randomness.html for
+                more details.
+        """
+        from mmengine.runner import set_random_seed
+        self._seed = set_random_seed(
+            seed=seed,
+            deterministic=deterministic,
+            diff_rank_seed=diff_rank_seed)
 
     def setup_distributed(self, *args, **kwargs):
         """Setup distributed training."""
@@ -139,6 +200,10 @@ class BaseStrategy(metaclass=ABCMeta):
         Args:
             model (nn.Module): Model to convert.
         """
+        self.logger.info(
+            'Distributed training is not used, all SyncBatchNorm (SyncBN) '
+            'layers in the model will be automatically reverted to '
+            'BatchNormXd layers if they are used.')
         model = revert_sync_batchnorm(model)
         return model
 
@@ -167,7 +232,6 @@ class BaseStrategy(metaclass=ABCMeta):
         
         return model
 
-    @abstractmethod
     def wrap_model(self, model: nn.Module) -> nn.Module:
         """Wrap model.
 
@@ -177,6 +241,7 @@ class BaseStrategy(metaclass=ABCMeta):
         Returns:
             nn.Module: Wrapped model.
         """
+        return model
 
     def _init_model_weights(self, model: nn.Module) -> nn.Module:
         """Initialize the model weights if the model has
@@ -489,6 +554,38 @@ class BaseStrategy(metaclass=ABCMeta):
                         scheduler, optimizer, default_args)
 
             return param_schedulers
+
+    def build_logger(self,
+                     log_level: Union[int, str] = 'INFO',
+                     log_dir: Optional[str] = None,
+                     log_file: Optional[str] = None,
+                     exp_name: Optional[str] = None,
+                     **kwargs) -> MMLogger:
+        """Build a global asscessable MMLogger.
+
+        Args:
+            log_level (int or str): The log level of MMLogger handlers.
+                Defaults to 'INFO'.
+            log_file (str, optional): Path of filename to save log.
+                Defaults to None.
+            **kwargs: Remaining parameters passed to ``MMLogger``.
+
+        Returns:
+            MMLogger: A MMLogger object build from ``logger``.
+        """
+        if log_file is None:
+            log_file = osp.join(log_dir, f'{self._timestamp}.log')
+
+        log_cfg = dict(log_level=log_level, log_file=log_file, **kwargs)
+        log_cfg.setdefault('name', exp_name)
+        # `torch.compile` in PyTorch 2.0 could close all user defined handlers
+        # unexpectedly. Using file mode 'a' can help prevent abnormal
+        # termination of the FileHandler and ensure that the log file could
+        # be continuously updated during the lifespan of the runner.
+        log_cfg.setdefault('file_mode', 'a')
+        self.logger = MMLogger.get_instance(**log_cfg)  # type: ignore
+
+        return self.logger
 
     def state_dict(self,
                    *,

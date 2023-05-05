@@ -51,7 +51,7 @@ class DDPStrategy(BaseStrategy):
                 *,
                 optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
                 param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
-                compile_target: Union[str, bool] = False,
+                compile_target: str = 'forward',
                 checkpoint: Optional[dict] = None,
                 train_batch_size: Optional[int] = None,
                 num_batches_per_epoch: Optional[int] = None,
@@ -90,17 +90,17 @@ class DDPStrategy(BaseStrategy):
             max_iters (int, optional): Number of iterations. Defaults to None.
             cur_iter (int, optional): Current iteration. Defaults to None.
         """
-        result = []
+        return_items = []
 
         model = self.build_model(model)
         model = self._init_model_weights(model)
         model = self.wrap_model(model)
         self.model = self.compile_model(model, target=compile_target)
-        result.append(self.model)
+        return_items.append(self.model)
 
         if optim_wrapper is not None:
             self.optim_wrapper = self.build_optim_wrapper(optim_wrapper)
-            result.append(self.optim_wrapper)
+            return_items.append(self.optim_wrapper)
 
         if param_scheduler is not None:
             _default_args = {}
@@ -112,7 +112,7 @@ class DDPStrategy(BaseStrategy):
                 _default_args['max_iters'] = max_iters
 
             self.param_schedulers = self.build_param_scheduler(param_scheduler, _default_args)
-            result.append(self.param_schedulers)
+            return_items.append(self.param_schedulers)
 
         if checkpoint is not None:
             self.load_state_dict(checkpoint)
@@ -123,7 +123,7 @@ class DDPStrategy(BaseStrategy):
             # Initiate inner count of `optim_wrapper`.
             self.optim_wrapper.initialize_count_status(self.model, cur_iter, max_iters)
 
-        return tuple(result)
+        return tuple(return_items)
 
     def _scale_lr(self, train_batch_size) -> None:
         """Automatically scaling learning rate in training according to the

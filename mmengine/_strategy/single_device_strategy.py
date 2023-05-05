@@ -20,7 +20,7 @@ class SingleDeviceStrategy(BaseStrategy):
                 *,
                 optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
                 param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
-                compile_target: Union[str, bool] = False,
+                compile_target: str = 'forward',
                 checkpoint: Optional[dict] = None,
                 num_batches_per_epoch: Optional[int] = None,
                 max_epochs: Optional[int] = None,
@@ -46,7 +46,7 @@ class SingleDeviceStrategy(BaseStrategy):
                 specified, :attr:`optimizer` should also be specified.
                 Defaults to None.
                 See :meth:`build_param_scheduler` for examples.
-            compile_target (str, optional): The method of model to be compiled.
+            compile_target (str): The method of model to be compiled.
                 Defaults to 'forward'.
             checkpoint (dict, optional): Checkpoint to load strategy state.
                 Defaults to None.
@@ -56,16 +56,16 @@ class SingleDeviceStrategy(BaseStrategy):
             max_iters (int, optional): Number of iterations. Defaults to None.
             cur_iter (int, optional): Current iteration. Defaults to None.
         """
-        result = []
+        return_items = []
         model = self.build_model(model)
         model = self._init_model_weights(model)
         model = self.wrap_model(model)
         self.model = self.compile_model(model, target=compile_target)
-        result.append(self.model)
+        return_items.append(self.model)
 
         if optim_wrapper is not None:
             self.optim_wrapper = self.build_optim_wrapper(optim_wrapper)
-            result.append(self.optim_wrapper)
+            return_items.append(self.optim_wrapper)
 
         if param_scheduler is not None:
             _default_args = {}
@@ -77,7 +77,7 @@ class SingleDeviceStrategy(BaseStrategy):
                 _default_args['max_iters'] = max_iters
 
             self.param_schedulers = self.build_param_scheduler(param_scheduler, _default_args)
-            result.append(self.param_schedulers)
+            return_items.append(self.param_schedulers)
 
         if checkpoint is not None:
             self.load_state_dict(checkpoint)
@@ -86,13 +86,9 @@ class SingleDeviceStrategy(BaseStrategy):
             # Initiate inner count of `optim_wrapper`.
             self.optim_wrapper.initialize_count_status(self.model, cur_iter, max_iters)
 
-        return result
+        return return_items
 
     def wrap_model(self, model: nn.Module) -> nn.Module:
-        self.logger.info(
-            'Distributed training is not used, all SyncBatchNorm (SyncBN) '
-            'layers in the model will be automatically reverted to '
-            'BatchNormXd layers if they are used.')
         model = self.convert_model(model)
         current_device = get_device()
         return model.to(current_device)

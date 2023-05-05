@@ -33,6 +33,24 @@ def register_torch_optimizers() -> List[str]:
 TORCH_OPTIMIZERS = register_torch_optimizers()
 
 
+def register_deepspeed_optimizers() -> List[str]:
+    """Register optimizers in ``deepspeed`` to the ``OPTIMIZERS`` registry.
+
+    Returns:
+        List[str]: A list of registered optimizers' name.
+    """
+    deepspeed_optimizers = []
+    try:
+        import deepspeed
+    except ImportError:
+        pass
+    else:
+        from deepspeed.runtime.zero.stage_1_and_2 import DeepSpeedZeroOptimizer
+        OPTIMIZERS.register_module(module=DeepSpeedZeroOptimizer)
+        deepspeed_optimizers.append('DeepSpeedZeroOptimizer')
+    return deepspeed_optimizers
+
+
 def register_dadaptation_optimizers() -> List[str]:
     """Register optimizers in ``dadaptation`` to the ``OPTIMIZERS`` registry.
 

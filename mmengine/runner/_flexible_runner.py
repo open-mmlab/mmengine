@@ -359,15 +359,13 @@ class FlexibleRunner:
             raise TypeError(
                 f'compile should be a bool or dict, but got {type(compile)}')
         self._compile = compile
-        self.strategy = self.build_strategy(strategy)
-        # self._timestamp will be set in the `setup_env` method. Besides,
-        # it also will initialize multi-process and (or) distributed
-        # environment.
-        self.setup_env(env_cfg)
-        # self._deterministic and self._seed will be set in the
-        # `set_randomness`` method
+
         self._randomness_cfg = randomness
-        self.set_randomness(**randomness)
+        self.strategy = self.build_strategy(strategy)
+        self.strategy.setup_env(launcher=self._launcher,
+                                distributed=self._distributed,
+                                randomness=randomness,
+                                **env_cfg)
 
         if experiment_name is not None:
             self._experiment_name = f'{experiment_name}_{self._timestamp}'
@@ -387,8 +385,11 @@ class FlexibleRunner:
         self.log_processor = self.build_log_processor(log_processor)
         # Since `get_instance` could return any subclass of ManagerMixin. The
         # corresponding attribute needs a type hint.
-        self.logger = self.build_logger(log_level=log_level)
-        self.strategy.logger = self.logger
+        self.logger = self.strategy.build_logger(
+            log_level=log_level,
+            log_dir=self._log_dir,
+            exp_name=self._experiment_name,
+        )
 
         # Collect and log environment information.
         self._log_env(env_cfg)
@@ -532,12 +533,12 @@ class FlexibleRunner:
     @property
     def rank(self):
         """int: Rank of current process."""
-        return self._rank
+        return self.strategy._rank
 
     @property
     def world_size(self):
         """int: Number of processes participating in the job."""
-        return self._world_size
+        return self.strategy._world_size
 
     @property
     def deterministic(self):
@@ -547,12 +548,12 @@ class FlexibleRunner:
     @property
     def seed(self):
         """int: A number to set random modules."""
-        return self._seed
+        return self.strategy._seed
 
     @property
     def timestamp(self):
         """str: Timestamp when creating experiment."""
-        return self._timestamp
+        return self.strategy._timestamp
 
     @property
     def hooks(self):
@@ -622,79 +623,6 @@ class FlexibleRunner:
         training."""
         return self.train_loop.val_begin
 
-    def setup_env(self, env_cfg: Dict) -> None:
-        """Setup environment.
-
-        An example of ``env_cfg``::
-
-            env_cfg = dict(
-                cudnn_benchmark=True,
-                mp_cfg=dict(
-                    mp_start_method='fork',
-                    opencv_num_threads=0
-                ),
-                dist_cfg=dict(backend='nccl', timeout=1800),
-                resource_limit=4096
-            )
-
-        Args:
-            env_cfg (dict): Config for setting environment.
-        """
-        if env_cfg.get('cudnn_benchmark'):
-            torch.backends.cudnn.benchmark = True
-
-        mp_cfg: dict = env_cfg.get('mp_cfg', {})
-        set_multi_processing(**mp_cfg, distributed=self.distributed)
-
-        # init distributed env first, since logger depends on the dist info.
-        if self.distributed and not is_distributed():
-            dist_cfg: dict = env_cfg.get('dist_cfg', {})
-            self.strategy.setup_distributed(self.launcher, **dist_cfg)
-
-        self._rank, self._world_size = get_dist_info()
-
-        timestamp = torch.tensor(time.time(), dtype=torch.float64)
-        # broadcast timestamp from 0 process to other processes
-        broadcast(timestamp)
-        self._timestamp = time.strftime('%Y%m%d_%H%M%S',
-                                        time.localtime(timestamp.item()))
-
-        # https://github.com/pytorch/pytorch/issues/973
-        # set resource limit
-        if platform.system() != 'Windows':
-            import resource
-            rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
-            base_soft_limit = rlimit[0]
-            hard_limit = rlimit[1]
-            soft_limit = min(
-                max(env_cfg.get('resource_limit', 4096), base_soft_limit),
-                hard_limit)
-            resource.setrlimit(resource.RLIMIT_NOFILE,
-                               (soft_limit, hard_limit))
-
-    def set_randomness(self,
-                       seed,
-                       diff_rank_seed: bool = False,
-                       deterministic: bool = False) -> None:
-        """Set random seed to guarantee reproducible results.
-
-        Args:
-            seed (int): A number to set random modules.
-            diff_rank_seed (bool): Whether or not set different seeds according
-                to global rank. Defaults to False.
-            deterministic (bool): Whether to set the deterministic option for
-                CUDNN backend, i.e., set `torch.backends.cudnn.deterministic`
-                to True and `torch.backends.cudnn.benchmark` to False.
-                Defaults to False.
-                See https://pytorch.org/docs/stable/notes/randomness.html for
-                more details.
-        """
-        self._deterministic = deterministic
-        self._seed = set_random_seed(
-            seed=seed,
-            deterministic=deterministic,
-            diff_rank_seed=diff_rank_seed)
-
     def build_strategy(self, strategy: Optional[BaseStrategy] = None) -> BaseStrategy:
         """Build a strategy.
         
@@ -719,35 +647,6 @@ class FlexibleRunner:
         strategy.setdefault('auto_scale_lr', self._auto_scale_lr)
 
         return STRATEGIES.build(strategy)
-
-    def build_logger(self,
-                     log_level: Union[int, str] = 'INFO',
-                     log_file: str = None,
-                     **kwargs) -> MMLogger:
-        """Build a global asscessable MMLogger.
-
-        Args:
-            log_level (int or str): The log level of MMLogger handlers.
-                Defaults to 'INFO'.
-            log_file (str, optional): Path of filename to save log.
-                Defaults to None.
-            **kwargs: Remaining parameters passed to ``MMLogger``.
-
-        Returns:
-            MMLogger: A MMLogger object build from ``logger``.
-        """
-        if log_file is None:
-            log_file = osp.join(self._log_dir, f'{self.timestamp}.log')
-
-        log_cfg = dict(log_level=log_level, log_file=log_file, **kwargs)
-        log_cfg.setdefault('name', self._experiment_name)
-        # `torch.compile` in PyTorch 2.0 could close all user defined handlers
-        # unexpectedly. Using file mode 'a' can help prevent abnormal
-        # termination of the FileHandler and ensure that the log file could
-        # be continuously updated during the lifespan of the runner.
-        log_cfg.setdefault('file_mode', 'a')
-
-        return MMLogger.get_instance(**log_cfg)  # type: ignore
 
     def build_message_hub(self,
                           message_hub: Optional[Dict] = None) -> MessageHub:
@@ -1515,7 +1414,7 @@ class FlexibleRunner:
                 checkpoint['meta']['config'], file_format='.py')
             previous_gpu_ids = config.get('gpu_ids', None)
             if (previous_gpu_ids is not None and len(previous_gpu_ids) > 0
-                    and len(previous_gpu_ids) != self._world_size):
+                    and len(previous_gpu_ids) != self.world_size):
                 # TODO, should we modify the iteration?
                 self.logger.info(
                     'Number of GPU used for current experiment is not '
@@ -1769,7 +1668,7 @@ class FlexibleRunner:
         runtime_env.update(self._randomness_cfg)
         runtime_env['Distributed launcher'] = self._launcher
         runtime_env['Distributed training'] = self._distributed
-        runtime_env['GPU number'] = self._world_size
+        runtime_env['GPU number'] = self.world_size
 
         env_info = '\n    ' + '\n    '.join(f'{k}: {v}'
                                             for k, v in env.items())
