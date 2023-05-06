@@ -72,7 +72,7 @@ data_element = BaseDataElement(
 
 ### 2. `new` 与 `clone` 函数
 
-用户可以使用 `new()` 函数通过已有的数据接口创建一个具有相同状态和数据的抽象数据接口。用户可以在创建新 `BaseDataElement` 时设置 `metainfo` 和 `data`，用于创建和 `data` 或 `metainfo` 具有相同状态和数据的抽象接口。比如 `new(metainfo=xx)` 使得新的 `BaseDataElement` 与被 clone 的 `BaseDataElement` 包含相同的 `data` 内容，但 `metainfo` 为新设置的内容。
+用户可以使用 `new()` 函数基于已有的 `BaseDataElement` 创建一个具有相同 `data` 和 `metainfo` 的 `BaseDataElement`。用户也可以在调用 `new` 函数时候传入新的 `data` 和 `metainfo`，例如 `new(metainfo=xx)`  ， 此时创建的 `BaseDataElement` 相较于于已有的 `BaseDataElement`，`data` 完全一致 ，而 `metainfo` 则为新设置的内容。
 也可以直接使用 `clone()` 来获得一份深拷贝，`clone()` 函数的行为与 PyTorch 中 Tensor 的 `clone()` 参数保持一致。
 
 ```python
