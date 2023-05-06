@@ -1,3 +1,4 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 from mmengine.registry import OPTIM_WRAPPERS
 from .optimizer_wrapper import OptimWrapper
 

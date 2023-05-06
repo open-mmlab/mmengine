@@ -1,13 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import torch
 from typing import Any, Dict, Union
-from mmengine.registry import MODEL_WRAPPERS
-from mmengine.optim import OptimWrapper
+
+import torch
 from deepspeed.runtime.engine import DeepSpeedEngine
+
+from mmengine.optim import OptimWrapper
+from mmengine.registry import MODEL_WRAPPERS
+
 
 @MODEL_WRAPPERS.register_module()
 class MMDeepSpeedEngine(DeepSpeedEngine):
-    
+
     def __init__(
         self,
         args=None,
@@ -25,20 +28,24 @@ class MMDeepSpeedEngine(DeepSpeedEngine):
         if config is None:
             config = dict()
 
-        super().__init__(args=args,
-                         model=model,
-                         optimizer=optimizer,
-                         model_parameters=model_parameters,
-                         training_data=training_data,
-                         lr_scheduler=lr_scheduler,
-                         mpu=mpu,
-                         dist_init_required=dist_init_required,
-                         collate_fn=collate_fn,
-                         config=config,
-                         dont_change_device=dont_change_device)
+        super().__init__(
+            args=args,
+            model=model,
+            optimizer=optimizer,
+            model_parameters=model_parameters,
+            training_data=training_data,
+            lr_scheduler=lr_scheduler,
+            mpu=mpu,
+            dist_init_required=dist_init_required,
+            collate_fn=collate_fn,
+            config=config,
+            dont_change_device=dont_change_device)
 
-    def train_step(self, data: Union[dict, tuple, list],
-                   optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
+    def train_step(
+        self,
+        data: Union[dict, tuple, list],
+        optim_wrapper: OptimWrapper,
+    ) -> Dict[str, torch.Tensor]:
         data = self.module.data_preprocessor(data, training=True)
         losses = self._run_forward(data, mode='loss')
         parsed_loss, log_vars = self.module.parse_losses(losses)

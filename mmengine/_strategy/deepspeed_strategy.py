@@ -1,42 +1,40 @@
-from .base_strategy import BaseStrategy
-from mmengine.registry import STRATEGIES
-from typing import Union, Optional
-import deepspeed
-from .base_strategy import BaseStrategy
-from mmengine.registry import STRATEGIES, MODEL_WRAPPERS
-from mmengine.dist import is_distributed, init_dist, get_dist_info
-from typing import Tuple, Optional, Union, Dict, List
-from mmengine.device import get_device
-import torch.nn as nn
-import torch
-from torch.nn.parallel import DistributedDataParallel
-import os
+# Copyright (c) OpenMMLab. All rights reserved.
 import json
-from mmengine.model import is_model_wrapper, convert_sync_batchnorm
-from mmengine.optim import OptimWrapper, OptimWrapperDict, _ParamScheduler
+import os
+from typing import Dict, List, Optional, Union
+
+import deepspeed
+import torch
+import torch.nn as nn
+
+from mmengine.optim import OptimWrapper, _ParamScheduler
+from mmengine.registry import MODEL_WRAPPERS, STRATEGIES
+from .base_strategy import BaseStrategy
 
 
 @STRATEGIES.register_module()
 class DeepSpeedStrategy(BaseStrategy):
     """
-    
+
     Args:
-        zero_optimization (dict, optional): https://www.deepspeed.ai/docs/config-json/#zero-optimizations-for-fp16-training
-        fp16 (dict, optional): 
+        zero_optimization (dict, optional):
+        fp16 (dict, optional):
     """
-    
-    def __init__(self,
-                 *,
-                 # the following args are for deepspeed
-                 config: Union[str, dict, None] = None,
-                 zero_optimization: Optional[dict] = None,
-                 fp16: Optional[dict] = None,
-                 bf16: Optional[dict] = None,
-                 amp: Optional[dict] = None,
-                 activation_checkpointing: Optional[dict] = None,
-                 aio: Optional[dict] = None,
-                 # the following args are for BaseStrategy
-                 **kwargs):
+
+    def __init__(
+        self,
+        *,
+        # the following args are for deepspeed
+        config: Union[str, dict, None] = None,
+        zero_optimization: Optional[dict] = None,
+        fp16: Optional[dict] = None,
+        bf16: Optional[dict] = None,
+        amp: Optional[dict] = None,
+        activation_checkpointing: Optional[dict] = None,
+        aio: Optional[dict] = None,
+        # the following args are for BaseStrategy
+        **kwargs,
+    ):
         super().__init__(**kwargs)
 
         self.config = self._parse_config(config)
@@ -52,7 +50,7 @@ class DeepSpeedStrategy(BaseStrategy):
             self.config['activation_checkpointing'] = activation_checkpointing
         if aio is not None:
             self.config['aio'] = aio
-    
+
     def _parse_config(self, config):
         if config is None:
             config = dict()
@@ -66,24 +64,26 @@ class DeepSpeedStrategy(BaseStrategy):
         torch.cuda.set_device(local_rank)
         deepspeed.init_distributed(dist_backend=backend)
 
-    def prepare(self,
-                model: Union[nn.Module, dict],
-                *,
-                optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
-                param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
-                compile_target: str = 'forward',
-                checkpoint: Optional[dict] = None,
-                train_batch_size: Optional[int] = None,
-                num_batches_per_epoch: Optional[int] = None,
-                max_epochs: Optional[int] = None,
-                max_iters: Optional[int] = None,
-                cur_iter: Optional[int] = None,
-                **kwargs):
+    def prepare(
+        self,
+        model: Union[nn.Module, dict],
+        *,
+        optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
+        param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
+        compile_target: str = 'forward',
+        checkpoint: Optional[dict] = None,
+        train_batch_size: Optional[int] = None,
+        num_batches_per_epoch: Optional[int] = None,
+        max_epochs: Optional[int] = None,
+        max_iters: Optional[int] = None,
+        cur_iter: Optional[int] = None,
+        **kwargs,
+    ):
         """Prepare model and some components.
-        
+
         Args:
-            model (:obj:`torch.nn.Module` or dict): The model to be run. It can be
-                a dict used for build a model.
+            model (:obj:`torch.nn.Module` or dict): The model to be run. It
+                can be a dict used for build a model.
 
         Kwargs:
             optim_wrapper (OptimWrapper or dict, optional):
@@ -102,8 +102,8 @@ class DeepSpeedStrategy(BaseStrategy):
                 Defaults to 'forward'.
             checkpoint (dict, optional): Checkpoint to load strategy state.
                 Defaults to None.
-            train_batch_size (int, optional): Batch size of training. It will be used
-                to scale the learning rate. Defaults to None.
+            train_batch_size (int, optional): Batch size of training. It will
+                be used to scale the learning rate. Defaults to None.
             num_batches_per_epoch (int, optional): Number of batches per epoch.
                 Defaults to None.
             max_epochs (int, optional): Number of epochs. Defaults to None.
@@ -136,17 +136,12 @@ class DeepSpeedStrategy(BaseStrategy):
             if max_iters is not None:
                 _default_args['max_iters'] = max_iters
 
-            self.param_schedulers = self.build_param_scheduler(param_scheduler, _default_args)
+            self.param_schedulers = self.build_param_scheduler(
+                param_scheduler, _default_args)
             return_items.append(self.param_schedulers)
 
         if checkpoint is not None:
             self.load_state_dict(checkpoint)
-
-        # if optim_wrapper is not None:
-            # self._scale_lr(train_batch_size)
-
-            # Initiate inner count of `optim_wrapper`.
-            # elf.optim_wrapper.initialize_count_status(self.model, cur_iter, max_iters)
 
         return tuple(return_items)
 
@@ -159,5 +154,3 @@ class DeepSpeedStrategy(BaseStrategy):
         )
         model = MODEL_WRAPPERS.build(wrapper_cfg)
         return model
-
-        

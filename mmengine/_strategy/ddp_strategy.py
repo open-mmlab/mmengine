@@ -1,19 +1,22 @@
-from .base_strategy import BaseStrategy
-from mmengine.registry import STRATEGIES, MODEL_WRAPPERS
-from mmengine.dist import is_distributed, init_dist, get_dist_info
-from typing import Tuple, Optional, Union, Dict, List
-from mmengine.device import get_device
+# Copyright (c) OpenMMLab. All rights reserved.
+import os
+from typing import Dict, List, Optional, Tuple, Union
+
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel
-import os
-from mmengine.model import is_model_wrapper, convert_sync_batchnorm
+
+from mmengine.device import get_device
+from mmengine.dist import get_dist_info, init_dist, is_distributed
+from mmengine.model import convert_sync_batchnorm, is_model_wrapper
 from mmengine.optim import OptimWrapper, OptimWrapperDict, _ParamScheduler
+from mmengine.registry import MODEL_WRAPPERS, STRATEGIES
+from .base_strategy import BaseStrategy
 
 
 @STRATEGIES.register_module()
 class DDPStrategy(BaseStrategy):
     """Distribution strategy for distributed data parallel training.
-    
+
     Args:
         model_wrapper (dict): Dict for model wrapper. Defaults to None.
         auto_scale_lr (dict, Optional): Config to scale the learning rate
@@ -22,48 +25,47 @@ class DDPStrategy(BaseStrategy):
             based on. ``enable`` is the switch to turn on and off the feature.
         sync_bn (str): Type of sync batch norm. Defaults to None.
             Options are 'torch' and 'mmcv'.
-        **kwargs: Other arguments for BaseStrategy.
+        **kwargs: Other arguments for :class:`BaseStrategy`.
     """
 
-    def __init__(self,
-                 *,
-                 model_wrapper: Optional[dict] = None,
-                 auto_scale_lr: Optional[dict] = None,
-                 sync_bn: Optional[str] = None,
-                 **kwargs,
-                 ):
+    def __init__(
+        self,
+        *,
+        model_wrapper: Optional[dict] = None,
+        auto_scale_lr: Optional[dict] = None,
+        sync_bn: Optional[str] = None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         if model_wrapper is None:
-            # set broadcast_buffers as False to keep compatibility with OpenMMLab repos
-            model_wrapper = dict(type='MMDistributedDataParallel', broadcast_buffers=False)
+            # set broadcast_buffers as False to keep compatibility with
+            # OpenMMLab repos
+            model_wrapper = dict(
+                type='MMDistributedDataParallel', broadcast_buffers=False)
         self.model_wrapper = model_wrapper
         self.auto_scale_lr = auto_scale_lr
         self.sync_bn = sync_bn
-    
-    def setup_distributed(self, launcher, backend='nccl', **kwargs) -> Tuple[int, int]:
-        """Setup environment."""
-        if not is_distributed():
-            init_dist(launcher, backend, **kwargs)
-            self.rank, self.world_size = get_dist_info()
 
-    def prepare(self,
-                model: Union[nn.Module, dict],
-                *,
-                optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
-                param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
-                compile_target: str = 'forward',
-                checkpoint: Optional[dict] = None,
-                train_batch_size: Optional[int] = None,
-                num_batches_per_epoch: Optional[int] = None,
-                max_epochs: Optional[int] = None,
-                max_iters: Optional[int] = None,
-                cur_iter: Optional[int] = None,
-                **kwargs):
+    def prepare(
+        self,
+        model: Union[nn.Module, dict],
+        *,
+        optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
+        param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
+        compile_target: str = 'forward',
+        checkpoint: Optional[dict] = None,
+        train_batch_size: Optional[int] = None,
+        num_batches_per_epoch: Optional[int] = None,
+        max_epochs: Optional[int] = None,
+        max_iters: Optional[int] = None,
+        cur_iter: Optional[int] = None,
+        **kwargs,
+    ):
         """Prepare model and some components.
-        
+
         Args:
-            model (:obj:`torch.nn.Module` or dict): The model to be run. It can be
-                a dict used for build a model.
+            model (:obj:`torch.nn.Module` or dict): The model to be run. It
+                can be a dict used for building a model.
 
         Kwargs:
             optim_wrapper (OptimWrapper or dict, optional):
@@ -82,8 +84,8 @@ class DDPStrategy(BaseStrategy):
                 Defaults to 'forward'.
             checkpoint (dict, optional): Checkpoint to load strategy state.
                 Defaults to None.
-            train_batch_size (int, optional): Batch size of training. It will be used
-                to scale the learning rate. Defaults to None.
+            train_batch_size (int, optional): Batch size of training. It will
+                be used to scale the learning rate. Defaults to None.
             num_batches_per_epoch (int, optional): Number of batches per epoch.
                 Defaults to None.
             max_epochs (int, optional): Number of epochs. Defaults to None.
@@ -111,7 +113,8 @@ class DDPStrategy(BaseStrategy):
             if max_iters is not None:
                 _default_args['max_iters'] = max_iters
 
-            self.param_schedulers = self.build_param_scheduler(param_scheduler, _default_args)
+            self.param_schedulers = self.build_param_scheduler(
+                param_scheduler, _default_args)
             return_items.append(self.param_schedulers)
 
         if checkpoint is not None:
@@ -121,11 +124,30 @@ class DDPStrategy(BaseStrategy):
             self._scale_lr(train_batch_size)
 
             # Initiate inner count of `optim_wrapper`.
-            self.optim_wrapper.initialize_count_status(self.model, cur_iter, max_iters)
+            self.optim_wrapper.initialize_count_status(self.model, cur_iter,
+                                                       max_iters)
 
         return tuple(return_items)
 
-    def _scale_lr(self, train_batch_size) -> None:
+    def setup_distributed(
+        self,
+        launcher: str = 'pytorch',
+        backend: str = 'nccl',
+        **kwargs,
+    ) -> Tuple[int, int]:
+        """Setup distributed environment.
+        
+        Args:
+            launcher (str): Way to launcher multi processes. Supported
+                launchers are 'pytorch', 'mpi' and 'slurm'.
+            backend (str): Communication Backends. Supported backends are
+                'nccl', 'gloo' and 'mpi'. Defaults to 'nccl'.
+            **kwargs: Other arguments for :func:`init_dist`.
+        """
+        if not is_distributed():
+            init_dist(launcher, backend, **kwargs)
+
+    def _scale_lr(self, train_batch_size: int) -> None:
         """Automatically scaling learning rate in training according to the
         ratio of ``base_batch_size`` in ``autoscalelr_cfg`` and real batch
         size.
@@ -137,7 +159,8 @@ class DDPStrategy(BaseStrategy):
             ``scale_lr`` must be called after building optimizer wrappers
             and before building parameter schedulers.
         """
-        if (self.auto_scale_lr is None or not self.auto_scale_lr.get('enable', False)):
+        if (self.auto_scale_lr is None
+                or not self.auto_scale_lr.get('enable', False)):
             return None
 
         assert 'base_batch_size' in self.auto_scale_lr, \
@@ -172,14 +195,24 @@ class DDPStrategy(BaseStrategy):
                 group['lr'] = group['lr'] * ratio
 
     def convert_model(self, model: nn.Module) -> nn.Module:
+        """convert all `BatchNorm` layers in the model to
+        `SyncBatchNorm` (SyncBN) or `mmcv.ops.sync_bn.SyncBatchNorm` (MMSyncBN)
+        layers.
+        
+        Args:
+            model (nn.Module): Model to be converted.
+
+        Returns:
+            nn.Module: Converted model.
+        """
         if self.sync_bn is not None:
             try:
                 model = convert_sync_batchnorm(model, self.sync_bn)
             except ValueError as e:
                 self.logger.error('cfg.sync_bn should be "torch" or '
-                                    f'"mmcv", but got {self.sync_bn}')
+                                  f'"mmcv", but got {self.sync_bn}')
                 raise e
-        
+
         return model
 
     def wrap_model(self, model: nn.Module) -> DistributedDataParallel:
@@ -202,5 +235,6 @@ class DDPStrategy(BaseStrategy):
 
         default_args = dict(module=model)
         default_args.setdefault('device_ids', [int(os.environ['LOCAL_RANK'])])
-        model = MODEL_WRAPPERS.build(self.model_wrapper, default_args=default_args)
+        model = MODEL_WRAPPERS.build(
+            self.model_wrapper, default_args=default_args)
         return model

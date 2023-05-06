@@ -1,11 +1,12 @@
-from .base_strategy import BaseStrategy
-import torch.nn as nn
-from typing import Union, Dict, Optional, List
+# Copyright (c) OpenMMLab. All rights reserved.
+from typing import Dict, List, Optional, Union
 
-from mmengine.registry import STRATEGIES
+import torch.nn as nn
+
 from mmengine.device import get_device
-from mmengine.model import revert_sync_batchnorm
 from mmengine.optim import OptimWrapper, _ParamScheduler
+from mmengine.registry import STRATEGIES
+from .base_strategy import BaseStrategy
 
 
 @STRATEGIES.register_module()
@@ -15,23 +16,25 @@ class SingleDeviceStrategy(BaseStrategy):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def prepare(self,
-                model: Union[nn.Module, dict],
-                *,
-                optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
-                param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
-                compile_target: str = 'forward',
-                checkpoint: Optional[dict] = None,
-                num_batches_per_epoch: Optional[int] = None,
-                max_epochs: Optional[int] = None,
-                max_iters: Optional[int] = None,
-                cur_iter: Optional[int] = None,
-                **kwargs):
+    def prepare(
+        self,
+        model: Union[nn.Module, dict],
+        *,
+        optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
+        param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
+        compile_target: str = 'forward',
+        checkpoint: Optional[dict] = None,
+        num_batches_per_epoch: Optional[int] = None,
+        max_epochs: Optional[int] = None,
+        max_iters: Optional[int] = None,
+        cur_iter: Optional[int] = None,
+        **kwargs,
+    ):
         """Prepare model and some components.
-        
+
         Args:
-            model (:obj:`torch.nn.Module` or dict): The model to be run. It can be
-                a dict used for build a model.
+            model (:obj:`torch.nn.Module` or dict): The model to be run. It
+                can be a dict used for build a model.
 
         Kwargs:
             optim_wrapper (OptimWrapper or dict, optional):
@@ -76,7 +79,8 @@ class SingleDeviceStrategy(BaseStrategy):
             if max_iters is not None:
                 _default_args['max_iters'] = max_iters
 
-            self.param_schedulers = self.build_param_scheduler(param_scheduler, _default_args)
+            self.param_schedulers = self.build_param_scheduler(
+                param_scheduler, _default_args)
             return_items.append(self.param_schedulers)
 
         if checkpoint is not None:
@@ -84,7 +88,8 @@ class SingleDeviceStrategy(BaseStrategy):
 
         if optim_wrapper is not None:
             # Initiate inner count of `optim_wrapper`.
-            self.optim_wrapper.initialize_count_status(self.model, cur_iter, max_iters)
+            self.optim_wrapper.initialize_count_status(self.model, cur_iter,
+                                                       max_iters)
 
         return return_items
 
