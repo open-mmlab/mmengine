@@ -48,7 +48,7 @@ weight = 'path/to/weight.pth'
 inferencer = CustomInferencer(model=cfg, weight=weight)
 ```
 
-**Building an Inferencer based on model name defined in 'model - index**. Take the [ATSS detector in MMDetection](https://github.com/open-mmlab/mmdetection/blob/31c84958f54287a8be2b99cbf87a6dcf12e57753/configs/atss/metafile.yml#L22) as an example, the model name is `atss_r50_fpn_1x_coco`, since the weight path is already defined in the model-index, the weight parameter does not need to be configured.
+**Building an Inferencer based on model name defined in model-index**. Take the [ATSS detector in MMDetection](https://github.com/open-mmlab/mmdetection/blob/31c84958f54287a8be2b99cbf87a6dcf12e57753/configs/atss/metafile.yml#L22) as an example, the model name is `atss_r50_fpn_1x_coco`. Since the path of weight has already been defined in the model-index, we don't need to configure the weight arguments anymore.
 
 ```python
 inferencer = CustomInferencer(model='atss_r50_fpn_1x_coco')
@@ -56,7 +56,7 @@ inferencer = CustomInferencer(model='atss_r50_fpn_1x_coco')
 
 ### Performing Inference
 
-**Infer a Single Image**
+**Inferring on a Single Image**
 
 ```python
 # Input as Image Path
@@ -88,7 +88,7 @@ OpenMMLab requires the `inferencer(img)` to output a `dict` containing two field
 When performing inference, the following steps are typically executed：
 
 1. preprocess：Input data preprocessing, including data reading, data preprocessing, data format conversion, and so on.
-2. forward: Execute model`.forwward`
+2. forward: Execute `model.forwward`
 3. visualize：Visualization of predicted results.
 4. postprocess：Post-processing of predicted results, including result format conversion, exporting predicted results, and so on.
 
@@ -147,7 +147,7 @@ class CustomInferencer(BaseInferencer):
 In OpenMMLab's algorithm repositories, the Inferencer must be registered to the downstream repository's registry instead of the root registry of MMEngine to avoid naming conflicts.
 ```
 
-**Core Interface Explanation**:
+## Core Interface Explanation:
 
 ### `__init__()`
 
