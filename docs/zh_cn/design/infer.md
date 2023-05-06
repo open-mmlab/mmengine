@@ -147,7 +147,7 @@ class CustomInferencer(BaseInferencer):
 OpenMMLab 系列算法仓库必须将 Inferencer 注册到下游仓库的注册器，而不能注册到 MMEngine 的根注册器（避免重名）。
 ```
 
-**核心接口说明**：
+## 核心接口说明：
 
 ### `__init__()`
 
