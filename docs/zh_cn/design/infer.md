@@ -15,7 +15,7 @@
 
 ### 定义推理器
 
-基于 `BaseInferencer` 实现自定义的推理器
+**基于 `BaseInferencer` 实现自定义的推理器**
 
 ```python
 from mmengine.infer import BaseInferencer
