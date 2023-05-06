@@ -57,6 +57,7 @@ class BaseStrategy(metaclass=ABCMeta):
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
         compile_target: str = 'forward',
         checkpoint: Optional[dict] = None,
+        resume: bool[str] = False,
         num_batches_per_epoch: Optional[int] = None,
         max_epochs: Optional[int] = None,
         max_iters: Optional[int] = None,
@@ -86,6 +87,8 @@ class BaseStrategy(metaclass=ABCMeta):
                 Defaults to 'forward'.
             checkpoint (dict, optional): Checkpoint to load strategy state.
                 Defaults to None.
+            resume (bool, optional): Whether resume training from checkpoint.
+                Defaults to False.
             num_batches_per_epoch (int, optional): Number of batches per epoch.
                 Defaults to None.
             max_epochs (int, optional): Number of epochs. Defaults to None.
@@ -713,15 +716,15 @@ class BaseStrategy(metaclass=ABCMeta):
     ) -> dict:
         """Load strategy state."""
         self.load_model_state_dict(
-            state_dict, strict=strict, revise_keys=revise_keys)
+            state_dict['state_dict'], strict=strict, revise_keys=revise_keys)
 
         # resume optimizer
         if 'optimizer' in state_dict:
-            self.load_optim_state_dict(state_dict)
+            self.load_optim_state_dict(state_dict['optimizer'])
 
         # resume param scheduler
         if 'param_schedulers' in state_dict:
-            self.load_param_scheduler(state_dict)
+            self.load_param_scheduler(state_dict['param_schedulers'])
 
     def load_model_state_dict(
         self,
@@ -733,32 +736,28 @@ class BaseStrategy(metaclass=ABCMeta):
         """Load model state from dict."""
         from mmengine.runner.checkpoint import _load_checkpoint_to_model
 
-        assert 'state_dict' in state_dict
         if is_model_wrapper(self.model):
             model = self.model.module
         else:
             model = self.model
 
-        _load_checkpoint_to_model(model, state_dict['state_dict'], strict,
-                                  revise_keys)
+        _load_checkpoint_to_model(model, state_dict, strict, revise_keys)
 
     def load_optim_state_dict(self, state_dict: dict) -> None:
         """Load optimizer state from dict."""
-        assert 'optimizer' in state_dict
-        self.optim_wrapper.load_state_dict(state_dict['optimizer'])
+        self.optim_wrapper.load_state_dict(state_dict)
 
     def load_scheduler_state_dict(self, state_dict: dict) -> None:
         """Load scheduler state from dict."""
-        assert 'param_schedulers' in state_dict
         if isinstance(self.param_schedulers, dict):
             for name, schedulers in self.param_schedulers.items():
                 for scheduler, ckpt_scheduler in zip(
-                        schedulers, state_dict['param_schedulers'][name]):
+                        schedulers, state_dict[name]):
                     scheduler.load_state_dict(ckpt_scheduler)
         else:
             for scheduler, ckpt_scheduler in zip(
                     self.param_schedulers,  # type: ignore
-                    state_dict['param_schedulers']):
+                    state_dict):
                 scheduler.load_state_dict(ckpt_scheduler)
 
     def load_checkpoint(

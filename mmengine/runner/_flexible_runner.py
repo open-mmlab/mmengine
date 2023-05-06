@@ -1493,12 +1493,12 @@ class FlexibleRunner:
                 pair of the regular expression operations. Defaults to strip
                 the prefix 'module.' by [(r'^module\\.', '')].
         """
+        def callback(checkpoint):
+            self.call_hook('after_load_checkpoint', checkpoint=checkpoint)
+
         self.logger.info(f'Load checkpoint from {filename}')
         checkpoint = self.strategy.load_checkpoint(
-            filename, map_location=map_location)
-
-        # Add comments to describe the usage of `after_load_ckpt`
-        self.call_hook('after_load_checkpoint', checkpoint=checkpoint)
+            filename, map_location=map_location, callback=callback)
 
         return checkpoint
 
