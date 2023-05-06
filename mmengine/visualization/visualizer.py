@@ -228,8 +228,9 @@ class Visualizer(ManagerMixin):
     def show(self,
              drawn_img: Optional[np.ndarray] = None,
              win_name: str = 'image',
-             wait_time: int = 0,
-             continue_key=' ') -> None:
+             wait_time: float = 0.,
+             continue_key: str = ' ',
+             backend: str = 'matplotlib') -> None:
         """Show the drawn image.
 
         Args:
@@ -237,28 +238,43 @@ class Visualizer(ManagerMixin):
                 is None, it will show the image got by Visualizer. Defaults
                 to None.
             win_name (str):  The image title. Defaults to 'image'.
-            wait_time (int): Delay in milliseconds. 0 is the special
+            wait_time (float): Delay in seconds. 0 is the special
                 value that means "forever". Defaults to 0.
             continue_key (str): The key for users to continue. Defaults to
                 the space key.
+            backend (str): The backend to show the image. Defaults to
+                'matplotlib'. `New in version 0.7.3.`
         """
-        import matplotlib.pyplot as plt
-        is_inline = 'inline' in plt.get_backend()
-        img = self.get_image() if drawn_img is None else drawn_img
-        self._init_manager(win_name)
-        fig = self.manager.canvas.figure
-        # remove white edges by set subplot margin
-        fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
-        fig.clear()
-        ax = fig.add_subplot()
-        ax.axis(False)
-        ax.imshow(img)
-        self.manager.canvas.draw()
+        if backend == 'matplotlib':
+            import matplotlib.pyplot as plt
+            is_inline = 'inline' in plt.get_backend()
+            img = self.get_image() if drawn_img is None else drawn_img
+            self._init_manager(win_name)
+            fig = self.manager.canvas.figure
+            # remove white edges by set subplot margin
+            fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
+            fig.clear()
+            ax = fig.add_subplot()
+            ax.axis(False)
+            ax.imshow(img)
+            self.manager.canvas.draw()
 
-        # Find a better way for inline to show the image
-        if is_inline:
-            return fig
-        wait_continue(fig, timeout=wait_time, continue_key=continue_key)
+            # Find a better way for inline to show the image
+            if is_inline:
+                return fig
+            wait_continue(fig, timeout=wait_time, continue_key=continue_key)
+        elif backend == 'cv2':
+            # Keep images are shown in the same window, and the title of window
+            # will be updated with `win_name`.
+            cv2.namedWindow(winname=f'{id(self)}')
+            cv2.setWindowTitle(f'{id(self)}', win_name)
+            cv2.imshow(
+                str(id(self)),
+                self.get_image() if drawn_img is None else drawn_img)
+            cv2.waitKey(int(np.ceil(wait_time * 1000)))
+        else:
+            raise ValueError('backend should be "matplotlib" or "cv2", '
+                             f'but got {backend} instead')
 
     @master_only
     def set_image(self, image: np.ndarray) -> None:

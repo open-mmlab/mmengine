@@ -1,5 +1,59 @@
 # Changelog of v0.x
 
+## v0.7.3 (04/28/2023)
+
+### Highlights
+
+- Support using MLflow to record experiment data
+- Support registering callable objects to the registry
+
+### New Features & Enhancements
+
+- Add `MLflowVisBackend` by [@sh0622-kim](https://github.com/sh0622-kim) in https://github.com/open-mmlab/mmengine/pull/878
+- Support customizing `worker_init_fn` in dataloader config by [@shufanwu](https://github.com/shufanwu) in https://github.com/open-mmlab/mmengine/pull/1038
+- Make the parameters of get_model_complexity_info() friendly by [@sjiang95](https://github.com/sjiang95) in https://github.com/open-mmlab/mmengine/pull/1056
+- Add torch_npu optimizer by [@luomaoling](https://github.com/luomaoling) in https://github.com/open-mmlab/mmengine/pull/1079
+- Support registering callable objects [@C1rN09](https://github.com/C1rN09) in https://github.com/open-mmlab/mmengine/pull/595
+- Complement type hint of get_model_complexity_info() by [@sjiang95](https://github.com/sjiang95) in https://github.com/open-mmlab/mmengine/pull/1064
+- MessageHub.get_info() supports returning a default value by [@enkilee](https://github.com/enkilee) in https://github.com/open-mmlab/mmengine/pull/991
+- Refactor logger hook unit test by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/797
+- Support BoolTensor and LongTensor on Ascend NPU by [@Ginray](https://github.com/Ginray) in https://github.com/open-mmlab/mmengine/pull/1011
+- Remove useless variable declaration by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1052
+- Enhance the support for MLU device by [@josh6688](https://github.com/josh6688) in https://github.com/open-mmlab/mmengine/pull/1075
+- Support configuring synchronization directory for BaseMetric by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1074
+- Support accepting multiple `input_shape` for `get_model_complexity_info` by [@sjiang95](https://github.com/sjiang95) in https://github.com/open-mmlab/mmengine/pull/1065
+- Enhance docstring and error catching in `MessageHub`  by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1098
+- Enhance the efficiency of Visualizer.show by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1015
+- Update repo list by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1108
+- Enhance error message during custom import by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1102
+- Support `_load_state_dict_post_hooks` in `load_state_dict` by [@mzr1996](https://github.com/mzr1996) in https://github.com/open-mmlab/mmengine/pull/1103
+
+### Bug fixes
+
+- Fix publishing multiple checkpoints when using multiple GPUs by [@JunweiZheng93](https://github.com/JunweiZheng93) in https://github.com/open-mmlab/mmengine/pull/1070
+- Fix error when `log_with_hierarchy` is `True` by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1085
+- Call SyncBufferHook before validation in IterBasedTrainLoop by [@Luo-Yihang](https://github.com/Luo-Yihang) in https://github.com/open-mmlab/mmengine/pull/982
+- Fix the resuming error caused by HistoryBuffer by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1078
+- Failed to remove the previous best checkpoints by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1086
+- Fix using incorrect local rank by [@C1rN09](https://github.com/C1rN09) in https://github.com/open-mmlab/mmengine/pull/973
+- No training log when the num of iterations is smaller than the default interval by [@shufanwu](https://github.com/shufanwu) in https://github.com/open-mmlab/mmengine/pull/1046
+- `collate_fn` could not be a function object by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1093
+- Fix `optimizer.state` could be saved in cuda:0 by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/966
+- Fix building unnecessary loop during train/test/val by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1107
+
+### Docs
+
+- Introduce the use of wandb and tensorboard by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/912
+- Translate tutorials/evaluation.md by [@LEFTeyex](https://github.com/LEFTeyex) in https://github.com/open-mmlab/mmengine/pull/1053
+- Translate design/evaluation.md by [@zccjjj](https://github.com/zccjjj) in https://github.com/open-mmlab/mmengine/pull/1062
+- Fix three typos in runner by [@jsrdcht](https://github.com/jsrdcht) in https://github.com/open-mmlab/mmengine/pull/1068
+- Translate migration/hook.md to English by [@SheffieldCao](https://github.com/SheffieldCao) in https://github.com/open-mmlab/mmengine/pull/1054
+- Replace MMCls with MMPretrain in docs by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1096
+
+### Contributors
+
+A total of 17 developers contributed to this release. Thanks [@enkilee](https://github.com/enkilee), [@JunweiZheng93](https://github.com/JunweiZheng93), [@sh0622-kim](https://github.com/sh0622-kim), [@jsrdcht](https://github.com/jsrdcht), [@SheffieldCao](https://github.com/SheffieldCao), [@josh6688](https://github.com/josh6688), [@mzr1996](https://github.com/mzr1996), [@zhouzaida](https://github.com/zhouzaida), [@shufanwu](https://github.com/shufanwu), [@Luo-Yihang](https://github.com/Luo-Yihang), [@C1rN09](https://github.com/C1rN09), [@LEFTeyex](https://github.com/LEFTeyex), [@zccjjj](https://github.com/zccjjj), [@Ginray](https://github.com/Ginray), [@HAOCHENYE](https://github.com/HAOCHENYE), [@sjiang95](https://github.com/sjiang95), [@luomaoling](https://github.com/luomaoling)
+
 ## v0.7.2 (04/06/2023)
 
 ### Bug fixes

@@ -6,6 +6,7 @@ import os.path as osp
 import random
 import shutil
 import tempfile
+from functools import partial
 from unittest import TestCase, skipIf
 
 import numpy as np
@@ -21,7 +22,7 @@ from mmengine.evaluator import BaseMetric, Evaluator
 from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, Hook,
                             IterTimerHook, LoggerHook, ParamSchedulerHook,
                             RuntimeInfoHook)
-from mmengine.logging import MessageHub, MMLogger
+from mmengine.logging import HistoryBuffer, MessageHub, MMLogger
 from mmengine.model import BaseDataPreprocessor, BaseModel, ImgDataPreprocessor
 from mmengine.optim import (DefaultOptimWrapperConstructor, MultiStepLR,
                             OptimWrapper, OptimWrapperDict, StepLR)
@@ -1263,6 +1264,43 @@ class TestRunner(TestCase):
         dataloader = runner.build_dataloader(cfg)
         self.assertIs(dataloader.worker_init_fn.func, custom_worker_init)
 
+        # collate_fn is a dict
+        cfg = dict(
+            dataset=dict(type='ToyDataset'),
+            sampler=dict(type='DefaultSampler', shuffle=True),
+            worker_init_fn=dict(type='custom_worker_init'),
+            batch_size=1,
+            num_workers=2,
+            collate_fn=dict(type='pseudo_collate'))
+        dataloader = runner.build_dataloader(cfg)
+        self.assertIsInstance(dataloader.collate_fn, partial)
+
+        # collate_fn is a callable object
+        def custom_collate(data_batch):
+            return data_batch
+
+        cfg = dict(
+            dataset=dict(type='ToyDataset'),
+            sampler=dict(type='DefaultSampler', shuffle=True),
+            worker_init_fn=dict(type='custom_worker_init'),
+            batch_size=1,
+            num_workers=2,
+            collate_fn=custom_collate)
+        dataloader = runner.build_dataloader(cfg)
+        self.assertIs(dataloader.collate_fn, custom_collate)
+        # collate_fn is a invalid value
+        with self.assertRaisesRegex(
+                TypeError, 'collate_fn should be a dict or callable object'):
+            cfg = dict(
+                dataset=dict(type='ToyDataset'),
+                sampler=dict(type='DefaultSampler', shuffle=True),
+                worker_init_fn=dict(type='custom_worker_init'),
+                batch_size=1,
+                num_workers=2,
+                collate_fn='collate_fn')
+            dataloader = runner.build_dataloader(cfg)
+            self.assertIsInstance(dataloader.collate_fn, partial)
+
     def test_build_train_loop(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_train_loop'
@@ -1753,6 +1791,27 @@ class TestRunner(TestCase):
         with self.assertRaisesRegex(AssertionError, 'If you want to validate'):
             runner.train()
 
+        # 13 Test the logs will be printed when the length of
+        # train_dataloader is smaller than the interval set in LoggerHook
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_train13'
+        cfg.default_hooks = dict(logger=dict(type='LoggerHook', interval=5))
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+        with open(runner.logger._log_file) as f:
+            log = f.read()
+        self.assertIn('Epoch(train) [1][4/4]', log)
+
+        # 14. test_loop will not be built
+        for cfg in (self.epoch_based_cfg, self.iter_based_cfg):
+            cfg = copy.deepcopy(cfg)
+            cfg.experiment_name = 'test_train14'
+            runner = Runner.from_cfg(cfg)
+            runner.train()
+            self.assertIsInstance(runner._train_loop, BaseLoop)
+            self.assertIsInstance(runner._val_loop, BaseLoop)
+            self.assertIsInstance(runner._test_loop, dict)
+
     @skipIf(
         SKIP_TEST_COMPILE,
         reason='torch.compile is not valid, please install PyTorch>=2.0.0')
@@ -1831,6 +1890,15 @@ class TestRunner(TestCase):
             self.assertIn(predictions[0].dtype,
                           (torch.float16, torch.bfloat16))
 
+        # train_loop and test_loop will not be built
+        for cfg in (self.epoch_based_cfg, self.iter_based_cfg):
+            cfg = copy.deepcopy(cfg)
+            cfg.experiment_name = 'test_val4'
+            runner = Runner.from_cfg(cfg)
+            runner.val()
+            self.assertIsInstance(runner._train_loop, dict)
+            self.assertIsInstance(runner._test_loop, dict)
+
     @skipIf(
         SKIP_TEST_COMPILE,
         reason='torch.compile is not valid, please install PyTorch>=2.0.0')
@@ -1890,7 +1958,7 @@ class TestRunner(TestCase):
         predictions.clear()
 
         # Test fp16 `autocast` context.
-        cfg.experiment_name = 'test_val3'
+        cfg.experiment_name = 'test_test3'
         cfg.test_cfg = dict(fp16=True)
         runner = Runner.from_cfg(cfg)
         runner.model.register_forward_hook(get_outputs_callback)
@@ -1902,6 +1970,14 @@ class TestRunner(TestCase):
             runner.test()
             self.assertIn(predictions[0].dtype,
                           (torch.float16, torch.bfloat16))
+        # train_loop and val_loop will not be built
+        for cfg in (self.epoch_based_cfg, self.iter_based_cfg):
+            cfg = copy.deepcopy(cfg)
+            cfg.experiment_name = 'test_test4'
+            runner = Runner.from_cfg(cfg)
+            runner.test()
+            self.assertIsInstance(runner._train_loop, dict)
+            self.assertIsInstance(runner._val_loop, dict)
 
     @skipIf(
         SKIP_TEST_COMPILE,
@@ -2290,7 +2366,7 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         runner.train()
 
-        # 2.1 test `save_checkpoint` which is called by `CheckpointHook`
+        # 2.1.1 test `save_checkpoint` which is called by `CheckpointHook`
         path = osp.join(self.temp_dir, 'iter_12.pth')
         self.assertTrue(osp.exists(path))
         self.assertFalse(osp.exists(osp.join(self.temp_dir, 'epoch_13.pth')))
@@ -2304,6 +2380,10 @@ class TestRunner(TestCase):
         message_hub.load_state_dict(ckpt['message_hub'])
         self.assertEqual(message_hub.get_info('epoch'), 0)
         self.assertEqual(message_hub.get_info('iter'), 11)
+        # 2.1.2 check class attribute _statistic_methods can be saved
+        HistoryBuffer._statistics_methods.clear()
+        ckpt = torch.load(path)
+        self.assertIn('min', HistoryBuffer._statistics_methods)
 
         # 2.2 test `load_checkpoint`
         cfg = copy.deepcopy(self.iter_based_cfg)

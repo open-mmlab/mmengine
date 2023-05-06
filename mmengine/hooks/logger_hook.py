@@ -185,7 +185,8 @@ class LoggerHook(Hook):
             tag, log_str = runner.log_processor.get_log_after_iter(
                 runner, batch_idx, 'train')
         elif (self.end_of_epoch(runner.train_dataloader, batch_idx)
-              and not self.ignore_last):
+              and (not self.ignore_last
+                   or len(runner.train_dataloader) <= self.interval)):
             # `runner.max_iters` may not be divisible by `self.interval`. if
             # `self.ignore_last==True`, the log of remaining iterations will
             # be recorded (Epoch [4][1000/1007], the logs of 998-1007
@@ -252,11 +253,25 @@ class LoggerHook(Hook):
             runner, len(runner.val_dataloader), 'val')
         runner.logger.info(log_str)
         if self.log_metric_by_epoch:
+            # Accessing the epoch attribute of the runner will trigger
+            # the construction of the train_loop. Therefore, to avoid
+            # triggering the construction of the train_loop during
+            # validation, check before accessing the epoch.
+            if (isinstance(runner._train_loop, dict)
+                    or runner._train_loop is None):
+                epoch = 0
+            else:
+                epoch = runner.epoch
             runner.visualizer.add_scalars(
-                tag, step=runner.epoch, file_path=self.json_log_path)
+                tag, step=epoch, file_path=self.json_log_path)
         else:
+            if (isinstance(runner._train_loop, dict)
+                    or runner._train_loop is None):
+                iter = 0
+            else:
+                iter = runner.iter
             runner.visualizer.add_scalars(
-                tag, step=runner.iter, file_path=self.json_log_path)
+                tag, step=iter, file_path=self.json_log_path)
 
     def after_test_epoch(self,
                          runner,

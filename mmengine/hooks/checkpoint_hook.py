@@ -479,9 +479,9 @@ class CheckpointHook(Hook):
             runner.message_hub.update_info(best_score_key, best_score)
 
             if best_ckpt_path and \
-               self.file_client.isfile(best_ckpt_path) and \
+               self.file_backend.isfile(best_ckpt_path) and \
                is_main_process():
-                self.file_client.remove(best_ckpt_path)
+                self.file_backend.remove(best_ckpt_path)
                 runner.logger.info(
                     f'The previous best checkpoint {best_ckpt_path} '
                     'is removed')
@@ -490,13 +490,13 @@ class CheckpointHook(Hook):
             # Replace illegal characters for filename with `_`
             best_ckpt_name = best_ckpt_name.replace('/', '_')
             if len(self.key_indicators) == 1:
-                self.best_ckpt_path = self.file_client.join_path(  # type: ignore # noqa: E501
+                self.best_ckpt_path = self.file_backend.join_path(  # type: ignore # noqa: E501
                     self.out_dir, best_ckpt_name)
                 runner.message_hub.update_info(runtime_best_ckpt_key,
                                                self.best_ckpt_path)
             else:
                 self.best_ckpt_path_dict[
-                    key_indicator] = self.file_client.join_path(  # type: ignore # noqa: E501
+                    key_indicator] = self.file_backend.join_path(  # type: ignore # noqa: E501
                         self.out_dir, best_ckpt_name)
                 runner.message_hub.update_info(
                     runtime_best_ckpt_key,
