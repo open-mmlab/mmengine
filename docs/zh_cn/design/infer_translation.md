@@ -1,6 +1,6 @@
 # Inference interface
 
-When developing based on MMEngine, we usually define a configuration file for a specific algorithm, use the configuration file to build an [executor](./runner.md), and execute the training and testing processes, and save the trained weights. When performing inference based on the trained model, the following steps are usually required:
+When developing based on MMEngine, we usually define a configuration file for a specific algorithm, use the configuration file to build an [runner](./runner.md), and execute the training and testing processes, and save the trained weights. When performing inference based on the trained model, the following steps are usually required:
 
 1. Build the model based on the configuration file
 2. Load the model weights
