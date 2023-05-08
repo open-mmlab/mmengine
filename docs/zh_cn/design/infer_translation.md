@@ -167,11 +167,11 @@ Initializes and returns the `collate_fn` required by the inferencer, whose value
 
 ### `_init_visualizer()`
 
-Initializes and returns the `visualizer` required by the inferencer, which is equivalent to the `visualizer` used in the training process. By default, `BaseInferencer` obtains the `visualizer` from the configuration of the `visualizer`, so there is usually no need to overide the `_init_visualizer` function.
+Initializes and returns the `visualizer` required by the inferencer, which is equivalent to the `visualizer` used in the training process. By default, `BaseInferencer` obtains the `visualizer` from the configuration of the `visualizer`, so there is usually no need to override the `_init_visualizer` function.
 
 ### `preprocess()`
 
-Input arguements:
+Input arguments:
 
 - inputs：Input data, passed into `__call__`, usually a list of image paths or image data.
 - batch_size：batch size, passed in by the user when calling `__call__`.
@@ -185,7 +185,7 @@ The `preprocess` function is a generator function by default, which applies the 
 
 ### `forward()`
 
-Input arguements:
+Input arguments:
 
 - inputs：The batch data processed by `preprocess` function.
 - Other parameters: Specified by the user and indicated in `forward_kwargs`.
@@ -202,7 +202,7 @@ Calls `model.test_step` to perform forward inference and returns the inference r
 Abstract method that subclasses must implement.
 ```
 
-Input arguements:
+Input arguments:
 
 - inputs：The input data, which is the raw data without preprocessing.
 - preds：Predicted results of the model.
@@ -219,7 +219,7 @@ Output:
 Abstract method that subclasses must implement.
 ```
 
-Input arguements:
+Input arguments:
 
 - preds：The predicted results of the model, which is a `list` type. Each element in the list represents the prediction result of a piece of data. In the OpenMMLab algorithm library series, the type of each element in the prediction result is `BaseDataElement`.
 - visualization：Visualization results
@@ -232,7 +232,7 @@ Output：
 
 ### `__call__()`
 
-Input arguements:
+Input arguments:
 
 - inputs：The input data, usually a list of image paths or image data. Each element in `inputs` can also be other types of data as long as it can be processed by the `pipeline` returned by [init_pipeline](#_init_pipeline). When there is only one inference data in `inputs`, it does not have to be a `list`, `__call__` will internally wrap it into a list for further processing.
 - return_datasample：Whether to return datasample as a `dict`.
