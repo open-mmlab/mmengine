@@ -1103,19 +1103,6 @@ class FlexibleRunner:
         Returns:
             nn.Module: The model after training.
         """
-        if is_model_wrapper(self.model):
-            ori_model = self.model.module
-        else:
-            ori_model = self.model
-        assert hasattr(ori_model, 'train_step'), (
-            'If you want to train your model, please make sure your model '
-            'has implemented `train_step`.')
-
-        if self._val_loop is not None:
-            assert hasattr(ori_model, 'val_step'), (
-                'If you want to validate your model, please make sure your '
-                'model has implemented `val_step`.')
-
         if self._train_loop is None:
             raise RuntimeError(
                 '`self._train_loop` should not be None when calling train '
@@ -1135,11 +1122,10 @@ class FlexibleRunner:
         # decide which keys of checkpoint should be kept
 
         batch_size = self.train_dataloader.batch_size
-
         result = self.strategy.prepare(
             self.model,
             optim_wrapper=self.optim_wrapper,
-            param_schedulers=self.param_schedulers,
+            param_scheduler=self.param_schedulers,
             compile_target='train_step',
             train_batch_size=batch_size,
             num_batches_per_epoch=len(self.train_dataloader),

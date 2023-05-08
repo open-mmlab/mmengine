@@ -140,6 +140,8 @@ class DeepSpeedStrategy(BaseStrategy):
                 param_scheduler, _default_args)
             return_items.append(self.param_schedulers)
 
+        if checkpoint is None:
+            checkpoint = self.load_or_resume()
         if checkpoint is not None:
             self.load_state_dict(checkpoint)
 
