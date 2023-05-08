@@ -91,7 +91,7 @@ class SingleDeviceStrategy(BaseStrategy):
             self.optim_wrapper.initialize_count_status(self.model, cur_iter,
                                                        max_iters)
 
-        return return_items
+        return return_items[0] if len(return_items) == 1 else return_items
 
     def wrap_model(self, model: nn.Module) -> nn.Module:
         model = self.convert_model(model)

@@ -344,30 +344,23 @@ class FlexibleRunner:
         self._test_loop = test_cfg
         self._test_evaluator = test_evaluator
 
-        self._launcher = launcher
-        if self._launcher == 'none':
-            self._distributed = False
-        else:
-            self._distributed = True
-
         if not isinstance(compile, bool) and not isinstance(compile, dict):
             raise TypeError(
                 f'compile should be a bool or dict, but got {type(compile)}')
         self._compile = compile
 
         self._randomness_cfg = randomness
-        self.strategy = self.build_strategy(strategy)
+        self.strategy = self.build_strategy(strategy, launcher=launcher)
         self.strategy.setup_env(
-            launcher=self._launcher,
-            distributed=self._distributed,
+            launcher=launcher,
             randomness=randomness,
             **env_cfg)
 
         if experiment_name is not None:
-            self._experiment_name = f'{experiment_name}_{self._timestamp}'
+            self._experiment_name = f'{experiment_name}_{self.timestamp}'
         elif self.cfg.filename is not None:
             filename_no_ext = osp.splitext(osp.basename(self.cfg.filename))[0]
-            self._experiment_name = f'{filename_no_ext}_{self._timestamp}'
+            self._experiment_name = f'{filename_no_ext}_{self.timestamp}'
         else:
             self._experiment_name = self.timestamp
         self._log_dir = osp.join(self.work_dir, self.timestamp)
@@ -388,7 +381,7 @@ class FlexibleRunner:
         )
 
         # Collect and log environment information.
-        self._log_env(env_cfg)
+        self._log_env()
 
         # Build `message_hub` for communication among components.
         # `message_hub` can store log scalars (loss, learning rate) and
@@ -517,24 +510,19 @@ class FlexibleRunner:
             return 0
 
     @property
-    def launcher(self):
-        """str: Way to launcher multi processes."""
-        return self._launcher
-
-    @property
     def distributed(self):
         """bool: Whether current environment is distributed."""
-        return self._distributed
+        return self.strategy.distributed
 
     @property
     def rank(self):
         """int: Rank of current process."""
-        return self.strategy._rank
+        return self.strategy.rank
 
     @property
     def world_size(self):
         """int: Number of processes participating in the job."""
-        return self.strategy._world_size
+        return self.strategy.world_size
 
     @property
     def deterministic(self):
@@ -544,12 +532,12 @@ class FlexibleRunner:
     @property
     def seed(self):
         """int: A number to set random modules."""
-        return self.strategy._seed
+        return self.strategy.seed
 
     @property
     def timestamp(self):
         """str: Timestamp when creating experiment."""
-        return self.strategy._timestamp
+        return self.strategy.timestamp
 
     @property
     def hooks(self):
@@ -622,6 +610,7 @@ class FlexibleRunner:
     def build_strategy(
         self,
         strategy: Optional[BaseStrategy] = None,
+        launcher: str = 'none',
     ) -> BaseStrategy:
         """Build a strategy.
 
@@ -635,13 +624,14 @@ class FlexibleRunner:
         if isinstance(strategy, BaseStrategy):
             return strategy
 
-        if self._launcher == 'none':
+        if launcher == 'none':
             if strategy is None:
                 strategy = dict(type='SingleDeviceStrategy')
         else:
             if strategy is None:
                 strategy = dict(type='DDPStrategy')
 
+        strategy.setdefault('work_dir', self._work_dir)
         strategy.setdefault('compile', self._compile)
         strategy.setdefault('auto_scale_lr', self._auto_scale_lr)
 
@@ -1081,7 +1071,7 @@ class FlexibleRunner:
                 stage_hook_infos.append(info)
         return '\n'.join(stage_hook_infos)
 
-    def load_or_resume(self) -> None:
+    def load_or_resume(self):
         """load or resume checkpoint."""
         if self._has_loaded:
             return None
@@ -1185,8 +1175,7 @@ class FlexibleRunner:
         self._val_loop = self.build_val_loop(self._val_loop)  # type: ignore
 
         checkpoint = self.load_or_resume()
-        self.model, *_ = self.strategy.prepare(
-            self.model, checkpoint=checkpoint)
+        self.model = self.strategy.prepare(self.model, checkpoint=checkpoint)
 
         self.call_hook('before_run')
         metrics = self.val_loop.run()  # type: ignore
@@ -1209,8 +1198,7 @@ class FlexibleRunner:
         self._test_loop = self.build_test_loop(self._test_loop)  # type: ignore
 
         checkpoint = self.load_or_resume()
-        self.model, *_ = self.strategy.prepare(
-            self.model, checkpoint=checkpoint)
+        self.model = self.strategy.prepare(self.model, checkpoint=checkpoint)
 
         self.call_hook('before_run')
         metrics = self.test_loop.run()  # type: ignore
@@ -1411,12 +1399,16 @@ class FlexibleRunner:
                 specifying how to remap storage locations.
                 Defaults to 'default'.
         """
-        if map_location == 'default':
-            device = get_device()
-            checkpoint = self.load_checkpoint(filename, map_location=device)
-        else:
-            checkpoint = self.load_checkpoint(
-                filename, map_location=map_location)
+        def callback(checkpoint):
+            self.call_hook('after_load_checkpoint', checkpoint=checkpoint)
+
+        checkpoint = self.strategy.resume(
+            filename,
+            resume_optimizer=resume_optimizer,
+            resume_param_scheduler=resume_param_scheduler,
+            map_location=map_location,
+            callback=callback,
+        )
 
         self.train_loop._epoch = checkpoint['meta']['epoch']
         self.train_loop._iter = checkpoint['meta']['iter']
@@ -1440,18 +1432,6 @@ class FlexibleRunner:
                         'make sure the number of GPU is consistent with the '
                         'previous training state resuming from the checkpoint '
                         'or set `enable` in `auto_scale_lr to False.')
-
-        # resume random seed
-        resumed_seed = checkpoint['meta'].get('seed', None)
-        current_seed = self._randomness_cfg.get('seed')
-        if resumed_seed is not None and resumed_seed != current_seed:
-            if current_seed is not None:
-                self.logger.warning(f'The value of random seed in the '
-                                    f'checkpoint "{resumed_seed}" is '
-                                    f'different from the value in '
-                                    f'`randomness` config "{current_seed}"')
-            self._randomness_cfg.update(seed=resumed_seed)
-            self.set_randomness(**self._randomness_cfg)
 
         resumed_dataset_meta = checkpoint['meta'].get('dataset_meta', None)
         dataset_meta = getattr(self.train_dataloader.dataset, 'metainfo', None)
@@ -1569,10 +1549,7 @@ class FlexibleRunner:
 
         meta.update(
             cfg=self.cfg.pretty_text,
-            seed=self.seed,
-            experiment_name=self.experiment_name,
-            time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
-            mmengine_version=mmengine.__version__ + get_git_hash())
+            experiment_name=self.experiment_name)
 
         if hasattr(self.train_dataloader.dataset, 'metainfo'):
             meta.update(dataset_meta=self.train_dataloader.dataset.metainfo)
@@ -1677,23 +1654,17 @@ class FlexibleRunner:
                 'single optimizer. If it does not contain key `type`, it '
                 'means multiple lists of schedulers for multiple optimizers.')
 
-    def _log_env(self, env_cfg: dict) -> None:
+    def _log_env(self) -> None:
         """Logging environment information of the current task.
 
         Args:
             env_cfg (dict): The environment config of the runner.
         """
         # Collect and log environment information.
-        env = collect_env()
-        runtime_env = OrderedDict()
-        runtime_env.update(env_cfg)
-        runtime_env.update(self._randomness_cfg)
-        runtime_env['Distributed launcher'] = self._launcher
-        runtime_env['Distributed training'] = self._distributed
-        runtime_env['GPU number'] = self.world_size
+        system_env, runtime_env = self.strategy.collect_env()
 
         env_info = '\n    ' + '\n    '.join(f'{k}: {v}'
-                                            for k, v in env.items())
+                                            for k, v in system_env.items())
         runtime_env_info = '\n    ' + '\n    '.join(
             f'{k}: {v}' for k, v in runtime_env.items())
         dash_line = '-' * 60

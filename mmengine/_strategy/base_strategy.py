@@ -5,22 +5,24 @@ import platform
 import time
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
-from typing import Callable, Dict, List, Optional, Sequence, Union
+from typing import Callable, Dict, List, Optional, Sequence, Union, Tuple
 
 import torch
 import torch.nn as nn
 from torch.optim import Optimizer
 
+import mmengine
 from mmengine.config import Config, ConfigDict
 from mmengine.dist import broadcast, get_dist_info, is_distributed
+from mmengine.device import get_device
 from mmengine.logging import MMLogger
 from mmengine.model import revert_sync_batchnorm
 from mmengine.model.wrappers import is_model_wrapper
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import MODELS, OPTIM_WRAPPERS, PARAM_SCHEDULERS
-from mmengine.utils import digit_version
-from mmengine.utils.dl_utils import TORCH_VERSION, set_multi_processing
+from mmengine.utils import digit_version, get_git_hash
+from mmengine.utils.dl_utils import TORCH_VERSION, set_multi_processing, collect_env
 
 ParamSchedulerType = Union[List[_ParamScheduler], Dict[str,
                                                        List[_ParamScheduler]]]
@@ -38,15 +40,59 @@ class BaseStrategy(metaclass=ABCMeta):
 
     Args:
         compile (dict or bool): Config to compile model. Defaults to False.
+        load_from (str, optional): The checkpoint file to load from.
+            Defaults to None.
+        resume (bool): Whether to resume training. Defaults to False. If
+            ``resume`` is True and ``load_from`` is None, automatically to
+            find latest checkpoint from ``work_dir``. If not found, resuming
+            does nothing.
     """
 
     def __init__(
         self,
         *,
+        work_dir: str = 'work_dir',
         compile: Union[dict, bool] = False,
+        load_from: Optional[str] = None,
+        resume: bool = False,
         **kwargs,
     ):
+        self._work_dir = osp.abspath(work_dir)
+        mmengine.mkdir_or_exist(self._work_dir)
+
         self.compile = compile
+
+        self._load_from = load_from
+        self._resume = resume
+        self._has_loaded = False
+
+    @property
+    def launcher(self):
+        return self._launcher
+
+    @property
+    def distributed(self):
+        return self._distributed
+
+    @property
+    def seed(self):
+        return self._seed
+
+    @property
+    def rank(self):
+        return self._rank
+
+    @property
+    def world_size(self):
+        return self._world_size
+
+    @property
+    def timestamp(self):
+        return self._timestamp
+
+    @property
+    def randomness(self):
+        return self._randomness
 
     @abstractmethod
     def prepare(
@@ -57,7 +103,6 @@ class BaseStrategy(metaclass=ABCMeta):
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
         compile_target: str = 'forward',
         checkpoint: Optional[dict] = None,
-        resume: bool[str] = False,
         num_batches_per_epoch: Optional[int] = None,
         max_epochs: Optional[int] = None,
         max_iters: Optional[int] = None,
@@ -100,7 +145,6 @@ class BaseStrategy(metaclass=ABCMeta):
         self,
         *,
         launcher: str = 'none',
-        distributed: bool = False,
         cudnn_benchmark: bool = False,
         mp_cfg: Optional[dict] = None,
         dist_cfg: Optional[dict] = None,
@@ -116,8 +160,6 @@ class BaseStrategy(metaclass=ABCMeta):
         Args:
             launcher (str): Way to launcher multi processes.
                 Defaults to 'none'.
-            distributed (bool): True if distributed environment.
-                Defaults to False.
             cudnn_benchmark (bool): Whether to enable cudnn benchmark.
                 Defaults to False.
             mp_cfg (dict, optional): Multi-processing config. Defaults to None.
@@ -132,14 +174,20 @@ class BaseStrategy(metaclass=ABCMeta):
                 ``True`` in ``randomness``, the value of
                 ``torch.backends.cudnn.benchmark`` will be ``False`` finally.
         """
+        self._launcher = launcher
+        if self._launcher == 'none':
+            self._distributed = False
+        else:
+            self._distributed = True
+
         if cudnn_benchmark:
             torch.backends.cudnn.benchmark = True
 
         mp_cfg = mp_cfg if mp_cfg is not None else {}
-        set_multi_processing(**mp_cfg, distributed=distributed)
+        set_multi_processing(**mp_cfg, distributed=self._distributed)
 
         # init distributed env first, since logger depends on the dist info.
-        if distributed and not is_distributed():
+        if self._distributed and not is_distributed():
             dist_cfg = dist_cfg if dist_cfg is not None else {}
             self.setup_distributed(launcher, **dist_cfg)
 
@@ -162,23 +210,24 @@ class BaseStrategy(metaclass=ABCMeta):
             resource.setrlimit(resource.RLIMIT_NOFILE,
                                (soft_limit, hard_limit))
 
-        self.set_randomness(**randomness)
-
+        self._randomness = randomness
+        self._set_randomness(**randomness)
 
     def setup_distributed(self, *args, **kwargs):
         """Setup distributed environment."""
         pass
 
-    def set_randomness(
+    def _set_randomness(
         self,
-        seed,
+        seed: Optional[int] = None,
         diff_rank_seed: bool = False,
         deterministic: bool = False,
     ) -> None:
         """Set random seed to guarantee reproducible results.
 
         Args:
-            seed (int): A number to set random modules.
+            seed (int, optional): A number to set random modules.
+                Defaults to None.
             diff_rank_seed (bool): Whether or not set different seeds according
                 to global rank. Defaults to False.
             deterministic (bool): Whether to set the deterministic option for
@@ -760,11 +809,39 @@ class BaseStrategy(metaclass=ABCMeta):
                     state_dict):
                 scheduler.load_state_dict(ckpt_scheduler)
 
+    def load_or_resume(self) -> Optional[dict]:
+        """Load checkpoint or resume from checkpoint."""
+        from mmengine.runner import find_latest_checkpoint
+
+        if self._has_loaded:
+            return None
+
+        if not self._resume and self._load_from is None:
+            return None
+
+        # decide to load from checkpoint or resume from checkpoint
+        resume_from = None
+        if self._resume and self._load_from is None:
+            # auto resume from the latest checkpoint
+            resume_from = find_latest_checkpoint(self.work_dir)
+            self.logger.info(
+                f'Auto resumed from the latest checkpoint {resume_from}.')
+        elif self._resume and self._load_from is not None:
+            # resume from the specified checkpoint
+            resume_from = self._load_from
+
+        if resume_from is not None:
+            self._has_loaded = True
+            return self.resume(resume_from)
+        elif self._load_from is not None:
+            self._has_loaded = True
+            return self.load_checkpoint(self._load_from)
+
     def load_checkpoint(
         self,
         filename: str,
-        map_location: Union[str, Callable] = 'cpu',
         *,
+        map_location: Union[str, Callable] = 'cpu',
         callback: Optional[Callable] = None,
     ) -> dict:
         """Load checkpoint from given ``filename``.
@@ -778,11 +855,47 @@ class BaseStrategy(metaclass=ABCMeta):
         """
         from mmengine.runner.checkpoint import _load_checkpoint
 
-        checkpoint = _load_checkpoint(filename, map_location=map_location)
+        if map_location == 'default':
+            device = get_device()
+            checkpoint = _load_checkpoint(filename, map_location=device)
+        else:
+            checkpoint = _load_checkpoint(filename, map_location=map_location)
 
         # users can do some modification after loading checkpoint
         if callback is not None:
             callback(checkpoint)
+
+        return checkpoint
+
+    def resume(
+        self,
+        filename: str,
+        *,
+        resume_optimizer: bool = True,
+        resume_param_scheduler: bool = True,
+        map_location: Union[str, Callable] = 'default',
+        callback: Optional[Callable] = None,
+    ) -> dict:
+        checkpoint = self.load_checkpoint(filename,
+                                          map_location=map_location,
+                                          callback=callback)
+
+        if not resume_optimizer:
+            checkpoint.pop('optimizer', None)
+        if not resume_param_scheduler:
+            checkpoint.pop('param_schedulers', None)
+
+        # resume random seed
+        resumed_seed = checkpoint['meta'].get('seed', None)
+        current_seed = self._randomness.get('seed')
+        if resumed_seed is not None and resumed_seed != current_seed:
+            if current_seed is not None:
+                self.logger.warning(f'The value of random seed in the '
+                                    f'checkpoint "{resumed_seed}" is '
+                                    f'different from the value in '
+                                    f'`randomness` config "{current_seed}"')
+            self._randomness.update(seed=resumed_seed)
+            self._set_randomness(**self._randomness)
 
         return checkpoint
 
@@ -814,11 +927,32 @@ class BaseStrategy(metaclass=ABCMeta):
             save_param_scheduler=save_param_scheduler)
 
         # save extra checkpoint passed by users
-        if extra_ckpt is not None:
-            state_dict.update(extra_ckpt)
+        if extra_ckpt is None:
+            extra_ckpt = dict()
+        if 'meta' not in extra_ckpt:
+            extra_ckpt['meta'] = dict()
+        extra_ckpt['meta'].update(
+            seed=self.seed,
+            time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
+            mmengine=mmengine.__version__ + get_git_hash(),
+        )
+
+        state_dict.update(extra_ckpt)
 
         # users can do some modification before saving checkpoint
         if callback is not None:
             callback(state_dict)
 
         save_checkpoint(state_dict, filename)
+
+    def collect_env(self) -> Tuple[dict, dict]:
+        """Collect the information of the running environments."""
+        system_env = collect_env()
+        runtime_env = OrderedDict()
+        # TODO: need to add env_cfg
+        runtime_env.update(self.randomness)
+        runtime_env['Distributed launcher'] = self.launcher
+        runtime_env['Distributed training'] = self.distributed
+        runtime_env['GPU number'] = self.world_size
+
+        return system_env, runtime_env

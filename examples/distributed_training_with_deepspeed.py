@@ -56,7 +56,7 @@ def main():
     args = parse_args()
     norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
     train_set = torchvision.datasets.CIFAR10(
-        '/nvme/data/zhouzaida/codebases/data/cifar10',
+        'data/cifar10',
         train=True,
         download=True,
         transform=transforms.Compose([
@@ -66,7 +66,7 @@ def main():
             transforms.Normalize(**norm_cfg)
         ]))
     valid_set = torchvision.datasets.CIFAR10(
-        '/nvme/data/zhouzaida/codebases/data/cifar10',
+        'data/cifar10',
         train=False,
         download=True,
         transform=transforms.Compose(
@@ -119,4 +119,5 @@ def main():
 
 
 if __name__ == '__main__':
+    # torchrun --nproc_per_node=2 examples/distributed_training_with_deepspeed.py --launcher pytorch
     main()

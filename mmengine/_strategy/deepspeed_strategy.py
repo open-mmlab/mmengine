@@ -143,7 +143,7 @@ class DeepSpeedStrategy(BaseStrategy):
         if checkpoint is not None:
             self.load_state_dict(checkpoint)
 
-        return tuple(return_items)
+        return return_items[0] if len(return_items) == 1 else return_items
 
     def wrap_model(self, model: nn.Module) -> nn.Module:
         wrapper_cfg = dict(

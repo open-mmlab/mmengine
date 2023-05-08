@@ -117,6 +117,8 @@ class DDPStrategy(BaseStrategy):
                 param_scheduler, _default_args)
             return_items.append(self.param_schedulers)
 
+        if checkpoint is None:
+            checkpoint = self.load_or_resume()
         if checkpoint is not None:
             self.load_state_dict(checkpoint)
 
@@ -127,7 +129,7 @@ class DDPStrategy(BaseStrategy):
             self.optim_wrapper.initialize_count_status(self.model, cur_iter,
                                                        max_iters)
 
-        return tuple(return_items)
+        return return_items[0] if len(return_items) == 1 else return_items
 
     def setup_distributed(
         self,
