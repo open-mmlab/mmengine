@@ -85,7 +85,7 @@ OpenMMLab requires the `inferencer(img)` to output a `dict` containing two field
 
 ## Development Specification of Inference Interface
 
-When performing inference, the following steps are typically executed：
+When performing inference, the following steps are typically executed:
 
 1. preprocess：Input data preprocessing, including data reading, data preprocessing, data format conversion, and so on.
 2. forward: Execute `model.forwward`
