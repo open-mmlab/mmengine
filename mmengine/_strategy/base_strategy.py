@@ -1,3 +1,4 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 from abc import ABCMeta, abstractmethod
 from typing import Union, Dict, List, Sequence, Optional, Callable
 from collections import OrderedDict

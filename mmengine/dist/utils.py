@@ -303,11 +303,15 @@ def get_local_rank() -> int:
     if not is_distributed():
         return 0
 
-    if _LOCAL_PROCESS_GROUP is None:
-        raise RuntimeError('Local process group is not created, please use '
-                           '`init_local_group` to setup local process group.')
-
-    return torch_dist.get_rank(_LOCAL_PROCESS_GROUP)
+    if _LOCAL_PROCESS_GROUP is not None:
+        return torch_dist.get_rank(_LOCAL_PROCESS_GROUP)
+    elif 'LOCAL_RANK' in os.environ:
+        return int(os.getenv('LOCAL_RANK'))
+    else:
+        raise RuntimeError(
+            'Local process group is not created and "LOCAL_RANK" is not '
+            'defined in environment, please use `init_local_group` to setup '
+            'local process group or define `LOCAL_RANK`.')
 
 
 def get_dist_info(group: Optional[ProcessGroup] = None) -> Tuple[int, int]:

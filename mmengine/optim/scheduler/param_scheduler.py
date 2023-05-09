@@ -216,9 +216,9 @@ class _ParamScheduler:
                 param_group[self.param_name] = value
                 self.print_value(self.verbose, i, value)
 
-        self._last_value = [
-            group[self.param_name] for group in self.optimizer.param_groups
-        ]
+            self._last_value = [
+                group[self.param_name] for group in self.optimizer.param_groups
+            ]
 
 
 @PARAM_SCHEDULERS.register_module()

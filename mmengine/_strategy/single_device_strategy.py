@@ -1,3 +1,4 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 from .base_strategy import BaseStrategy
 import torch.nn as nn
 from typing import Union, Dict, Optional, List

@@ -1,3 +1,4 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 from .base_strategy import BaseStrategy
 from mmengine.registry import STRATEGIES
 from typing import Union, Optional
