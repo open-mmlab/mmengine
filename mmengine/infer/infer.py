@@ -125,6 +125,7 @@ class BaseInferencer(metaclass=InferencerMeta):
         scope (str, optional): The scope of the model. Defaults to None.
         show_progress (bool): Control whether to display the progress bar during
             the inference process. Defaults to True.
+            `New in version 0.7.4.`
 
     Note:
         Since ``Inferencer`` could be used to infer batch data,
