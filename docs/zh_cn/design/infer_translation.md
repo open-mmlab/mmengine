@@ -1,17 +1,17 @@
 # Inference interface
 
-When developing based on MMEngine, we usually define a configuration file for a specific algorithm, use the configuration file to build an [runner](./runner.md), and execute the training and testing processes, and save the trained weights. When performing inference based on the trained model, the following steps are usually required:
+When developing with MMEngine, we usually define a configuration file for a specific algorithm, use the file to build a [runner](./runner.md), execute the training and testing processes, and save the trained weights. When performing inference based on the trained model, the following steps are usually required:
 
 1. Build the model based on the configuration file
 2. Load the model weights
 3. Set up the data preprocessing pipeline
-4. Perform forward inference on the model
+4. Perform the forward inference of the model
 5. Visualize the inference results
 6. Return the inference results
 
-For this type of standard inference workflow, MMEngine provides a unified inference interface and recommends that users develop inference code based on this interface specification.
+For such standard inference workflow, MMEngine provides a unified inference interface and recommends that users develop inference applications based on this interface specification.
 
-## Example Usage
+## Usage
 
 ### Defining an Inferencer
 
@@ -37,7 +37,7 @@ weight = 'path/to/weight.pth'
 inferencer = CustomInferencer(model=cfg, weight=weight)
 ```
 
-**Building an Inferencer Based on Configuration Class Instance.**
+**Building an Inferencer Based on Config object**
 
 ```python
 from mmengine import Config
@@ -48,7 +48,7 @@ weight = 'path/to/weight.pth'
 inferencer = CustomInferencer(model=cfg, weight=weight)
 ```
 
-**Building an Inferencer based on model name defined in model-index**. Take the [ATSS detector in MMDetection](https://github.com/open-mmlab/mmdetection/blob/31c84958f54287a8be2b99cbf87a6dcf12e57753/configs/atss/metafile.yml#L22) as an example, the model name is `atss_r50_fpn_1x_coco`. Since the path of weight has already been defined in the model-index, we don't need to configure the weight arguments anymore.
+**Building an Inferencer based on model name defined in model-index**. Take the [ATSS detector in MMDetection](https://github.com/open-mmlab/mmdetection/blob/31c84958f54287a8be2b99cbf87a6dcf12e57753/configs/atss/metafile.yml#L22) as an example, the model name is `atss_r50_fpn_1x_coco`. Since the path of weight has already been defined in the model-index, there is no need to configure the weight argument anymore.
 
 ```python
 inferencer = CustomInferencer(model='atss_r50_fpn_1x_coco')
@@ -87,14 +87,14 @@ OpenMMLab requires the `inferencer(img)` to output a `dict` containing two field
 
 When performing inference, the following steps are typically executed:
 
-1. preprocess：Input data preprocessing, including data reading, data preprocessing, data format conversion, and so on.
+1. preprocess：Input data preprocessing, including data reading, data preprocessing, data format conversion, etc.
 2. forward: Execute `model.forwward`
 3. visualize：Visualization of predicted results.
-4. postprocess：Post-processing of predicted results, including result format conversion, exporting predicted results, and so on.
+4. postprocess：Post-processing of predicted results, including result format conversion, exporting predicted results, etc.
 
-To optimize the user experience of the inferencer, we aim to eliminate the need for users to configure parameters for each step when performing inference. In other words, we want users to be able to simply configure parameters for the `__call__` interface without having to be aware of the aforementioned processes.
+To improve the user experience of the inferencer,  we do not want users to have to configure parameters for each step when performing inference. In other words, we hope that users can simply configure parameters for the `__call__` interface without being aware of the above process and complete the inference.
 
-The `__call__` interface will execute the aforementioned steps in order, but it is not aware of which step the parameters provided by the user should be distributed to. Therefore, when developing a `CustomInferencer`, developers need to define four class attributes: `preprocess_kwargs`, `forward_kwargs`, `visualize_kwargs`, and `postprocess_kwargs`. Each attribute is a set of strings that are used to specify which step the parameters in the `__call__` interface correspond to:
+The `__call__` interface will execute the aforementioned steps in order, but it is not aware of which step the parameters provided by the user should be assigned to. Therefore, when developing a `CustomInferencer`, developers need to define four class attributes: `preprocess_kwargs`, `forward_kwargs`, `visualize_kwargs`, and `postprocess_kwargs`. Each attribute is a set of strings that are used to specify which step the parameters in the `__call__` interface correspond to:
 
 ```python
 class CustomInferencer(BaseInferencer):
@@ -129,7 +129,7 @@ class CustomInferencer(BaseInferencer):
             inputs, batch_size, show, return_datasample, a=a, b=b, c=c, d=d)
 ```
 
-In the code above, `a`, `b`, `c`, and `d` in the `preprocess`, `forward`, `visualize`, and `postprocess` functions are additional parameters that can be passed in by the user (`inputs`, `preds`, and other parameters are automatically filled in during the execution of `__call__`). Therefore, developers need to specify these parameters in the `preprocess_kwargs`, `forward_kwargs`, `visualize_kwargs`, and `postprocess_kwargs` class attributes, so that the parameters passed in by the user in the `__call__` phase can be correctly distributed to the corresponding steps. The distribution process is implemented by the `BaseInferencer.__call__` function, which developers do not need to be concerned about.
+In the code above, `a`, `b`, `c`, and `d` in the `preprocess`, `forward`, `visualize`, and `postprocess` functions are additional parameters that can be passed in by the user (`inputs`, `preds`, and other parameters are automatically filled in during the execution of `__call__`). Therefore, developers need to specify these parameters in the `preprocess_kwargs`, `forward_kwargs`, `visualize_kwargs`, and `postprocess_kwargs` class attributes, so that the parameters passed in by the user in the `__call__` phase can be correctly assigned to the corresponding steps. The distribution process is implemented by the `BaseInferencer.__call__` function, which developers do not need to be concerned about.
 
 In addition, we need to register the `CustomInferencer` to a custom registry or the MMEngine's registry.
 
@@ -151,19 +151,19 @@ In OpenMMLab's algorithm repositories, the Inferencer must be registered to the 
 
 ### `__init__()`
 
-The `BaseInferencer.__init__` method has already implemented the logic for building an inferencer as shown in the [sample code](#Building-an-Inferencer), so in most cases there is no need to override the `__init__` method. However, if there is a need to implement custom logic for loading configuration files, weight initialization, pipeline initialization, etc., the `__init__` method can be overridden.
+The `BaseInferencer.__init__` method has already implemented the logic for building an inferencer as shown in the above [section](#Building-an-Inferencer), so in most cases, there is no need to override the `__init__` method. However, if there is a need to implement custom logic for loading configuration files, weight initialization, pipeline initialization, etc., the `__init__` method can be overridden.
 
 ### `_init_pipeline()`
 
 ```{note}
-Abstract method, subclasses must implement.
+This is an abstract method that must be implemented by the subclass.
 ```
 
-Initialize and return the pipeline required by the inferencer. The pipeline is for a single image, similar to the `train_pipeline` and `test_pipeline` defined in the OpenMMLab series algorithm library. Each `inputs` passed in by the user when calling the `__call__` interface will be processed by the pipeline to form batch data, which will then be passed to the `forward` method. This is an abstract method that must be implemented by the subclass.
+Initialize and return the pipeline required by the inferencer. The pipeline is used for a single image, similar to the `train_pipeline` and `test_pipeline` defined in the OpenMMLab series algorithm library. Each `inputs` passed in by the user when calling the `__call__` interface will be processed by the pipeline to form batch data, which will then be passed to the `forward` method. This is an abstract method that must be implemented by the subclass.
 
 ### `_init_collate()`
 
-Initializes and returns the `collate_fn` required by the inferencer, whose value is equivalent to the `collate_fn` of the Dataloader in the training process. `BaseInferencer` will default to getting the `collate_fn` from the configuration of `test_dataloader`, so it is generally not necessary to override the `_init_collate` function.
+Initialize and return the `collate_fn` required by the inferencer, which is equivalent to the `collate_fn` of the Dataloader in the training process. `BaseInferencer` will obtain the `collate_fn` from the configuration of `test_dataloader` by default, so it is generally not necessary to override the `_init_collate` method.
 
 ### `_init_visualizer()`
 
@@ -175,11 +175,11 @@ Input arguments:
 
 - inputs：Input data, passed into `__call__`, usually a list of image paths or image data.
 - batch_size：batch size, passed in by the user when calling `__call__`.
-- Other parameters: specified by the user and included in `preprocess_kwargs`.
+- Other parameters: Passed in by the user and specified in `preprocess_kwargs`.
 
-Output:
+Return:
 
-- Generator that yields one batch of data per iteration.
+- A generator that yields one batch of data at each iteration.
 
 The `preprocess` function is a generator function by default, which applies the `pipeline` and `collate_fn` to the input data, and yields the preprocessed batch data. In general, subclasses do not need to override this function.
 
@@ -188,9 +188,9 @@ The `preprocess` function is a generator function by default, which applies the 
 Input arguments:
 
 - inputs：The batch data processed by `preprocess` function.
-- Other parameters: Specified by the user and indicated in `forward_kwargs`.
+- Other parameters: Passed in by the user and specified in `forward_kwargs`.
 
-Output：
+Return:
 
 - Prediction result, default type is `List[BaseDataElement]`.
 
@@ -199,7 +199,7 @@ Calls `model.test_step` to perform forward inference and returns the inference r
 ### `visualize()`
 
 ```{note}
-Abstract method that subclasses must implement.
+This is an abstract method that must be implemented by the subclass.
 ```
 
 Input arguments:
@@ -207,26 +207,26 @@ Input arguments:
 - inputs：The input data, which is the raw data without preprocessing.
 - preds：Predicted results of the model.
 - show：Whether to visualize.
-- Other parameters: Specified by the user in `visualize_kwargs`.
+- Other parameters: Passed in by the user and specified in `visualize_kwargs`.
 
-Output:
+Return:
 
-- The visualization result, usually of type `List[np.ndarray]`. Taking object detection as an example, each element in the list should be an image with detection boxes drawn, which can be visualized using `cv2.imshow`. The visualization process may vary for different tasks, and `visualize` should return results that are suitable for common visualization processes in that field.
+- Visualize the results, which are usually of type `List[np.ndarray]`. Taking object detection as an example, each element in the list should be an image with detection boxes drawn, which can be visualized using `cv2.imshow`. The visualization process may vary for different tasks, and `visualize` should return results that are suitable for common visualization processes in that field.
 
 ### `postprocess()`
 
 ```{note}
-Abstract method that subclasses must implement.
+This is an abstract method that must be implemented by the subclass.
 ```
 
 Input arguments:
 
-- preds：The predicted results of the model, which is a `list` type. Each element in the list represents the prediction result of a piece of data. In the OpenMMLab algorithm library series, the type of each element in the prediction result is `BaseDataElement`.
+- preds：The predicted results of the model, which is a `list` type. Each element in the list represents the prediction result for a single data item. In the OpenMMLab series of algorithm libraries, the type of each element in the prediction result is `BaseDataElement`.
 - visualization：Visualization results
-- return_datasample：Whether to return the datasample as is. When set to `False`, the returned result is converted to a `dict`.
-- Other parameters: specified by the user in `postprocess_kwargs`.
+- return_datasample: Whether to maintain datasample for return. When set to `False`, the returned result is converted to a `dict`.
+- Other parameters: Passed in by the user and specified in `postprocess_kwargs`.
 
-Output：
+Return：
 
 - The type of the returned value is a dictionary containing both the visualization and prediction results. OpenMMLab requires the returned dictionary to have two keys: `predictions` and `visualization`.
 
@@ -235,10 +235,10 @@ Output：
 Input arguments:
 
 - inputs：The input data, usually a list of image paths or image data. Each element in `inputs` can also be other types of data as long as it can be processed by the `pipeline` returned by [init_pipeline](#_init_pipeline). When there is only one inference data in `inputs`, it does not have to be a `list`, `__call__` will internally wrap it into a list for further processing.
-- return_datasample：Whether to return datasample as a `dict`.
+- return_datasample: Whether to convert datasample to dict for return.
 - batch_size：Batch size for inference, which will be further passed to the `preprocess` function.
-- Extra arguments to be passed to `preprocess`, `forward`, `visualize`, and `postprocess` functions.
+- Other parameters: Additional parameters assigned to `preprocess`, `forward`, `visualize`, and `postprocess` methods.
 
-Output:
+Return:
 
 - The visualized and predicted results returned by `postprocess`, in the form of a dictionary. OpenMMLab requires the returned dictionary to contain two keys: `predictions` and `visualization`.
