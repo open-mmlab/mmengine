@@ -4,7 +4,6 @@ import argparse
 import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
-from torch.optim import SGD
 
 from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
@@ -96,22 +95,20 @@ def main():
             initial_scale_power=15,
         ),
         zero_optimization=dict(
-            stage=0,
+            stage=2,
             allgather_partitions=True,
             reduce_scatter=True,
             allgather_bucket_size=50000000,
             reduce_bucket_size=50000000,
             overlap_comm=True,
             contiguous_gradients=True,
-            cpu_offload=False
-        )
-    )
+            cpu_offload=False))
     runner = FlexibleRunner(
         model=MMResNet50(),
         work_dir='./work_dir',
         strategy=strategy,
         train_dataloader=train_dataloader,
-        optim_wrapper=dict(type='DSOptimWrapper', optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+        optim_wrapper=dict(type='DSOptimWrapper', optimizer=dict(type='Adam')),
         train_cfg=dict(by_epoch=True, max_epochs=10, val_interval=1),
         val_dataloader=val_dataloader,
         val_cfg=dict(),
@@ -122,4 +119,5 @@ def main():
 
 
 if __name__ == '__main__':
+    # torchrun --nproc_per_node=2 examples/distributed_training_with_deepspeed.py --launcher pytorch
     main()

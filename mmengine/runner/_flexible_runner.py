@@ -3,14 +3,12 @@ import copy
 import logging
 import os.path as osp
 import pickle
-import platform
 import time
 import warnings
 from collections import OrderedDict
 from functools import partial
 from typing import Callable, Dict, List, Optional, Union
 
-import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
@@ -19,27 +17,24 @@ from mmengine._strategy import BaseStrategy
 from mmengine.config import Config, ConfigDict
 from mmengine.dataset import worker_init_fn
 from mmengine.device import get_device
-from mmengine.dist import (broadcast, get_dist_info, get_rank,
-                           is_distributed, master_only)
+from mmengine.dist import get_rank, master_only
 from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient, join_path
 from mmengine.hooks import Hook
-from mmengine.logging import MessageHub, MMLogger, print_log
+from mmengine.logging import MessageHub, print_log
 from mmengine.model import is_model_wrapper
 from mmengine.optim import OptimWrapper, OptimWrapperDict, _ParamScheduler
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, FUNCTIONS,
-                               HOOKS, LOG_PROCESSORS, LOOPS,
-                               RUNNERS, VISUALIZERS, DefaultScope, STRATEGIES)
+                               HOOKS, LOG_PROCESSORS, LOOPS, RUNNERS,
+                               STRATEGIES, VISUALIZERS, DefaultScope)
 from mmengine.utils import digit_version, get_git_hash, is_seq_of
-from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
-                                     set_multi_processing)
+from mmengine.utils.dl_utils import TORCH_VERSION, collect_env
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import find_latest_checkpoint
 from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
-from .utils import set_random_seed
 
 ConfigType = Union[Dict, Config, ConfigDict]
 ParamSchedulerType = Union[List[_ParamScheduler], Dict[str,
@@ -127,8 +122,8 @@ class FlexibleRunner:
             ``runner.val()`` will be performed under fp16 precision.
             Defaults to None. See :meth:`build_test_loop` for more details.
         strategy (BaseStrategy or dict, optional): A strategy object or a dict
-            to build a strategy. Defaults to None. If not specified, the strategy
-            will be inferred automatically.
+            to build a strategy. Defaults to None. If not specified, the
+            strategy will be inferred automatically.
         auto_scale_lr (dict, Optional): Config to scale the learning rate
             automatically. It includes ``base_batch_size`` and ``enable``.
             ``base_batch_size`` is the batch size that the optimizer lr is
@@ -349,29 +344,23 @@ class FlexibleRunner:
         self._test_loop = test_cfg
         self._test_evaluator = test_evaluator
 
-        self._launcher = launcher
-        if self._launcher == 'none':
-            self._distributed = False
-        else:
-            self._distributed = True
-        
         if not isinstance(compile, bool) and not isinstance(compile, dict):
             raise TypeError(
                 f'compile should be a bool or dict, but got {type(compile)}')
         self._compile = compile
 
         self._randomness_cfg = randomness
-        self.strategy = self.build_strategy(strategy)
-        self.strategy.setup_env(launcher=self._launcher,
-                                distributed=self._distributed,
-                                randomness=randomness,
-                                **env_cfg)
+        self.strategy = self.build_strategy(strategy, launcher=launcher)
+        self.strategy.setup_env(
+            launcher=launcher,
+            randomness=randomness,
+            **env_cfg)
 
         if experiment_name is not None:
-            self._experiment_name = f'{experiment_name}_{self._timestamp}'
+            self._experiment_name = f'{experiment_name}_{self.timestamp}'
         elif self.cfg.filename is not None:
             filename_no_ext = osp.splitext(osp.basename(self.cfg.filename))[0]
-            self._experiment_name = f'{filename_no_ext}_{self._timestamp}'
+            self._experiment_name = f'{filename_no_ext}_{self.timestamp}'
         else:
             self._experiment_name = self.timestamp
         self._log_dir = osp.join(self.work_dir, self.timestamp)
@@ -392,7 +381,7 @@ class FlexibleRunner:
         )
 
         # Collect and log environment information.
-        self._log_env(env_cfg)
+        self._log_env()
 
         # Build `message_hub` for communication among components.
         # `message_hub` can store log scalars (loss, learning rate) and
@@ -442,7 +431,7 @@ class FlexibleRunner:
             experiment_name=cfg.get('experiment_name'),
             train_dataloader=cfg.get('train_dataloader'),
             optim_wrapper=cfg.get('optim_wrapper'),
-            param_scheduler=cfg.get('param_scheduler'),     
+            param_scheduler=cfg.get('param_scheduler'),
             train_cfg=cfg.get('train_cfg'),
             val_dataloader=cfg.get('val_dataloader'),
             val_evaluator=cfg.get('val_evaluator'),
@@ -521,24 +510,19 @@ class FlexibleRunner:
             return 0
 
     @property
-    def launcher(self):
-        """str: Way to launcher multi processes."""
-        return self._launcher
-
-    @property
     def distributed(self):
         """bool: Whether current environment is distributed."""
-        return self._distributed
+        return self.strategy.distributed
 
     @property
     def rank(self):
         """int: Rank of current process."""
-        return self.strategy._rank
+        return self.strategy.rank
 
     @property
     def world_size(self):
         """int: Number of processes participating in the job."""
-        return self.strategy._world_size
+        return self.strategy.world_size
 
     @property
     def deterministic(self):
@@ -548,12 +532,12 @@ class FlexibleRunner:
     @property
     def seed(self):
         """int: A number to set random modules."""
-        return self.strategy._seed
+        return self.strategy.seed
 
     @property
     def timestamp(self):
         """str: Timestamp when creating experiment."""
-        return self.strategy._timestamp
+        return self.strategy.timestamp
 
     @property
     def hooks(self):
@@ -623,12 +607,16 @@ class FlexibleRunner:
         training."""
         return self.train_loop.val_begin
 
-    def build_strategy(self, strategy: Optional[BaseStrategy] = None) -> BaseStrategy:
+    def build_strategy(
+        self,
+        strategy: Optional[BaseStrategy] = None,
+        launcher: str = 'none',
+    ) -> BaseStrategy:
         """Build a strategy.
-        
+
         Args:
-            strategy (BaseStrategy, optional): A strategy object or dict to build the
-                strategy. Defaults to None.
+            strategy (BaseStrategy, optional): A strategy object or dict to
+                build the strategy. Defaults to None.
 
         Returns:
             BaseStrategy: A strategy object.
@@ -636,20 +624,23 @@ class FlexibleRunner:
         if isinstance(strategy, BaseStrategy):
             return strategy
 
-        if self._launcher == 'none':
+        if launcher == 'none':
             if strategy is None:
                 strategy = dict(type='SingleDeviceStrategy')
         else:
             if strategy is None:
                 strategy = dict(type='DDPStrategy')
 
+        strategy.setdefault('work_dir', self._work_dir)
         strategy.setdefault('compile', self._compile)
         strategy.setdefault('auto_scale_lr', self._auto_scale_lr)
 
         return STRATEGIES.build(strategy)
 
-    def build_message_hub(self,
-                          message_hub: Optional[Dict] = None) -> MessageHub:
+    def build_message_hub(
+        self,
+        message_hub: Optional[Dict] = None,
+    ) -> MessageHub:
         """Build a global asscessable MessageHub.
 
         Args:
@@ -672,9 +663,9 @@ class FlexibleRunner:
         return MessageHub.get_instance(**message_hub)
 
     def build_visualizer(
-            self,
-            visualizer: Optional[Union[Visualizer,
-                                       Dict]] = None) -> Visualizer:
+        self,
+        visualizer: Optional[Union[Visualizer, Dict]] = None,
+    ) -> Visualizer:
         """Build a global asscessable Visualizer.
 
         Args:
@@ -707,8 +698,10 @@ class FlexibleRunner:
                 'visualizer should be Visualizer object, a dict or None, '
                 f'but got {visualizer}')
 
-    def build_evaluator(self, evaluator: Union[Dict, List,
-                                               Evaluator]) -> Evaluator:
+    def build_evaluator(
+        self,
+        evaluator: Union[Dict, List, Evaluator],
+    ) -> Evaluator:
         """Build evaluator.
 
         Examples of ``evaluator``::
@@ -756,9 +749,11 @@ class FlexibleRunner:
                 f', but got {evaluator}')
 
     @staticmethod
-    def build_dataloader(dataloader: Union[DataLoader, Dict],
-                         seed: Optional[int] = None,
-                         diff_rank_seed: bool = False) -> DataLoader:
+    def build_dataloader(
+        dataloader: Union[DataLoader, Dict],
+        seed: Optional[int] = None,
+        diff_rank_seed: bool = False,
+    ) -> DataLoader:
         """Build dataloader.
 
         The method builds three components:
@@ -1015,7 +1010,9 @@ class FlexibleRunner:
         return loop  # type: ignore
 
     def build_log_processor(
-            self, log_processor: Union[LogProcessor, Dict]) -> LogProcessor:
+        self,
+        log_processor: Union[LogProcessor, Dict],
+    ) -> LogProcessor:
         """Build test log_processor.
 
         Examples of ``log_processor``:
@@ -1074,11 +1071,11 @@ class FlexibleRunner:
                 stage_hook_infos.append(info)
         return '\n'.join(stage_hook_infos)
 
-    def load_or_resume(self) -> None:
+    def load_or_resume(self):
         """load or resume checkpoint."""
         if self._has_loaded:
             return None
-        
+
         if not self._resume and self._load_from is None:
             return None
 
@@ -1106,19 +1103,6 @@ class FlexibleRunner:
         Returns:
             nn.Module: The model after training.
         """
-        if is_model_wrapper(self.model):
-            ori_model = self.model.module
-        else:
-            ori_model = self.model
-        assert hasattr(ori_model, 'train_step'), (
-            'If you want to train your model, please make sure your model '
-            'has implemented `train_step`.')
-
-        if self._val_loop is not None:
-            assert hasattr(ori_model, 'val_step'), (
-                'If you want to validate your model, please make sure your '
-                'model has implemented `val_step`.')
-
         if self._train_loop is None:
             raise RuntimeError(
                 '`self._train_loop` should not be None when calling train '
@@ -1138,11 +1122,10 @@ class FlexibleRunner:
         # decide which keys of checkpoint should be kept
 
         batch_size = self.train_dataloader.batch_size
-        
         result = self.strategy.prepare(
             self.model,
             optim_wrapper=self.optim_wrapper,
-            param_schedulers=self.param_schedulers,
+            param_scheduler=self.param_schedulers,
             compile_target='train_step',
             train_batch_size=batch_size,
             num_batches_per_epoch=len(self.train_dataloader),
@@ -1150,11 +1133,11 @@ class FlexibleRunner:
             max_iters=self.max_iters,
             cur_iter=self.iter,
             checkpoint=checkpoint)
-        
+
         if self.param_schedulers is not None:
             self.model, self.optim_wrapper, self.param_schedulers, *_ = result
         else:
-            self.model, self.optim_wrapper, *_ = result 
+            self.model, self.optim_wrapper, *_ = result
 
         # TODO: add a contextmanager to avoid calling `before_run` many times
         self.call_hook('before_run')
@@ -1178,7 +1161,7 @@ class FlexibleRunner:
         self._val_loop = self.build_val_loop(self._val_loop)  # type: ignore
 
         checkpoint = self.load_or_resume()
-        self.model, *_ = self.strategy.prepare(self.model, checkpoint=checkpoint)
+        self.model = self.strategy.prepare(self.model, checkpoint=checkpoint)
 
         self.call_hook('before_run')
         metrics = self.val_loop.run()  # type: ignore
@@ -1201,8 +1184,8 @@ class FlexibleRunner:
         self._test_loop = self.build_test_loop(self._test_loop)  # type: ignore
 
         checkpoint = self.load_or_resume()
-        self.model, *_ = self.strategy.prepare(self.model, checkpoint=checkpoint)
-   
+        self.model = self.strategy.prepare(self.model, checkpoint=checkpoint)
+
         self.call_hook('before_run')
         metrics = self.test_loop.run()  # type: ignore
         self.call_hook('after_run')
@@ -1226,9 +1209,10 @@ class FlexibleRunner:
                     raise TypeError(f'{e} in {hook}') from None
 
     def register_hook(
-            self,
-            hook: Union[Hook, Dict],
-            priority: Optional[Union[str, int, Priority]] = None) -> None:
+        self,
+        hook: Union[Hook, Dict],
+        priority: Optional[Union[str, int, Priority]] = None,
+    ) -> None:
         """Register a hook into the hook list.
 
         The hook will be inserted into a priority queue, with the specified
@@ -1279,8 +1263,9 @@ class FlexibleRunner:
             self._hooks.insert(0, hook_obj)
 
     def register_default_hooks(
-            self,
-            hooks: Optional[Dict[str, Union[Hook, Dict]]] = None) -> None:
+        self,
+        hooks: Optional[Dict[str, Union[Hook, Dict]]] = None,
+    ) -> None:
         """Register default hooks into hook list.
 
         ``hooks`` will be registered into runner to execute some default
@@ -1361,9 +1346,10 @@ class FlexibleRunner:
             self.register_hook(hook)
 
     def register_hooks(
-            self,
-            default_hooks: Optional[Dict[str, Union[Hook, Dict]]] = None,
-            custom_hooks: Optional[List[Union[Hook, Dict]]] = None) -> None:
+        self,
+        default_hooks: Optional[Dict[str, Union[Hook, Dict]]] = None,
+        custom_hooks: Optional[List[Union[Hook, Dict]]] = None,
+    ) -> None:
         """Register default hooks and custom hooks into hook list.
 
         Args:
@@ -1379,11 +1365,13 @@ class FlexibleRunner:
         if custom_hooks is not None:
             self.register_custom_hooks(custom_hooks)
 
-    def resume(self,
-               filename: str,
-               resume_optimizer: bool = True,
-               resume_param_scheduler: bool = True,
-               map_location: Union[str, Callable] = 'default') -> None:
+    def resume(
+        self,
+        filename: str,
+        resume_optimizer: bool = True,
+        resume_param_scheduler: bool = True,
+        map_location: Union[str, Callable] = 'default',
+    ) -> None:
         """Resume model from checkpoint.
 
         Args:
@@ -1397,12 +1385,16 @@ class FlexibleRunner:
                 specifying how to remap storage locations.
                 Defaults to 'default'.
         """
-        if map_location == 'default':
-            device = get_device()
-            checkpoint = self.load_checkpoint(filename, map_location=device)
-        else:
-            checkpoint = self.load_checkpoint(
-                filename, map_location=map_location)
+        def callback(checkpoint):
+            self.call_hook('after_load_checkpoint', checkpoint=checkpoint)
+
+        checkpoint = self.strategy.resume(
+            filename,
+            resume_optimizer=resume_optimizer,
+            resume_param_scheduler=resume_param_scheduler,
+            map_location=map_location,
+            callback=callback,
+        )
 
         self.train_loop._epoch = checkpoint['meta']['epoch']
         self.train_loop._iter = checkpoint['meta']['iter']
@@ -1427,18 +1419,6 @@ class FlexibleRunner:
                         'previous training state resuming from the checkpoint '
                         'or set `enable` in `auto_scale_lr to False.')
 
-        # resume random seed
-        resumed_seed = checkpoint['meta'].get('seed', None)
-        current_seed = self._randomness_cfg.get('seed')
-        if resumed_seed is not None and resumed_seed != current_seed:
-            if current_seed is not None:
-                self.logger.warning(f'The value of random seed in the '
-                                    f'checkpoint "{resumed_seed}" is '
-                                    f'different from the value in '
-                                    f'`randomness` config "{current_seed}"')
-            self._randomness_cfg.update(seed=resumed_seed)
-            self.set_randomness(**self._randomness_cfg)
-
         resumed_dataset_meta = checkpoint['meta'].get('dataset_meta', None)
         dataset_meta = getattr(self.train_dataloader.dataset, 'metainfo', None)
 
@@ -1457,11 +1437,13 @@ class FlexibleRunner:
         self.logger.info(f'resumed epoch: {self.epoch}, iter: {self.iter}')
         return checkpoint
 
-    def load_checkpoint(self,
-                        filename: str,
-                        map_location: Union[str, Callable] = 'cpu',
-                        strict: bool = False,
-                        revise_keys: list = [(r'^module.', '')]):
+    def load_checkpoint(
+        self,
+        filename: str,
+        map_location: Union[str, Callable] = 'cpu',
+        strict: bool = False,
+        revise_keys: list = [(r'^module.', '')],
+    ):
         """Load checkpoint from given ``filename``.
 
         Args:
@@ -1477,11 +1459,12 @@ class FlexibleRunner:
                 pair of the regular expression operations. Defaults to strip
                 the prefix 'module.' by [(r'^module\\.', '')].
         """
-        self.logger.info(f'Load checkpoint from {filename}')
-        checkpoint = self.strategy.load_checkpoint(filename, map_location=map_location)
+        def callback(checkpoint):
+            self.call_hook('after_load_checkpoint', checkpoint=checkpoint)
 
-        # Add comments to describe the usage of `after_load_ckpt`
-        self.call_hook('after_load_checkpoint', checkpoint=checkpoint)
+        self.logger.info(f'Load checkpoint from {filename}')
+        checkpoint = self.strategy.load_checkpoint(
+            filename, map_location=map_location, callback=callback)
 
         return checkpoint
 
@@ -1552,10 +1535,7 @@ class FlexibleRunner:
 
         meta.update(
             cfg=self.cfg.pretty_text,
-            seed=self.seed,
-            experiment_name=self.experiment_name,
-            time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
-            mmengine_version=mmengine.__version__ + get_git_hash())
+            experiment_name=self.experiment_name)
 
         if hasattr(self.train_dataloader.dataset, 'metainfo'):
             meta.update(dataset_meta=self.train_dataloader.dataset.metainfo)
@@ -1564,12 +1544,16 @@ class FlexibleRunner:
             'meta': meta,
             'message_hub': self.message_hub.state_dict()
         }
-        callback = lambda checkpoint: self.call_hook('before_save_checkpoint', checkpoint=checkpoint)
-        self.strategy.save_checkpoint(filename=filepath,
-                                      save_optimizer=save_optimizer,
-                                      save_param_scheduler=save_param_scheduler,
-                                      extra_ckpt=checkpoint,
-                                      callback=callback)
+
+        def callback(checkpoint):
+            self.call_hook('before_save_checkpoint', checkpoint=checkpoint)
+
+        self.strategy.save_checkpoint(
+            filename=filepath,
+            save_optimizer=save_optimizer,
+            save_param_scheduler=save_param_scheduler,
+            extra_ckpt=checkpoint,
+            callback=callback)
 
     @master_only
     def dump_config(self) -> None:
@@ -1581,8 +1565,9 @@ class FlexibleRunner:
         self.cfg.dump(osp.join(self.work_dir, filename))
 
     def _check_scheduler_cfg(
-            self, param_scheduler: Optional[Union[dict, list,
-                                                  _ParamScheduler]]) -> None:
+        self,
+        param_scheduler: Optional[Union[dict, list, _ParamScheduler]],
+    ) -> None:
         """Parse `param_scheduler` to a list of parameter schedulers, or a
         `dict` of which each value is a list of parameter schedulers.
 
@@ -1655,23 +1640,17 @@ class FlexibleRunner:
                 'single optimizer. If it does not contain key `type`, it '
                 'means multiple lists of schedulers for multiple optimizers.')
 
-    def _log_env(self, env_cfg: dict) -> None:
+    def _log_env(self) -> None:
         """Logging environment information of the current task.
 
         Args:
             env_cfg (dict): The environment config of the runner.
         """
         # Collect and log environment information.
-        env = collect_env()
-        runtime_env = OrderedDict()
-        runtime_env.update(env_cfg)
-        runtime_env.update(self._randomness_cfg)
-        runtime_env['Distributed launcher'] = self._launcher
-        runtime_env['Distributed training'] = self._distributed
-        runtime_env['GPU number'] = self.world_size
+        system_env, runtime_env = self.strategy.collect_env()
 
         env_info = '\n    ' + '\n    '.join(f'{k}: {v}'
-                                            for k, v in env.items())
+                                            for k, v in system_env.items())
         runtime_env_info = '\n    ' + '\n    '.join(
             f'{k}: {v}' for k, v in runtime_env.items())
         dash_line = '-' * 60

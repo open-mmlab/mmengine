@@ -1,26 +1,29 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from abc import ABCMeta, abstractmethod
-from typing import Union, Dict, List, Sequence, Optional, Callable
-from collections import OrderedDict
 import copy
 import os.path as osp
+import platform
+import time
+from abc import ABCMeta, abstractmethod
+from collections import OrderedDict
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+
 import torch
 import torch.nn as nn
-import time
 from torch.optim import Optimizer
-import platform
 
+import mmengine
 from mmengine.config import Config, ConfigDict
-from mmengine.registry import MODELS, PARAM_SCHEDULERS
-from mmengine.utils import digit_version
-from mmengine.utils.dl_utils import TORCH_VERSION, set_multi_processing
-from mmengine.logging import MMLogger
-from mmengine.model.wrappers import is_model_wrapper
-from mmengine.model import revert_sync_batchnorm
+from mmengine.device import get_device
 from mmengine.dist import broadcast, get_dist_info, is_distributed
+from mmengine.logging import MMLogger
+from mmengine.model import revert_sync_batchnorm
+from mmengine.model.wrappers import is_model_wrapper
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
-
+from mmengine.registry import MODELS, OPTIM_WRAPPERS, PARAM_SCHEDULERS
+from mmengine.utils import digit_version, get_git_hash
+from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
+                                     set_multi_processing)
 
 ParamSchedulerType = Union[List[_ParamScheduler], Dict[str,
                                                        List[_ParamScheduler]]]
@@ -28,36 +31,90 @@ ParamSchedulerType = Union[List[_ParamScheduler], Dict[str,
 
 class BaseStrategy(metaclass=ABCMeta):
     """Base class for all strategies.
-    
+
+    In the process of supporting FSDP, DeepSpeed, and ColossalAI, the
+    scalability of the Runner faced challenges, which led to the redefinition
+    of the Runner's responsibilities. The Strategy abstraction was split out,
+    which is responsible for constructing, initializing, and saving/loading
+    the state of training components such as models, optimizers, and parameter
+    schedulers.
+
     Args:
         compile (dict or bool): Config to compile model. Defaults to False.
+        load_from (str, optional): The checkpoint file to load from.
+            Defaults to None.
+        resume (bool): Whether to resume training. Defaults to False. If
+            ``resume`` is True and ``load_from`` is None, automatically to
+            find latest checkpoint from ``work_dir``. If not found, resuming
+            does nothing.
     """
 
-    def __init__(self,
-                 *,
-                 compile: Union[dict, bool] = False,
-                 **kwargs,
-                 ):
+    def __init__(
+        self,
+        *,
+        work_dir: str = 'work_dir',
+        compile: Union[dict, bool] = False,
+        load_from: Optional[str] = None,
+        resume: bool = False,
+        **kwargs,
+    ):
+        self._work_dir = osp.abspath(work_dir)
+        mmengine.mkdir_or_exist(self._work_dir)
+
         self.compile = compile
 
+        self._load_from = load_from
+        self._resume = resume
+        self._has_loaded = False
+
+    @property
+    def launcher(self):
+        return self._launcher
+
+    @property
+    def distributed(self):
+        return self._distributed
+
+    @property
+    def seed(self):
+        return self._seed
+
+    @property
+    def rank(self):
+        return self._rank
+
+    @property
+    def world_size(self):
+        return self._world_size
+
+    @property
+    def timestamp(self):
+        return self._timestamp
+
+    @property
+    def randomness(self):
+        return self._randomness
+
     @abstractmethod
-    def prepare(self,
-                model: Union[nn.Module, dict],
-                *,
-                optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
-                param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
-                compile_target: str = 'forward',
-                checkpoint: Optional[dict] = None,
-                num_batches_per_epoch: Optional[int] = None,
-                max_epochs: Optional[int] = None,
-                max_iters: Optional[int] = None,
-                cur_iter: Optional[int] = None,
-                **kwargs):
+    def prepare(
+        self,
+        model: Union[nn.Module, dict],
+        *,
+        optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
+        param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
+        compile_target: str = 'forward',
+        checkpoint: Optional[dict] = None,
+        num_batches_per_epoch: Optional[int] = None,
+        max_epochs: Optional[int] = None,
+        max_iters: Optional[int] = None,
+        cur_iter: Optional[int] = None,
+        **kwargs,
+    ):
         """Prepare model and some components.
-        
+
         Args:
-            model (:obj:`torch.nn.Module` or dict): The model to be run. It can be
-                a dict used for build a model.
+            model (:obj:`torch.nn.Module` or dict): The model to be run. It
+                can be a dict used for building a model.
 
         Kwargs:
             optim_wrapper (OptimWrapper or dict, optional):
@@ -76,6 +133,8 @@ class BaseStrategy(metaclass=ABCMeta):
                 Defaults to 'forward'.
             checkpoint (dict, optional): Checkpoint to load strategy state.
                 Defaults to None.
+            resume (bool, optional): Whether resume training from checkpoint.
+                Defaults to False.
             num_batches_per_epoch (int, optional): Number of batches per epoch.
                 Defaults to None.
             max_epochs (int, optional): Number of epochs. Defaults to None.
@@ -83,29 +142,53 @@ class BaseStrategy(metaclass=ABCMeta):
             cur_iter (int, optional): Current iteration. Defaults to None.
         """
 
-    def setup_env(self,
-                  *,
-                  launcher: str = 'none',
-                  distributed: bool = False,
-                  cudnn_benchmark: bool = False,
-                  mp_cfg: Optional[dict] = None,
-                  dist_cfg: Optional[dict] = None,
-                  resource_limit: int = 4096,
-                  randomness: dict = dict(seed=None)):
+    def setup_env(
+            self,
+            *,
+            launcher: str = 'none',
+            cudnn_benchmark: bool = False,
+            mp_cfg: Optional[dict] = None,
+            dist_cfg: Optional[dict] = None,
+            resource_limit: int = 4096,
+            randomness: dict = dict(seed=None),
+    ):
         """Setup environment.
-        
+
         1. setup multi-processing
         2. setup distributed
         3. set random seed
+
+        Args:
+            launcher (str): Way to launcher multi processes.
+                Defaults to 'none'.
+            cudnn_benchmark (bool): Whether to enable cudnn benchmark.
+                Defaults to False.
+            mp_cfg (dict, optional): Multi-processing config. Defaults to None.
+            dist_cfg (dict, optional): Distributed config. Defaults to None.
+            resource_limit (int): Resource limit. Defaults to 4096.
+            randomness (dict): Some settings to make the experiment as
+                reproducible as possible like seed and deterministic.
+                Defaults to ``dict(seed=None)``. If seed is None, a random
+                number will be generated and it will be broadcasted to all
+                other processes if in distributed environment.
+                If ``cudnn_benchmark`` is ``True`` in but ``deterministic`` is
+                ``True`` in ``randomness``, the value of
+                ``torch.backends.cudnn.benchmark`` will be ``False`` finally.
         """
+        self._launcher = launcher
+        if self._launcher == 'none':
+            self._distributed = False
+        else:
+            self._distributed = True
+
         if cudnn_benchmark:
             torch.backends.cudnn.benchmark = True
 
         mp_cfg = mp_cfg if mp_cfg is not None else {}
-        set_multi_processing(**mp_cfg, distributed=distributed)
+        set_multi_processing(**mp_cfg, distributed=self._distributed)
 
         # init distributed env first, since logger depends on the dist info.
-        if distributed and not is_distributed():
+        if self._distributed and not is_distributed():
             dist_cfg = dist_cfg if dist_cfg is not None else {}
             self.setup_distributed(launcher, **dist_cfg)
 
@@ -128,16 +211,24 @@ class BaseStrategy(metaclass=ABCMeta):
             resource.setrlimit(resource.RLIMIT_NOFILE,
                                (soft_limit, hard_limit))
 
-        self.set_randomness(**randomness)
+        self._randomness = randomness
+        self._set_randomness(**randomness)
 
-    def set_randomness(self,
-                       seed,
-                       diff_rank_seed: bool = False,
-                       deterministic: bool = False) -> None:
+    def setup_distributed(self, *args, **kwargs):
+        """Setup distributed environment."""
+        pass
+
+    def _set_randomness(
+        self,
+        seed: Optional[int] = None,
+        diff_rank_seed: bool = False,
+        deterministic: bool = False,
+    ) -> None:
         """Set random seed to guarantee reproducible results.
 
         Args:
-            seed (int): A number to set random modules.
+            seed (int, optional): A number to set random modules.
+                Defaults to None.
             diff_rank_seed (bool): Whether or not set different seeds according
                 to global rank. Defaults to False.
             deterministic (bool): Whether to set the deterministic option for
@@ -152,10 +243,6 @@ class BaseStrategy(metaclass=ABCMeta):
             seed=seed,
             deterministic=deterministic,
             diff_rank_seed=diff_rank_seed)
-
-    def setup_distributed(self, *args, **kwargs):
-        """Setup distributed training."""
-        pass
 
     def build_model(self, model: Union[nn.Module, dict]) -> nn.Module:
         """Build model.
@@ -193,7 +280,7 @@ class BaseStrategy(metaclass=ABCMeta):
 
     def convert_model(self, model: nn.Module) -> nn.Module:
         """Convert layers of model.
-        
+
         convert all `SyncBatchNorm` (SyncBN) and
         `mmcv.ops.sync_bn.SyncBatchNorm`(MMSyncBN) layers in the model to
         `BatchNormXd` layers.
@@ -208,7 +295,11 @@ class BaseStrategy(metaclass=ABCMeta):
         model = revert_sync_batchnorm(model)
         return model
 
-    def compile_model(self, model: nn.Module, target: str = 'forward') -> nn.Module:
+    def compile_model(
+        self,
+        model: nn.Module,
+        target: str = 'forward',
+    ) -> nn.Module:
         """Compile model.
 
         Args:
@@ -230,7 +321,7 @@ class BaseStrategy(metaclass=ABCMeta):
         setattr(model, target, compiled_func)
         self.logger.info('Model has been "compiled". The first few iterations '
                          'will be slow, please be patient.')
-        
+
         return model
 
     def wrap_model(self, model: nn.Module) -> nn.Module:
@@ -252,11 +343,12 @@ class BaseStrategy(metaclass=ABCMeta):
             # sync params and buffers
             for _, params in model.state_dict().items():
                 broadcast(params)
-        
+
         return model
 
     def build_optim_wrapper(
-        self, optim_wrapper: Union[Optimizer, OptimWrapper, dict]
+        self,
+        optim_wrapper: Union[Optimizer, OptimWrapper, dict],
     ) -> Union[OptimWrapper, OptimWrapperDict]:
         """Build optimizer wrapper.
 
@@ -405,9 +497,11 @@ class BaseStrategy(metaclass=ABCMeta):
                             f'object or dict, but got {optim_wrapper}')
 
     def _build_param_scheduler(
-            self, scheduler: Union[_ParamScheduler, Dict, List],
-            optim_wrapper: OptimWrapper,
-            default_args: dict) -> List[_ParamScheduler]:
+        self,
+        scheduler: Union[_ParamScheduler, Dict, List],
+        optim_wrapper: OptimWrapper,
+        default_args: dict,
+    ) -> List[_ParamScheduler]:
         """Build parameter schedulers for a single optimizer.
 
         Args:
@@ -460,7 +554,8 @@ class BaseStrategy(metaclass=ABCMeta):
                 param_schedulers.append(
                     PARAM_SCHEDULERS.build(
                         _scheduler,
-                        default_args=dict(optimizer=optim_wrapper, **default_args)))
+                        default_args=dict(
+                            optimizer=optim_wrapper, **default_args)))
             else:
                 raise TypeError(
                     'scheduler should be a _ParamScheduler object or dict, '
@@ -468,8 +563,10 @@ class BaseStrategy(metaclass=ABCMeta):
         return param_schedulers
 
     def build_param_scheduler(
-            self, scheduler: Union[_ParamScheduler, Dict,
-                                   List], default_args) -> ParamSchedulerType:
+        self,
+        scheduler: Union[_ParamScheduler, Dict, List],
+        default_args,
+    ) -> ParamSchedulerType:
         """Build parameter schedulers.
 
         ``build_param_scheduler`` should be called after
@@ -556,12 +653,14 @@ class BaseStrategy(metaclass=ABCMeta):
 
             return param_schedulers
 
-    def build_logger(self,
-                     log_level: Union[int, str] = 'INFO',
-                     log_dir: Optional[str] = None,
-                     log_file: Optional[str] = None,
-                     exp_name: Optional[str] = None,
-                     **kwargs) -> MMLogger:
+    def build_logger(
+        self,
+        log_level: Union[int, str] = 'INFO',
+        log_dir: Optional[str] = None,
+        log_file: Optional[str] = None,
+        exp_name: Optional[str] = None,
+        **kwargs,
+    ) -> MMLogger:
         """Build a global asscessable MMLogger.
 
         Args:
@@ -588,12 +687,14 @@ class BaseStrategy(metaclass=ABCMeta):
 
         return self.logger
 
-    def state_dict(self,
-                   *,
-                   save_optimizer: bool = True,
-                   save_param_scheduler: bool = True) -> dict:
+    def state_dict(
+        self,
+        *,
+        save_optimizer: bool = True,
+        save_param_scheduler: bool = True,
+    ) -> dict:
         """Get the state of strategy.
-        
+
         The state of strategy contains the following items:
         - state_dict: The state dict of model.
         - optimizer: The state dict of optimizer.
@@ -604,7 +705,7 @@ class BaseStrategy(metaclass=ABCMeta):
                 the checkpoint. Defaults to True.
             save_param_scheduler (bool): Whether to save the param_scheduler
                 to the checkpoint. Defaults to True.
-        
+
         Returns:
             dict: The state of strategy.
         """
@@ -614,17 +715,18 @@ class BaseStrategy(metaclass=ABCMeta):
         # save optimizer state dict
         if save_optimizer and hasattr(self, 'optim_wrapper'):
             state_dict['optimizer'] = self.optim_state_dict()
-        
+
         # save param scheduler state dict
         if save_param_scheduler and not hasattr(self, 'param_schedulers'):
             self.logger.warning(
-                '`save_param_scheduler` is True but strategy has no param_schedulers '
-                'attribute, so skip saving parameter schedulers')
+                '`save_param_scheduler` is True but strategy has no '
+                'param_schedulers attribute, so skip saving parameter '
+                'schedulers')
             save_param_scheduler = False
 
         if save_param_scheduler:
             state_dict['param_schedulers'] = self.scheduler_state_dict()
-        
+
         return state_dict
 
     def model_state_dict(self) -> dict:
@@ -637,10 +739,9 @@ class BaseStrategy(metaclass=ABCMeta):
         if isinstance(self.optim_wrapper, OptimWrapper):
             return self.optim_wrapper.state_dict()
         else:
-            raise TypeError(
-                'self.optim_wrapper should be an `OptimWrapper` '
-                'or `OptimWrapperDict` instance, but got '
-                f'{self.optim_wrapper}')
+            raise TypeError('self.optim_wrapper should be an `OptimWrapper` '
+                            'or `OptimWrapperDict` instance, but got '
+                            f'{self.optim_wrapper}')
 
     def scheduler_state_dict(self) -> Union[dict, list]:
         """Get parameter scheduler state dict."""
@@ -657,59 +758,93 @@ class BaseStrategy(metaclass=ABCMeta):
                 state_list.append(scheduler.state_dict())
             return state_list
 
-    def load_state_dict(self, state_dict: dict, strict: bool = False, revise_keys: list = [(r'^module.', '')]) -> dict:
+    def load_state_dict(
+        self,
+        state_dict: dict,
+        strict: bool = False,
+        revise_keys: list = [(r'^module.', '')],
+    ) -> dict:
         """Load strategy state."""
-        self.load_model_state_dict(state_dict, strict=strict, revise_keys=revise_keys)
+        self.load_model_state_dict(
+            state_dict['state_dict'], strict=strict, revise_keys=revise_keys)
 
         # resume optimizer
         if 'optimizer' in state_dict:
-            self.load_optim_state_dict(state_dict)
-        
+            self.load_optim_state_dict(state_dict['optimizer'])
+
         # resume param scheduler
         if 'param_schedulers' in state_dict:
-            self.load_param_scheduler(state_dict)
+            self.load_param_scheduler(state_dict['param_schedulers'])
 
-    def load_model_state_dict(self,
-                              state_dict: dict,
-                              *,
-                              strict: bool = False,
-                              revise_keys: list = [(r'^module.', '')]) -> None:
+    def load_model_state_dict(
+        self,
+        state_dict: dict,
+        *,
+        strict: bool = False,
+        revise_keys: list = [(r'^module.', '')],
+    ) -> None:
         """Load model state from dict."""
         from mmengine.runner.checkpoint import _load_checkpoint_to_model
 
-        assert 'state_dict' in state_dict
         if is_model_wrapper(self.model):
             model = self.model.module
         else:
             model = self.model
 
-        _load_checkpoint_to_model(model, state_dict['state_dict'], strict, revise_keys)
-
+        _load_checkpoint_to_model(model, state_dict, strict, revise_keys)
 
     def load_optim_state_dict(self, state_dict: dict) -> None:
         """Load optimizer state from dict."""
-        assert 'optimizer' in state_dict
-        self.optim_wrapper.load_state_dict(state_dict['optimizer'])
+        self.optim_wrapper.load_state_dict(state_dict)
 
     def load_scheduler_state_dict(self, state_dict: dict) -> None:
         """Load scheduler state from dict."""
-        assert 'param_schedulers' in state_dict
         if isinstance(self.param_schedulers, dict):
             for name, schedulers in self.param_schedulers.items():
-                for scheduler, ckpt_scheduler in zip(
-                        schedulers, state_dict['param_schedulers'][name]):
+                for scheduler, ckpt_scheduler in zip(schedulers,
+                                                     state_dict[name]):
                     scheduler.load_state_dict(ckpt_scheduler)
         else:
             for scheduler, ckpt_scheduler in zip(
                     self.param_schedulers,  # type: ignore
-                    state_dict['param_schedulers']):
+                    state_dict):
                 scheduler.load_state_dict(ckpt_scheduler)
 
-    def load_checkpoint(self,
-                        filename: str,
-                        map_location: Union[str, Callable] = 'cpu',
-                        *,
-                        callback: Optional[Callable] = None) -> dict:
+    def load_or_resume(self) -> Optional[dict]:
+        """Load checkpoint or resume from checkpoint."""
+        from mmengine.runner import find_latest_checkpoint
+
+        if self._has_loaded:
+            return None
+
+        if not self._resume and self._load_from is None:
+            return None
+
+        # decide to load from checkpoint or resume from checkpoint
+        resume_from = None
+        if self._resume and self._load_from is None:
+            # auto resume from the latest checkpoint
+            resume_from = find_latest_checkpoint(self.work_dir)
+            self.logger.info(
+                f'Auto resumed from the latest checkpoint {resume_from}.')
+        elif self._resume and self._load_from is not None:
+            # resume from the specified checkpoint
+            resume_from = self._load_from
+
+        if resume_from is not None:
+            self._has_loaded = True
+            return self.resume(resume_from)
+        elif self._load_from is not None:
+            self._has_loaded = True
+            return self.load_checkpoint(self._load_from)
+
+    def load_checkpoint(
+        self,
+        filename: str,
+        *,
+        map_location: Union[str, Callable] = 'cpu',
+        callback: Optional[Callable] = None,
+    ) -> dict:
         """Load checkpoint from given ``filename``.
 
         Args:
@@ -721,7 +856,11 @@ class BaseStrategy(metaclass=ABCMeta):
         """
         from mmengine.runner.checkpoint import _load_checkpoint
 
-        checkpoint = _load_checkpoint(filename, map_location=map_location)
+        if map_location == 'default':
+            device = get_device()
+            checkpoint = _load_checkpoint(filename, map_location=device)
+        else:
+            checkpoint = _load_checkpoint(filename, map_location=map_location)
 
         # users can do some modification after loading checkpoint
         if callback is not None:
@@ -729,13 +868,46 @@ class BaseStrategy(metaclass=ABCMeta):
 
         return checkpoint
 
-    def save_checkpoint(self,
-                        filename: str,
-                        *,
-                        save_optimizer: bool = True,
-                        save_param_scheduler: bool = True,
-                        extra_ckpt: Optional[dict] = None,
-                        callback: Optional[Callable] = None) -> None:
+    def resume(
+        self,
+        filename: str,
+        *,
+        resume_optimizer: bool = True,
+        resume_param_scheduler: bool = True,
+        map_location: Union[str, Callable] = 'default',
+        callback: Optional[Callable] = None,
+    ) -> dict:
+        checkpoint = self.load_checkpoint(
+            filename, map_location=map_location, callback=callback)
+
+        if not resume_optimizer:
+            checkpoint.pop('optimizer', None)
+        if not resume_param_scheduler:
+            checkpoint.pop('param_schedulers', None)
+
+        # resume random seed
+        resumed_seed = checkpoint['meta'].get('seed', None)
+        current_seed = self._randomness.get('seed')
+        if resumed_seed is not None and resumed_seed != current_seed:
+            if current_seed is not None:
+                self.logger.warning(f'The value of random seed in the '
+                                    f'checkpoint "{resumed_seed}" is '
+                                    f'different from the value in '
+                                    f'`randomness` config "{current_seed}"')
+            self._randomness.update(seed=resumed_seed)
+            self._set_randomness(**self._randomness)
+
+        return checkpoint
+
+    def save_checkpoint(
+        self,
+        filename: str,
+        *,
+        save_optimizer: bool = True,
+        save_param_scheduler: bool = True,
+        extra_ckpt: Optional[dict] = None,
+        callback: Optional[Callable] = None,
+    ) -> None:
         """Save checkpoint to given ``filename``.
 
         Args:
@@ -747,18 +919,40 @@ class BaseStrategy(metaclass=ABCMeta):
             extra_ckpt (dict): Extra checkpoint to save. Defaults to None.
             callback (callable): Callback function to modify the checkpoint.
                 Defaults to None.
-            """
+        """
         from mmengine.runner.checkpoint import save_checkpoint
 
-        state_dict = self.state_dict(save_optimizer=save_optimizer,
-                                     save_param_scheduler=save_param_scheduler)
+        state_dict = self.state_dict(
+            save_optimizer=save_optimizer,
+            save_param_scheduler=save_param_scheduler)
 
         # save extra checkpoint passed by users
-        if extra_ckpt is not None:
-            state_dict.update(extra_ckpt)
-        
+        if extra_ckpt is None:
+            extra_ckpt = dict()
+        if 'meta' not in extra_ckpt:
+            extra_ckpt['meta'] = dict()
+        extra_ckpt['meta'].update(
+            seed=self.seed,
+            time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
+            mmengine=mmengine.__version__ + get_git_hash(),
+        )
+
+        state_dict.update(extra_ckpt)
+
         # users can do some modification before saving checkpoint
         if callback is not None:
             callback(state_dict)
 
         save_checkpoint(state_dict, filename)
+
+    def collect_env(self) -> Tuple[dict, dict]:
+        """Collect the information of the running environments."""
+        system_env = collect_env()
+        runtime_env = OrderedDict()
+        # TODO: need to add env_cfg
+        runtime_env.update(self.randomness)
+        runtime_env['Distributed launcher'] = self.launcher
+        runtime_env['Distributed training'] = self.distributed
+        runtime_env['GPU number'] = self.world_size
+
+        return system_env, runtime_env

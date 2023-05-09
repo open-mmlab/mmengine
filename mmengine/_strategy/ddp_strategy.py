@@ -25,7 +25,7 @@ class DDPStrategy(BaseStrategy):
             based on. ``enable`` is the switch to turn on and off the feature.
         sync_bn (str): Type of sync batch norm. Defaults to None.
             Options are 'torch' and 'mmcv'.
-        **kwargs: Other arguments for BaseStrategy.
+        **kwargs: Other arguments for :class:`BaseStrategy`.
     """
 
     def __init__(
@@ -38,41 +38,34 @@ class DDPStrategy(BaseStrategy):
     ):
         super().__init__(**kwargs)
         if model_wrapper is None:
-            # set broadcast_buffers as False to keep compatibility with OpenMMLab repos
+            # set broadcast_buffers as False to keep compatibility with
+            # OpenMMLab repos
             model_wrapper = dict(
                 type='MMDistributedDataParallel', broadcast_buffers=False)
         self.model_wrapper = model_wrapper
         self.auto_scale_lr = auto_scale_lr
         self.sync_bn = sync_bn
 
-    def setup_distributed(self,
-                          launcher,
-                          backend='nccl',
-                          **kwargs) -> Tuple[int, int]:
-        """Setup environment."""
-        if not is_distributed():
-            init_dist(launcher, backend, **kwargs)
-            self.rank, self.world_size = get_dist_info()
-
-    def prepare(self,
-                model: Union[nn.Module, dict],
-                *,
-                optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
-                param_scheduler: Optional[Union[_ParamScheduler, Dict,
-                                                List]] = None,
-                compile_target: str = 'forward',
-                checkpoint: Optional[dict] = None,
-                train_batch_size: Optional[int] = None,
-                num_batches_per_epoch: Optional[int] = None,
-                max_epochs: Optional[int] = None,
-                max_iters: Optional[int] = None,
-                cur_iter: Optional[int] = None,
-                **kwargs):
+    def prepare(
+        self,
+        model: Union[nn.Module, dict],
+        *,
+        optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
+        param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
+        compile_target: str = 'forward',
+        checkpoint: Optional[dict] = None,
+        train_batch_size: Optional[int] = None,
+        num_batches_per_epoch: Optional[int] = None,
+        max_epochs: Optional[int] = None,
+        max_iters: Optional[int] = None,
+        cur_iter: Optional[int] = None,
+        **kwargs,
+    ):
         """Prepare model and some components.
 
         Args:
-            model (:obj:`torch.nn.Module` or dict): The model to be run. It can be
-                a dict used for build a model.
+            model (:obj:`torch.nn.Module` or dict): The model to be run. It
+                can be a dict used for building a model.
 
         Kwargs:
             optim_wrapper (OptimWrapper or dict, optional):
@@ -91,8 +84,8 @@ class DDPStrategy(BaseStrategy):
                 Defaults to 'forward'.
             checkpoint (dict, optional): Checkpoint to load strategy state.
                 Defaults to None.
-            train_batch_size (int, optional): Batch size of training. It will be used
-                to scale the learning rate. Defaults to None.
+            train_batch_size (int, optional): Batch size of training. It will
+                be used to scale the learning rate. Defaults to None.
             num_batches_per_epoch (int, optional): Number of batches per epoch.
                 Defaults to None.
             max_epochs (int, optional): Number of epochs. Defaults to None.
@@ -124,6 +117,8 @@ class DDPStrategy(BaseStrategy):
                 param_scheduler, _default_args)
             return_items.append(self.param_schedulers)
 
+        if checkpoint is None:
+            checkpoint = self.load_or_resume()
         if checkpoint is not None:
             self.load_state_dict(checkpoint)
 
@@ -135,9 +130,27 @@ class DDPStrategy(BaseStrategy):
                 self.optim_wrapper.initialize_count_status(
                     self.model, cur_iter, max_iters)
 
-        return tuple(return_items)
+        return return_items[0] if len(return_items) == 1 else return_items
 
-    def _scale_lr(self, train_batch_size) -> None:
+    def setup_distributed(
+        self,
+        launcher: str = 'pytorch',
+        backend: str = 'nccl',
+        **kwargs,
+    ) -> Tuple[int, int]:
+        """Setup distributed environment.
+
+        Args:
+            launcher (str): Way to launcher multi processes. Supported
+                launchers are 'pytorch', 'mpi' and 'slurm'.
+            backend (str): Communication Backends. Supported backends are
+                'nccl', 'gloo' and 'mpi'. Defaults to 'nccl'.
+            **kwargs: Other arguments for :func:`init_dist`.
+        """
+        if not is_distributed():
+            init_dist(launcher, backend, **kwargs)
+
+    def _scale_lr(self, train_batch_size: int) -> None:
         """Automatically scaling learning rate in training according to the
         ratio of ``base_batch_size`` in ``autoscalelr_cfg`` and real batch
         size.
@@ -185,6 +198,15 @@ class DDPStrategy(BaseStrategy):
                 group['lr'] = group['lr'] * ratio
 
     def convert_model(self, model: nn.Module) -> nn.Module:
+        """convert all `BatchNorm` layers in the model to `SyncBatchNorm`
+        (SyncBN) or `mmcv.ops.sync_bn.SyncBatchNorm` (MMSyncBN) layers.
+
+        Args:
+            model (nn.Module): Model to be converted.
+
+        Returns:
+            nn.Module: Converted model.
+        """
         if self.sync_bn is not None:
             try:
                 model = convert_sync_batchnorm(model, self.sync_bn)
