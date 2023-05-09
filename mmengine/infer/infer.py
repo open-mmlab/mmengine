@@ -123,8 +123,8 @@ class BaseInferencer(metaclass=InferencerMeta):
         device (str, optional): Device to run inference. If None, the available
             device will be automatically used. Defaults to None.
         scope (str, optional): The scope of the model. Defaults to None.
-        show_progress (bool, optional): Control whether to display the progress bar
-            during the inference process. Defaults to True.
+        show_progress (bool): Control whether to display the progress bar during
+            the inference process. Defaults to True.
 
     Note:
         Since ``Inferencer`` could be used to infer batch data,
