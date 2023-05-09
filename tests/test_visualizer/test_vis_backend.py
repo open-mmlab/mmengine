@@ -12,8 +12,9 @@ import torch
 from mmengine import Config
 from mmengine.fileio import load
 from mmengine.registry import VISBACKENDS
-from mmengine.visualization import (LocalVisBackend, MLflowVisBackend,
-                                    TensorboardVisBackend, WandbVisBackend, ClearMLVisBackend)
+from mmengine.visualization import (ClearMLVisBackend, LocalVisBackend,
+                                    MLflowVisBackend, TensorboardVisBackend,
+                                    WandbVisBackend)
 
 
 class TestLocalVisBackend:
@@ -285,6 +286,7 @@ class TestMLflowVisBackend:
         mlflow_vis_backend.add_config(cfg)
         mlflow_vis_backend.close()
         shutil.rmtree('temp_dir')
+
 
 class TestClearMLVisBackend:
 
