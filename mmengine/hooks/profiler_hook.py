@@ -136,7 +136,6 @@ class ProfilerHook(Hook):
 
         self.json_trace_path = json_trace_path
 
-    @master_only
     def before_run(self, runner):
         """Initialize the profiler.
 
@@ -212,19 +211,16 @@ class ProfilerHook(Hook):
                 f'but got {self.on_trace_ready}')
         return _on_trace_ready
 
-    @master_only
     def after_train_epoch(self, runner):
         """Determine if the content is exported."""
         if self.by_epoch and runner.epoch == self.profile_times - 1:
             self._export_chrome_trace(runner)
 
-    @master_only
     def after_train_iter(self, runner, batch_idx, data_batch, outputs):
         """Update the content according to the schedule, and determine if the
         content is exported."""
-        if self.schedule is None:
-            self.profiler.step()
         if not self.by_epoch and runner.iter == self.profile_times - 1:
+            self.profiler.step()
             self._export_chrome_trace(runner)
 
     def _export_chrome_trace(self, runner):
