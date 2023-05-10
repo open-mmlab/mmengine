@@ -229,19 +229,15 @@ class ProfilerHook(Hook):
     def after_train_epoch(self, runner):
         """Determine if the content is exported."""
         # `after_train_epoch` will also be called in IterBasedTrainLoop.
-        # Call `_export_chrome_trace` only when `self._closed` is False.
+        # Here we check `self._closed` to avoid exiting twice.
         if not self._closed:
             self._export_chrome_trace(runner)
 
     def after_train_iter(self, runner, batch_idx, data_batch, outputs):
         """Update the content according to the schedule, and determine if the
         content is exported."""
-        if self.by_epoch and runner.epoch == 0:
+        if not self._closed:
             self.profiler.step()
-
-        if not self.by_epoch and runner.iter < self.profile_times:
-            self.profiler.step()
-
         if runner.iter == self.profile_times - 1 and not self.by_epoch:
             self._export_chrome_trace(runner)
 
