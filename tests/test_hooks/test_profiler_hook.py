@@ -85,7 +85,7 @@ class TestProfilerHook(RunnerTestCase):
             dict(
                 type='ProfilerHook',
                 on_trace_ready=dict(
-                    type='tb_trace', dir_name='/home/baymax/RunTime/tb'))
+                    type='tb_trace', dir_name=self.temp_dir.name))
         ]
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
