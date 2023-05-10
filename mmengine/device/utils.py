@@ -6,6 +6,7 @@ import torch
 
 try:
     import torch_npu  # noqa: F401
+    import torch_npu.npu.utils as npu_utils
 
     # Enable operator support for dynamic shape and
     # binary operator support on the NPU.
@@ -60,6 +61,13 @@ def is_mps_available() -> bool:
     It's specialized for mac m1 chips and require torch version 1.12 or higher.
     """
     return hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
+
+
+def is_npu_support_full_precision() -> bool:
+    """Returns True if npu devices support full precision training."""
+    version_of_support_full_precision = 220
+    return IS_NPU_AVAILABLE and npu_utils.get_soc_version(
+    ) >= version_of_support_full_precision
 
 
 DEVICE = 'cpu'
