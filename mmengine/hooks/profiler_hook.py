@@ -48,8 +48,7 @@ class ProfilerHook(Hook):
             of generating handler. Defaults to None, which means profiling
             without an on_trace_ready.The Callable type needs to construct its
             own function that can handle 'torch.autograd.profiler.profile'.
-            Two officially recommended ways are provided, namely terminal
-            display or tensorboard display.
+            Two officially recommended ways are provided:
 
             - ``schedule=dict(type='log_trace')``: Print the profiling result
               in the terminal See more details in the `official tutorial`_.
