@@ -149,6 +149,7 @@ class ProfilerHook(Hook):
         self.with_flops = with_flops
 
         self.json_trace_path = json_trace_path
+        self._closed = False
 
     def before_run(self, runner):
         """Initialize the profiler.
@@ -227,18 +228,26 @@ class ProfilerHook(Hook):
 
     def after_train_epoch(self, runner):
         """Determine if the content is exported."""
-        if self.by_epoch and runner.epoch == self.profile_times - 1:
+        # `after_train_epoch` will also be called in IterBasedTrainLoop.
+        # Call `_export_chrome_trace` only when `self._closed` is False.
+        if not self._closed:
             self._export_chrome_trace(runner)
 
     def after_train_iter(self, runner, batch_idx, data_batch, outputs):
         """Update the content according to the schedule, and determine if the
         content is exported."""
-        if not self.by_epoch and runner.iter == self.profile_times - 1:
+        if self.by_epoch and runner.epoch == 0:
             self.profiler.step()
+
+        if not self.by_epoch and runner.iter < self.profile_times:
+            self.profiler.step()
+
+        if runner.iter == self.profile_times - 1 and not self.by_epoch:
             self._export_chrome_trace(runner)
 
     def _export_chrome_trace(self, runner):
         """Exporting content."""
+        self._closed = True
         runner.logger.info('profiler may take a few minutes...')
         self.profiler.__exit__(None, None, None)
         if self.json_trace_path is not None:
