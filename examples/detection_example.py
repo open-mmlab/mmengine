@@ -1,12 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
-import os
 
 import torch
-import torchvision
 import torchvision.transforms as transforms
-from PIL import Image
-from pycocotools.coco import COCO
+from coco_utils import get_coco
 from torch.optim import SGD
 from torchvision.models.detection import maskrcnn_resnet50_fpn
 from torchvision.models.detection.mask_rcnn import \
@@ -75,74 +72,6 @@ class Accuracy(BaseMetric):
         return {'accuracy': accuracy}
 
 
-class COCODataset(torch.utils.data.Dataset):
-
-    def __init__(self, root, annotation, transforms=None):
-        self.root = root
-        self.transforms = transforms
-        self.coco = COCO(annotation)
-        self.ids = list(sorted(self.coco.imgs.keys()))
-
-    def __getitem__(self, index):
-        # COCO annotation
-        coco = self.coco
-        # Image ID
-        img_id = self.ids[index]
-        print(f'img_id: {img_id}')
-        # List of annotation IDs for the image
-        ann_ids = coco.getAnnIds(imgIds=img_id)
-        # Annotation for the image
-        coco_annotation = coco.loadAnns(ann_ids)
-
-        # Path of the input image
-        path = coco.loadImgs(img_id)[0]['file_name']
-        # Open the input image
-        img = Image.open(os.path.join(self.root, path)).convert('RGB')
-
-        # Bounding boxes for objects
-        boxes = []
-        # Labels for objects
-        labels = []
-        # Areas of bounding boxes
-        areas = []
-        for obj in coco_annotation:
-            # In COCO format, bbox = [xmin, ymin, width, height]
-            # Convert it to [xmin, ymin, xmax, ymax]
-            xmin = obj['bbox'][0]
-            ymin = obj['bbox'][1]
-            xmax = xmin + obj['bbox'][2]
-            ymax = ymin + obj['bbox'][3]
-            boxes.append([xmin, ymin, xmax, ymax])
-
-            # The labels in the label_map start from 1, so subtract 1 from the
-            # category ID
-            labels.append(obj['category_id'] - 1)
-
-            areas.append(obj['area'])
-
-        # Convert the lists to tensors
-        boxes = torch.as_tensor(boxes, dtype=torch.float32)
-        labels = torch.as_tensor(labels, dtype=torch.int64)
-        areas = torch.as_tensor(areas, dtype=torch.float32)
-        iscrowd = torch.zeros((len(coco_annotation), ), dtype=torch.int64)
-
-        # Annotation is in dictionary format
-        my_annotation = {}
-        my_annotation['boxes'] = boxes
-        my_annotation['labels'] = labels
-        my_annotation['image_id'] = torch.tensor([img_id])
-        my_annotation['area'] = areas
-        my_annotation['iscrowd'] = iscrowd
-
-        if self.transforms is not None:
-            img = self.transforms(img)
-
-        return img, my_annotation
-
-    def __len__(self):
-        return len(self.ids)
-
-
 def parse_args():
     parser = argparse.ArgumentParser(description='Distributed Training')
     parser.add_argument(
@@ -166,35 +95,35 @@ def collate_fn(batch):
 def main():
     args = parse_args()
     norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
-    train_dataset = torchvision.datasets.CocoDetection(
+    train_dataset = get_coco(
         root=r'data/COCO128/train',
-        annFile=r'data/COCO128/train/_annotations.coco.json',
+        image_set='train',
         transforms=transforms.Compose([
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(**norm_cfg)
         ]))
-    val_dataset = torchvision.datasets.CocoDetection(
+    val_dataset = get_coco(
         root=r'data/COCO128/valid',
-        annFile=r'data/COCO128/valid/_annotations.coco.json',
+        image_set='val',
         transforms=transforms.Compose([
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(**norm_cfg)
         ]))
-
     train_dataloader = torch.utils.data.DataLoader(
         dataset=train_dataset,
         batch_size=32,
-        shuffle=True,
-        collate_fn='default_collate')
+        sampler=dict(type='DefaultSampler', shuffle=False),
+        collate_fn=dict(type='default_collate'))
     val_dataloader = torch.utils.data.DataLoader(
         dataset=val_dataset,
         batch_size=32,
-        shuffle=True,
-        collate_fn='default_collate')
+        sampler=dict(type='DefaultSampler', shuffle=False),
+        collate_fn=dict(type='default_collate'))
+
     runner = Runner(
         model=MMMaskRCNN(),
         work_dir='./work_dir',
