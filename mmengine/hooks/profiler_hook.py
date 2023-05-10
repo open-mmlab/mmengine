@@ -150,7 +150,6 @@ class ProfilerHook(Hook):
 
         self.json_trace_path = json_trace_path
 
-    @master_only
     def before_run(self, runner):
         """Initialize the profiler.
 
