@@ -255,10 +255,7 @@ class TestLogProcessor(RunnerTestCase):
 
     def test_get_iter(self):
         log_processor = LogProcessor()
-        # Get global iter when `inner_iter=False`
-        iter = log_processor._get_iter(self.runner)
-        assert iter == 11
-        # Get inner iter
+        # Get batch_idx
         iter = log_processor._get_iter(self.runner, 1)
         assert iter == 2
         # Still get global iter when `logger_hook.by_epoch==False`

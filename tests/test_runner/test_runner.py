@@ -1802,6 +1802,16 @@ class TestRunner(TestCase):
             log = f.read()
         self.assertIn('Epoch(train) [1][4/4]', log)
 
+        # 14. test_loop will not be built
+        for cfg in (self.epoch_based_cfg, self.iter_based_cfg):
+            cfg = copy.deepcopy(cfg)
+            cfg.experiment_name = 'test_train14'
+            runner = Runner.from_cfg(cfg)
+            runner.train()
+            self.assertIsInstance(runner._train_loop, BaseLoop)
+            self.assertIsInstance(runner._val_loop, BaseLoop)
+            self.assertIsInstance(runner._test_loop, dict)
+
     @skipIf(
         SKIP_TEST_COMPILE,
         reason='torch.compile is not valid, please install PyTorch>=2.0.0')
@@ -1880,6 +1890,15 @@ class TestRunner(TestCase):
             self.assertIn(predictions[0].dtype,
                           (torch.float16, torch.bfloat16))
 
+        # train_loop and test_loop will not be built
+        for cfg in (self.epoch_based_cfg, self.iter_based_cfg):
+            cfg = copy.deepcopy(cfg)
+            cfg.experiment_name = 'test_val4'
+            runner = Runner.from_cfg(cfg)
+            runner.val()
+            self.assertIsInstance(runner._train_loop, dict)
+            self.assertIsInstance(runner._test_loop, dict)
+
     @skipIf(
         SKIP_TEST_COMPILE,
         reason='torch.compile is not valid, please install PyTorch>=2.0.0')
@@ -1939,7 +1958,7 @@ class TestRunner(TestCase):
         predictions.clear()
 
         # Test fp16 `autocast` context.
-        cfg.experiment_name = 'test_val3'
+        cfg.experiment_name = 'test_test3'
         cfg.test_cfg = dict(fp16=True)
         runner = Runner.from_cfg(cfg)
         runner.model.register_forward_hook(get_outputs_callback)
@@ -1951,6 +1970,14 @@ class TestRunner(TestCase):
             runner.test()
             self.assertIn(predictions[0].dtype,
                           (torch.float16, torch.bfloat16))
+        # train_loop and val_loop will not be built
+        for cfg in (self.epoch_based_cfg, self.iter_based_cfg):
+            cfg = copy.deepcopy(cfg)
+            cfg.experiment_name = 'test_test4'
+            runner = Runner.from_cfg(cfg)
+            runner.test()
+            self.assertIsInstance(runner._train_loop, dict)
+            self.assertIsInstance(runner._val_loop, dict)
 
     @skipIf(
         SKIP_TEST_COMPILE,

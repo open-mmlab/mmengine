@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 
 from mmengine.config import Config, ConfigDict
-from mmengine.device import is_npu_available
+from mmengine.device import is_npu_available, is_npu_support_full_precision
 from mmengine.registry import OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS
 from .optimizer_wrapper import OptimWrapper
 
@@ -128,9 +128,9 @@ def build_optim_wrapper(model: nn.Module,
     paramwise_cfg = optim_wrapper_cfg.pop('paramwise_cfg', None)
 
     # Since the current generation of NPU(Ascend 910) only supports
-    # mixed precision training, here we turn on mixed precision by default
-    # on the NPU to make the training normal
-    if is_npu_available():
+    # mixed precision training, here we turn on mixed precision
+    # to make the training normal
+    if is_npu_available() and not is_npu_support_full_precision():
         optim_wrapper_cfg['type'] = 'AmpOptimWrapper'
 
     optim_wrapper_constructor = OPTIM_WRAPPER_CONSTRUCTORS.build(
