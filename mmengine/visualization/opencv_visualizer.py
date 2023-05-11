@@ -26,6 +26,18 @@ from mmengine.visualization.utils import (check_type, check_type_and_length,
                                           value2list, wait_continue)
 from mmengine.visualization.vis_backend import BaseVisBackend
 
+ALIGN_TO_ANCHOR = {
+    ('top', 'left'): cv2.FONT_HERSHEY_SIMPLEX,
+    ('top', 'center'): cv2.FONT_HERSHEY_SIMPLEX | cv2.FONT_ITALIC,
+    ('top', 'right'): cv2.FONT_HERSHEY_SIMPLEX | cv2.FONT_ITALIC,
+    ('center', 'left'): cv2.FONT_HERSHEY_SIMPLEX,
+    ('center', 'center'): cv2.FONT_HERSHEY_SIMPLEX | cv2.FONT_ITALIC,
+    ('center', 'right'): cv2.FONT_HERSHEY_SIMPLEX | cv2.FONT_ITALIC,
+    ('bottom', 'left'): cv2.FONT_HERSHEY_SIMPLEX,
+    ('bottom', 'center'): cv2.FONT_HERSHEY_SIMPLEX | cv2.FONT_ITALIC,
+    ('bottom', 'right'): cv2.FONT_HERSHEY_SIMPLEX | cv2.FONT_ITALIC,
+}
+
 
 @VISUALIZERS.register_module()
 class openCVVisualizer(ManagerMixin):
@@ -419,7 +431,8 @@ class openCVVisualizer(ManagerMixin):
         texts: Union[str, List[str]],
         positions: Union[np.ndarray, torch.Tensor],
         font_sizes: Optional[Union[int, List[int]]] = None,
-        colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+        colors: Union[tuple,
+                      List[tuple]] = (0, 255, 0),  # Default color is green
         vertical_alignments: Union[str, List[str]] = 'top',
         horizontal_alignments: Union[str, List[str]] = 'left',
         font_families: Union[str, List[str]] = 'sans-serif',
@@ -488,73 +501,73 @@ class openCVVisualizer(ManagerMixin):
                 Defaults to None.
                 `New in version 0.6.0.`
         """  # noqa: E501
-        from matplotlib.font_manager import FontProperties
-        check_type('texts', texts, (str, list))
-        if isinstance(texts, str):
-            texts = [texts]
-        num_text = len(texts)
         check_type('positions', positions, (np.ndarray, torch.Tensor))
         positions = tensor2ndarray(positions)
-        if len(positions.shape) == 1:
-            positions = positions[None]
-        assert positions.shape == (num_text, 2), (
-            '`positions` should have the shape of '
-            f'({num_text}, 2), but got {positions.shape}')
-        if not self._is_posion_valid(positions):
-            warnings.warn(
-                'Warning: The text is out of bounds,'
-                ' the drawn text may not be in the image', UserWarning)
-        positions = positions.tolist()
+        assert positions.ndim == 2 and positions.shape[1] == 2, (
+            '`positions` should be a matrix with shape (N, 2), '
+            f'but got shape {positions.shape}')
+        positions = positions.astype(int)
+
+        check_type_and_length('texts', texts, (str, list), positions.shape[0])
+        texts = value2list(texts, str, positions.shape[0])
 
         if font_sizes is None:
-            font_sizes = self._default_font_size
-        check_type_and_length('font_sizes', font_sizes, (int, float, list),
-                              num_text)
-        font_sizes = value2list(font_sizes, (int, float), num_text)
+            font_sizes = 10
+        check_type_and_length('font_sizes', font_sizes, (int, list),
+                              positions.shape[0])
+        font_sizes = value2list(font_sizes, int, positions.shape[0])
 
-        check_type_and_length('colors', colors, (str, tuple, list), num_text)
-        colors = value2list(colors, (str, tuple), num_text)
-        colors = color_val_matplotlib(colors)  # type: ignore
+        check_type_and_length('colors', colors, (tuple, list),
+                              positions.shape[0])
+        colors = value2list(colors, tuple, positions.shape[0])
 
         check_type_and_length('vertical_alignments', vertical_alignments,
-                              (str, list), num_text)
-        vertical_alignments = value2list(vertical_alignments, str, num_text)
+                              (str, list), positions.shape[0])
+        vertical_alignments = value2list(vertical_alignments, str,
+                                         positions.shape[0])
 
         check_type_and_length('horizontal_alignments', horizontal_alignments,
-                              (str, list), num_text)
+                              (str, list), positions.shape[0])
         horizontal_alignments = value2list(horizontal_alignments, str,
-                                           num_text)
+                                           positions.shape[0])
 
-        check_type_and_length('font_families', font_families, (str, list),
-                              num_text)
-        font_families = value2list(font_families, str, num_text)
+        for idx, (text, position, font_size, color, vertical_alignment,
+                  horizontal_alignment) in enumerate(
+                      zip(
+                          texts,
+                          positions,
+                          font_sizes,
+                          colors,
+                          vertical_alignments,
+                          horizontal_alignments,
+                      )):
+            x, y = position
+            font_face = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = font_size / 10.0
+            thickness = 1
 
-        if font_properties is None:
-            font_properties = [None for _ in range(num_text)]  # type: ignore
-        else:
-            check_type_and_length('font_properties', font_properties,
-                                  (FontProperties, list), num_text)
-            font_properties = value2list(font_properties, FontProperties,
-                                         num_text)
+            text_size, _ = cv2.getTextSize(text, font_face, font_scale,
+                                           thickness)
 
-        if bboxes is None:
-            bboxes = [None for _ in range(num_text)]  # type: ignore
-        else:
-            check_type_and_length('bboxes', bboxes, (dict, list), num_text)
-            bboxes = value2list(bboxes, dict, num_text)
+            if bboxes is not None:
+                bbox = bboxes[idx]
+                if 'color' in bbox:
+                    bbox_color = color_str2rgb(bbox['color'])
+                else:
+                    bbox_color = color
 
-        for i in range(num_text):
-            self.ax_save.text(
-                positions[i][0],
-                positions[i][1],
-                texts[i],
-                size=font_sizes[i],  # type: ignore
-                bbox=bboxes[i],  # type: ignore
-                verticalalignment=vertical_alignments[i],
-                horizontalalignment=horizontal_alignments[i],
-                family=font_families[i],
-                fontproperties=font_properties[i],
-                color=colors[i])
+                if 'thickness' in bbox:
+                    bbox_thickness = bbox['thickness']
+                else:
+                    bbox_thickness = 1
+
+                cv2.rectangle(self._image, (x, y - text_size[1]),
+                              (x + text_size[0], y), bbox_color,
+                              bbox_thickness)
+
+            cv2.putText(self._image, text, (x, y), font_face, font_scale,
+                        color, thickness)
+
         return self
 
     @master_only
@@ -729,10 +742,11 @@ class openCVVisualizer(ManagerMixin):
     def draw_bboxes(
         self,
         bboxes: Union[np.ndarray, torch.Tensor],
-        edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+        edge_colors: Union[str, tuple, List[Union[str, tuple]]] = (0, 255, 0),
         line_styles: Union[str, List[str]] = '-',
-        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
-        face_colors: Union[str, tuple, List[str], List[tuple]] = 'none',
+        line_widths: Union[int, float, List[Union[int, float]]] = 2,
+        face_colors: Union[str, tuple, List[Union[str,
+                                                  tuple]]] = (255, 178, 194),
         alpha: Union[int, float] = 0.8,
     ) -> 'openCVVisualizer':
         """Draw single or multiple bboxes.
@@ -765,7 +779,6 @@ class openCVVisualizer(ManagerMixin):
         """
         check_type('bboxes', bboxes, (np.ndarray, torch.Tensor))
         bboxes = tensor2ndarray(bboxes)
-
         if len(bboxes.shape) == 1:
             bboxes = bboxes[None]
         assert bboxes.shape[-1] == 4, (
@@ -777,28 +790,33 @@ class openCVVisualizer(ManagerMixin):
             warnings.warn(
                 'Warning: The bbox is out of bounds,'
                 ' the drawn bbox may not be in the image', UserWarning)
-        poly = np.stack(
-            (bboxes[:, 0], bboxes[:, 1], bboxes[:, 2], bboxes[:, 1],
-             bboxes[:, 2], bboxes[:, 3], bboxes[:, 0], bboxes[:, 3]),
-            axis=-1).reshape(-1, 4, 2)
-        poly = [p for p in poly]
-        return self.draw_polygons(
-            poly,
-            alpha=alpha,
-            edge_colors=edge_colors,
-            line_styles=line_styles,
-            line_widths=line_widths,
-            face_colors=face_colors)
+        if not isinstance(edge_colors, list):
+            edge_colors = [edge_colors] * len(bboxes)
+        if not isinstance(face_colors, list):
+            face_colors = [face_colors] * len(bboxes)
+        if not isinstance(line_widths, list):
+            line_widths = [line_widths] * len(bboxes)
+
+        for points, edge_color, face_color, line_width in zip(
+                bboxes, edge_colors, face_colors, line_widths):
+            start = (int(points[0]), int(points[1]))
+            end = (int(points[2]), int(points[3]))
+            cv2.rectangle(self._image, start, end, face_color,
+                          -1)  # Fill the rectangle
+            cv2.rectangle(self._image, start, end, edge_color,
+                          line_width)  # Outline the rectangle
+
+        return self
 
     @master_only
     def draw_polygons(
         self,
         polygons: Union[Union[np.ndarray, torch.Tensor],
                         List[Union[np.ndarray, torch.Tensor]]],
-        edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+        edge_colors: Union[str, tuple, List[Union[str, tuple]]] = (0, 255, 0),
         line_styles: Union[str, List[str]] = '-',
-        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
-        face_colors: Union[str, tuple, List[str], List[tuple]] = 'none',
+        line_widths: List[Union[int, float]] = [2],
+        face_colors: Union[str, tuple, List[Union[str, tuple]]] = (0, 0, 0),
         alpha: Union[int, float] = 0.8,
     ) -> 'openCVVisualizer':
         """Draw single or multiple bboxes.
@@ -830,10 +848,7 @@ class openCVVisualizer(ManagerMixin):
             alpha (Union[int, float]): The transparency of polygons.
                 Defaults to 0.8.
         """
-        from matplotlib.collections import PolyCollection
         check_type('polygons', polygons, (list, np.ndarray, torch.Tensor))
-        edge_colors = color_val_matplotlib(edge_colors)  # type: ignore
-        face_colors = color_val_matplotlib(face_colors)  # type: ignore
 
         if isinstance(polygons, (np.ndarray, torch.Tensor)):
             polygons = [polygons]
@@ -848,21 +863,22 @@ class openCVVisualizer(ManagerMixin):
                 warnings.warn(
                     'Warning: The polygon is out of bounds,'
                     ' the drawn polygon may not be in the image', UserWarning)
-        if isinstance(line_widths, (int, float)):
-            line_widths = [line_widths] * len(polygons)
-        line_widths = [
-            min(max(linewidth, 1), self._default_font_size / 4)
-            for linewidth in line_widths
-        ]
-        polygon_collection = PolyCollection(
-            polygons,
-            alpha=alpha,
-            facecolor=face_colors,
-            linestyles=line_styles,
-            edgecolors=edge_colors,
-            linewidths=line_widths)
+        assert len(polygons) == len(
+            edge_colors), 'Number of polygons and edge colors must match'
+        assert len(polygons) == len(
+            line_widths), 'Number of polygons and line widths must match'
+        if face_colors is not None:
+            assert len(polygons) == len(
+                face_colors), 'Number of polygons and face colors must match'
 
-        self.ax_save.add_collection(polygon_collection)
+        for i, polygon in enumerate(polygons):
+            assert polygon.shape[1] == 2, f'Invalid shape for polygon {i + 1}'
+            polygon = polygon.reshape((-1, 1, 2)).astype(np.int32)
+            if face_colors is not None:
+                cv2.fillPoly(self._image, [polygon], face_colors[i])
+            cv2.polylines(self._image, [polygon], True, edge_colors[i],
+                          line_widths[i])
+
         return self
 
     @master_only
