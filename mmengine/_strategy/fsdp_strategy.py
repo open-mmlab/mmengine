@@ -41,7 +41,6 @@ FSDP_CONFIGS.register_module(module=ShardedOptimStateDictConfig)
 
 @STRATEGIES.register_module()
 class FSDPStrategy(DDPStrategy):
-
     def __init__(self,
                  *,
                  model_wrapper: Optional[dict] = None,

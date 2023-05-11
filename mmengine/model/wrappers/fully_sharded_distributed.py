@@ -6,22 +6,24 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 from torch.distributed import ProcessGroup
-from torch.distributed.fsdp.api import (
-    FullStateDictConfig, LocalOptimStateDictConfig, LocalStateDictConfig,
-    OptimStateDictConfig, ShardedOptimStateDictConfig, ShardedStateDictConfig,
-    ShardingStrategy, StateDictConfig, StateDictSettings, StateDictType)
+from torch.distributed.fsdp.api import (FullStateDictConfig,
+                                        LocalOptimStateDictConfig,
+                                        LocalStateDictConfig,
+                                        OptimStateDictConfig,
+                                        ShardedOptimStateDictConfig,
+                                        ShardedStateDictConfig,
+                                        ShardingStrategy, StateDictConfig,
+                                        StateDictSettings, StateDictType)
 from torch.distributed.fsdp.fully_sharded_data_parallel import (
     BackwardPrefetch, CPUOffload, FullOptimStateDictConfig,
     FullyShardedDataParallel, LocalOptimStateDictConfig, MixedPrecision,
     ShardedOptimStateDictConfig)
 
 from mmengine.optim import OptimWrapper
-from mmengine.registry import MODEL_WRAPPERS, Registry
+from mmengine.registry import FUNCTIONS, MODEL_WRAPPERS
 from mmengine.registry.root import FUNCTIONS
 from mmengine.structures import BaseDataElement
 from mmengine.utils import digit_version, is_seq_of
-
-FSDP_WRAP_POLICIES = Registry('fsdp wrap policy')
 
 
 @MODEL_WRAPPERS.register_module()
@@ -134,8 +136,12 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                 f'or `CPUOffload`, but has type {type(cpu_offload)}')
 
         if isinstance(auto_wrap_policy, str):
-            auto_wrap_policy = FSDP_WRAP_POLICIES.get(  # type: ignore
+            auto_wrap_policy = FUNCTIONS.get(  # type: ignore
                 auto_wrap_policy)
+        elif isinstance(auto_wrap_policy, dict):
+            ori_func = FUNCTIONS.get(  # type: ignore
+                auto_wrap_policy.pop('type'))
+            auto_wrap_policy = partial(ori_func, **auto_wrap_policy)
         if not (isinstance(auto_wrap_policy, Callable)
                 or auto_wrap_policy is None):  # type: ignore
             raise TypeError('Registered `fsdp_auto_wrap_policy` needs to be '
