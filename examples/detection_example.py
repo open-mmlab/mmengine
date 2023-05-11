@@ -2,8 +2,8 @@
 import argparse
 
 import torch
+import torchvision
 import torchvision.transforms as transforms
-from coco_utils import get_coco
 from torch.optim import SGD
 from torchvision.models.detection import maskrcnn_resnet50_fpn
 from torchvision.models.detection.mask_rcnn import \
@@ -23,6 +23,7 @@ class MMMaskRCNN(BaseModel):
 
     def forward(self, images, targets, mode):
         if mode == 'loss':
+            print(f'TARGET: {targets}')
             loss_dict = self.model(images, targets)
             return loss_dict
         elif mode == 'predict':
@@ -95,30 +96,28 @@ def collate_fn(batch):
 def main():
     args = parse_args()
     norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
-    train_dataset = get_coco(
+    train_dataset = torchvision.datasets.CocoDetection(
         root=r'data/COCO128/train',
-        image_set='train',
-        transforms=transforms.Compose([
+        annFile=r'data/COCO128/train/_annotations.coco.json',
+        transform=transforms.Compose([
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(**norm_cfg)
         ]))
-    val_dataset = get_coco(
+    val_dataset = torchvision.datasets.CocoDetection(
         root=r'data/COCO128/valid',
-        image_set='val',
-        transforms=transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(**norm_cfg)
-        ]))
-    train_dataloader = torch.utils.data.DataLoader(
+        annFile=r'data/COCO128/valid/_annotations.coco.json',
+        transform=transforms.Compose(
+            [transforms.ToTensor(),
+             transforms.Normalize(**norm_cfg)]))
+    # print(train_dataset[0])
+    train_dataloader = dict(
         dataset=train_dataset,
         batch_size=32,
         sampler=dict(type='DefaultSampler', shuffle=False),
         collate_fn=dict(type='default_collate'))
-    val_dataloader = torch.utils.data.DataLoader(
+    val_dataloader = dict(
         dataset=val_dataset,
         batch_size=32,
         sampler=dict(type='DefaultSampler', shuffle=False),

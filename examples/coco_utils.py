@@ -228,8 +228,8 @@ class CocoDetection(torchvision.datasets.CocoDetection):
 
 def get_coco(root, image_set, transforms, mode='instances'):
     PATHS = {
-        'train': ('data/COCO128/train', '_annotations.coco.json'),
-        'val': ('data/COCO128/valid', '_annotations.coco.json'),
+        'train': ('', '_annotations.coco.json'),
+        'val': ('', '_annotations.coco.json'),
     }
 
     t = [ConvertCocoPolysToMask()]
