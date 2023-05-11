@@ -54,7 +54,6 @@ class ProfilerHook(Hook):
               in the terminal See more details in the `official tutorial`_.
               The configurable arguments is the same as
               ``prof.key_averages().table``
-
             - ``scheduler=dict(type='tb_trace')``: Profile the performance
                with tensorboard. See more details in the tutorial
                `profile with tensorboard`_.
