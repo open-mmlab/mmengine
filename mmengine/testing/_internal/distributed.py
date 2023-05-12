@@ -67,6 +67,9 @@ class MultiProcessTestCase(TestCase):
     def _should_stop_test_suite(self) -> bool:
         return False
 
+    def prepare_subprocess(self):
+        pass
+
     @property
     def world_size(self) -> int:
         return 2
@@ -169,7 +172,7 @@ class MultiProcessTestCase(TestCase):
     def _run(cls, rank: int, test_name: str, file_name: str,
              parent_pipe) -> None:
         self = cls(test_name)
-
+        self.prepare_subprocess()
         self.rank = rank
         self.file_name = file_name
         self.run_test(test_name, parent_pipe)

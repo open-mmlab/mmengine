@@ -13,6 +13,11 @@ else:
     array_method.append(torch.tensor)
 
 
+@HistoryBuffer.register_statistics
+def custom_statistics(self):
+    return -1
+
+
 class TestLoggerBuffer:
 
     def test_init(self):
@@ -112,10 +117,5 @@ class TestLoggerBuffer:
             log_buffer.statistics('unknown')
 
     def test_register_statistics(self):
-
-        @HistoryBuffer.register_statistics
-        def custom_statistics(self):
-            return -1
-
         log_buffer = HistoryBuffer()
         assert log_buffer.statistics('custom_statistics') == -1

@@ -75,7 +75,7 @@ class ComplexModel(BaseModel):
 
 class TestDistributedDataParallel(MultiProcessTestCase):
 
-    def setUp(self) -> None:
+    def setUp(self):
         super().setUp()
         self._spawn_processes()
 

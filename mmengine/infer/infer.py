@@ -123,6 +123,9 @@ class BaseInferencer(metaclass=InferencerMeta):
         device (str, optional): Device to run inference. If None, the available
             device will be automatically used. Defaults to None.
         scope (str, optional): The scope of the model. Defaults to None.
+        show_progress (bool): Control whether to display the progress bar during
+            the inference process. Defaults to True.
+            `New in version 0.7.4.`
 
     Note:
         Since ``Inferencer`` could be used to infer batch data,
@@ -139,7 +142,8 @@ class BaseInferencer(metaclass=InferencerMeta):
                  model: Union[ModelType, str, None] = None,
                  weights: Optional[str] = None,
                  device: Optional[str] = None,
-                 scope: Optional[str] = None) -> None:
+                 scope: Optional[str] = None,
+                 show_progress: bool = True) -> None:
         if scope is None:
             default_scope = DefaultScope.get_current_instance()
             if default_scope is not None:
@@ -178,6 +182,7 @@ class BaseInferencer(metaclass=InferencerMeta):
         self.collate_fn = self._init_collate(cfg)
         self.visualizer = self._init_visualizer(cfg)
         self.cfg = cfg
+        self.show_progress = show_progress
 
     def __call__(
         self,
@@ -213,7 +218,8 @@ class BaseInferencer(metaclass=InferencerMeta):
         inputs = self.preprocess(
             ori_inputs, batch_size=batch_size, **preprocess_kwargs)
         preds = []
-        for data in track(inputs, description='Inference'):
+        for data in (track(inputs, description='Inference')
+                     if self.show_progress else inputs):
             preds.extend(self.forward(data, **forward_kwargs))
         visualization = self.visualize(
             ori_inputs, preds,
