@@ -17,7 +17,7 @@ class MMResNet50(BaseModel):
         self.resnet = torchvision.models.resnet50()
 
     def forward(self, imgs, labels, mode):
-        x = self.resnet(imgs.half())
+        x = self.resnet(imgs)
         if mode == 'loss':
             return {'loss': F.cross_entropy(x, labels.long())}
         elif mode == 'predict':
@@ -86,7 +86,6 @@ def main():
         type='DeepSpeedStrategy',
         fp16=dict(
             enabled=True,
-            # auto_cast=True,
             fp16_master_weights_and_grads=False,
             loss_scale=0,
             loss_scale_window=500,
@@ -94,6 +93,7 @@ def main():
             min_loss_scale=1,
             initial_scale_power=15,
         ),
+        inputs_to_half=[0],
         zero_optimization=dict(
             stage=2,
             allgather_partitions=True,
