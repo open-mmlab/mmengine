@@ -945,13 +945,14 @@ class ClearMLVisBackend(BaseVisBackend):
     def close(self) -> None:
         """Close the clearml."""
         file_paths: List[str] = list()
-        for filename in scandir(self._cfg.work_dir, self._artifact_suffix,
-                                False):
-            file_path = osp.join(self._cfg.work_dir, filename)
-            file_paths.append(file_path)
-
-        for file_path in file_paths:
-            self._task.upload_artifact(os.path.basename(file_path), file_path)
+        if hasattr(self, '_cfg'):
+            for filename in scandir(self._cfg.work_dir, self._artifact_suffix,
+                                    False):
+                file_path = osp.join(self._cfg.work_dir, filename)
+                file_paths.append(file_path)
 
         if hasattr(self, '_clearml'):
+            for file_path in file_paths:
+                self._task.upload_artifact(
+                    os.path.basename(file_path), file_path)
             self._task.close()
