@@ -500,3 +500,43 @@ def deprecated_function(since: str, removed_in: str,
         return wrapper
 
     return decorator
+
+
+def locate(obj_name: str):
+    """Get object from name.
+
+    Args:
+        obj_name (str): The name of the object.
+
+    Examples:
+        >>> locate('torch.optim.sgd.SGD')
+        >>> torch.optim.sgd.SGD
+    """
+    parts = iter(obj_name.split('.'))
+    module_name = next(parts)
+    module = None
+    # import module
+    while True:
+        try:
+            module = import_module(module_name)
+            part = next(parts)
+            module_name = f'{module_name}.{part}'
+        except StopIteration:
+            # if obj is a module
+            return module
+        except ImportError:
+            break
+
+    # module does not exist
+    if module is None:
+        return module
+
+    # get class or attribute from module
+    while True:
+        try:
+            obj_cls = getattr(module, part)
+            part = next(parts)
+        except StopIteration:
+            return obj_cls
+        except AttributeError:
+            return None

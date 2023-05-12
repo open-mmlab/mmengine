@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.table import Table
 
 from mmengine.config.utils import MODULE2PACKAGE
-from mmengine.utils import is_seq_of
+from mmengine.utils import is_seq_of, locate
 from .default_scope import DefaultScope
 
 
@@ -432,7 +432,9 @@ class Registry:
         """
         # Avoid circular import
         from ..logging import print_log
-
+        obj_cls = locate(key)
+        if obj_cls is not None:
+            return obj_cls
         scope, real_key = self.split_scope_key(key)
         obj_cls = None
         registry_name = self.name

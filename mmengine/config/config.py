@@ -53,6 +53,10 @@ class ConfigDict(Dict):
     object during configuration parsing, and it should be set to False outside
     the Config to ensure that users do not experience the ``LazyObject``.
     """
+    # Lazy should be False when parsing configs, otherwise the real object
+    # will be imported during parsing.
+    # Lazy should be True after parsing the configs, users will get the
+    # real object and will not perceive the existence of LazyObject
     lazy = False
 
     def __init__(__self, *args, **kwargs):
@@ -976,11 +980,7 @@ class Config:
                 cfg = cfg.to_dict()
             cfg_dict = ConfigDict()
             for key, value in cfg.items():
-                if isinstance(value, str) and ':::' in value:
-                    module, cfg_type = value.split(':::')
-                    cfg_dict[key] = LazyObject(module, cfg_type)
-                else:
-                    cfg_dict[key] = Config._dict_to_config_dict_lazy(value)
+                cfg_dict[key] = Config._dict_to_config_dict_lazy(value, )
             return cfg_dict
         if isinstance(cfg, (tuple, list)):
             return type(cfg)(
@@ -1232,7 +1232,7 @@ class Config:
             if isinstance(v, str):
                 v_str = repr(v)
             elif isinstance(v, (LazyObject, LazyAttr)):
-                v_str = f"'{v.module}:::{str(v)}'"
+                v_str = f"'{v.module}.{str(v)}'"
             else:
                 v_str = str(v)
 
@@ -1246,15 +1246,22 @@ class Config:
             return attr_str
 
         def _format_list_tuple(k, v, use_mapping=False):
+            if isinstance(v, list):
+                left = '['
+                right = ']'
+            else:
+                left = '('
+                right = ')'
+
+            v_str = f'{left}\n'
             # check if all items in the list are dict
-            v_str = '[\n'
             for item in v:
                 if isinstance(item, dict):
                     v_str += f'dict({_indent(_format_dict(item), indent)}),\n'
                 elif isinstance(item, tuple):
-                    v_str += f'({_indent(_format_list_tuple(None, item), indent)}),\n'  # noqa: 501
+                    v_str += f'{_indent(_format_list_tuple(None, item), indent)},\n'  # noqa: 501
                 elif isinstance(item, list):
-                    v_str += f'[{_indent(_format_list_tuple(None, item), indent)}],\n'  # noqa: 501
+                    v_str += f'{_indent(_format_list_tuple(None, item), indent)},\n'  # noqa: 501
                 elif isinstance(item, str):
                     v_str += f'{_indent(repr(item), indent)},\n'
                 elif isinstance(item, (LazyObject, LazyAttr)):
@@ -1262,13 +1269,13 @@ class Config:
                 else:
                     v_str += str(item) + ',\n'
             if k is None:
-                return _indent(v_str, indent) + ']'
+                return _indent(v_str, indent) + right
             if use_mapping:
                 k_str = f"'{k}'" if isinstance(k, str) else str(k)
                 attr_str = f'{k_str}: {v_str}'
             else:
                 attr_str = f'{str(k)}={v_str}'
-            attr_str = _indent(attr_str, indent) + ']'
+            attr_str = _indent(attr_str, indent) + right
             return attr_str
 
         def _contain_invalid_identifier(dict_str):
@@ -1469,7 +1476,7 @@ class Config:
                 # relative import -> lazy_import
                 if node.level != 0:
                     return True
-                # Skip checkking when using `mmengine.config` in cfg file
+                # Skip checking when using `mmengine.config` in cfg file
                 if (node.module == 'mmengine' and len(node.names) == 1
                         and node.names[0].name == 'Config'):
                     continue
@@ -1480,10 +1487,6 @@ class Config:
                 for name in node.names:
                     if not _is_builtin_module(name.name):
                         return True
-        if ':::' in codes_str:
-            # The dumped_cfg defines the `type` field like this:
-            # `type='mmengine.hooks.sampler_seed_hook::DistSamplerSeedHook'`
-            return True
         return False
 
 
