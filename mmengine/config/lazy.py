@@ -28,7 +28,7 @@ class LazyObject:
         >>> # import mmcls.models; import mmcls.datasets; import mmcls
         >>> mmcls = lazyObject(['mmcls', 'mmcls.datasets', 'mmcls.models'])
 
-    ``LazyObject``s record all module information and will be further
+    ``LazyObject`` records all module information and will be further
     referenced by configuration file.
 
     Args:

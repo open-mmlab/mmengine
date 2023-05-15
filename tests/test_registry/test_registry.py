@@ -318,6 +318,14 @@ class TestRegistry:
         assert DOGS.get('samoyed.LittlePedigreeSamoyed') is None
         assert LITTLE_HOUNDS.get('mid_hound.PedigreeSamoyedddddd') is None
 
+        # Get mmengine.utils by string
+        utils = LITTLE_HOUNDS.get('mmengine.utils')
+        import mmengine.utils
+        assert utils is mmengine.utils
+
+        unknown = LITTLE_HOUNDS.get('mmengine.unknown')
+        assert unknown is None
+
     def test__search_child(self):
         #        Hierarchical Registry
         #                           DOGS
