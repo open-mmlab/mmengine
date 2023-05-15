@@ -1,18 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
-import random
 
+import numpy as np
 import torch
 import torchvision
 import torchvision.transforms as transforms
-from PIL import Image
-from pycocotools.coco import COCO
 from torch.optim import SGD
-from torchvision.models.detection import maskrcnn_resnet50_fpn
-from torchvision.models.detection.mask_rcnn import \
-    MaskRCNN_ResNet50_FPN_V2_Weights
+from torchvision.models.detection import fasterrcnn_resnet50_fpn
 from torchvision.ops import box_convert
-from torchvision.transforms import functional as F
 
 from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
@@ -23,12 +18,10 @@ class MMMaskRCNN(BaseModel):
 
     def __init__(self):
         super().__init__()
-        self.model = maskrcnn_resnet50_fpn(
-            weights=MaskRCNN_ResNet50_FPN_V2_Weights)
+        self.model = fasterrcnn_resnet50_fpn(pretrained=True, num_classes=91)
 
     def forward(self, images, targets, mode):
         if mode == 'loss':
-            print(f'TARGET: {targets}')
             loss_dict = self.model(images, targets)
             return loss_dict
         elif mode == 'predict':
@@ -44,30 +37,63 @@ class Accuracy(BaseMetric):
 
     def process(self, data_batch, data_samples):
         predictions, targets = data_samples
-        batch_size = targets.size(0)
+        batch_size = len(targets)
 
         # Compute IoU for each prediction and target
-        ious = self.calculate_iou(predictions, targets)
+        iou_scores = self.calculate_iou(predictions, targets)
+        print(f'iou: {iou_scores}')
 
         # Count correct predictions based on IoU threshold
-        correct = (ious > self.iou_threshold).sum().item()
+        correct = 0
+        for i in range(batch_size):
+            if i < len(iou_scores):  # Check if there are valid IoU scores
+                iou = iou_scores[i]
+                num_correct = np.sum(iou > self.iou_threshold)
+                correct += num_correct
 
         self.results.append({'batch_size': batch_size, 'correct': correct})
 
     def calculate_iou(self, predictions, targets):
-        # Compute the intersection and union areas
-        intersection = torch.min(predictions[:, 2:], targets[:, 2:]).clamp(0)
-        # union = torch.max(predictions[:, 2:], targets[:, 2:]).clamp(0)
+        iou_scores = []
 
-        # Calculate areas
-        pred_area = (predictions[:, 2] - predictions[:, 0]) * (
-            predictions[:, 3] - predictions[:, 1])
-        target_area = (targets[:, 2] - targets[:, 0]) * (
-            targets[:, 3] - targets[:, 1])
+        for i in range(len(predictions)):
+            box1 = predictions[i]['boxes'].cpu().numpy()
+            box2 = targets[i]['boxes'].cpu().numpy()
 
-        # Calculate IoU
-        iou = intersection.prod(dim=1) / (
-            pred_area + target_area - intersection.prod(dim=1) + 1e-6)
+            if len(box1) > 0 and len(box2) > 0:
+                num_box1 = len(box1)
+                num_box2 = len(box2)
+                iou_matrix = torch.zeros((num_box1, num_box2))
+
+                # Calculate IoU for each pair of boxes
+                for j in range(num_box1):
+                    for k in range(num_box2):
+                        iou = self.compute_iou(box1[j], box2[k])
+                        iou_matrix[j, k] = iou
+
+                # Find the best matching target box for each predicted box
+                for j in range(num_box1):
+                    best_iou = torch.max(iou_matrix[j])
+                    iou_scores.append(best_iou.item())
+
+        return iou_scores
+
+    def compute_iou(self, box1, box2):
+        # Calculate the coordinates of the intersection rectangle
+        x1 = max(box1[0], box2[0])
+        y1 = max(box1[1], box2[1])
+        x2 = min(box1[2], box2[2])
+        y2 = min(box1[3], box2[3])
+
+        # Calculate the areas of intersection and union
+        intersection_area = torch.max(torch.tensor(0.0), x2 - x1) * torch.max(
+            torch.tensor(0.0), y2 - y1)
+        box1_area = (box1[2] - box1[0]) * (box1[3] - box1[1])
+        box2_area = (box2[2] - box2[0]) * (box2[3] - box2[1])
+        union_area = box1_area + box2_area - intersection_area
+
+        # Calculate the IoU
+        iou = intersection_area / union_area
 
         return iou
 
@@ -78,95 +104,46 @@ class Accuracy(BaseMetric):
         return {'accuracy': accuracy}
 
 
-def filterDataset(folder, classes=None, mode='train'):
-    # initialize COCO api for instance annotations
-    annFile = f'{folder}/{mode}/_annotations.coco.json'
-    coco = COCO(annFile)
+def collate_fn(batches):
+    # Remove None values from the batch
+    # Separate images and targets
+    images = [batch[0] for batch in batches]
+    targets = [batch[1] for batch in batches]
+    # print(targets[5])
+    new_targets = []
 
-    images = []
-    if classes is not None:
-        # iterate for each individual class in the list
-        for className in classes:
-            # get all images containing given categories
-            catIds = coco.getCatIds(catNms=className)
-            imgIds = coco.getImgIds(catIds=catIds)
-            images += coco.loadImgs(imgIds)
+    for target in targets:
+        if len(target) > 0:
+            imageIds = [item['image_id'] for item in target]
+            bboxes = [item['bbox'] for item in target]
+            bboxes = torch.tensor(bboxes)
+            bboxes = box_convert(bboxes, in_fmt='xywh', out_fmt='xyxy')
+            ids = [item['id'] for item in target]
+            categoryIds = [item['category_id'] for item in target]
+            areas = [item['area'] for item in target]
+            new_target = {
+                'id': torch.tensor(ids),
+                'image_id': torch.tensor(imageIds),
+                'category_id': torch.tensor(categoryIds, dtype=torch.int64),
+                'boxes': bboxes,
+                'area': torch.tensor(areas),
+                'labels': torch.tensor(categoryIds).to(torch.int64)
+            }
+            new_targets.append(new_target)
+            # print(f"bboxes: {bboxes}")
+        else:
+            new_target = {
+                'id': torch.tensor([]),
+                'image_id': torch.tensor(0),
+                'category_id': torch.tensor([]),
+                'boxes': torch.empty((0, 4)),
+                'area': torch.tensor([]),
+                'labels': torch.tensor([]).to(torch.int64)
+            }
+            new_targets.append(new_target)
+    # print(f"TARGETS: {len(new_targets)}")
 
-    else:
-        imgIds = coco.getImgIds()
-        images = coco.loadImgs(imgIds)
-
-    # Now, filter out the repeated images
-    unique_images = []
-    for i in range(len(images)):
-        if images[i] not in unique_images:
-            unique_images.append(images[i])
-
-    random.shuffle(unique_images)
-    dataset_size = len(unique_images)
-
-    return unique_images, dataset_size, coco
-
-
-def dataGeneratorCoco(images,
-                      annFile,
-                      folder,
-                      input_image_size=(224, 224),
-                      batch_size=32,
-                      type='train'):
-    img_folder = f'{folder}/{type}'
-    coco = COCO(annotation_file=annFile)
-    dataset_size = len(images)
-
-    # print(f"imgObjL {images[0]}\n")
-    batches = []
-    c = 0
-    for c in range(0, dataset_size, batch_size):
-        img = []
-        targets = []
-
-        for i in range(c, c + batch_size):
-            imageObj = images[i]
-            # Retrieve Image
-            # print( f'IMAGE: {imageObj}')
-            img_path = f'{img_folder}/{imageObj["file_name"]}'
-            # print(f"img_path: {img_path}")
-            img_data = Image.open(img_path).convert('RGB')
-            img_data = F.resize(img_data, input_image_size)
-            img_tensor = F.to_tensor(img_data)
-            img.append(img_tensor)
-
-            # Retrieve Object Annotations
-            annIds = coco.getAnnIds(imgIds=imageObj['id'], iscrowd=None)
-            annotations = coco.loadAnns(annIds)
-
-            # Skip image if there are no annotations
-            if len(annotations) == 0:
-                continue
-
-            # Convert bounding box coordinates to tensor
-            boxes = [ann['bbox'] for ann in annotations]
-            # print(f"boxes: {boxes}\n")
-            boxes = torch.tensor(boxes, dtype=torch.float32)
-            boxes = box_convert(boxes, in_fmt='xywh', out_fmt='xyxy')
-            # boxes = torch.tensor(boxes, dtype=torch.float32)
-
-            # Convert class labels to tensor
-            labels = [ann['category_id'] for ann in annotations]
-            labels = torch.tensor(labels, dtype=torch.int64)
-
-            # Create target dictionary
-            target = {'boxes': boxes, 'labels': labels}
-            targets.append(target)
-
-        c += batch_size
-        if c + batch_size >= dataset_size:
-            c = 0
-            random.shuffle(images)
-
-        batches.append((torch.stack(img), targets))
-
-    return batches
+    return images, new_targets
 
 
 def parse_args():
@@ -187,7 +164,7 @@ def parse_args():
 def main():
     args = parse_args()
     norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
-    folder = 'data/COCO128'
+    folder = '/content/mmengine/examples'
     train_dataset = torchvision.datasets.CocoDetection(
         root=f'{folder}/train',
         annFile=f'{folder}/train/_annotations.coco.json',
@@ -203,28 +180,16 @@ def main():
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize(**norm_cfg)]))
-    print('_____________________________________________________________--')
-    trainImages, _, _ = filterDataset(folder, mode='train')
-    print(f'trainImages: {trainImages[0]}')
-    valImages = filterDataset(folder, mode='valid')
     train_dataloader = dict(
         dataset=train_dataset,
-        batch_size=32,
+        batch_size=16,
         sampler=dict(type='DefaultSampler', shuffle=False),
-        collate_fn=lambda batch: dataGeneratorCoco(
-            trainImages,
-            f'{folder}/train/_annotations.coco.json',
-            folder,
-            type='train'))
+        collate_fn=collate_fn)
     val_dataloader = dict(
         dataset=val_dataset,
-        batch_size=32,
+        batch_size=16,
         sampler=dict(type='DefaultSampler', shuffle=False),
-        collate_fn=lambda batch: dataGeneratorCoco(
-            valImages,
-            f'{folder}/valid/_annotations.coco.json',
-            folder,
-            type='valid'))
+        collate_fn=collate_fn)
 
     runner = Runner(
         model=MMMaskRCNN(),
