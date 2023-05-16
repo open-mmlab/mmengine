@@ -583,7 +583,7 @@ print(type(cfg['optimizer']['type']))
 
 2. rename 配置文件，配置文件命名需要符合 python 模块名的命名规范，即只能包含字母、数字、下划线，且不能以数字开头
 
-3. 删除 scope 相关配置。纯 python 风格的配置文件不再需要通过 scope 来跨库调用模块，直接通过 import 导入即可
+3. 删除 scope 相关配置。纯 python 风格的配置文件不再需要通过 scope 来跨库调用模块，直接通过 import 导入即可。出于兼容性方面的考虑，我们仍然让 Runner 的 default_scope 参数为 `mmengine`，用户需要将其手动设置为 `None`
 
 4. 对于注册器中存在别名的（alias）的模块，将其别名替换成其对应的真实模块即可，以下是常用的别名替换表：
 
