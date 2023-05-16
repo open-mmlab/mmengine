@@ -63,7 +63,11 @@ class LazyObject:
             # For import xxx.xxx as xxx or from xxx.xxx import xxx
             module = importlib.import_module(self._module)
             if self._imported:
-                module = getattr(module, self._imported)
+                try:
+                    module = getattr(module, self._imported)
+                except AttributeError:
+                    raise ImportError(f'Cannot import {self._imported} '
+                                      f'from {self._module}')
             return module
         else:
             # import xxx.xxx
@@ -171,7 +175,12 @@ class LazyAttr:
         Returns:
             Any: attribute of the imported object.
         """
-        return getattr(self.source.build(), self.name)
+        try:
+            return getattr(self.source.build(), self.name)
+        except ImportError or AttributeError:
+            raise ImportError(
+                f'Cannot import f{self.module}, please check the you have '
+                'imported the correct module')
 
     def __str__(self) -> str:
         return self.name
