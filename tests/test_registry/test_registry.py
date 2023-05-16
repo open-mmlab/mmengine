@@ -228,6 +228,10 @@ class TestRegistry:
         DOGS, HOUNDS, LITTLE_HOUNDS = registries[:3]
         MID_HOUNDS, SAMOYEDS, LITTLE_SAMOYEDS = registries[3:]
 
+        # error type of key
+        with pytest.raises(AssertionError):
+            MID_HOUNDS.get(None)
+
         @DOGS.register_module()
         def bark(word, times):
             return [word] * times

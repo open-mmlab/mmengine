@@ -431,6 +431,10 @@ class Registry:
             >>> mobilenet_cls = DETECTORS.get('cls.MobileNet')
         """
         # Avoid circular import
+        if not isinstance(key, str):
+            raise TypeError(
+                'The key argument of `Registry.get` must be a str, '
+                f'got {type(key)}')
         from ..logging import print_log
         obj_cls = locate(key)
         if obj_cls is not None:

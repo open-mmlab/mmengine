@@ -879,6 +879,7 @@ class Runner:
                 broadcast_buffers=False,
                 find_unused_parameters=find_unused_parameters)
         else:
+            model_wrapper_cfg.setdefault('type', 'MMDistributedDataParallel')
             model_wrapper_type = MODEL_WRAPPERS.get(
                 model_wrapper_cfg.get('type'))  # type: ignore
             default_args: dict = dict()
