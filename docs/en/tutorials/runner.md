@@ -258,7 +258,7 @@ If you as a beginner do not immediately understand, it doesn't matter too much, 
 <details>
 <summary>Where can I find the possible configuration options for the xxx argument?</summary>
 
-You will find extensive instructions and examples in those tutorials of the corresponding modules. You can also find all possible arguments in [Runner&#39;s API documentation](mmengine.runner.Runner). If neither of the above resolves your query, you are always encouraged to start a topic in our [discussion forum](https://github.com/open-mmlab/mmengine/discussions). It also helps us improve documentations.
+You will find extensive instructions and examples in those tutorials of the corresponding modules. You can also find all possible arguments in [Runner's API documentation](mmengine.runner.Runner). If neither of the above resolves your query, you are always encouraged to start a topic in our [discussion forum](https://github.com/open-mmlab/mmengine/discussions). It also helps us improve documentation.
 
 </details>
 
