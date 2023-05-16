@@ -3,7 +3,7 @@ import os
 import shutil
 import sys
 import warnings
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -288,6 +288,7 @@ class TestMLflowVisBackend:
         shutil.rmtree('temp_dir')
 
 
+@patch.dict(sys.modules, {'clearml': MagicMock()})
 class TestClearMLVisBackend:
 
     def test_init(self):
