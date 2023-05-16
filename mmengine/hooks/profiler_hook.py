@@ -51,12 +51,12 @@ class ProfilerHook(Hook):
             Two officially recommended ways are provided:
 
             - ``schedule=dict(type='log_trace')``: Print the profiling result
-              in the terminal See more details in the `official tutorial`_.
-              The configurable arguments is the same as
+              in the terminal. See more details in the `PyTorch official tutorial`_.
+              The configurable arguments are the same as
               ``prof.key_averages().table``
             - ``scheduler=dict(type='tb_trace')``: Profile the performance
-               with tensorboard. See more details in the tutorial
-               `profile with tensorboard`_.
+              with tensorboard. See more details in the tutorial
+              `profile with tensorboard`_.
 
         record_shapes (bool): Save information about operator's input shapes.
             Defaults to False.
