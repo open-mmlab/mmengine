@@ -541,7 +541,7 @@ class openCVVisualizer(ManagerMixin):
                           vertical_alignments,
                           horizontal_alignments,
                       )):
-            x, y = position
+            x, y = int(position[0]), int(position[1])
             font_face = cv2.FONT_HERSHEY_SIMPLEX
             font_scale = font_size / 10.0
             thickness = 1
