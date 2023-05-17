@@ -355,6 +355,7 @@ class Runner:
         # `set_randomness`` method
         self._randomness_cfg = randomness
         self.set_randomness(**randomness)
+        self._randomness_cfg['seed'] = self._seed
 
         if experiment_name is not None:
             self._experiment_name = f'{experiment_name}_{self._timestamp}'
