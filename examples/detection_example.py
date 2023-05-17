@@ -1,107 +1,81 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
 
-import numpy as np
 import torch
 import torchvision
 import torchvision.transforms as transforms
-from torch.optim import SGD
+from mmeval import COCODetection
+from torch.optim import Adam
 from torchvision.models.detection import fasterrcnn_resnet50_fpn
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.ops import box_convert
 
 from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
 from mmengine.runner import Runner
 
+num_classes = 80
+
 
 class MMMaskRCNN(BaseModel):
 
     def __init__(self):
         super().__init__()
-        self.model = fasterrcnn_resnet50_fpn(pretrained=True, num_classes=91)
+        self.model = fasterrcnn_resnet50_fpn(pretrained=True)
+        in_feats = self.model.roi_heads.box_predictor.cls_score.in_features
+        self.model.roi_heads.box_predictor = FastRCNNPredictor(
+            in_feats, num_classes)
 
     def forward(self, images, targets, mode):
         if mode == 'loss':
-            loss_dict = self.model(images, targets)
-            return loss_dict
+            output = self.model(images, targets)
+            return output
         elif mode == 'predict':
             predictions = self.model(images)
-            return predictions, targets
+            return predictions
 
 
 class Accuracy(BaseMetric):
 
-    def __init__(self, iou_threshold=0.5):
-        super().__init__()
-        self.iou_threshold = iou_threshold
-
-    def process(self, data_batch, data_samples):
-        predictions, targets = data_samples
+    def process(self, targets, predictions):
         batch_size = len(targets)
-
-        # Compute IoU for each prediction and target
-        iou_scores = self.calculate_iou(predictions, targets)
-        print(f'iou: {iou_scores}')
-
-        # Count correct predictions based on IoU threshold
-        correct = 0
+        fake_dataset_metas = {
+            'classes': tuple([str(i) for i in range(num_classes)])
+        }
+        self.coco_det_metric = COCODetection(
+            dataset_meta=fake_dataset_metas, metric=[
+                'bbox',
+            ])
+        print(predictions)
         for i in range(batch_size):
-            if i < len(iou_scores):  # Check if there are valid IoU scores
-                iou = iou_scores[i]
-                num_correct = np.sum(iou > self.iou_threshold)
-                correct += num_correct
-
-        self.results.append({'batch_size': batch_size, 'correct': correct})
-
-    def calculate_iou(self, predictions, targets):
-        iou_scores = []
-
-        for i in range(len(predictions)):
-            box1 = predictions[i]['boxes'].cpu().numpy()
-            box2 = targets[i]['boxes'].cpu().numpy()
-
-            if len(box1) > 0 and len(box2) > 0:
-                num_box1 = len(box1)
-                num_box2 = len(box2)
-                iou_matrix = torch.zeros((num_box1, num_box2))
-
-                # Calculate IoU for each pair of boxes
-                for j in range(num_box1):
-                    for k in range(num_box2):
-                        iou = self.compute_iou(box1[j], box2[k])
-                        iou_matrix[j, k] = iou
-
-                # Find the best matching target box for each predicted box
-                for j in range(num_box1):
-                    best_iou = torch.max(iou_matrix[j])
-                    iou_scores.append(best_iou.item())
-
-        return iou_scores
-
-    def compute_iou(self, box1, box2):
-        # Calculate the coordinates of the intersection rectangle
-        x1 = max(box1[0], box2[0])
-        y1 = max(box1[1], box2[1])
-        x2 = min(box1[2], box2[2])
-        y2 = min(box1[3], box2[3])
-
-        # Calculate the areas of intersection and union
-        intersection_area = torch.max(torch.tensor(0.0), x2 - x1) * torch.max(
-            torch.tensor(0.0), y2 - y1)
-        box1_area = (box1[2] - box1[0]) * (box1[3] - box1[1])
-        box2_area = (box2[2] - box2[0]) * (box2[3] - box2[1])
-        union_area = box1_area + box2_area - intersection_area
-
-        # Calculate the IoU
-        iou = intersection_area / union_area
-
-        return iou
+            print(f'TARGETS: {targets[i]}')
+            self.coco_det_metric(
+                predictions=[
+                    predictions[i],
+                ], groundtruths=[
+                    targets[i],
+                ])
+            self.results.append = {
+                'batch_size': batch_size,
+                'bbox_result': self.coco_det_metric['bbox_result']
+            }
+        # for i in range(batch_size):
+        #   prediction = predictions[i]
+        #   target = targets[i]
+        #   print(f"TARGET: {target}")
+        #   print(f"PREDICTIONS: {prediction}")
+        # self.results.append({
+        #     'batch_size': len(gt),
+        #     'correct': (score.argmax(dim=1) == gt).sum().cpu(),
+        # })
+        # print(f"data_batch: {data_batch}\n data_samples: {data_samples}\n")
 
     def compute_metrics(self, results):
-        total_correct = sum(item['correct'] for item in results)
-        total_size = sum(item['batch_size'] for item in results)
-        accuracy = 100 * total_correct / total_size
-        return {'accuracy': accuracy}
+        pass
+        # print(f"RESULTS: {results}\n")
+        # total_correct = sum(item['correct'] for item in results)
+        # total_size = sum(item['batch_size'] for item in results)
+        # return dict(accuracy=100 * total_correct / total_size)
 
 
 def collate_fn(batches):
@@ -147,7 +121,7 @@ def collate_fn(batches):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Distributed Training')
+    parser = argparse.ArgumentParser(description='Object Detection')
     parser.add_argument(
         '--launcher',
         choices=['none', 'pytorch', 'slurm', 'mpi'],
@@ -195,7 +169,7 @@ def main():
         model=MMMaskRCNN(),
         work_dir='./work_dir',
         train_dataloader=train_dataloader,
-        optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+        optim_wrapper=dict(optimizer=dict(type=Adam, lr=0.0001)),
         train_cfg=dict(by_epoch=True, max_epochs=2, val_interval=1),
         val_dataloader=val_dataloader,
         val_cfg=dict(),
