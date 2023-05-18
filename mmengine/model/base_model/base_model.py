@@ -292,7 +292,7 @@ class BaseModel(BaseModule):
 
         During non-distributed training, validation, and testing process,
         ``forward`` will be called by ``BaseModel.train_step``,
-        ``BaseModel.val_step`` and ``BaseModel.val_step`` directly.
+        ``BaseModel.val_step`` and ``BaseModel.test_step`` directly.
 
         During distributed data parallel training process,
         ``MMSeparateDistributedDataParallel.train_step`` will first call
