@@ -25,11 +25,10 @@ class MMDeeplabV3(BaseModel):
 
     def forward(self, imgs, labels, mode):
         x = self.deeplab(imgs)['out']
-        labels = labels.squeeze(1)  # Change the shape of labels from (B, 1, H, W) to (B, H, W).
+        labels = labels.squeeze(
+            1)  # Change the shape of labels from (B, 1, H, W) to (B, H, W).
         if mode == 'loss':
-            return {
-                'loss': F.cross_entropy(x, labels, ignore_index=255)
-            }  
+            return {'loss': F.cross_entropy(x, labels, ignore_index=255)}
         elif mode == 'predict':
             return x, labels
 
@@ -39,9 +38,7 @@ class IoU(BaseMetric):
     def process(self, data_batch, data_samples):
         score, gt = data_samples
         pred = torch.argmax(score, dim=1)
-        gt = gt.where(gt != 255,
-                      torch.tensor(-1,
-                                   device=gt.device))  
+        gt = gt.where(gt != 255, torch.tensor(-1, device=gt.device))
         intersection = (pred * gt).sum(dim=(1, 2)).float()
         union = (pred + gt).sum(dim=(1, 2)).float() - intersection
         iou = (intersection / union).cpu()
@@ -81,8 +78,8 @@ def main():
         ]),
         target_transform=transforms.Compose([
             transforms.Resize((520, 520), interpolation=0),
-            transforms.Lambda(lambda x: torch.tensor(
-                np.array(x), dtype=torch.long))  
+            transforms.Lambda(
+                lambda x: torch.tensor(np.array(x), dtype=torch.long))
         ]))
     valid_set = torchvision.datasets.VOCSegmentation(
         'data/VOC2012',
@@ -95,8 +92,8 @@ def main():
         ]),
         target_transform=transforms.Compose([
             transforms.Resize((520, 520), interpolation=0),
-            transforms.Lambda(lambda x: torch.tensor(
-                np.array(x), dtype=torch.long))  
+            transforms.Lambda(
+                lambda x: torch.tensor(np.array(x), dtype=torch.long))
         ]))
     train_dataloader = dict(
         batch_size=8,
