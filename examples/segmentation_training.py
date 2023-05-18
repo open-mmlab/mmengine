@@ -25,11 +25,11 @@ class MMDeeplabV3(BaseModel):
 
     def forward(self, imgs, labels, mode):
         x = self.deeplab(imgs)['out']
-        labels = labels.squeeze(1)  # 将 labels 的形状从 (B, 1, H, W) 更改为 (B, H, W)
+        labels = labels.squeeze(1)  # Change the shape of labels from (B, 1, H, W) to (B, H, W).
         if mode == 'loss':
             return {
                 'loss': F.cross_entropy(x, labels, ignore_index=255)
-            }  # 添加 ignore_index 参数
+            }  
         elif mode == 'predict':
             return x, labels
 
@@ -41,7 +41,7 @@ class IoU(BaseMetric):
         pred = torch.argmax(score, dim=1)
         gt = gt.where(gt != 255,
                       torch.tensor(-1,
-                                   device=gt.device))  # 将 gt 中的 255 值设置为 -1
+                                   device=gt.device))  
         intersection = (pred * gt).sum(dim=(1, 2)).float()
         union = (pred + gt).sum(dim=(1, 2)).float() - intersection
         iou = (intersection / union).cpu()
@@ -68,7 +68,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    num_classes = 21  # 修改为实际的类别数
+    num_classes = 21  # Modify to actual number of categories.
     norm_cfg = dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     train_set = torchvision.datasets.VOCSegmentation(
         'data/VOC2012',
@@ -82,7 +82,7 @@ def main():
         target_transform=transforms.Compose([
             transforms.Resize((520, 520), interpolation=0),
             transforms.Lambda(lambda x: torch.tensor(
-                np.array(x), dtype=torch.long))  # 修改 target_transform
+                np.array(x), dtype=torch.long))  
         ]))
     valid_set = torchvision.datasets.VOCSegmentation(
         'data/VOC2012',
@@ -96,7 +96,7 @@ def main():
         target_transform=transforms.Compose([
             transforms.Resize((520, 520), interpolation=0),
             transforms.Lambda(lambda x: torch.tensor(
-                np.array(x), dtype=torch.long))  # 修改 target_transform
+                np.array(x), dtype=torch.long))  
         ]))
     train_dataloader = dict(
         batch_size=8,
