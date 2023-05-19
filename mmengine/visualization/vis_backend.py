@@ -836,8 +836,7 @@ class ClearMLVisBackend(BaseVisBackend):
         >>> vis_backend.add_config(cfg)
 
     Args:
-        save_dir (str): The root directory to save the files
-            produced by the backend.
+        save_dir (str): The file ends with `artifact_suffix` in the `save_dir` will be uploaded to ``ClearML`` artifact.
         init_kwargs (dict): A dict contains the `clearml.Task.init`
             initialization keys. See `taskinit`_  for more details.
         artifact_suffix (Tuple[str] or str, optional): The artifact suffix.
