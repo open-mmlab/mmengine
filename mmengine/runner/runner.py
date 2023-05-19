@@ -2306,6 +2306,7 @@ class Runner:
         runtime_env = OrderedDict()
         runtime_env.update(env_cfg)
         runtime_env.update(self._randomness_cfg)
+        runtime_env['seed'] = self._seed
         runtime_env['Distributed launcher'] = self._launcher
         runtime_env['Distributed training'] = self._distributed
         runtime_env['GPU number'] = self._world_size
