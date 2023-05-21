@@ -40,21 +40,6 @@ class MMFasterRCNN(BaseModel):
             return predictions
 
 
-def calculate_iou(box1, box2):
-    """Calculate IoU (Intersection over Union) between two boxes."""
-    x1 = max(box1[0], box2[0])
-    y1 = max(box1[1], box2[1])
-    x2 = min(box1[2], box2[2])
-    y2 = min(box1[3], box2[3])
-
-    intersection_area = max(0, x2 - x1 + 1) * max(0, y2 - y1 + 1)
-    box1_area = (box1[2] - box1[0] + 1) * (box1[3] - box1[1] + 1)
-    box2_area = (box2[2] - box2[0] + 1) * (box2[3] - box2[1] + 1)
-
-    iou = intersection_area / float(box1_area + box2_area - intersection_area)
-    return iou
-
-
 class Accuracy(BaseMetric):
 
     def process(self, targets, predictions):
@@ -95,7 +80,6 @@ class Accuracy(BaseMetric):
                        for item in results]
         proposal_recall = ProposalRecall()
         r = proposal_recall.compute_metric(groundtruth)
-        print(f'PREDICTION: {r}')
         return r
 
 
