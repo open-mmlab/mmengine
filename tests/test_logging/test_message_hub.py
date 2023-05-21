@@ -186,8 +186,6 @@ class TestMessageHub:
         obj = pickle.dumps(message_hub)
         instance = pickle.loads(obj)
 
-        print(instance)
-
         with pytest.raises(KeyError):
             instance.get_info('feat')
         with pytest.raises(KeyError):
