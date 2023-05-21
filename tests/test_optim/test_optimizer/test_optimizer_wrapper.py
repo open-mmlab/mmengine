@@ -238,6 +238,7 @@ class TestOptimWrapper(MultiProcessTestCase):
         optimizer = SGD(model.parameters(), lr=0.1)
         optim_wrapper.load_state_dict(optimizer.state_dict())
 
+        optim_wrapper.param_groups.pop()
         self.assertEqual(optim_wrapper.state_dict(), optimizer.state_dict())
 
     def test_param_groups(self):
@@ -505,6 +506,7 @@ class TestAmpOptimWrapper(TestCase):
         optimizer = SGD(self.model.parameters(), lr=0.1)
         amp_optim_wrapper.load_state_dict(optimizer.state_dict())
 
+        amp_optim_wrapper.param_groups.pop()
         self.assertDictEqual(optimizer.state_dict(),
                              amp_optim_wrapper.optimizer.state_dict())
         # Test load from optim_wrapper
