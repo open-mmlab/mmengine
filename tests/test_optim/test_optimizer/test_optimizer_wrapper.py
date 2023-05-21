@@ -507,6 +507,7 @@ class TestAmpOptimWrapper(TestCase):
         amp_optim_wrapper.load_state_dict(optimizer.state_dict())
         amp_optim_wrapper.param_groups.pop()
 
+        amp_optim_wrapper.param_groups.pop()
         self.assertDictEqual(optimizer.state_dict(),
                              amp_optim_wrapper.optimizer.state_dict())
         # Test load from optim_wrapper

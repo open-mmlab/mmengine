@@ -87,7 +87,13 @@ def main():
         model=MMResNet50(),
         work_dir='./work_dir',
         train_dataloader=train_dataloader,
-        optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+
+        # optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+        optim_wrapper=dict(
+            optimizer=dict(type=SGD, lr=0.001, momentum=0.9),
+            paramwise_cfg=dict(custom_keys=dict(
+                conv1=dict(lr_mult=0.1)))),
+
         train_cfg=dict(by_epoch=True, max_epochs=2, val_interval=1),
         val_dataloader=val_dataloader,
         val_cfg=dict(),

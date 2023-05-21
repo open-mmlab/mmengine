@@ -149,12 +149,12 @@ class AmpOptimWrapper(OptimWrapper):
         if 'loss_scaler' in state_dict:
             self.loss_scaler.load_state_dict(state_dict.pop('loss_scaler'))
 
-        # remote the current state tracker during the loading in optimizer
+            # remote the current state tracker during the loading in optimizer
         if self.optimizer.param_groups[-1].get('is_state_tracker', False):
             self.optimizer.param_groups.pop()
 
-        # remote the state tracker in state_dict if exists
-        # save it and add it back after loading
+            # remote the state tracker in state_dict if exists
+            # save it and add it back after loading
         state_tracker = None
         if state_dict['param_groups'][-1].get('is_state_tracker', False):
             state_tracker = state_dict['param_groups'].pop()

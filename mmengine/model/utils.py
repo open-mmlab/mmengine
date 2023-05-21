@@ -84,14 +84,13 @@ def detect_anomalous_params(loss: torch.Tensor, model) -> None:
                     traverse(grad_fn)
 
     traverse(loss.grad_fn)
-    from mmengine.logging import MMLogger
-    logger = MMLogger.get_current_instance()
     for n, p in model.named_parameters():
         if p not in parameters_in_graph and p.requires_grad:
-            logger.log(
-                level=logging.ERROR,
-                msg=f'{n} with shape {p.size()} is not '
-                f'in the computational graph \n')
+            print_log(
+                f'{n} with shape {p.size()} is not '
+                f'in the computational graph \n',
+                logger='current',
+                level=logging.ERROR)
 
 
 def merge_dict(*args):

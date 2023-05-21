@@ -161,6 +161,13 @@ class OptimWrapper:
         # last few iterations. If `_max_counts` has not been initialized,
         # the loss factor will always be the same as `_accumulative_counts`.
         self._remainder_counts = -1
+        if hasattr(self.optimizer, 'defaults'):
+            new_param_settings = {
+                'params': torch.tensor([0.0], requires_grad=True),
+                'is_state_tracker': True,
+                **self.optimizer.defaults
+            }
+            self.optimizer.param_groups.append(new_param_settings)
 
         # add a tensor to the optimizer to retrieve global lr
         if hasattr(self.optimizer, 'defaults'):
@@ -275,13 +282,11 @@ class OptimWrapper:
         Args:
             state_dict (dict): The state dictionary of :attr:`optimizer`.
         """
-
-        # remote the current state tracker during the loading in optimizer
         if self.optimizer.param_groups[-1].get('is_state_tracker', False):
             self.optimizer.param_groups.pop()
 
-        # remote the state tracker in state_dict if exists
-        # save it and add it back after loading
+            # remote the state tracker in state_dict if exists
+            # save it and add it back after loading
         state_tracker = None
         if state_dict['param_groups'][-1].get('is_state_tracker', False):
             state_tracker = state_dict['param_groups'].pop()
@@ -332,10 +337,7 @@ class OptimWrapper:
         Returns:
             Dict[str, List[float]]: Learning rate of the optimizer.
         """
-        lr = [
-            group['lr'] for group in self.param_groups if
-            'is_state_tracker' in group and group['is_state_tracker'] is True
-        ]
+        lr = [group['lr'] for group in self.param_groups]
         return dict(lr=lr)
 
     def get_momentum(self) -> Dict[str, List[float]]:
