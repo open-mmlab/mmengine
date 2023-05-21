@@ -5,9 +5,9 @@ import xml.etree.ElementTree as ET  # Connect to the GPU if one exists.
 import numpy as np
 import PIL
 import torch
-import torchvision
 import torchvision.transforms.functional as F
 import torchvision.transforms.transforms as T
+from mmeval import ProposalRecall
 # from mmeval import MeanIoU
 from torchvision.models.detection import fasterrcnn_resnet50_fpn
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
@@ -40,64 +40,63 @@ class MMFasterRCNN(BaseModel):
             return predictions
 
 
+def calculate_iou(box1, box2):
+    """Calculate IoU (Intersection over Union) between two boxes."""
+    x1 = max(box1[0], box2[0])
+    y1 = max(box1[1], box2[1])
+    x2 = min(box1[2], box2[2])
+    y2 = min(box1[3], box2[3])
+
+    intersection_area = max(0, x2 - x1 + 1) * max(0, y2 - y1 + 1)
+    box1_area = (box1[2] - box1[0] + 1) * (box1[3] - box1[1] + 1)
+    box2_area = (box2[2] - box2[0] + 1) * (box2[3] - box2[1] + 1)
+
+    iou = intersection_area / float(box1_area + box2_area - intersection_area)
+    return iou
+
+
 class Accuracy(BaseMetric):
 
     def process(self, targets, predictions):
-        # miou = MeanIoU(num_classes=11)
-        # print(targets)
-        # print(predictions)
         label = []
         pred = []
-        labelS = []
-        preds = []
+        score = []
+        groundtruth = {}
+        predictionS = {}
         for target in targets[1]:
             boxes = target['boxes']
-            target_labels = [target['labels'].item()]
-            # print("Target Labels:", target_labels)
-
             for i in range(len(boxes)):
                 x_min, y_min, x_max, y_max = boxes[i].tolist()
-                label.append([target_labels[i], x_min, y_min])
+                label.append([x_min, y_min, x_max, y_max])
         for prediction in predictions:
             boxes = prediction['boxes']
-            scores = prediction['scores']
+            scores = prediction['scores'].cpu().numpy()
             labels = prediction['labels']
-            score_threshold = 0.8
-            nms_iou_threshold = 0.2
-            # print(f"boxes: {boxes}\nscores: {scores}\nlabels: {labels}\n")
-            if score_threshold is not None:
-                want = scores > score_threshold
-                boxes = boxes[want]
-                scores = scores[want]
-                labels = labels[want]
-            if nms_iou_threshold is not None:
-                want = torchvision.ops.nms(
-                    boxes=boxes,
-                    scores=scores,
-                    iou_threshold=nms_iou_threshold)
-                boxes = boxes[want]
-                scores = scores[want]
-                labels = labels[want]
-            # print(f"boxes: {boxes}\nscores: {scores}\nlabels: {labels}\n")
-            # boxes = prediction['boxes']
             prediction_labels = [labels.cpu().numpy()]
             prediction_labels = prediction_labels[0].tolist()
-            # print("Prediction Labels:", prediction_labels)
             for i in range(len(boxes)):
                 x_min, y_min, x_max, y_max = boxes[i].tolist()
-                pred.append([prediction_labels[i], x_min, y_min])
+                score.append(scores[i].tolist())
+                pred.append([x_min, y_min, x_max, y_max])
+        label = np.array(label)
+        pred = np.array(pred)
+        score = np.array(score)
+        groundtruth['bboxes'] = label
+        predictionS['bboxes'] = pred
+        predictionS['scores'] = score
 
-        labelS.append(label)
-        preds.append(pred)
-        labelS = np.asarray(labelS)
-        preds = np.asarray(preds)
-        print(f'LABELS:{labelS}, PREDS: {preds}')
+        self.results.append({
+            'groundtruth': groundtruth,
+            'predictions': predictionS
+        })
 
-        # miou(labels, preds)
-        # print(miou)
-        # print(f"TARGETS: {targets}\n PREDICTIONS: {predictions}\n")
     def compute_metrics(self, results):
-        pass
+        groundtruth = [(item['groundtruth'], item['predictions'])
+                       for item in results]
+        proposal_recall = ProposalRecall()
+        r = proposal_recall.compute_metric(groundtruth)
+        print(f'PREDICTION: {r}')
+        return r
 
 
 def parse_args():
@@ -151,7 +150,7 @@ def reverse_dict(dictionary):
 
 
 # Convert human readable str label to int.
-label_dict = file_to_dict('data/tiny_motorbike_coco/tiny_motorbike/labels.txt')
+label_dict = file_to_dict('/content/tiny_motorbike/labels.txt')
 # Convert label int to human readable str.
 reverse_label_dict = reverse_dict(label_dict)
 
@@ -161,8 +160,7 @@ class vehicleDataset(torch.utils.data.Dataset):
     def __init__(self, root, transforms=None):
         self.root = root
         self.transforms = transforms
-        self.files = sorted(
-            os.listdir('data/tiny_motorbike_coco/tiny_motorbike/images'))
+        self.files = sorted(os.listdir('/content/tiny_motorbike/images'))
         for i in range(len(self.files)):
             self.files[i] = self.files[i].split('.')[0]
             self.label_dict = label_dict
@@ -224,8 +222,10 @@ class RandomHorizontalFlip(T.RandomHorizontalFlip):
 def get_transform(train):
     transforms = []
     transforms.append(ToTensor())
+    norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
     if train:
         transforms.append(RandomHorizontalFlip(0.5))
+        transforms.append(transforms.Normalize(**norm_cfg))
     return Compose(transforms)
 
 
@@ -240,11 +240,11 @@ def main():
 
     # Train dataset.
     # Set train = True to apply the training image transforms.
-    train_ds = vehicleDataset('data/tiny_motorbike_coco/tiny_motorbike/',
+    train_ds = vehicleDataset('/content/tiny_motorbike',
                               get_transform(train=True))  # Validation dataset.
-    val_ds = vehicleDataset('data/tiny_motorbike_coco/tiny_motorbike/',
+    val_ds = vehicleDataset('/content/tiny_motorbike',
                             get_transform(train=False))  # Test dataset.
-    test_ds = vehicleDataset('data/tiny_motorbike_coco/tiny_motorbike/',
+    test_ds = vehicleDataset('/content/tiny_motorbike',
                              get_transform(train=False))
 
     # Randomly shuffle all the data.
@@ -278,7 +278,7 @@ def main():
                 lr=0.005,
                 momentum=0.9,
                 weight_decay=0.0005)),
-        train_cfg=dict(by_epoch=True, max_epochs=2, val_interval=1),
+        train_cfg=dict(by_epoch=True, max_epochs=10, val_interval=1),
         val_dataloader=val_dl,
         val_cfg=dict(),
         val_evaluator=dict(type=Accuracy),
