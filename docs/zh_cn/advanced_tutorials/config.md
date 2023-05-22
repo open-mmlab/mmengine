@@ -467,7 +467,19 @@ b=2
             from .optimizer import *
 ```
 
-纯 python 风格的配置文件通过 import 语法来实现继承，这样做的好处是，我们可以直接跳转到被继承的配置文件中，方便阅读和跳转。变量的继承规则（增删改查）和 完全对齐 `import` 语法。当然了，如果你更喜欢纯文本风格的继承规则，且该变量在 _base_ 配置文件中为 `dict` 类型，则可以通过 merge 语法来实现和纯文本风格配置文件一致的继承规则：
+纯 python 风格的配置文件通过 import 语法来实现继承，这样做的好处是，我们可以直接跳转到被继承的配置文件中，方便阅读和跳转。变量的继承规则（增删改查）和 完全对齐 Python 语法，例如我想修改 base 配置文件中 optimizer 的学习率:
+
+```python
+if '_base_':
+    from .optimizer import *
+
+# optimizer 为 base 配置文件定义的变量
+optimizer.update(
+    lr=0.01,
+)
+```
+
+当然了，如果你已经习惯了纯文本风格的继承规则，且该变量在 _base_ 配置文件中为 `dict` 类型，也可以通过 merge 语法来实现和纯文本风格配置文件一致的继承规则：
 
 ```python
 if '_base_':
@@ -477,8 +489,31 @@ if '_base_':
 optimizer.merge(
     _delete_=True,
     lr=0.01,
+    type='SGD'
 )
+
+# 等价的 python 风格写法如下，与 Python 的 import 规则完全一致
+# optimizer = dict(
+#     lr=0.01,
+#     type='SGD'
+# )
 ```
+
+````{note}
+需要注意的是，纯 python 风格的配置文件中，字典的 `update` 方法与 `dict.update` 稍有不同。纯 Python 风格的 update 会递归地去更新字典中的内容，例如：
+
+```python
+x = dict(a=1, b=dict(c=2, d=3))
+
+x.update(dict(b=dict(d=4)))
+# 配置文件中的 update 规则：
+# {a: 1, b: {c: 2, d: 4}}
+# 普通 dict 的 update 规则：
+# {a: 1, b: {d: 4}}
+```
+
+可见在配置文件中使用 update 方法会递归地去更新字段，而不是简单的覆盖。
+````
 
 与纯文本风格的配置文件相比，纯 Python 风格的配置文件的继承规则完全对齐 import 语法，更容易理解，且支持配置文件之间的跳转。你或许会好奇既然继承和模块的导入都使用了 import 语法，为什么继承配置文件还需要额外的 `if '_base_'` 语句呢？一方面这样可以提升配置文件的可读性，可以让继承的配置文件更加突出，另一方面也是受限于 lazy_import 的规则，这个会在后面讲到。
 
