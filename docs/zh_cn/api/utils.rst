@@ -77,6 +77,21 @@ Progress Bar
    track_parallel_progress
    track_progress
 
+Progress Bar (rich enhanced)
+----------------
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+   :template: classtemplate.rst
+
+   RichProgressBar
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   track_progress_rich
 
 Miscellaneous
 ----------------
