@@ -10,7 +10,6 @@ import numpy.compat
 import numpy.linalg as linalg
 
 import mmengine
-import mmengine.model
 from mmengine.config.lazy import LazyAttr, LazyObject
 from mmengine.config.utils import Transform, _gather_abs_import_lazyobj
 from mmengine.fileio import LocalBackend, PetrelBackend
