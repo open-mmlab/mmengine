@@ -229,7 +229,7 @@ class TestRegistry:
         MID_HOUNDS, SAMOYEDS, LITTLE_SAMOYEDS = registries[3:]
 
         # error type of key
-        with pytest.raises(AssertionError):
+        with pytest.raises(TypeError):
             MID_HOUNDS.get(None)
 
         @DOGS.register_module()
