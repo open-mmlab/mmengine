@@ -9,7 +9,7 @@ import textwrap
 import warnings
 from collections import abc
 from importlib import import_module
-from inspect import getfullargspec
+from inspect import getfullargspec, ismodule
 from itertools import repeat
 from typing import Any, Callable, Optional, Type, Union
 
@@ -520,6 +520,11 @@ def locate(obj_name: str):
         try:
             module = import_module(module_name)
             part = next(parts)
+            # mmcv.ops has nms.py has nms function at the same time. So the
+            # function will have a higher priority
+            obj = getattr(module, part, None)
+            if obj is not None and not ismodule(obj):
+                break
             module_name = f'{module_name}.{part}'
         except StopIteration:
             # if obj is a module
