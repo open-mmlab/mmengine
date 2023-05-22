@@ -400,6 +400,8 @@ def _gather_abs_import_lazyobj(tree: ast.Module,
     imported = defaultdict(list)
     abs_imported = set()
     new_body: List[ast.stmt] = []
+    # module2node is used to get lineno when Python < 3.10
+    module2node: dict = dict()
     for node in tree.body:
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -408,14 +410,17 @@ def _gather_abs_import_lazyobj(tree: ast.Module,
                     new_body.append(node)
                     continue
                 module = alias.name.split('.')[0]
+                module2node.setdefault(module, node)
                 imported[module].append(alias)
             continue
         new_body.append(node)
 
     for key, value in imported.items():
         names = [_value.name for _value in value]
-        # TODO Get lineno for each import statement
-        lineno = value[0].lineno if hasattr(value[0], 'lineno') else ''
+        if hasattr(value[0], 'lineno'):
+            lineno = value[0].lineno
+        else:
+            lineno = module2node[key].lineno
         lazy_module_assign = ast.parse(
             f'{key} = LazyObject({names}, location="{filename}, line {lineno}")'  # noqa: E501
         )  # noqa: E501
