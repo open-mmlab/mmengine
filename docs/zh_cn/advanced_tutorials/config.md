@@ -637,7 +637,7 @@ print(type(cfg['optimizer']['type']))
     </tr>
     <tr>
         <th>SyncBN</th>
-        <th>mmengine.utils.dl_utils.parrots_wrapper.SyncBatchNorm</th>
+        <th>torch.nn.SyncBatchNorm</th>
         <th>无</th>
     </tr>
     <tr>
