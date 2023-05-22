@@ -397,14 +397,17 @@ class Config:
                 filename=filename,
                 env_variables=env_variables)
         else:
+            # enable lazy import when parsing the config
             ConfigDict.lazy = True
-            cfg_dict = Config._parse_lazy_import(filename)
+            cfg_dict, imported_names = Config._parse_lazy_import(filename)
             for key, value in list(cfg_dict.to_dict().items()):
-                if isinstance(value, (LazyObject, LazyAttr, types.FunctionType,
-                                      types.ModuleType)):
+                if isinstance(value, (types.FunctionType, types.ModuleType)):
                     cfg_dict.pop(key)
+            # disable lazy import to get the real type.
             ConfigDict.lazy = False
-            return Config(cfg_dict, filename=filename)
+            cfg = Config(cfg_dict, filename=filename)
+            object.__setattr__(cfg, '_imported_names', imported_names)
+            return cfg
 
     @staticmethod
     def fromstring(cfg_str: str, file_format: str) -> 'Config':
@@ -839,7 +842,7 @@ class Config:
         return cfg_dict, cfg_text, env_variables
 
     @staticmethod
-    def _parse_lazy_import(filename: str) -> ConfigDict:
+    def _parse_lazy_import(filename: str) -> Tuple[ConfigDict, set]:
         """Transform file to variables dictionary.
 
         Args:
@@ -848,7 +851,11 @@ class Config:
                 predefined variables. Defaults to True.
 
         Returns:
-            Tuple[dict, str]: Variables dictionary and text of Config.
+            Tuple[dict, dict]: ``cfg_dict`` and ``imported_names``.
+
+              - cfg_dict (dict): Variables dictionary of parsed config.
+              - imported_names (set): Used to mark the names of
+                imported object.
         """
         # In lazy import mode, users can use the Python syntax `import` to
         # implement inheritance between configuration files, which is easier
@@ -884,6 +891,11 @@ class Config:
         #       }, each item in base_dict is a dict of `LazyObject`
         # 3. parse the current config file filling the imported variable
         #    with the base_dict.
+        #
+        # 4. During the parsing process, all imported variable will be
+        #    recorded in the `imported_names` set. These variables can be
+        #    accessed, but will not be dumped by default.
+
         with open(filename) as f:
             global_dict = {'LazyObject': LazyObject}
             base_dict = {}
@@ -892,6 +904,7 @@ class Config:
             # get the names of base modules, and remove the
             # `if '_base_:'` statement
             base_modules = Config._get_base_modules(code.body)
+            base_imported_names = set()
             for base_module in base_modules:
                 # If base_module means a relative import, assuming the level is
                 # 2, which means the module is imported like
@@ -921,12 +934,15 @@ class Config:
                         module_path = f'{osp.join(root_path, *module_list[1:])}.py'  # noqa: E501
                 if not osp.isfile(module_path):
                     raise FileNotFoundError(
-                        'Incorrect module defined in '
+                        f'{module_path} not found! It means that incorrect '
+                        'module is defined in '
                         f"_base_ = ['{base_module}', ...], please "
                         'make sure the base config module is valid '
                         'and is consistent with the prior import '
                         'logic')
-                base_cfg = Config._parse_lazy_import(module_path)
+                base_cfg, _base_imported_names = Config._parse_lazy_import(
+                    module_path)
+                base_imported_names |= _base_imported_names
                 # The base_dict will be:
                 # {
                 #     'mmdet.configs.default_runtime': {...}
@@ -942,9 +958,15 @@ class Config:
             # the global dict. After the ast transformation, most of import
             # syntax will be removed (except for the builtin import) and
             # replaced with the `LazyObject`
-            transform = Transform(global_dict=global_dict, base_dict=base_dict)
+            transform = Transform(
+                global_dict=global_dict,
+                base_dict=base_dict,
+                filename=filename)
             modified_code = transform.visit(code)
-            modified_code = _gather_abs_import_lazyobj(modified_code)
+            modified_code, abs_imported = _gather_abs_import_lazyobj(
+                modified_code, filename=filename)
+            imported_names = transform.imported_obj | abs_imported
+            imported_names |= base_imported_names
             modified_code = ast.fix_missing_locations(modified_code)
             exec(
                 compile(modified_code, filename, mode='exec'), global_dict,
@@ -958,7 +980,7 @@ class Config:
             # convert dict to ConfigDict
             cfg_dict = Config._dict_to_config_dict_lazy(ret)
 
-            return cfg_dict
+            return cfg_dict, imported_names
 
     @staticmethod
     def _dict_to_config_dict_lazy(cfg: dict):
@@ -1316,7 +1338,7 @@ class Config:
                 r += '}'
             return r
 
-        cfg_dict = self._cfg_dict.to_dict()
+        cfg_dict = self.to_dict(keep_imported=False)
         text = _format_dict(cfg_dict, outest_level=True)
         # copied from setup.cfg
         yapf_style = dict(
@@ -1488,6 +1510,18 @@ class Config:
                     if not _is_builtin_module(name.name):
                         return True
         return False
+
+    def to_dict(self, keep_imported: bool = True) -> dict:
+        """Convert config object to dictionary and filter the imported
+        object."""
+        res = self._cfg_dict.to_dict()
+        if hasattr(self, '_imported_names') and not keep_imported:
+            res = {
+                key: value
+                for key, value in res.items()
+                if key not in self._imported_names
+            }
+        return res
 
 
 class DictAction(Action):

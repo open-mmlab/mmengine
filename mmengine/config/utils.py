@@ -165,11 +165,12 @@ def _is_builtin_module(module_name: str) -> bool:
     # Module not found
     if spec is None:
         return False
-    origin_path = osp.abspath(getattr(spec, 'origin', None))
+    origin_path = getattr(spec, 'origin', None)
     if origin_path is None:
-        return True
-    elif ('site-package' in origin_path
-          or not origin_path.startswith(PYTHON_ROOT_DIR)):
+        return False
+    origin_path = osp.abspath(origin_path)
+    if ('site-package' in origin_path
+            or not origin_path.startswith(PYTHON_ROOT_DIR)):
         return False
     else:
         return True
@@ -251,9 +252,14 @@ class Transform(ast.NodeTransformer):
                 >>> global_dict.update(dataset=base_dict['.._base_.datasets.coco_detection']['dataset'])  # only update `dataset`
     """  # noqa: E501
 
-    def __init__(self, global_dict: dict, base_dict: Optional[dict] = None):
+    def __init__(self,
+                 global_dict: dict,
+                 base_dict: Optional[dict] = None,
+                 filename=None):
         self.base_dict = base_dict if base_dict is not None else {}
         self.global_dict = global_dict
+        self.filename = filename
+        self.imported_obj: set = set()
         super().__init__()
 
     def visit_ImportFrom(
@@ -305,23 +311,30 @@ class Transform(ast.NodeTransformer):
         # TODO: Support lazyimport module from relative path
         nodes: List[ast.Assign] = []
         for name in node.names:
+            # `ast.alias`` have lineno attr after Python 3.10,
+            if hasattr(name, 'lineno'):
+                lineno = name.lineno
+            else:
+                lineno = node.lineno
             if name == '*':
                 # TODO If user import * from a non-config module, it should
                 # fallback to import the real module and raise a warning to
                 # remind user the real module will be imported which will slows
                 # donwn the parsing speed.
                 raise RuntimeError(
-                    'You cannot import * from a non-config module, please use')
+                    'You cannot import * from a non-config module!')
             elif name.asname is not None:
                 # case1:
                 # from mmengine.dataset import BaseDataset as Dataset ->
                 # Dataset = LazyObject('mmengine.dataset', 'BaseDataset')
-                code = f'{name.asname} = LazyObject("{module}", "{name.name}")'
+                code = f'{name.asname} = LazyObject("{module}", "{name.name}", "{self.filename}, line {lineno}")'  # noqa: E501
+                self.imported_obj.add(name.asname)
             else:
                 # case2:
                 # from mmengine.model import BaseModel
                 # BaseModel = LazyObject('mmengine.model', 'BaseModel')
-                code = f'{name.name} = LazyObject("{module}", "{name.name}")'
+                code = f'{name.name} = LazyObject("{module}", "{name.name}", "{self.filename}, line {lineno}")'  # noqa: E501
+                self.imported_obj.add(name.name)
             try:
                 nodes.append(ast.parse(code).body[0])  # type: ignore
             except Exception as e:
@@ -373,14 +386,19 @@ class Transform(ast.NodeTransformer):
         # TODO Support multiline import
         alias = alias_list[0]
         if alias.asname is not None:
+            self.imported_obj.add(alias.asname)
             return ast.parse(  # type: ignore
-                f'{alias.asname} = LazyObject("{alias.name}")').body[0]
+                f'{alias.asname} = LazyObject('
+                f'"{alias.name}",'
+                f'location="{self.filename}: line, {node.lineno}")').body[0]
         return node
 
 
-def _gather_abs_import_lazyobj(tree: ast.Module):
+def _gather_abs_import_lazyobj(tree: ast.Module,
+                               filename: Optional[str] = None):
     """Experimental implementation of gathering absolute import information."""
     imported = defaultdict(list)
+    abs_imported = set()
     new_body: List[ast.stmt] = []
     for node in tree.body:
         if isinstance(node, ast.Import):
@@ -390,12 +408,18 @@ def _gather_abs_import_lazyobj(tree: ast.Module):
                     new_body.append(node)
                     continue
                 module = alias.name.split('.')[0]
-                imported[module].append(alias.name)
+                imported[module].append(alias)
             continue
         new_body.append(node)
 
     for key, value in imported.items():
-        lazy_module_assign = ast.parse(f'{key} = LazyObject({value})')
+        names = [_value.name for _value in value]
+        # TODO Get lineno for each import statement
+        lineno = value[0].lineno if hasattr(value[0], 'lineno') else ''
+        lazy_module_assign = ast.parse(
+            f'{key} = LazyObject({names}, location="{filename}, line {lineno}")'  # noqa: E501
+        )  # noqa: E501
+        abs_imported.add(key)
         new_body.insert(0, lazy_module_assign.body[0])
     tree.body = new_body
-    return tree
+    return tree, abs_imported

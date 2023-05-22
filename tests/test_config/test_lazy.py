@@ -32,7 +32,7 @@ class TestTransform(TestCase):
         codeobj = ast.parse(codestr)
         global_dict = {'LazyObject': LazyObject}
         codeobj = Transform(global_dict).visit(codeobj)
-        codeobj = _gather_abs_import_lazyobj(codeobj)
+        codeobj, _ = _gather_abs_import_lazyobj(codeobj)
         codeobj = ast.fix_missing_locations(codeobj)
 
         exec(compile(codeobj, cfg_path, mode='exec'), global_dict, global_dict)

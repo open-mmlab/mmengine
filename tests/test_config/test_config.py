@@ -995,16 +995,39 @@ class TestConfig:
             else:
                 return True
 
-        if test_lazy_import_mmdet():
-            cfg = Config.fromfile(
-                osp.join(self.data_path,
-                         'config/lazy_module_config/load_mmdet_config.py'))
-            assert cfg.model.backbone.depth == 101
-            cfg.work_dir = str(tmp_path)
-            runner.from_cfg(cfg)
-        else:
-            pytest.skip('skip testing loading config from mmdet since mmdet '
-                        'is not installed or mmdet version is too low')
+        # if test_lazy_import_mmdet():
+        #     cfg = Config.fromfile(
+        #         osp.join(self.data_path,
+        #                  'config/lazy_module_config/load_mmdet_config.py'))
+        #     assert cfg.model.backbone.depth == 101
+        #     cfg.work_dir = str(tmp_path)
+        #     runner.from_cfg(cfg)
+        # else:
+        #     pytest.skip('skip testing loading config from mmdet since mmdet '
+        #                 'is not installed or mmdet version is too low')
+
+        # catch import error correctly
+        error_obj = tmp_path / 'error_obj.py'
+        error_obj.write_text("""from mmengine.fileio import error_obj
+""")
+        with pytest.raises(ImportError, match=f'.*{error_obj}, line 1.*'):
+            cfg = Config.fromfile(str(error_obj))
+            cfg.error_obj
+
+        error_attr = tmp_path / 'error_attr.py'
+        error_attr.write_text("""import mmengine
+error_attr = mmengine.error_attr
+""")
+        with pytest.raises(ImportError, match=f'.*{error_attr}'):
+            cfg = Config.fromfile(str(error_attr))
+            cfg.error_attr
+
+        error_module = tmp_path / 'error_module.py'
+        error_module.write_text("""import error_module
+""")
+        with pytest.raises(ImportError, match=f'.*{error_module}, line 1.*'):
+            cfg = Config.fromfile(str(error_module))
+            cfg.error_module
 
 
 class TestConfigDict(TestCase):

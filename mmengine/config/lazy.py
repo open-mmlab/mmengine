@@ -38,10 +38,11 @@ class LazyObject:
 
     def __init__(self,
                  module: Union[str, list, tuple],
-                 imported: Optional[str] = None):
+                 imported: Optional[str] = None,
+                 location=None):
         if (not isinstance(module, str) and not is_seq_of(module, str)):
             raise TypeError('module should be `str`, `list`, `tuple` or '
-                            f'None, but got {type(imported)}, this might be '
+                            f'None, but got {type(module)}, this might be '
                             'a bug of MMEngine, please report it to '
                             'https://github.com/open-mmlab/mmengine/issues')
         self._module: Union[str, list, tuple] = module
@@ -52,6 +53,7 @@ class LazyObject:
                             'a bug of MMEngine, please report it to '
                             'https://github.com/open-mmlab/mmengine/issues')
         self._imported = imported
+        self.location = location
 
     def build(self) -> Any:
         """Return imported object.
@@ -61,32 +63,58 @@ class LazyObject:
         """
         if isinstance(self._module, str):
             # For import xxx.xxx as xxx or from xxx.xxx import xxx
-            module = importlib.import_module(self._module)
-            if self._imported:
-                try:
+            try:
+                module = importlib.import_module(self._module)
+                if self._imported:
                     module = getattr(module, self._imported)
-                except AttributeError:
-                    raise ImportError(f'Cannot import {self._imported} '
-                                      f'from {self._module}')
+            except AttributeError or ImportError:
+                if self._imported is not None:
+                    raise ImportError(
+                        f'Cannot import {self._imported} '
+                        f'from {self._module} in {self.location}')
+                else:
+                    raise ImportError(f'Cannot import {self._module} '
+                                      f'in {self.location}')
+            except Exception as e:
+                raise type(e)(
+                    f'{e} in {self.location}, if you have checked the '
+                    'correctness of your syntax, please report this bug '
+                    'to https://github.com/open-mmlab/mmengine/issues')
+
             return module
         else:
             # import xxx.xxx
             # import xxx.yyy
             # import xxx.zzz
             # return imported xxx
-            for module in self._module:
-                importlib.import_module(module)  # type: ignore
-            module_name = self._module[0].split('.')[0]
-            return importlib.import_module(module_name)
+            try:
+                for module in self._module:
+                    importlib.import_module(module)  # type: ignore
+                module_name = self._module[0].split('.')[0]
+                return importlib.import_module(module_name)
+            except ImportError:
+                raise ImportError(f'Cannot import {self._module} '
+                                  f'in {self.location}')
+            except Exception as e:
+                raise type(e)(
+                    f'{e} in {self.location}, if you have checked the '
+                    'correctness of your syntax, please report this bug '
+                    'to https://github.com/open-mmlab/mmengine/issues')
 
     def __call__(self, *args, **kwargs):
         raise RuntimeError()
 
     def __deepcopy__(self, memo):
-        return LazyObject(self._module, self._imported)
+        return LazyObject(self._module, self._imported, self.location)
 
     def __getattr__(self, name):
-        return LazyAttr(name, self)
+        # Cannot locate the line number of the getting attribute.
+        # Therefore only record the filename.
+        if self.location is not None:
+            location = self.location.split(', line')
+        else:
+            location = self.location
+        return LazyAttr(name, self, location)
 
     def __str__(self) -> str:
         if self._imported is not None:
@@ -118,7 +146,10 @@ class LazyAttr:
         >>> print(model['type'].build())  # <class 'mmdet.models.detectors.retinanet.RetinaNet'>
     """  # noqa: E501
 
-    def __init__(self, name: str, source: Union['LazyObject', 'LazyAttr']):
+    def __init__(self,
+                 name: str,
+                 source: Union['LazyObject', 'LazyAttr'],
+                 location=None):
         self.name = name
         self.source = source
         # What is self._module meaning:
@@ -159,6 +190,7 @@ class LazyAttr:
             # zzz = xxx.yyy.zzz
             # zzz._module = xxx.yyy._module + zzz.name
             self._module = f'{self.source._module}.{self.source.name}'
+        self.location = location
 
     def __call__(self, *args, **kwargs: Any) -> Any:
         raise RuntimeError()
@@ -177,10 +209,11 @@ class LazyAttr:
         """
         try:
             return getattr(self.source.build(), self.name)
-        except ImportError or AttributeError:
+        except AttributeError:
             raise ImportError(
-                f'Cannot import f{self.module}, please check the you have '
-                'imported the correct module')
+                f'Cannot import f{self.module} in {self.location}')
+        except ImportError as e:
+            raise e
 
     def __str__(self) -> str:
         return self.name
