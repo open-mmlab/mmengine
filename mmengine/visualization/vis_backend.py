@@ -650,8 +650,8 @@ class MLflowVisBackend(BaseVisBackend):
         artifact_suffix (Tuple[str] or str, optional): The artifact suffix.
             Default to ('.json', '.log', '.py', 'yaml').
         tracked_config_keys (dict, optional): The top level keys of config that
-            will be added to the experiment. Default to None, which means all the
-            config will be added.
+            will be added to the experiment. Default to None, which means all
+            the config will be added.
             `New in version 0.7.4.`
     """
 
