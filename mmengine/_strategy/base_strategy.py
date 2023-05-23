@@ -5,7 +5,7 @@ import platform
 import time
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
-from typing import Callable, Dict, List, Optional, Sequence, Union, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import torch
 import torch.nn as nn
@@ -13,8 +13,8 @@ from torch.optim import Optimizer
 
 import mmengine
 from mmengine.config import Config, ConfigDict
-from mmengine.dist import broadcast, get_dist_info, is_distributed
 from mmengine.device import get_device
+from mmengine.dist import broadcast, get_dist_info, is_distributed
 from mmengine.logging import MMLogger
 from mmengine.model import revert_sync_batchnorm
 from mmengine.model.wrappers import is_model_wrapper
@@ -22,7 +22,8 @@ from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import MODELS, OPTIM_WRAPPERS, PARAM_SCHEDULERS
 from mmengine.utils import digit_version, get_git_hash
-from mmengine.utils.dl_utils import TORCH_VERSION, set_multi_processing, collect_env
+from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
+                                     set_multi_processing)
 
 ParamSchedulerType = Union[List[_ParamScheduler], Dict[str,
                                                        List[_ParamScheduler]]]
@@ -30,7 +31,7 @@ ParamSchedulerType = Union[List[_ParamScheduler], Dict[str,
 
 class BaseStrategy(metaclass=ABCMeta):
     """Base class for all strategies.
- 
+
     In the process of supporting FSDP, DeepSpeed, and ColossalAI, the
     scalability of the Runner faced challenges, which led to the redefinition
     of the Runner's responsibilities. The Strategy abstraction was split out,
@@ -142,14 +143,14 @@ class BaseStrategy(metaclass=ABCMeta):
         """
 
     def setup_env(
-        self,
-        *,
-        launcher: str = 'none',
-        cudnn_benchmark: bool = False,
-        mp_cfg: Optional[dict] = None,
-        dist_cfg: Optional[dict] = None,
-        resource_limit: int = 4096,
-        randomness: dict = dict(seed=None),
+            self,
+            *,
+            launcher: str = 'none',
+            cudnn_benchmark: bool = False,
+            mp_cfg: Optional[dict] = None,
+            dist_cfg: Optional[dict] = None,
+            resource_limit: int = 4096,
+            randomness: dict = dict(seed=None),
     ):
         """Setup environment.
 
@@ -800,8 +801,8 @@ class BaseStrategy(metaclass=ABCMeta):
         """Load scheduler state from dict."""
         if isinstance(self.param_schedulers, dict):
             for name, schedulers in self.param_schedulers.items():
-                for scheduler, ckpt_scheduler in zip(
-                        schedulers, state_dict[name]):
+                for scheduler, ckpt_scheduler in zip(schedulers,
+                                                     state_dict[name]):
                     scheduler.load_state_dict(ckpt_scheduler)
         else:
             for scheduler, ckpt_scheduler in zip(
@@ -876,9 +877,8 @@ class BaseStrategy(metaclass=ABCMeta):
         map_location: Union[str, Callable] = 'default',
         callback: Optional[Callable] = None,
     ) -> dict:
-        checkpoint = self.load_checkpoint(filename,
-                                          map_location=map_location,
-                                          callback=callback)
+        checkpoint = self.load_checkpoint(
+            filename, map_location=map_location, callback=callback)
 
         if not resume_optimizer:
             checkpoint.pop('optimizer', None)

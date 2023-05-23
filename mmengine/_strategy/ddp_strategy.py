@@ -1,12 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel
 
 from mmengine.device import get_device
-from mmengine.dist import get_dist_info, init_dist, is_distributed
+from mmengine.dist import get_dist_info, init_dist, is_distributed, master_only
 from mmengine.model import convert_sync_batchnorm, is_model_wrapper
 from mmengine.optim import OptimWrapper, OptimWrapperDict, _ParamScheduler
 from mmengine.registry import MODEL_WRAPPERS, STRATEGIES
@@ -138,7 +138,7 @@ class DDPStrategy(BaseStrategy):
         **kwargs,
     ) -> Tuple[int, int]:
         """Setup distributed environment.
-        
+
         Args:
             launcher (str): Way to launcher multi processes. Supported
                 launchers are 'pytorch', 'mpi' and 'slurm'.
@@ -197,10 +197,9 @@ class DDPStrategy(BaseStrategy):
                 group['lr'] = group['lr'] * ratio
 
     def convert_model(self, model: nn.Module) -> nn.Module:
-        """convert all `BatchNorm` layers in the model to
-        `SyncBatchNorm` (SyncBN) or `mmcv.ops.sync_bn.SyncBatchNorm` (MMSyncBN)
-        layers.
-        
+        """convert all `BatchNorm` layers in the model to `SyncBatchNorm`
+        (SyncBN) or `mmcv.ops.sync_bn.SyncBatchNorm` (MMSyncBN) layers.
+
         Args:
             model (nn.Module): Model to be converted.
 
@@ -240,3 +239,20 @@ class DDPStrategy(BaseStrategy):
         model = MODEL_WRAPPERS.build(
             self.model_wrapper, default_args=default_args)
         return model
+
+    @master_only
+    def save_checkpoint(
+        self,
+        filename: str,
+        *,
+        save_optimizer: bool = True,
+        save_param_scheduler: bool = True,
+        extra_ckpt: Optional[dict] = None,
+        callback: Optional[Callable] = None,
+    ) -> None:
+        super().save_checkpoint(
+            filename=filename,
+            save_optimizer=save_optimizer,
+            save_param_scheduler=save_param_scheduler,
+            extra_ckpt=extra_ckpt,
+            callback=callback)

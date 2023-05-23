@@ -33,7 +33,8 @@ class DeepSpeedStrategy(BaseStrategy):
         amp: Optional[dict] = None,
         activation_checkpointing: Optional[dict] = None,
         aio: Optional[dict] = None,
-        steps_per_print: int = 10000000000000,  # diable the log printed by deepseed
+        steps_per_print:
+        int = 10000000000000,  # disable the log printed by deepseed
         # the following args are for BaseStrategy
         **kwargs,
     ):
