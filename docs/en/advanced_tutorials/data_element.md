@@ -124,7 +124,7 @@ To facilitate usage, users can access the data within `data` and `metainfo` in t
 
 ```python
 data_element = BaseDataElement()
-# Set the `metainfo` field of the data_element using `set_metainfo`, 
+# Set the `metainfo` field of the data_element using `set_metainfo`,
 # with img_id and img_shape becoming attributes of the data_element.
 data_element.set_metainfo(dict(img_id=9, img_shape=(100, 100)))
 # check metainfo key, value, and item
@@ -386,7 +386,7 @@ MMEngine categorizes the data elements into three categories:
 - length validation of the data stored in InstanceData's data.
 - support for dictionary-like access and assignment of attributes in the `data`.
 - support for basic indexing, slicing, and advanced indexing capabilities.
-- support for concatenation of InstanceData with the same keys but different instances. 
+- support for concatenation of InstanceData with the same keys but different instances.
 
 These extended features support basic data structures such as `torch.tensor`, `numpy.ndarray`, list, str, and tuple, as well as custom data structures, as long as the custom data structure implements `__len__`, `__getitem__`, and `cat` methods.
 
