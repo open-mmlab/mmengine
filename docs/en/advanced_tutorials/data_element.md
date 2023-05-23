@@ -27,14 +27,14 @@ for img, data_sample in dataloader:
 
 The abstracted interface unifies and simplifies the interface between modules in the algorithm library, and can be used to pass data between datasets, models, visualizers, evaluates, or even within different modules in one model.
 
-Besides the basic add, delete, change and check functions, this interface also supports migration between different devices and the operation of `dict and `torch.Tensor\`, which can fully satisfy the requirements of the algorithm library.
+Besides the basic add, delete, update, and query functions, this interface also supports transferring data between different devices and the operation of `dict` and `torch.Tensor`, which can fully satisfy the requirements of the algorithm library.
 
-The MMEngine based algirthm library can inherit from this design and implement its own interfaces to meet the characteristics and practical needs of data in different algorithms, improving the expandability while maintaining a unified interface.
+Those algorithm libraries based on MMEngine can inherit from this design and implement their own interfaces to meet the characteristics and custom needs of data in different algorithms, improving the expandability while maintaining a unified interface.
 
-During the implementation, there are two types of the data interfaces for the algorithm libraries:
+During the implementation, there are two types of data interfaces for the algorithm libraries:
 
-- A collection of all the annotation and prediction information of a training or test sample. For example, the output of a dataset, a model, and the input of a visualizer. MMEngine defines it as a `DataSample`.
-- A single type of prediction or annotation information which is usually the output of a sub-module of a model, such as the output of a RPN in two-stage detection algorithm, the result of a semantic segmentation model, the production of a key point branch, and the output of a generator of a GAN model, etc. MMEngine defines these data as a data element (`XXXData`).
+- A collection of all annotation information and prediction information for a training or testing sample, such as the output of a dataset, the inputs of model and visualizer, typically constitutes all the information of an individual training or testing sample. MMEngine defines this as a `DataSample`.
+- A single type of prediction or annotation, typically the output of a sub-module in an algorithm model, such as the output of the RPN in two-stage detection, the output of a semantic segmentation model, the output of a keypoint branch, or the output of the generator in GANs, is defined by MMEngine as a data element (`XXXData`).
 
 The following section first introduces the base class [BaseDataElement](mmengine.structures.BaseDataElement) for `DataSample` and `XXXData`.
 
@@ -42,10 +42,10 @@ The following section first introduces the base class [BaseDataElement](mmengine
 
 There are two types of data in `BaseDataElement`. One is `data` such as the bounding box, label, and the instance mask, etc., the other is `metainfo` which contains the meta information of the data to ensure the integrity of the data, including `img_shape`, `img_id`, and some other basic information of the images. These information facilitate the recovery and the use of the data in visualization and other cases. Therefore, users need to explicitly distinguish and declare the data of these two types of attributes while creating the `BaseDataElement`.
 
-To make it easier to use `BaseDataElement`, the data in both `data` and `metainfo` are properties of `BaseDataElement`. We can directly access the data in these two parts by accessing the class properties. In addition, `BaseDataElement` provides several methods for manipulating the data in `data`.
+To make it easier to use `BaseDataElement`, the data in both `data` and `metainfo` are attributes of `BaseDataElement`. We can directly access the data and metainfo by accessing the class attributes. In addition, `BaseDataElement` provides several methods for manipulating the data in `data`.
 
-- Add, delete, change, and check data in different fields of `data`.
-- Migrate `data` to target devices.
+- Add, delete, update, and query data in different fields of `data`.
+- Copy `data` to target devices.
 - Support accessing data in the same way as a dictionary or a tensor to fully satisfy the algorithm's requirements.
 
 ### 1. Create BaseDataElement
@@ -76,7 +76,7 @@ data_element = BaseDataElement(
 
 ### 2. `new` and `clone`
 
-Users can use the `new()` function to create an abstract data interface with the same state and data from an existing data interface. You can set `metainfo` and `data` while create a new `BaseDataElement` to get an interface with the same state and data as `data` or `metainfo`. For example, `new(metainfo=xx)` makes the new `BaseDataElement` has the same content as the clone `BaseDataElement`, but `metainfo` has the newly set content. You can also use `clone()` directly to get a deep copy. The behavior of the `clone()` is the same as the `clone()` in PyTorch Tensor operation.
+Users can use the `new()` method to create an abstract data interface with the same state and data from an existing data interface. You can set `metainfo` and `data` while creating a new `BaseDataElement` to create an abstract interface with the same state and data as `data` or `metainfo`. For example, `new(metainfo=xx)` makes the new `BaseDataElement` has the same content as the cloned `BaseDataElement`, but `metainfo` is set to the newly specified content. You can also use `clone()` directly to get a deep copy. The behavior of the `clone()` is the same as the `clone()` in PyTorch Tensor operation.
 
 ```python
 data_element = BaseDataElement(
@@ -84,7 +84,7 @@ data_element = BaseDataElement(
     scores=torch.rand((5,)),
     metainfo=dict(img_id=1, img_shape=(640, 640)))
 
-# set metainfo and data while creating BaseDataElement, makes BaseDataElement has the same unused data
+# set metainfo and data while creating BaseDataElement
 data_element1 = data_element.new(metainfo=dict(img_id=2, img_shape=(320, 320)))
 print('bboxes is in data_element1:', 'bboxes' in data_element1) # True
 print('bboxes in data_element1 is same as bbox in data_element', (data_element1.bboxes == data_element.bboxes).all())
@@ -110,20 +110,22 @@ label in data_element2 is True
 
 ### 3. Add and query attributes
 
-For adding `data` attributes, users can add them as adding class attributes inside `data`. However, for `metainfo`, users should use `set_metainfo` interface to explicitly modify the information if it is needed since usually `metainfo` contains the metadata of the images and will not be modify in most scenarios.
+When it comes to adding attributes, users can add attributes to the `data` in the same way they add class attributes. For `metainfo`, it generally stores metadata about images and is not usually modified. If there is a need to add attributes to `metainfo`, users should use the `set_metainfo` interface to explicitly modify it.
 
-For querying, users can access keys that exists only in `data` via `keys`, `values`, and `items`. You can also use `metainfo_keys`, `metainfo_values`, and `metainfo_items` to access those only exists in `metainfo`.
+For querying, users can access the key-value pairs that exist only in `data` using `keys`, `values`, and `items`. Similarly, they can access the key-value pairs that exist only in `metainfo` using `metainfo_keys`, `metainfo_values`, and `metainfo_items`. Users can also access all attributes of the BaseDataElement, regardless of their type, using `all_keys`, `all_values`, and `all_items`.
 
-Moreover, for the ease of use, users can access `data` and `metainfo` as if they were working with class properties, or through the `get()` interface as `dict`.
+To facilitate usage, users can access the data within `data` and `metainfo` in the same way they access class attributes. Alternatively, they can use the `get()` interface in a dictionary-like manner to access the data.
 
 **Note:**
 
-BaseDataElement does not allow users to use the same name to set fields in metainfo and data. Otherwise, it will throw out an error.
+1. `BaseDataElement` does not support having the same field names in both `metainfo` and `data` attributes. Therefore, users should avoid setting the same field names in them, as it would result in an error in `BaseDataElement`.
+
+2. Considering that `InstanceData` and `PixelData` support slicing operations on the data, in order to maintain consistency with the use of `[]` and reduce the number of different methods for the same need, BaseDataElement does not support accessing and setting its attributes like a dictionary. Therefore, operations like `BaseDataElement[name]` for value assignment and retrieval are not supported.
 
 ```python
 data_element = BaseDataElement()
-# set `set_metainfo` via metainfo in data_element
-# meanwhile make img_id and img_shape as data_element attributes
+# Set the `metainfo` field of the data_element using `set_metainfo`, 
+# with img_id and img_shape becoming attributes of the data_element.
 data_element.set_metainfo(dict(img_id=9, img_shape=(100, 100)))
 # check metainfo key, value, and item
 print("metainfo'keys are ", data_element.metainfo_keys())
@@ -220,9 +222,9 @@ bboxes: tensor([[0.9204, 0.2110, 0.2886, 0.7925],
 
 ### 4. Delete and modify attributes
 
-Users can modify the `data` of `BaseDataElement` as if it were an instance property. However, with the same reason we mentioned in adding and querying attributes, users should only use `set_metainfo` to modify the `metainfo`.
+Users can modify the `data` attribute of `BaseDataElement` in the same way they modify instance attributes. As for `metainfo`, it generally stores metadata about images and is not usually modified. If there is a need to modify `metainfo`, users should use the `set_metainfo` interface to make explicit modifications.
 
-For ease of use, users can use `del` to delete the data in `data` and `metainfo` directly. and can also use `pop` to get the deleted data.
+For convenience in operations, `data` and `metainfo` can be directly deleted using del. Additionally, the pop method is supported to delete attributes after accessing them.
 
 ```python
 data_element = BaseDataElement(
@@ -308,19 +310,19 @@ data_element = BaseDataElement(
     bboxes=torch.rand((6, 4)), scores=torch.rand((6,)),
     metainfo=dict(img_id=0, img_shape=(640, 640))
 )
-# allocate data to GPU
+# copy data to GPU
 cuda_element_1 = data_element.cuda()
 print('cuda_element_1 is on the device of', cuda_element_1.bboxes.device)  # cuda:0
 cuda_element_2 = data_element.to('cuda:0')
 print('cuda_element_1 is on the device of', cuda_element_2.bboxes.device)  # cuda:0
 
-# allocate data to cpu
+# copy data to cpu
 cpu_element_1 = cuda_element_1.cpu()
 print('cpu_element_1 is on the device of', cpu_element_1.bboxes.device)  # cpu
 cpu_element_2 = cuda_element_2.to('cpu')
 print('cpu_element_2 is on the device of', cpu_element_2.bboxes.device)  # cpu
 
-# transform data to FP16
+# convert data to FP16
 fp16_instances = cuda_element_1.to(
     device=None, dtype=torch.float16, non_blocking=False, copy=False,
     memory_format=torch.preserve_format)
@@ -346,7 +348,7 @@ The type of cpu_element_1 is convert to <class 'numpy.ndarray'>
 
 ### 6. Show properties
 
-`BaseDataElement` also implements `__repr__` which allows users to get all the data information through `print`. Meanwhile, to facilitate debugging, all properties in `BaseDataElement` are added to `__dict__`. Users can visualize the contents directly in their IDEs. A complete property display is as follow:
+`BaseDataElement` also implements `__repr__` which allows users to get all the data information through `print`. Meanwhile, to facilitate debugging, all attributes in `BaseDataElement` are added to `__dict__`. Users can visualize the contents directly in their IDEs. A complete property display is as follows:
 
 ```python
 img_meta = dict(img_shape=(800, 1196, 3), pad_shape=(800, 1216, 3))
@@ -371,26 +373,22 @@ print(instance_data)
 
 ## xxxData
 
-MMEngine divides the data elements into three categories:
+MMEngine categorizes the data elements into three categories:
 
 - InstanceData: mainly for high-level tasks that encapsulated all instance-related data in the image, such as bounding boxes, labels, instance masks, key points, polygons, tracking ids, etc. All instance-related data has the same **length**, which is the number of instances in the image.
-- PixelData: mainly for low-level tasks and some high-level tasks that need perception pixel-level labels. `PixelData` encapsulates pixel-level data such as segmentation map for semantic segmentations, flow map for optical flow tasks, panoptic seg map for panoramic segmentions, and various images generated by the bottom-level tasks like super-resolution maps, denoising maps, and other various style maps generated. These data are characterized as three-dimensional or four-dimensional arrays, with the last two dimentsions being the height and width of the data. The height and the width are same.
-- LabelData: mainly for encapsulating label level data such as image classification, categories in multi-categorization, category content of the generated images in image generation, or texts in text recoginition.
+- PixelData: mainly for low-level tasks and some high-level tasks that require pixel-level labels. It encapsulates pixel-level data such as segmentation map for semantic segmentations, flow map for optical flow tasks, panoptic segmentation map for panoramic segmentations, and various images generated by bottom-level tasks like super-resolution maps, denoising maps, and other various style maps generated. These data typically have three or four dimensions, with the last two dimensions representing the height and width of the data, which are consistent across the dataset.
+- LabelData: mainly for encapsulating label-level data, such as class labels in image classification or multi-class classification, content categories for generated images in image generation, text in text recognition tasks, and more.
 
 ### InstanceData
 
-[`InstanceData`](mmengine.structures.InstanceData) builds on top of the `BaseDataElement` and restricts the stored data to have the same length.
+[`InstanceData`](mmengine.structures.InstanceData) builds upon `BaseDataElement` and introduces restrictions on the data stored in `data`, requiring that the length of the data is consistent. For example, in object detection, assuming an image has N objects (instances), you can store all the bounding boxes and labels in InstanceData, where the lengths of bounding boxes and label in InstanceData are the same. Based on this assumption, InstanceData is extended to include the following features:
 
-For example, in object detection tasks, suppose there are N instances in one image. All the bboxes and labels of the image can be stored in `InstanceData`, and the bboxes and labels of `InstanceData` have the same length.
+- length validation of the data stored in InstanceData's data.
+- support for dictionary-like access and assignment of attributes in the `data`.
+- support for basic indexing, slicing, and advanced indexing capabilities.
+- support for concatenation of InstanceData with the same keys but different instances. 
 
-In this way, MMEngine added the following features to `InstanceData`:
-
-- supports length checking of the data store in `InstanceData`
-- supports dictionary-like accessing and editing
-- supports basic indexing, slicing and other advanced querying features
-- supports concatenation of data with the **same `key`** but from different `InstanceData`
-
-These extended functions support both basic data structures such as `torch.tensor`, `numpy.dnarray`, `list`, `str` and `tuple`, and customized data structures, as long as they have implemented the `__len__`, `__getitem__` and `cat` fields.
+These extended features support basic data structures such as `torch.tensor`, `numpy.ndarray`, list, str, and tuple, as well as custom data structures, as long as the custom data structure implements `__len__`, `__getitem__`, and `cat` methods.
 
 #### Data verification
 
@@ -557,7 +555,7 @@ print(filter_results)
 ) at 0x7fa061299dc0>
 ```
 
-4. None result
+4. result is empty
 
 ```python
 empty_results = instance_data[instance_data.det_scores > 1]
@@ -722,15 +720,15 @@ print(InstanceData.cat([instance_data, instance_data]))
 
 ### PixelData
 
-[`PixelData`](mmengine.structures.PixelData) builds on `BaseDataElement` which also has restrictions on the stored data.
+[`PixelData`](mmengine.structures.PixelData) upon `BaseDataElement` and imposes restrictions on the stored `data`:
 
-- All data must be in three-dimension in the order of (Channel, Height, Width).
+- All data must be three-dimension in the order of (Channel, Height, and Width).
 - All data must have the same length and width.
 
 MMEngine extends the `PixelData` according to these assumptions, including:
 
-- Dimension checking on data stored
-- Supports indexing and slicing the data in spatial dimension
+- Dimension validation on data stored
+- Support indexing and slicing the data in spatial dimension
 
 #### Data verification
 
@@ -848,22 +846,22 @@ tensor([0, 1, 0, 0, 0, 0, 0, 0, 0, 0]) is convert to tensor([1])
 
 ## xxxDataSample
 
-There may be different types of labels in one sample, for example, there may be both instance-level labels (Box) and pixel-level labels (SegMap) in one image. Therefore, we need to have a higher-level encapsulation on top of PixelData, InstanceData, and PixelData to represent the image-level labels. This layer is named as `XXXDataSample` across the OpenMMLab series algorithms. In MMDet we have DetDataSample. All the labels are encapsulated in `XXXDataSample` during the training process, so different deep learning tasks can maintain a uniform data flow and data processing method.
+There may be different types of labels in one sample, for example, there may be both instance-level labels (Box) and pixel-level labels (SegMap) in one image. Therefore, we need to have a higher-level encapsulation on top of PixelData, InstanceData, and PixelData to represent the image-level labels. This layer is named `XXXDataSample` across the OpenMMLab series algorithms. In MMDet we have `DetDataSample`. All the labels are encapsulated in `XXXDataSample` during the training process, so different deep learning tasks can maintain a uniform data flow and data processing method.
 
 ### Downstream library usage
 
 We take MMDet as an example to illustrate the use of the `DataSample` in downstream libraries and its constraints and naming styles. MMDet defined `DetDataSample` and seven fields, which are:
 
 - Annotation Information
-  - gt_instance(InstanceData): Instance annotation information includes the instance class, bounding box, etc. The type constraint is `InstanceData`.
-  - gt_panoptic_seg(PixelData): For panoptic segmentation annotation information, the required type is PixelData.
-  - gt_semantic_seg(PixelData): Semantic segmentation annotation information. The type constraint is `PixelData`.
+  - gt_instance (InstanceData): Instance annotation information includes the instance class, bounding box, etc. The type constraint is `InstanceData`.
+  - gt_panoptic_seg (PixelData): For panoptic segmentation annotation information, the required type is PixelData.
+  - gt_semantic_seg (PixelData): Semantic segmentation annotation information. The type constraint is `PixelData`.
 - Prediction Results
-  - pred_instance(InstanceData): Instance prediction results includes the instance class, bounding boxes, etc. The type constraint is `InstanceData`.
-  - pred_panoptic_seg(PixelData): Panoptic segmentation prediction results. The type constraint is `PixelData`.
-  - pred_semantic_seg(PixelData): Semantic segmentation prediction results. The type constraint is `PixelData`.
+  - pred_instance (InstanceData): Instance prediction results include the instance class, bounding boxes, etc. The type constraint is `InstanceData`.
+  - pred_panoptic_seg (PixelData): Panoptic segmentation prediction results. The type constraint is `PixelData`.
+  - pred_semantic_seg (PixelData): Semantic segmentation prediction results. The type constraint is `PixelData`.
 - Intermediate Results
-  - proposal(InstanceData): Mostly used for the RPN results in the two-stage algorithms. The type constraint is `InstanceData`.
+  - proposal (InstanceData): Mostly used for the RPN results in the two-stage algorithms. The type constraint is `InstanceData`.
 
 ```python
 from mmengine.structures import BaseDataElement
@@ -1006,11 +1004,11 @@ AssertionError: tensor([[0.4370, 0.1661, 0.0902, 0.8421],
 
 ## Simpify the interfaces
 
-In this section we use MMDetection to demonstrate how to migrate the abstract data interfaces to simplify the module and component interfaces. We suppose both `DetDataSample` and `InstanceData` have been implemented in MMDetection and MMEngine.
+In this section, we use MMDetection to demonstrate how to migrate the abstract data interfaces to simplify the module and component interfaces. We suppose both `DetDataSample` and `InstanceData` have been implemented in MMDetection and MMEngine.
 
 ### 1. Simplify the module interface
 
-Detector's external interfaces can been significantly simplified and unified. In the training process of a single-stage detection and segmentation algorithm in MMDet 2.X, `SingleStageDetector` requires `img`， `img_metas`， `gt_bboxes`， `gt_labels`， `gt_bboxes_ignore` as the inputs, but `SingleStageInstanceSegmentor` requires `gt_masks` as well. This causes the inconsistency in the training interface and affects the flexibility.
+Detector's external interfaces can be significantly simplified and unified. In the training process of a single-stage detection and segmentation algorithm in MMDet 2.X, `SingleStageDetector` requires `img`, `img_metas`, `gt_bboxes`， `gt_labels` and `gt_bboxes_ignore` as the inputs, but `SingleStageInstanceSegmentor` requires `gt_masks` as well. This causes inconsistency in the training interface and affects flexibility.
 
 ```python
 class SingleStageDetector(BaseDetector):
@@ -1037,7 +1035,7 @@ class SingleStageInstanceSegmentor(BaseDetector):
                       **kwargs):
 ```
 
-In MMDet 3.X, the training interfaces of the all the detectors can be unified as `img` and `data_samples` using `DetDataSample`. Different modules can use `data_samples` to encapsule their own attributes.
+In MMDet 3.X, the training interfaces of all the detectors can be unified as `img` and `data_samples` using `DetDataSample`. Different modules can use `data_samples` to encapsulate their own attributes.
 
 ```python
 class SingleStageDetector(BaseDetector):
@@ -1058,7 +1056,7 @@ class SingleStageInstanceSegmentor(BaseDetector):
 
 ### 2. Simplify the model interfaces
 
-In MMDet 2.X, `HungarianAssigner` and `MaskHungarianAssigner` will be used to assign bboxes and instance segment information with annotated instances, respectively. The assignment logics of these two moduls are the same, and the only differences are the interface and the calculation of the loss functions. However, this difference make the code of `HungarianAssigner` cannot be directly used in `MaskHungarianAssigner`, which caused the redundancy.
+In MMDet 2.X, `HungarianAssigner` and `MaskHungarianAssigner` will be used to assign bboxes and instance segment information with annotated instances, respectively. The assignment logics of these two modules are the same, and the only differences are the interface and the calculation of the loss functions. However, this difference makes the code of `HungarianAssigner` cannot be directly used in `MaskHungarianAssigner`, which caused the redundancy.
 
 ```python
 class HungarianAssigner(BaseAssigner):
@@ -1084,7 +1082,7 @@ class MaskHungarianAssigner(BaseAssigner):
                eps=1e-7):
 ```
 
-In MMDet 3.X, `InstanceData` can encapsule the bounding boxes, scores, and the masks. With which we can simplify the core parameters of `HungarianAssigner` to `pred_instances`, `gt_instances`, and `gt_instances_ignore`. This unifies the two assigner into one `HungarianAssianger`.
+In MMDet 3.X, `InstanceData` can encapsulate the bounding boxes, scores, and masks. With this, we can simplify the core parameters of `HungarianAssigner` to `pred_instances`, `gt_instances`, and `gt_instances_ignore`. This unifies the two assigners into one `HungarianAssianger`.
 
 ```python
 class HungarianAssigner(BaseAssigner):

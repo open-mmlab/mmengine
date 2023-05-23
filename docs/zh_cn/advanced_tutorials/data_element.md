@@ -72,7 +72,7 @@ data_element = BaseDataElement(
 
 ### 2. `new` 与 `clone` 函数
 
-用户可以使用 `new()` 函数基于已有的 `BaseDataElement` 创建一个具有相同 `data` 和 `metainfo` 的 `BaseDataElement`。用户也可以在调用 `new` 函数时候传入新的 `data` 和 `metainfo`，例如 `new(metainfo=xx)`  ， 此时创建的 `BaseDataElement` 相较于于已有的 `BaseDataElement`，`data` 完全一致 ，而 `metainfo` 则为新设置的内容。
+用户可以使用 `new()` 方法基于已有的 `BaseDataElement` 创建一个具有相同 `data` 和 `metainfo` 的 `BaseDataElement`。用户也可以在调用 `new` 方法时传入新的 `data` 和 `metainfo`，例如 `new(metainfo=xx)` ，此时创建的 `BaseDataElement` 相较于已有的 `BaseDataElement`，`data` 完全一致 ，而 `metainfo` 则为新设置的内容。
 也可以直接使用 `clone()` 来获得一份深拷贝，`clone()` 函数的行为与 PyTorch 中 Tensor 的 `clone()` 参数保持一致。
 
 ```python
@@ -116,7 +116,8 @@ label in data_element2 is True
 
 **注意：**
 
-`BaseDataElement` 不支持 metainfo 和 data 属性中有同名的字段，所以用户应当避免 metainfo 和 data 属性中设置相同的字段，否则 `BaseDataElement` 会报错。
+1. `BaseDataElement` 不支持 metainfo 和 data 属性中有同名的字段，所以用户应当避免 metainfo 和 data 属性中设置相同的字段，否则 `BaseDataElement` 会报错。
+2. 考虑到 `InstanceData` 和 `PixelData` 支持对数据进行切片操作，为了避免 `[]` 用法的不一致，同时减少同种需求的不同方法，`BaseDataElement` 不支持像字典那样访问和设置它的属性，所以类似 `BaseDataElement[name]` 的取值赋值操作是不被支持的。
 
 ```python
 data_element = BaseDataElement()
@@ -387,7 +388,7 @@ MMEngine 对 `InstanceData` 加入了如下支持：
 - 支持基础索引，切片以及高级索引功能
 - 支持具有**相同的 `key`** 但是不同的 `InstanceData` 进行拼接的功能。
 
-这些扩展功能除了支持基础的数据结构， 比如 `torch.tensor`, `numpy.dnarray`, `list`, `str` 和 `tuple`, 也可以是自定义的数据结构，只要自定义数据结构实现了 `__len__`, `__getitem__` 和 `cat` 字段。
+这些扩展功能除了支持基础的数据结构， 比如 `torch.tensor`, `numpy.dnarray`, `list`, `str` 和 `tuple`, 也可以是自定义的数据结构，只要自定义数据结构实现了 `__len__`, `__getitem__` 和 `cat` 方法。
 
 #### 数据校验
 
@@ -845,7 +846,7 @@ tensor([0, 1, 0, 0, 0, 0, 0, 0, 0, 0]) is convert to tensor([1])
 
 ## 数据样本(xxxDataSample)
 
-一份样本中可能存在不同类型的标签，例如一张图片里可能同时存在实例级别的标签（Box），像素系别的标签（SegMap），因此在 PixelData、InstanceData、PixelData 之上，还会有一层更加高级封装，用来表示图像级别的标签。OpenMMLab 系列项目将这层封装命名为 XXDataSample。以检测任务为例，MMDet 就实现了 DetDataSample。训练过程中所有的标签都会被封装在 XXXDataSample 中，这样能够保证不同的深度学习任务能够保持统一的数据流和统一的数据操作方式。
+一份样本中可能存在不同类型的标签，例如一张图片里可能同时存在实例级别的标签（Box），像素级别的标签（SegMap），因此在 PixelData、InstanceData、PixelData 之上，还会有一层更加高级封装，用来表示图像级别的标签。OpenMMLab 系列项目将这层封装命名为 `XXDataSample`。以检测任务为例，MMDet 就实现了 DetDataSample。训练过程中所有的标签都会被封装在 XXXDataSample 中，这样能够保证不同的深度学习任务能够保持统一的数据流和统一的数据操作方式。
 
 ### 下游库使用
 
