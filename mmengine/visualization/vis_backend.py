@@ -649,6 +649,10 @@ class MLflowVisBackend(BaseVisBackend):
         tracking_uri (str, optional): The tracking uri. Default to None.
         artifact_suffix (Tuple[str] or str, optional): The artifact suffix.
             Default to ('.json', '.log', '.py', 'yaml').
+        tracked_config_keys (dict, optional): The top level keys of config that
+            will be added to the experiment. Default to None, which means all
+            the config will be added.
+            `New in version 0.7.4.`
     """
 
     def __init__(self,
@@ -659,7 +663,8 @@ class MLflowVisBackend(BaseVisBackend):
                  params: Optional[dict] = None,
                  tracking_uri: Optional[str] = None,
                  artifact_suffix: SUFFIX_TYPE = ('.json', '.log', '.py',
-                                                 'yaml')):
+                                                 'yaml'),
+                 tracked_config_keys: Optional[dict] = None):
         super().__init__(save_dir)
         self._exp_name = exp_name
         self._run_name = run_name
@@ -667,6 +672,7 @@ class MLflowVisBackend(BaseVisBackend):
         self._params = params
         self._tracking_uri = tracking_uri
         self._artifact_suffix = artifact_suffix
+        self._tracked_config_keys = tracked_config_keys
 
     def _init_env(self):
         """Setup env for MLflow."""
@@ -729,7 +735,13 @@ class MLflowVisBackend(BaseVisBackend):
             config (Config): The Config object
         """
         self.cfg = config
-        self._mlflow.log_params(self._flatten(self.cfg))
+        if self._tracked_config_keys is None:
+            self._mlflow.log_params(self._flatten(self.cfg))
+        else:
+            tracked_cfg = dict()
+            for k in self._tracked_config_keys:
+                tracked_cfg[k] = self.cfg[k]
+            self._mlflow.log_params(self._flatten(tracked_cfg))
         self._mlflow.log_text(self.cfg.pretty_text, 'config.py')
 
     @force_init_env
