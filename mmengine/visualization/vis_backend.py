@@ -354,20 +354,20 @@ class WandbVisBackend(BaseVisBackend):
             The maximum value of ``coco/bbox_mAP`` is logged on wandb UI.
             See `wandb define_metric <https://docs.wandb.ai/ref/python/
             run#define_metric>`_ for details.
-            Default: None
-        commit: (bool, optional) Save the metrics dict to the wandb server
+            Defaults to None.
+        commit (bool, optional) Save the metrics dict to the wandb server
             and increment the step.  If false `wandb.log` just updates the
             current metrics dict with the row argument and metrics won't be
             saved until `wandb.log` is called with `commit=True`.
             Defaults to True.
-        log_code_name: (str, optional) The name of code artifact.
+        log_code_name (str, optional) The name of code artifact.
             By default, the artifact will be named
             source-$PROJECT_ID-$ENTRYPOINT_RELPATH. See
             `wandb log_code <https://docs.wandb.ai/ref/python/run#log_code>`_
             for details. Defaults to None.
-            New in version 0.3.0.
+            `New in version 0.3.0.`
         watch_kwargs (optional, dict): Agurments for ``wandb.watch``.
-            New in version 0.4.0.
+            `New in version 0.4.0.`
     """
 
     def __init__(self,
@@ -640,18 +640,18 @@ class MLflowVisBackend(BaseVisBackend):
     Args:
         save_dir (str): The root directory to save the files
             produced by the backend.
-        exp_name (str, optional): The experiment name. Default to None.
-        run_name (str, optional): The run name. Default to None.
+        exp_name (str, optional): The experiment name. Defaults to None.
+        run_name (str, optional): The run name. Defaults to None.
         tags (dict, optional): The tags to be added to the experiment.
-            Default to None.
+            Defaults to None.
         params (dict, optional): The params to be added to the experiment.
-            Default to None.
-        tracking_uri (str, optional): The tracking uri. Default to None.
+            Defaults to None.
+        tracking_uri (str, optional): The tracking uri. Defaults to None.
         artifact_suffix (Tuple[str] or str, optional): The artifact suffix.
-            Default to ('.json', '.log', '.py', 'yaml').
+            Defaults to ('.json', '.log', '.py', 'yaml').
         tracked_config_keys (dict, optional): The top level keys of config that
-            will be added to the experiment. Default to None, which means all
-            the config will be added.
+            will be added to the experiment. If it is None, which means all
+            the config will be added. Defaults to None.
             `New in version 0.7.4.`
     """
 
@@ -788,7 +788,7 @@ class MLflowVisBackend(BaseVisBackend):
                 corresponding values.
             step (int): Global step value to record. Default to 0.
             file_path (str, optional): Useless parameter. Just for
-                interface unification. Default to None.
+                interface unification. Defaults to None.
         """
         assert isinstance(scalar_dict, dict)
         assert 'step' not in scalar_dict, 'Please set it directly ' \
