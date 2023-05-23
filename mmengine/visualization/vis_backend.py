@@ -647,11 +647,12 @@ class MLflowVisBackend(BaseVisBackend):
         params (dict, optional): The params to be added to the experiment.
             Default to None.
         tracking_uri (str, optional): The tracking uri. Default to None.
-        tracking_config_key (dict, optional): The top level keys of config that will 
-            be added to the experiment. Default to None, which means all the config 
-            will be added. 
         artifact_suffix (Tuple[str] or str, optional): The artifact suffix.
             Default to ('.json', '.log', '.py', 'yaml').
+        tracking_config_keys (dict, optional): The top level keys of config that
+            will be added to the experiment. Default to None, which means all the
+            config will be added.
+            `New in version 0.7.4.`
     """
 
     def __init__(self,
@@ -661,9 +662,9 @@ class MLflowVisBackend(BaseVisBackend):
                  tags: Optional[dict] = None,
                  params: Optional[dict] = None,
                  tracking_uri: Optional[str] = None,
-                 tracking_config_keys: Optional[dict] = None,
                  artifact_suffix: SUFFIX_TYPE = ('.json', '.log', '.py',
-                                                 'yaml')):
+                                                 'yaml'),
+                 tracking_config_keys: Optional[dict] = None):
         super().__init__(save_dir)
         self._exp_name = exp_name
         self._run_name = run_name
