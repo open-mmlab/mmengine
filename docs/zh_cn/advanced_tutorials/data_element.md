@@ -720,7 +720,7 @@ print(InstanceData.cat([instance_data, instance_data]))
 
 ### PixelData
 
-[`PixelData`](mmengine.structures.PixelData) 在 `BaseDataElement` 的基础上，同样对对 data 中存储的数据做了限制:
+[`PixelData`](mmengine.structures.PixelData) 在 `BaseDataElement` 的基础上，同样对 data 中存储的数据做了限制:
 
 - 所有 data 内的数据均为 3 维，并且顺序为 (通道，高，宽)
 - 所有在 data 内的数据要有相同的长和宽
