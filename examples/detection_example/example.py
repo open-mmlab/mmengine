@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import xml.etree.ElementTree as ET  # Connect to the GPU if one exists.
 
@@ -7,8 +8,7 @@ import PIL
 import torch
 import torchvision.transforms.functional as F
 import torchvision.transforms.transforms as T
-from mmeval import ProposalRecall
-# from mmeval import MeanIoU
+from mmeval import COCODetection
 from torchvision.models.detection import fasterrcnn_resnet50_fpn
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
@@ -48,27 +48,41 @@ class Accuracy(BaseMetric):
         score = []
         groundtruth = {}
         predictionS = {}
+        labelS = []
+        pred_labels = []
         for target in targets[1]:
             boxes = target['boxes']
+            width = target['width']
+            height = target['height']
+            labels = target['labels'].cpu().numpy()
             for i in range(len(boxes)):
                 x_min, y_min, x_max, y_max = boxes[i].tolist()
                 label.append([x_min, y_min, x_max, y_max])
+                labelS.append(labels[i].tolist())
         for prediction in predictions:
             boxes = prediction['boxes']
             scores = prediction['scores'].cpu().numpy()
-            labels = prediction['labels']
-            prediction_labels = [labels.cpu().numpy()]
-            prediction_labels = prediction_labels[0].tolist()
+            pred_label = prediction['labels'].cpu().numpy()
             for i in range(len(boxes)):
                 x_min, y_min, x_max, y_max = boxes[i].tolist()
+                pred_labels.append(pred_label[i].tolist())
                 score.append(scores[i].tolist())
                 pred.append([x_min, y_min, x_max, y_max])
+
         label = np.array(label)
+        labelS = np.array(labelS)
         pred = np.array(pred)
         score = np.array(score)
+        pred_labels = np.array(pred_labels)
+
         groundtruth['bboxes'] = label
+        groundtruth['labels'] = labelS
+        groundtruth['width'] = width
+        groundtruth['height'] = height
+
         predictionS['bboxes'] = pred
         predictionS['scores'] = score
+        predictionS['labels'] = pred_labels
 
         self.results.append({
             'groundtruth': groundtruth,
@@ -76,10 +90,12 @@ class Accuracy(BaseMetric):
         })
 
     def compute_metrics(self, results):
-        groundtruth = [(item['groundtruth'], item['predictions'])
+        groundtruth = [(item['predictions'], item['groundtruth'])
                        for item in results]
-        proposal_recall = ProposalRecall()
-        r = proposal_recall.compute_metric(groundtruth)
+        fake_dataset_metas = {'classes': tuple([str(i) for i in range(73)])}
+        coco_det_metric = COCODetection(
+            dataset_meta=fake_dataset_metas, metric=['bbox'])
+        r = coco_det_metric.compute_metric(groundtruth)
         return r
 
 
@@ -92,7 +108,7 @@ def parse_args():
         help='job launcher')
     parser.add_argument('--local_rank', type=int, default=0)
     parser.add_argument(
-        '--batch_size', type=int, default=32, help='batch size for training')
+        '--batch_size', type=int, default=8, help='batch size for training')
 
     args = parser.parse_args()
     return args
@@ -120,6 +136,53 @@ def xml_to_dict(xml_path):
     }
 
 
+def json_to_dict(file_path):
+    image_name = os.path.basename(file_path)
+    json_path = os.path.dirname(file_path)
+
+    with open(json_path) as file:
+        json_data = json.load(file)
+
+    images = json_data.get('images', [])
+    annotations = json_data.get('annotations', [])
+
+    image_info = next(
+        (image for image in images if image['file_name'] == image_name), None)
+
+    if image_info is None:
+        return None
+
+    image_id = image_info['id']
+    height = image_info['height']
+    width = image_info['width']
+
+    boxes = []
+    labels = []
+
+    for ann in annotations:
+        if ann['image_id'] == image_id:
+            x, y, width_box, height_box = ann['bbox']
+            xmin = x
+            ymin = y
+            xmax = x + width_box
+            ymax = y + height_box
+            boxes.append([xmin, ymin, xmax, ymax])
+            category_id = ann['category_id']
+            labels.append(category_id)
+
+    if len(boxes) == 0:
+        boxes.append([1, 1, 2, 2])
+        labels.append(73)
+
+    return {
+        'image_width': int(width),
+        'image_height': int(height),
+        'image_channels': 3,
+        'labels': labels,
+        'boxes': boxes
+    }
+
+
 def file_to_dict(file_path):
     data_dict = {}
     with open(file_path) as file:
@@ -129,12 +192,26 @@ def file_to_dict(file_path):
     return data_dict
 
 
+def coco_file_to_dict(file_path):
+    with open(file_path) as file:
+        json_data = json.load(file)
+
+    categories = json_data.get('categories', [])
+
+    data_dict = {category['name']: category['id'] for category in categories}
+    data_dict['None'] = 73
+
+    return data_dict
+
+
 def reverse_dict(dictionary):
     return {value: key for key, value in dictionary.items()}
 
 
 # Convert human readable str label to int.
-label_dict = file_to_dict('/content/tiny_motorbike/labels.txt')
+label_dict = coco_file_to_dict(
+    'examples/detection_example/train/_annotations.coco.json')
+print(label_dict)
 # Convert label int to human readable str.
 reverse_label_dict = reverse_dict(label_dict)
 
@@ -144,26 +221,28 @@ class vehicleDataset(torch.utils.data.Dataset):
     def __init__(self, root, transforms=None):
         self.root = root
         self.transforms = transforms
-        self.files = sorted(os.listdir('/content/tiny_motorbike/images'))
+        self.files = sorted(os.listdir(self.root))
         for i in range(len(self.files)):
-            self.files[i] = self.files[i].split('.')[0]
+            self.files[i] = self.files[i].split('.jpg')[0]
             self.label_dict = label_dict
+        print(self.files)
+        self.files.remove('_annotations.coco.json')
 
     def __getitem__(self, i):
-        img = PIL.Image.open(
-            os.path.join(self.root,
-                         'images/' + self.files[i] + '.jpg')).convert(
-                             'RGB')  # Load annotation file from the hard disc.
-        ann = xml_to_dict(
-            os.path.join(self.root, 'annotations/' + self.files[i] +
-                         '.xml'))  # The target is given as a dict.
+        img = PIL.Image.open(os.path.join(
+            self.root, self.files[i] + '.jpg')).convert(
+                'RGB')  # Load annotation file from the hard disc.
+        ann = json_to_dict(
+            os.path.join(self.root, '_annotations.coco.json/' + self.files[i] +
+                         '.jpg'))  # The target is given as a dict.
+
         target = {}
-        target['boxes'] = torch.as_tensor(
-            [[ann['x1'], ann['y1'], ann['x2'], ann['y2']]],
-            dtype=torch.float32)
-        target['labels'] = torch.as_tensor([reverse_label_dict[ann['label']]],
-                                           dtype=torch.int64)
-        target['image_id'] = torch.as_tensor(
+        target['width'] = ann['image_width']
+        target['height'] = ann['image_height']
+        target['boxes'] = torch.as_tensor(ann['boxes'], dtype=torch.float32)
+        # labels=[label_dict[label] for label in ann['labels']]
+        target['labels'] = torch.as_tensor(ann['labels'], dtype=torch.int64)
+        target['img_id'] = torch.as_tensor(
             i)  # Apply any transforms to the data if required.
         if self.transforms is not None:
             img, target = self.transforms(img, target)
@@ -206,10 +285,8 @@ class RandomHorizontalFlip(T.RandomHorizontalFlip):
 def get_transform(train):
     transforms = []
     transforms.append(ToTensor())
-    norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
     if train:
         transforms.append(RandomHorizontalFlip(0.5))
-        transforms.append(transforms.Normalize(**norm_cfg))
     return Compose(transforms)
 
 
@@ -220,40 +297,27 @@ def collate_fn(batch):
 
 def main():
     args = parse_args()
-    # norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
 
     # Train dataset.
     # Set train = True to apply the training image transforms.
-    train_ds = vehicleDataset('/content/tiny_motorbike',
+    train_ds = vehicleDataset('examples/detection_example/train',
                               get_transform(train=True))  # Validation dataset.
-    val_ds = vehicleDataset('/content/tiny_motorbike',
-                            get_transform(train=False))  # Test dataset.
-    test_ds = vehicleDataset('/content/tiny_motorbike',
-                             get_transform(train=False))
-
-    # Randomly shuffle all the data.
-    indices = torch.randperm(len(train_ds)).tolist()
-    # We split the entire data into 80/20 train-test splits. We further
-    # split the train set into 80/20 train-validation splits.
-    # Train dataset: 64% of the entire data, or 80% of 80%.
-    train_ds = torch.utils.data.Subset(
-        train_ds, indices[:int(len(indices) * 0.64)]
-    )  # Validation dataset: 16% of the entire data, or 20% of 80%.
-    val_ds = torch.utils.data.Subset(
-        val_ds,
-        indices[int(len(indices) *
-                    0.64):int(len(indices) *
-                              0.8)])  # Test dataset: 20% of the entire data.
-    test_ds = torch.utils.data.Subset(test_ds,
-                                      indices[int(len(indices) * 0.8):])
+    val_ds = vehicleDataset('examples/detection_example/valid',
+                            get_transform(train=False))  # Valid dataset.
 
     train_dl = torch.utils.data.DataLoader(
-        train_ds, batch_size=2, shuffle=True, collate_fn=collate_fn)
+        train_ds,
+        batch_size=args.batch_size,
+        shuffle=True,
+        collate_fn=collate_fn)
     val_dl = torch.utils.data.DataLoader(
-        val_ds, batch_size=2, shuffle=False, collate_fn=collate_fn)
+        val_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        collate_fn=collate_fn)
 
     runner = Runner(
-        model=MMFasterRCNN(11),
+        model=MMFasterRCNN(74),
         work_dir='./work_dir',
         train_dataloader=train_dl,
         optim_wrapper=dict(
@@ -262,7 +326,7 @@ def main():
                 lr=0.005,
                 momentum=0.9,
                 weight_decay=0.0005)),
-        train_cfg=dict(by_epoch=True, max_epochs=10, val_interval=1),
+        train_cfg=dict(by_epoch=True, max_epochs=20, val_interval=1),
         val_dataloader=val_dl,
         val_cfg=dict(),
         val_evaluator=dict(type=Accuracy),
