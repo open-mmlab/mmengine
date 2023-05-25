@@ -54,10 +54,6 @@ TEST_SKIPS = {
 # subprocesses to join.
 
 
-class SubprocessException(Exception):
-    ...
-
-
 class MultiProcessTestCase(TestCase):
     MAIN_PROCESS_RANK = -1
 
@@ -89,10 +85,7 @@ class MultiProcessTestCase(TestCase):
             if self.rank == self.MAIN_PROCESS_RANK:
                 self._join_processes(fn)
             else:
-                try:
-                    fn()
-                except Exception as e:
-                    raise SubprocessException(e)
+                fn()
 
         return types.MethodType(wrapper, self)
 
@@ -181,8 +174,8 @@ class MultiProcessTestCase(TestCase):
         self = cls(test_name)
         try:
             self.prepare_subprocess()
-        except Exception as e:
-            raise SubprocessException(e)
+        except Exception:
+            raise sys.exit(MultiProcessTestCase.TEST_ERROR_EXIT_CODE)
         self.rank = rank
         self.file_name = file_name
         self.run_test(test_name, parent_pipe)
@@ -206,7 +199,7 @@ class MultiProcessTestCase(TestCase):
             logger.info(f'Process {self.rank} skipping test {test_name} for '
                         f'following reason: {str(se)}')
             sys.exit(TEST_SKIPS['generic'].exit_code)
-        except SubprocessException:
+        except Exception:
             logger.error(
                 f'Caught exception: \n{traceback.format_exc()} exiting '
                 f'process {self.rank} with exit code: '
