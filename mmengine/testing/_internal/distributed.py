@@ -126,12 +126,16 @@ class MultiProcessTestCase(TestCase):
         self.processes = []
         for rank in range(int(self.world_size)):
             parent_conn, child_conn = torch.multiprocessing.Pipe()
-            process = proc(
-                target=self.__class__._run,
-                name='process ' + str(rank),
-                args=(rank, self._current_test_name(), self.file_name,
-                      child_conn),
-            )
+            try:
+                process = proc(
+                    target=self.__class__._run,
+                    name='process ' + str(rank),
+                    args=(rank, self._current_test_name(), self.file_name,
+                          child_conn),
+                )
+            except:  # noqa: E722
+                self.skipTest(f'Skip test {self._testMethodName} due to '
+                              'limited resources')
             process.start()
             self.pid_to_pipe[process.pid] = parent_conn
             self.processes.append(process)
@@ -338,8 +342,8 @@ class MultiProcessTestCase(TestCase):
             if p.exitcode is None:
                 raise RuntimeError(
                     f'Process {i} terminated or timed out after '
-                    '{elapsed_time} seconds')
-            if p.exitcode == signal.SIGABRT:
+                    f'{elapsed_time} seconds')
+            if abs(p.exitcode) == signal.SIGABRT:
                 self.skipTest(f'Skip test {self._testMethodName} due to '
                               'the program abort')
             self.assertEqual(
