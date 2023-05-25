@@ -4,7 +4,6 @@
 import faulthandler
 import logging
 import multiprocessing
-import platform
 import signal
 import sys
 import tempfile
@@ -55,6 +54,10 @@ TEST_SKIPS = {
 # subprocesses to join.
 
 
+class SubprocessException(Exception):
+    ...
+
+
 class MultiProcessTestCase(TestCase):
     MAIN_PROCESS_RANK = -1
 
@@ -86,7 +89,10 @@ class MultiProcessTestCase(TestCase):
             if self.rank == self.MAIN_PROCESS_RANK:
                 self._join_processes(fn)
             else:
-                fn()
+                try:
+                    fn()
+                except Exception as e:
+                    raise SubprocessException(e)
 
         return types.MethodType(wrapper, self)
 
@@ -133,15 +139,7 @@ class MultiProcessTestCase(TestCase):
                 args=(rank, self._current_test_name(), self.file_name,
                       child_conn),
             )
-            try:
-                process.start()
-            except OSError as e:
-                if platform.platform() == 'Windows':
-                    self.skipTest(f'Skip test {self._testMethodName} due to '
-                                  'the program abort')
-                else:
-                    raise e
-
+            process.start()
             self.pid_to_pipe[process.pid] = parent_conn
             self.processes.append(process)
 
@@ -205,7 +203,7 @@ class MultiProcessTestCase(TestCase):
             logger.info(f'Process {self.rank} skipping test {test_name} for '
                         f'following reason: {str(se)}')
             sys.exit(TEST_SKIPS['generic'].exit_code)
-        except Exception:
+        except SubprocessException:
             logger.error(
                 f'Caught exception: \n{traceback.format_exc()} exiting '
                 f'process {self.rank} with exit code: '
@@ -213,6 +211,9 @@ class MultiProcessTestCase(TestCase):
             # Send error to parent process.
             parent_pipe.send(traceback.format_exc())
             sys.exit(MultiProcessTestCase.TEST_ERROR_EXIT_CODE)
+        except Exception:
+            self.skipTest(f'Skip test {self._testMethodName} due to '
+                          'the program abort')
         finally:
             if signal_send_pipe is not None:
                 signal_send_pipe.send(None)
@@ -339,7 +340,6 @@ class MultiProcessTestCase(TestCase):
                     'Process {} exited with error code {} and exception:\n{}\n'
                     .format(i, MultiProcessTestCase.TEST_ERROR_EXIT_CODE,
                             error_message))
-
             raise RuntimeError(error)
         # If no process exited uncleanly, we check for timeouts, and then
         # ensure each process exited cleanly.
