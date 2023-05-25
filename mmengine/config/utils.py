@@ -389,8 +389,8 @@ class Transform(ast.NodeTransformer):
             self.imported_obj.add(alias.asname)
             return ast.parse(  # type: ignore
                 f'{alias.asname} = LazyObject('
-                f'"{alias.name}",'
-                f'location="{self.filename}: line, {node.lineno}")').body[0]
+                rf'"{alias.name}",'
+                rf'location="{self.filename}: line, {node.lineno}")').body[0]
         return node
 
 
@@ -422,7 +422,7 @@ def _gather_abs_import_lazyobj(tree: ast.Module,
         else:
             lineno = module2node[key].lineno
         lazy_module_assign = ast.parse(
-            f'{key} = LazyObject({names}, location="{filename}, line {lineno}")'  # noqa: E501
+            rf'{key} = LazyObject({names}, location="{filename}, line {lineno}")'  # noqa: E501
         )  # noqa: E501
         abs_imported.add(key)
         new_body.insert(0, lazy_module_assign.body[0])
