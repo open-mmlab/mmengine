@@ -66,6 +66,7 @@ class MultiProcessTestCase(TestCase):
     # simulate failures and in those cases, we can't have an exit code of 0,
     # but we still want to ensure we didn't run into any other errors.
     TEST_ERROR_EXIT_CODE = 10
+    SYSTEM_ERRO_CODE = 11
 
     # do not early terminate for distributed tests.
     def _should_stop_test_suite(self) -> bool:
@@ -212,8 +213,8 @@ class MultiProcessTestCase(TestCase):
             parent_pipe.send(traceback.format_exc())
             sys.exit(MultiProcessTestCase.TEST_ERROR_EXIT_CODE)
         except Exception:
-            self.skipTest(f'Skip test {self._testMethodName} due to '
-                          'the program abort')
+            # error unrelated with the tested function
+            sys.exit(MultiProcessTestCase.SYSTEM_ERRO_CODE)
         finally:
             if signal_send_pipe is not None:
                 signal_send_pipe.send(None)
@@ -351,6 +352,9 @@ class MultiProcessTestCase(TestCase):
             if p.exitcode == signal.SIGABRT:
                 self.skipTest(f'Skip test {self._testMethodName} due to '
                               'the program abort')
+            if p.exitcode == MultiProcessTestCase.SYSTEM_ERRO_CODE:
+                self.skipTest(f'Skip test {self._testMethodName} due to '
+                              'the system error')
             self.assertEqual(
                 p.exitcode,
                 first_process.exitcode,
