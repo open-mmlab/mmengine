@@ -210,7 +210,7 @@ def reverse_dict(dictionary):
 
 # Convert human readable str label to int.
 label_dict = coco_file_to_dict(
-    'examples/detection_example/train/_annotations.coco.json')
+    'examples/detection/train/_annotations.coco.json')
 print(label_dict)
 # Convert label int to human readable str.
 reverse_label_dict = reverse_dict(label_dict)
@@ -300,9 +300,9 @@ def main():
 
     # Train dataset.
     # Set train = True to apply the training image transforms.
-    train_ds = vehicleDataset('examples/detection_example/train',
+    train_ds = vehicleDataset('examples/detection/train',
                               get_transform(train=True))  # Validation dataset.
-    val_ds = vehicleDataset('examples/detection_example/valid',
+    val_ds = vehicleDataset('examples/detection/valid',
                             get_transform(train=False))  # Valid dataset.
 
     train_dl = torch.utils.data.DataLoader(
