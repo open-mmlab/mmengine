@@ -797,6 +797,9 @@ class MLflowVisBackend(BaseVisBackend):
 
     def close(self) -> None:
         """Close the mlflow."""
+        if not hasattr(self, '_mlflow'):
+            return
+
         file_paths = dict()
         for filename in scandir(self.cfg.work_dir, self._artifact_suffix,
                                 True):
@@ -808,8 +811,7 @@ class MLflowVisBackend(BaseVisBackend):
         for file_path, dir_path in file_paths.items():
             self._mlflow.log_artifact(file_path, dir_path)
 
-        if hasattr(self, '_mlflow'):
-            self._mlflow.end_run()
+        self._mlflow.end_run()
 
     def _flatten(self, d, parent_key='', sep='.') -> dict:
         """Flatten the dict."""
