@@ -436,7 +436,10 @@ class Registry:
                 'The key argument of `Registry.get` must be a str, '
                 f'got {type(key)}')
         from ..logging import print_log
-        obj_cls = locate(key)
+        try:
+            obj_cls = locate(key)
+        except Exception:
+            raise RuntimeError(f'Failed to get {key}')
         if obj_cls is not None:
             return obj_cls
         scope, real_key = self.split_scope_key(key)
