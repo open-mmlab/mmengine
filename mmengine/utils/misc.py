@@ -5,6 +5,7 @@ import itertools
 import logging
 import re
 import subprocess
+import sys
 import textwrap
 import warnings
 from collections import abc
@@ -521,7 +522,10 @@ def locate(obj_name: str):
     # import module
     while True:
         try:
-            module = import_module(module_name)
+            if module_name not in sys.modules:
+                module = import_module(module_name)
+            else:
+                module = sys.modules[module_name]
             part = next(parts)
             # mmcv.ops has nms.py has nms function at the same time. So the
             # function will have a higher priority
