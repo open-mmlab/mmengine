@@ -163,7 +163,7 @@ jobs:
           pip install openmim
           mim install 'mmcv>=2.0.0rc1'
       - name: Run CPU unittests
-        run: pytest tests/  --ignore tests/test_dist
+        run: pytest tests/  --ignore tests/test_dist -vv
         if: ${{ matrix.platform == 'cpu' }}
       - name: Run GPU unittests
         # Skip testing distributed related unit tests since the memory of windows CI is limited
