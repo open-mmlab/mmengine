@@ -3,9 +3,9 @@ import collections.abc
 import functools
 import itertools
 import logging
+import os.path as osp
 import re
 import subprocess
-import sys
 import textwrap
 import warnings
 from collections import abc
@@ -516,16 +516,18 @@ def locate(obj_name: str):
     """
     parts = iter(obj_name.split('.'))
     module_name = next(parts)
-    if find_spec(module_name) is None:
-        return None
     module = None
     # import module
     while True:
         try:
-            if module_name not in sys.modules:
+            spec = find_spec(module_name)
+            # In Windows and Python < 3.8, spec will not be None
+            # even if a module name with inconsistent capitalization is
+            # provided
+            if spec is not None and osp.exists(spec.origin):  # type: ignore
                 module = import_module(module_name)
             else:
-                module = sys.modules[module_name]
+                break
             part = next(parts)
             # mmcv.ops has nms.py has nms function at the same time. So the
             # function will have a higher priority
@@ -536,8 +538,6 @@ def locate(obj_name: str):
         except StopIteration:
             # if obj is a module
             return module
-        except ImportError:
-            break
 
     # module does not exist
     if module is None:
