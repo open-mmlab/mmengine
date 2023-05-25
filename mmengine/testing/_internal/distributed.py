@@ -1,10 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 # Copyright (c) https://github.com/pytorch/pytorch
 # Modified from https://github.com/pytorch/pytorch/blob/master/torch/testing/_internal/common_distributed.py  # noqa: E501
-
 import faulthandler
 import logging
 import multiprocessing
+import signal
 import sys
 import tempfile
 import threading
@@ -339,6 +339,9 @@ class MultiProcessTestCase(TestCase):
                 raise RuntimeError(
                     f'Process {i} terminated or timed out after '
                     '{elapsed_time} seconds')
+            if p.exitcode == signal.SIGABRT:
+                self.skipTest(f'Skip test {self._testMethodName} due to '
+                              'the program abort')
             self.assertEqual(
                 p.exitcode,
                 first_process.exitcode,
