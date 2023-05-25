@@ -9,6 +9,7 @@ import textwrap
 import warnings
 from collections import abc
 from importlib import import_module
+from importlib.util import find_spec
 from inspect import getfullargspec, ismodule
 from itertools import repeat
 from typing import Any, Callable, Optional, Type, Union
@@ -514,6 +515,8 @@ def locate(obj_name: str):
     """
     parts = iter(obj_name.split('.'))
     module_name = next(parts)
+    if find_spec(module_name) is None:
+        return None
     module = None
     # import module
     while True:
