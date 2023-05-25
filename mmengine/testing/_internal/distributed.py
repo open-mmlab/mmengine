@@ -126,6 +126,8 @@ class MultiProcessTestCase(TestCase):
         self.processes = []
         for rank in range(int(self.world_size)):
             parent_conn, child_conn = torch.multiprocessing.Pipe()
+            # Windows CI could fail to spawn subprocesses for limited
+            # resources.
             try:
                 process = proc(
                     target=self.__class__._run,
