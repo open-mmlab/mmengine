@@ -85,7 +85,7 @@ class TestProfilerHook(RunnerTestCase):
             dict(
                 type='ProfilerHook',
                 on_trace_ready=dict(
-                    type='tb_trace', dir_name='/home/baymax/RunTime/tb'))
+                    type='tb_trace', dir_name=self.temp_dir.name))
         ]
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
@@ -143,9 +143,6 @@ class TestProfilerHook(RunnerTestCase):
         runner.iter = 9
 
         hook = ProfilerHook(by_epoch=False, profile_times=10, schedule=None)
-        hook.before_run(runner)
-        hook.profiler.__exit__(None, None, None)
-
         hook.profiler = MagicMock()
         hook.after_train_iter(runner, 1, 1, 1)
         hook.profiler.__exit__.assert_called_once()
@@ -154,12 +151,9 @@ class TestProfilerHook(RunnerTestCase):
         hook = ProfilerHook(
             by_epoch=False,
             schedule=dict(wait=1, warmup=1, active=3, repeat=1))
-        hook.before_run(runner)
-        hook.profiler.__exit__(None, None, None)
-
         hook.profiler = MagicMock()
         hook.after_train_iter(runner, 1, 1, 1)
-        hook.profiler.step.assert_not_called()
+        hook.profiler.step.assert_called_once()
 
     def test_with_runner(self):
         self.epoch_based_cfg['custom_hooks'] = [
