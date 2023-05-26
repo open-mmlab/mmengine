@@ -231,29 +231,29 @@ def test_get_device_id():
     # cuda is not available and local_rank is not set
     with patch('torch.cuda.is_available', lambda: False), \
          patch_env(None, '0,1,2,3'):
-        assert _get_device_id() == '0'
+        assert _get_device_id() == 0
 
     # cuda is not available and local_rank is set
     with patch('torch.cuda.is_available', lambda: False), \
          patch_env('1', '0,1,2,3'):
-        assert _get_device_id() == '1'
+        assert _get_device_id() == 1
 
     # CUDA_VISIBLE_DEVICES will not influence non-cuda device
     with patch('torch.cuda.is_available', lambda: False), \
          patch_env('1', '0,100,2,3'):
-        assert _get_device_id() == '1'
+        assert _get_device_id() == 1
 
     # cuda is available and local_rank is not set
     with patch('torch.cuda.is_available', lambda: True), \
          patch_env(None, '0,1,2,3'):
-        assert _get_device_id() == '0'
+        assert _get_device_id() == 0
 
     # cuda is available and local_rank is set
     with patch('torch.cuda.is_available', lambda: True), \
          patch_env('2', '0,1,2,3'):
-        assert _get_device_id() == '2'
+        assert _get_device_id() == 2
 
     # CUDA_VISIBLE_DEVICES worked
     with patch('torch.cuda.is_available', lambda: True), \
          patch_env('2', '0,1,3,5'):
-        assert _get_device_id() == '3'
+        assert _get_device_id() == 3
