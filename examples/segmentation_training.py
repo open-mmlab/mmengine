@@ -123,7 +123,7 @@ class CamVid(VisionDataset):
         if self.target_transform is not None:
             mask_class = self.target_transform(mask_class)
 
-        return img, mask_class  # 直接返回 mask_class
+        return img, mask_class  
 
     def __len__(self):
         return len(self.images)
