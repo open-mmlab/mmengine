@@ -499,11 +499,13 @@ class TestCheckpointHook(RunnerTestCase):
         runner = self.build_runner(cfg)
         runner.train()
         self.assertTrue(
-            osp.isfile(osp.join(cfg.work_dir, f'{training_type}_10.pth')))
+            osp.isfile(osp.join(cfg.work_dir, f'{training_type}_11.pth')))
 
-        for i in range(10):
+        for i in range(11):
             self.assertFalse(
                 osp.isfile(osp.join(cfg.work_dir, f'{training_type}_{i}.pth')))
+
+        cfg.default_hooks.checkpoint.max_keep_ckpts = -1
 
         # Test filename_tmpl
         cfg.default_hooks.checkpoint.filename_tmpl = 'test_{}.pth'
@@ -517,8 +519,12 @@ class TestCheckpointHook(RunnerTestCase):
         cfg.train_cfg.val_interval = 1
         runner = self.build_runner(cfg)
         runner.train()
-        self.assertTrue(
-            osp.isfile(osp.join(cfg.work_dir, 'best_test_acc_test_5.pth')))
+        best_ckpt = osp.join(cfg.work_dir, 'best_test_acc_test_5.pth')
+        self.assertTrue(osp.isfile(best_ckpt))
+
+        ckpt = torch.load(osp.join(cfg.work_dir, 'test_5.pth'))
+        self.assertEqual(best_ckpt,
+                         ckpt['message_hub']['runtime_info']['best_ckpt'])
 
         # test save published keys
         cfg.default_hooks.checkpoint.published_keys = ['meta', 'state_dict']

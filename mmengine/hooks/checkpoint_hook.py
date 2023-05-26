@@ -428,8 +428,6 @@ class CheckpointHook(Hook):
                     self.out_dir, self.filename_tmpl.format(step))
                 if self.file_backend.isfile(ckpt_path):
                     self.file_backend.remove(ckpt_path)
-                else:
-                    break
 
             self.keep_ckpt_ids.append(current_ckpt)
 
