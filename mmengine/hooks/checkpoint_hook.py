@@ -3,6 +3,7 @@ import hashlib
 import logging
 import os.path as osp
 import pickle
+from collections import deque
 from math import inf
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Union
@@ -144,7 +145,11 @@ class CheckpointHook(Hook):
         self.save_optimizer = save_optimizer
         self.save_param_scheduler = save_param_scheduler
         self.out_dir = out_dir  # type: ignore
+
         self.max_keep_ckpts = max_keep_ckpts
+        if max_keep_ckpts > 0:
+            self.keep_ckpt_ids: deque = deque([], max_keep_ckpts)
+
         self.save_last = save_last
         self.args = kwargs
 
@@ -416,16 +421,17 @@ class CheckpointHook(Hook):
                 current_ckpt = runner.epoch + 1
             else:
                 current_ckpt = runner.iter + 1
-            redundant_ckpts = range(
-                current_ckpt - self.max_keep_ckpts * self.interval, 0,
-                -self.interval)
-            for _step in redundant_ckpts:
+
+            while len(self.keep_ckpt_ids) >= self.max_keep_ckpts:
+                step = self.keep_ckpt_ids.popleft()
                 ckpt_path = self.file_backend.join_path(
-                    self.out_dir, self.filename_tmpl.format(_step))
+                    self.out_dir, self.filename_tmpl.format(step))
                 if self.file_backend.isfile(ckpt_path):
                     self.file_backend.remove(ckpt_path)
                 else:
                     break
+
+            self.keep_ckpt_ids.append(current_ckpt)
 
         save_file = osp.join(runner.work_dir, 'last_checkpoint')
         with open(save_file, 'w') as f:
