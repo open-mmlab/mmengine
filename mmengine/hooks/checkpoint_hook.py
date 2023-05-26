@@ -85,7 +85,7 @@ class CheckpointHook(Hook):
             accordingly.
         backend_args (dict, optional): Arguments to instantiate the
             prefix of uri corresponding backend. Defaults to None.
-            New in v0.2.0.
+            `New in version 0.2.0.`
         published_keys (str, List[str], optional): If ``save_last`` is ``True``
             or ``save_best`` is not ``None``, it will automatically
             publish model with keys in the list after training.
@@ -242,6 +242,8 @@ class CheckpointHook(Hook):
                 'Find duplicate elements in "published_keys".')
         self.published_keys = published_keys
 
+        self.last_ckpt = None
+
     def before_train(self, runner) -> None:
         """Finish all operations, related to checkpoint.
 
@@ -337,14 +339,13 @@ class CheckpointHook(Hook):
         if self.published_keys is None:
             return
 
-        if self.save_last and 'last_ckpt' in runner.message_hub.runtime_info:
-            last_ckpt = runner.message_hub.get_info('last_ckpt')
-            self._publish_model(runner, last_ckpt)
+        if self.save_last and self.last_ckpt is not None:
+            self._publish_model(runner, self.last_ckpt)
 
         if getattr(self, 'best_ckpt_path', None) is not None:
             self._publish_model(runner, str(self.best_ckpt_path))
         if getattr(self, 'best_ckpt_path_dict', None) is not None:
-            for key, best_ckpt in self.best_ckpt_path_dict.items():
+            for best_ckpt in self.best_ckpt_path_dict.values():
                 self._publish_model(runner, best_ckpt)
 
     @master_only
@@ -400,14 +401,14 @@ class CheckpointHook(Hook):
             backend_args=self.backend_args,
             **self.args)
 
+        self.last_ckpt = self.file_backend.join_path(self.out_dir,
+                                                     ckpt_filename)
+        runner.message_hub.update_info('last_ckpt', self.last_ckpt)
+
         # Model parallel-like training should involve pulling sharded states
         # from all ranks, but skip the following procedure.
         if not is_main_process():
             return
-
-        runner.message_hub.update_info(
-            'last_ckpt',
-            self.file_backend.join_path(self.out_dir, ckpt_filename))
 
         # remove other checkpoints
         if self.max_keep_ckpts > 0:
@@ -427,9 +428,8 @@ class CheckpointHook(Hook):
                     break
 
         save_file = osp.join(runner.work_dir, 'last_checkpoint')
-        filepath = self.file_backend.join_path(self.out_dir, ckpt_filename)
         with open(save_file, 'w') as f:
-            f.write(filepath)
+            f.write(self.last_ckpt)  # type: ignore
 
     def _save_best_checkpoint(self, runner, metrics) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
@@ -452,6 +452,7 @@ class CheckpointHook(Hook):
         if 'auto' in self.key_indicators:
             self._init_rule(self.rules, [list(metrics.keys())[0]])
 
+        best_ckpt_updated = False
         # save best logic
         # get score from messagehub
         for key_indicator, rule in zip(self.key_indicators, self.rules):
@@ -474,6 +475,8 @@ class CheckpointHook(Hook):
             if key_score is None or not self.is_better_than[key_indicator](
                     key_score, best_score):
                 continue
+
+            best_ckpt_updated = True
 
             best_score = key_score
             runner.message_hub.update_info(best_score_key, best_score)
@@ -512,6 +515,27 @@ class CheckpointHook(Hook):
             runner.logger.info(
                 f'The best checkpoint with {best_score:0.4f} {key_indicator} '
                 f'at {cur_time} {cur_type} is saved to {best_ckpt_name}.')
+
+        if best_ckpt_updated and self.last_ckpt is not None:
+            # save checkpoint again to update the best_score and best_ckpt
+            # because the checkpoint saved in `after_train_epoch` or
+            # `after_train_iter` stage only keep the previous best checkpoint
+            # which causes the current best checkpoint can not be removed when
+            # resuming training.
+            if self.by_epoch:
+                ckpt_filename = self.filename_tmpl.format(runner.epoch)
+            else:
+                ckpt_filename = self.filename_tmpl.format(runner.iter)
+
+            runner.save_checkpoint(
+                self.out_dir,
+                ckpt_filename,
+                self.file_client_args,
+                save_optimizer=self.save_optimizer,
+                save_param_scheduler=self.save_param_scheduler,
+                by_epoch=self.by_epoch,
+                backend_args=self.backend_args,
+                **self.args)
 
     def _init_rule(self, rules, key_indicators) -> None:
         """Initialize rule, key_indicator, comparison_func, and best score. If
