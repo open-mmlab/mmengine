@@ -378,7 +378,7 @@ def _get_device_id():
             cuda_visible_devices = cuda_visible_devices.split(',')
         try:
             return int(cuda_visible_devices[local_rank])
-        except:
+        except ValueError:
             return cuda_visible_devices[local_rank]
 
 
