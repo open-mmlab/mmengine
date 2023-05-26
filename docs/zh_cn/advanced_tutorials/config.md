@@ -398,6 +398,7 @@ b=2
 
         .. code-tab:: python 纯文本风格
 
+            # 注册流程
             from torch.optim import SGD
             from mmengine.registry import OPTIMIZERS
 
@@ -407,6 +408,7 @@ b=2
 
         .. code-tab:: python 纯 python 风格
 
+            # 配置文件写法
             from torch.optim import SGD
 
 
@@ -414,6 +416,7 @@ b=2
 
         .. code-tab:: python 纯文本风格
 
+            # 配置文件写法
             optimizer = dict(type='SGD', lr=0.1)
 
     .. tabs:: 构建模块
@@ -607,7 +610,7 @@ print(type(cfg['optimizer']['type']))
 2. 配置文件名必须符合 python 模块名的命名规范，即只能包含字母、数字、下划线，且不能以数字开头
 3. 导入 base 配置文件中的变量时候，例如 `from ._base_.alpha import beta`，此处的 `alpha` 必须是模块（module）名，即 python 文件，而能不是含有 `__init__.py` 的包（package）名
 
-### 迁移至南
+### 迁移指南
 
 从纯文本风格的配置文件迁移到纯 python 风格的配置文件，需要遵守以下规则：
 

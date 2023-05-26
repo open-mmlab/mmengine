@@ -528,6 +528,8 @@ def locate(obj_name: str):
         except StopIteration:
             # if obj is a module
             return module
+        except ImportError:
+            return None
 
     # module does not exist
     if module is None:
