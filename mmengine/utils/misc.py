@@ -3,14 +3,12 @@ import collections.abc
 import functools
 import itertools
 import logging
-import os.path as osp
 import re
 import subprocess
 import textwrap
 import warnings
 from collections import abc
 from importlib import import_module
-from importlib.util import find_spec
 from inspect import getfullargspec, ismodule
 from itertools import repeat
 from typing import Any, Callable, Optional, Type, Union
@@ -516,18 +514,10 @@ def locate(obj_name: str):
     """
     parts = iter(obj_name.split('.'))
     module_name = next(parts)
-    module = None
     # import module
     while True:
         try:
-            spec = find_spec(module_name)
-            # In Windows and Python < 3.8, spec will not be None
-            # even if a module name with inconsistent capitalization is
-            # provided
-            if spec is not None and osp.exists(spec.origin):  # type: ignore
-                module = import_module(module_name)
-            else:
-                break
+            module = import_module(module_name)
             part = next(parts)
             # mmcv.ops has nms.py has nms function at the same time. So the
             # function will have a higher priority
