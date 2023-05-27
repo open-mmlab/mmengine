@@ -12,7 +12,7 @@ from mmengine.dist import is_main_process, master_only
 from mmengine.fileio import FileClient, get_file_backend
 from mmengine.logging import print_log
 from mmengine.registry import HOOKS
-from mmengine.utils import is_list_of, is_seq_of
+from mmengine.utils import apply_to, is_list_of, is_seq_of
 from .hook import Hook
 
 DATA_BATCH = Optional[Union[dict, tuple, list]]
@@ -442,6 +442,8 @@ class CheckpointHook(Hook):
             runner (Runner): The runner of the training process.
             metrics (dict): Evaluation results of all metrics.
         """
+        from mmengine.runner.checkpoint import (_load_checkpoint,
+                                                save_checkpoint)
         if not self.save_best:
             return
 
@@ -520,26 +522,38 @@ class CheckpointHook(Hook):
                 f'The best checkpoint with {best_score:0.4f} {key_indicator} '
                 f'at {cur_time} {cur_type} is saved to {best_ckpt_name}.')
 
-        if best_ckpt_updated and self.last_ckpt is not None:
-            # save checkpoint again to update the best_score and best_ckpt
-            # because the checkpoint saved in `after_train_epoch` or
-            # `after_train_iter` stage only keep the previous best checkpoint
-            # which causes the current best checkpoint can not be removed when
-            # resuming training.
-            if self.by_epoch:
-                ckpt_filename = self.filename_tmpl.format(runner.epoch)
-            else:
-                ckpt_filename = self.filename_tmpl.format(runner.iter)
+        # save checkpoint again to update the best_score and best_ckpt stored
+        # in message_hub because the checkpoint saved in `after_train_epoch`
+        # or `after_train_iter` stage only keep the previous best checkpoint
+        # not the current best checkpoint which causes the current best
+        # checkpoint can not be removed when resuming training.
+        if (best_ckpt_updated and self.last_ckpt is not None
+                and is_main_process()):
+            if self.file_backend.isfile(self.last_ckpt):
+                checkpoint = _load_checkpoint(self.last_ckpt)
+                checkpoint['message_hub'] = apply_to(
+                    runner.message_hub.state_dict(),
+                    lambda x: hasattr(x, 'cpu'), lambda x: x.cpu())
 
-            runner.save_checkpoint(
-                self.out_dir,
-                ckpt_filename,
-                self.file_client_args,
-                save_optimizer=self.save_optimizer,
-                save_param_scheduler=self.save_param_scheduler,
-                by_epoch=self.by_epoch,
-                backend_args=self.backend_args,
-                **self.args)
+                save_checkpoint(
+                    checkpoint,
+                    self.last_ckpt,
+                    file_client_args=self.file_client_args,
+                    backend_args=self.backend_args)
+            else:
+                if self.by_epoch:
+                    ckpt_filename = self.filename_tmpl.format(runner.epoch)
+                else:
+                    ckpt_filename = self.filename_tmpl.format(runner.iter)
+                runner.save_checkpoint(
+                    self.out_dir,
+                    ckpt_filename,
+                    self.file_client_args,
+                    save_optimizer=self.save_optimizer,
+                    save_param_scheduler=self.save_param_scheduler,
+                    by_epoch=self.by_epoch,
+                    backend_args=self.backend_args,
+                    **self.args)
 
     def _init_rule(self, rules, key_indicators) -> None:
         """Initialize rule, key_indicator, comparison_func, and best score. If
