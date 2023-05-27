@@ -507,6 +507,7 @@ class TestCheckpointHook(RunnerTestCase):
         cfg.default_hooks.checkpoint.max_keep_ckpts = 1
         runner = self.build_runner(cfg)
         runner.train()
+        print(os.listdir(cfg.work_dir))
         self.assertTrue(
             osp.isfile(osp.join(cfg.work_dir, f'{training_type}_11.pth')))
 
