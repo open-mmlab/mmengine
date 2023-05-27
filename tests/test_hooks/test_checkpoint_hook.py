@@ -534,7 +534,8 @@ class TestCheckpointHook(RunnerTestCase):
         cfg.train_cfg.val_interval = 1
         runner = self.build_runner(cfg)
         runner.train()
-        best_ckpt = osp.join(cfg.work_dir, 'best_test_acc_iter_5.pth')
+        best_ckpt = osp.join(cfg.work_dir,
+                             f'best_test_acc_{training_type}_5.pth')
         self.assertTrue(osp.isfile(best_ckpt))
 
         ckpt = torch.load(osp.join(cfg.work_dir, f'{training_type}_5.pth'))
