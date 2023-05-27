@@ -85,7 +85,7 @@ class CheckpointHook(Hook):
             accordingly.
         backend_args (dict, optional): Arguments to instantiate the
             prefix of uri corresponding backend. Defaults to None.
-            New in v0.2.0.
+            `New in version 0.2.0.`
         published_keys (str, List[str], optional): If ``save_last`` is ``True``
             or ``save_best`` is not ``None``, it will automatically
             publish model with keys in the list after training.
