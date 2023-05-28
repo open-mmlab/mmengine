@@ -1,4 +1,4 @@
-## Distributed Training
+# Distributed Training
 
 MMEngine supports training models with CPU, single GPU, multiple GPUs in single machine and multiple machines. When multiple GPUs are available in the environment, we can use the following command to enable multiple GPUs in single machine or multiple machines to shorten the training time of the model.
 
