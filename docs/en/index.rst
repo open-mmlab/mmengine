@@ -21,6 +21,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    :caption: Common Usage
 
    common_usage/resume_training.md
+   common_usage/distributed_training.md
    common_usage/speed_up_training.md
    common_usage/save_gpu_memory.md
    common_usage/visualize_training_log.md
