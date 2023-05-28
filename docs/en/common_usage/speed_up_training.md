@@ -12,6 +12,12 @@ MMEngine supports training models with CPU, single GPU, multiple GPUs in single 
   python -m torch.distributed.launch --nproc_per_node=8 examples/train.py --launcher pytorch
   ```
 
+  You can also launch distributed training from Python script
+
+  ```python
+  python examples/train.py --num-gpus 8
+  ```
+
   If you need to specify the GPU index, you can set the `CUDA_VISIBLE_DEVICES` environment variable, e.g. use the 0th and 3rd GPU.
 
   ```bash
@@ -28,7 +34,7 @@ MMEngine supports training models with CPU, single GPU, multiple GPUs in single 
   python -m torch.distributed.launch \
       --nnodes 8 \
       --node_rank 0 \
-      --master_addr 127.0.0.1 \
+      --master-addr 127.0.0.1 \
       --master_port 29500 \
       --nproc_per_node=8 \
       examples/train.py --launcher pytorch
@@ -40,9 +46,32 @@ MMEngine supports training models with CPU, single GPU, multiple GPUs in single 
   python -m torch.distributed.launch \
       --nnodes 8 \
       --node_rank 1 \
-      --master_addr 127.0.0.1 \
+      --master-addr 127.0.0.1 \
       --master_port 29500 \
       --nproc_per_node=8 \
+  ```
+
+  Launch multi-machine distributed training from Python script
+
+  On the first machine:
+
+  ```bash
+  python examples/train.py \
+      --num-gpus 8 \
+      --num-nodes 2 \
+      --node-rank 0 \
+      --master-port 29500 \
+  ```
+
+  On the second machine:
+
+  ```bash
+  python examples/train.py \
+      --num-gpus 8 \
+      --num-nodes 2 \
+      --node-rank 1 \
+      --master-addr ${ip address to node of rank 0 } \
+      --master-port 29500
   ```
 
   If you are running MMEngine in a slurm cluster, simply run the following command to enable training for 2 machines and 16 GPUs.

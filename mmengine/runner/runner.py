@@ -22,7 +22,7 @@ from mmengine.config import Config, ConfigDict
 from mmengine.dataset import worker_init_fn as default_worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
-                           is_distributed, master_only)
+                           init_local_group, is_distributed, master_only)
 from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient, join_path
 from mmengine.hooks import Hook
@@ -650,6 +650,17 @@ class Runner:
         if self.distributed and not is_distributed():
             dist_cfg: dict = env_cfg.get('dist_cfg', {})
             init_dist(self.launcher, **dist_cfg)
+            # If distributed training is launched by `mmengine.dist.launch`,
+            # `NUM_PROC_PER_NODE` will be set in the environment variable.
+            # It means that the task is launched by multiple machines,
+            # and `init_local_group` should be called to ensure each machine
+            # has their own process group.
+            if 'NUM_PROC_PER_NODE' in os.environ:
+                rank = int(os.environ['RANK'])
+                num_proc_per_node: Union[List[int], List[str]]
+                num_proc_per_node = os.environ['NUM_PROC_PER_NODE'].split(' ')
+                num_proc_per_node = [int(num) for num in num_proc_per_node]
+                init_local_group(rank, num_proc_per_node)
 
         self._rank, self._world_size = get_dist_info()
 

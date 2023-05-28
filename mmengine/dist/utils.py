@@ -3,17 +3,18 @@ import datetime
 import functools
 import os
 import subprocess
+from collections.abc import Iterable, Mapping
 from typing import Callable, Optional, Tuple, Union
 
+import argparse
 import numpy as np
 import torch
 import torch.multiprocessing as mp
 from torch import Tensor
 from torch import distributed as torch_dist
 from torch.distributed import ProcessGroup
-from mmengine.device import is_mlu_available, is_npu_available
 
-from collections.abc import Iterable, Mapping
+from mmengine.device import is_mlu_available, is_npu_available
 
 _LOCAL_PROCESS_GROUP = None
 
@@ -178,27 +179,34 @@ def _init_dist_slurm(backend, port=None) -> None:
     torch_dist.init_process_group(backend=backend)
 
 
-def init_local_group(node_rank: int, num_gpus_per_node: int):
+def init_local_group(node_rank: int, num_proc_per_node: list):
     """Setup the local process group.
 
     Setup a process group which only includes processes that on the same
-    machine as the current process.
+    node as the current process.
 
     The code is modified from
     https://github.com/facebookresearch/detectron2/blob/main/detectron2/engine/launch.py
 
     Args:
-        node_rank (int): Rank of machines used for training.
-        num_gpus_per_node (int): Number of gpus used for training in a single
-            machine.
+        node_rank (int): Rank of node used for training.
+        num_gpus_per_node (list): Number of processes used for training in each
+            node.
     """  # noqa: W501
     global _LOCAL_PROCESS_GROUP
     assert _LOCAL_PROCESS_GROUP is None
 
-    ranks = list(
-        range(node_rank * num_gpus_per_node,
-              (node_rank + 1) * num_gpus_per_node))
-    _LOCAL_PROCESS_GROUP = torch_dist.new_group(ranks)
+    # `torch_dist.new_group` requires all process to enter the function call.
+    # `_LOCAL_PROCESS_GROUP` will be set as the process group of corresponding
+    # node.
+    num_nodes = len(num_proc_per_node)
+    for i in range(num_nodes):
+        start = sum(num_proc_per_node[:i]) if i != 0 else 0
+        end = sum(num_proc_per_node[:i + 1])
+        ranks_on_i = list(range(start, end))
+        pg = torch_dist.new_group(ranks_on_i)
+        if i == node_rank:
+            _LOCAL_PROCESS_GROUP = pg
 
 
 def get_backend(group: Optional[ProcessGroup] = None) -> Optional[str]:
@@ -557,3 +565,198 @@ def cast_data_device(
     else:
         raise TypeError('data should be a Tensor, list of tensor or dict, '
                         f'but got {data}')
+
+
+def launch(
+    main_func: Callable,
+    num_proc_per_node: Union[list, int] = 1,
+    num_nodes: int = 1,
+    node_rank: int = 0,
+    master_addr: str = '127.0.0.1',
+    master_port: str = 'auto',
+    args: Optional[argparse.Namespace] = None,
+):
+    """"A function used to launch distributed tasks.
+
+    It requires the passed function to accept only one argument, which
+    can either be ``None`` or of type ``argparse.ArgumentParser``.
+
+    Args:
+        main_func (Callable): Function only accepts one argument which
+            can either be ``None`` or of type ``argparse.ArgumentParser``.
+        num_proc_per_node (list or int): Number of valid processes for
+            nodes. For example, The task will be ran on 2 node A and
+            node B. A has 2 processes, and B has 4 valid processes. Then
+            ``num_proc_per_node`` should be [2, 4]. If
+            ``num_proc_per_node`` is a single ``int``, it means all
+            nodes launch ``num_proc_per_node`` processes.
+        num_nodes (int, optional): Number of used nodes. This argument is
+            only useful when ``num_proc_per_node`` is an int. Defaults to 1.
+        node_rank (int, optional): The rank of current node.
+            Defaults to 0.
+        master_addr (str, optional): The FQDN of the host that is running
+            worker with rank 0; used to initialize the Torch Distributed
+            backend. Defaults to '127.0.0.1'.
+        master_port (str, optional): The port on the ``master_addr`` that can
+            be used to host the C10d TCP store. Defaults to 'auto'.
+        args (tuple, optional): Arguments passed to main_func. Defaults to ().
+    """
+    if not isinstance(num_proc_per_node, list):
+        num_proc_per_node = [num_proc_per_node] * num_nodes
+
+    if not isinstance(args, argparse.Namespace) and args is not None:
+        raise TypeError(
+            'args should be None or an ``argparse.ArgumentParser`` object'
+            f'but got {type(args)}')
+    tuple_args: tuple
+    if args is not None:
+        if sum(num_proc_per_node) > 1 or 'WORLD_SIZE' in os.environ:
+            launcher = 'pytorch'
+        elif 'SLURM_NTASKS' in os.environ:
+            launcher = 'slurm'
+        elif 'OMPI_COMM_WORLD_SIZE' in os.environ:
+            launcher = 'mpi'
+        else:
+            launcher = 'none'
+        if getattr(args, 'launcher', None) is None:
+            args.launcher = launcher
+        tuple_args = (args, )
+    else:
+        tuple_args = ()
+
+    return general_launch(main_func, num_proc_per_node, num_nodes, node_rank,
+                          master_addr, master_port, tuple_args)
+
+
+def general_launch(
+        main_func: Callable,
+        num_proc_per_node: Union[list, int] = 1,
+        num_nodes: int = 1,
+        node_rank: int = 0,
+        master_addr: str = '127.0.0.1',
+        master_port: str = 'auto',
+        args: tuple = (),
+) -> None:
+    """Launch distributed task with single or multiple nodes(machines)/GPUs.
+
+    Args:
+        main_func (Callable): Function to be executed in multiple processes.
+        num_proc_per_node (list or int): Number of valid processes for
+            nodes. For example, The task will be ran on 2 node A and
+            node B. A has 2 processes, and B has 4 valid processes. Then
+            ``num_proc_per_node`` should be [2, 4]. If
+            ``num_proc_per_node`` is a single ``int``, it means all
+            nodes launch ``num_proc_per_node`` processes.
+        num_nodes (int, optional): Number of used nodes. This argument is
+            only useful when ``num_proc_per_node`` is an int. Defaults to 1.
+        node_rank (int, optional): The rank of current node.
+            Defaults to 0.
+        master_addr (str, optional): The FQDN of the host that is running
+            worker with rank 0; used to initialize the Torch Distributed
+            backend. Defaults to '127.0.0.1'.
+        master_port (str, optional): The port on the ``master_addr`` that can
+            be used to host the C10d TCP store. Defaults to 'auto'.
+        args (tuple, optional): Arguments passed to main_func. Defaults to ().
+    """
+    if not isinstance(num_proc_per_node, list):
+        num_proc_per_node = [num_proc_per_node] * num_nodes
+    world_size = sum(num_proc_per_node)
+
+    if master_port == 'auto':
+        assert len(num_proc_per_node) == 1, (
+            'Automatically inferring free port on multiple nodes will lead'
+            'to potential error.')
+        master_port = str(_find_free_port())
+
+    if world_size > 1:
+        # https://github.com/pytorch/pytorch/pull/14391
+
+        mp.start_processes(
+            _distributed_worker,
+            nprocs=num_proc_per_node[node_rank],
+            args=(
+                main_func,
+                world_size,
+                num_proc_per_node,
+                node_rank,
+                master_addr,
+                master_port,
+                args,
+            ),
+            daemon=False,
+            start_method=mp.get_start_method())
+    else:
+        main_func(*args)
+
+
+def _distributed_worker(
+    local_rank: int,
+    main_func: Callable,
+    world_size: int,
+    num_proc_per_node: list,
+    node_rank: int,
+    master_addr: str,
+    master_port: str,
+    args: tuple,
+) -> None:
+    """Run the task after initializing the environment.
+
+    This function will be launched by ``mp.start_processes`` and ``local_rank``
+    will be filled automatically.
+
+    Part of environment variable defined in `pytorch official docs <https://pytorch.org/docs/stable/elastic/run.html#environment-variables>`_
+    will be initialized.
+
+    Warning:
+        :func:`init_dist` must be called in the ``main_func``
+
+    Args:
+        local_rank (int): Local rank of the current node.
+        main_func (Callable): Function to be executed.
+        world_size (int): The number of all processes launched on all nodes.
+        num_proc_per_node (list): Number of launched processes of all
+            nodes.
+        node_rank (int): The rank of current node.
+        master_addr (str): The FQDN of the host that is running
+            worker with rank 0; used to initialize the Torch Distributed
+            backend.
+        master_port (str): The port on the ``master_addr`` that can
+            be used to host the C10d TCP store.
+        args (tuple, optional): Arguments passde to main_func.
+    """  # noqa: E501
+    has_gpu = torch.cuda.is_available()
+    if has_gpu:
+        assert num_proc_per_node[node_rank] <= torch.cuda.device_count()
+    os.environ['RANK'] = \
+        str(sum(num_proc_per_node[:node_rank]) + local_rank)
+    os.environ['LOCAL_RANK'] = str(local_rank)
+    os.environ['WORLD_SIZE'] = str(world_size)
+    os.environ['MASTER_ADDR'] = master_addr
+    os.environ['MASTER_PORT'] = master_port
+    num_proc_per_node = [str(num) for num in num_proc_per_node]
+    os.environ['NUM_PROC_PER_NODE'] = ' '.join(num_proc_per_node)
+
+    # synchronize is needed here to prevent a possible timeout after calling
+    # init_process_group.
+    # See: https://github.com/facebookresearch/maskrcnn-benchmark/issues/172
+    barrier()
+
+    main_func(*args)
+
+
+def _find_free_port() -> str:
+    """Find free port.
+
+    Returns:
+        str: Free port.
+    """
+    import socket
+
+    # Copied from https://github.com/facebookresearch/detectron2/blob/main/detectron2/engine/launch.py # noqa: E501
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # Binding to port 0 will cause the OS to find an available port for us
+    sock.bind(('', 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    # NOTE: there is still a chance the port could be taken by other processes.
+    return port
