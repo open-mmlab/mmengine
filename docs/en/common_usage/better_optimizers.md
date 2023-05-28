@@ -1,31 +1,31 @@
-# 性能更优的优化器
+# Better performance optimizers
 
-本文档提供了一些 MMEngine 支持的第三方优化器，它们可能会带来更快的收敛速度或者更高的性能。
+This document provides some third-party optimizers supported by MMEngine, which may bring faster convergence speed or higher performance.
 
 ## D-Adaptation
 
-[D-Adaptation](https://github.com/facebookresearch/dadaptation) 提供了 `DAdaptAdaGrad`、`DAdaptAdam` 和 `DAdaptSGD` 优化器。
+[D-Adaptation](https://github.com/facebookresearch/dadaptation) provides `DAdaptAdaGrad`, `DAdaptAdam` and `DAdaptSGD` optimziers。
 
 ```{note}
-如使用 D-Adaptation 提供的优化器，需将 mmengine 升级至 `0.6.0`。
+If you use the optimizer provided by D-Adaptation, you need to upgrade mmengine to `0.6.0`.
 ```
 
-- 安装
+- Installation
 
 ```bash
 pip install dadaptation
 ```
 
-- 使用
+- Usage
 
-以使用 `DAdaptAdaGrad` 为例。
+Take the `DAdaptAdaGrad` as an example.
 
 ```python
 runner = Runner(
     model=ResNet18(),
     work_dir='./work_dir',
     train_dataloader=train_dataloader_cfg,
-    # 如需查看 DAdaptAdaGrad 的输入参数，可查看
+    # To view the input parameters for DAdaptAdaGrad, you can refer to
     # https://github.com/facebookresearch/dadaptation/blob/main/dadaptation/dadapt_adagrad.py
     optim_wrapper=dict(optimizer=dict(type='DAdaptAdaGrad', lr=0.001, momentum=0.9)),
     train_cfg=dict(by_epoch=True, max_epochs=3),
@@ -33,28 +33,28 @@ runner = Runner(
 runner.train()
 ```
 
-## Lion
+## Lion-Pytorch
 
-[lion-pytorch](https://github.com/lucidrains/lion-pytorch) 提供了 `Lion` 优化器。
+[lion-pytorch](https://github.com/lucidrains/lion-pytorch) provides the `Lion` optimizer。
 
 ```{note}
-如使用 Lion 提供的优化器，需将 mmengine 升级至 `0.6.0`。
+If you use the optimizer provided by Lion-Pytorch, you need to upgrade mmengine to `0.6.0`.
 ```
 
-- 安装
+- Installation
 
 ```bash
 pip install lion-pytorch
 ```
 
-- 使用
+- Usage
 
 ```python
 runner = Runner(
     model=ResNet18(),
     work_dir='./work_dir',
     train_dataloader=train_dataloader_cfg,
-    # 如需查看 Lion 的输入参数，可查看
+    # To view the input parameters for Lion, you can refer to
     # https://github.com/lucidrains/lion-pytorch/blob/main/lion_pytorch/lion_pytorch.py
     optim_wrapper=dict(optimizer=dict(type='Lion', lr=1e-4, weight_decay=1e-2)),
     train_cfg=dict(by_epoch=True, max_epochs=3),
@@ -64,26 +64,26 @@ runner.train()
 
 ## Sophia
 
-[Sophia](https://github.com/kyegomez/Sophia) 提供了 `Sophia`、`SophiaG`、`DecoupledSophia` 和 `Sophia2` 优化器。
+[Sophia](https://github.com/kyegomez/Sophia) provides `Sophia`, `SophiaG`, `DecoupledSophia` and `Sophia2` optimizers.
 
 ```{note}
-如使用 Sophia 提供的优化器，需将 mmengine 升级至 `0.7.4`。
+If you use the optimizer provided by Sophia, you need to upgrade mmengine to `0.7.4`.
 ```
 
-- 安装
+- Installation
 
 ```bash
 pip install Sophia-Optimizer
 ```
 
-- 使用
+- Usage
 
 ```python
 runner = Runner(
     model=ResNet18(),
     work_dir='./work_dir',
     train_dataloader=train_dataloader_cfg,
-    # 如需查看 SophiaG 的输入参数，可查看
+    # To view the input parameters for SophiaG, you can refer to
     # https://github.com/kyegomez/Sophia/blob/main/Sophia/Sophia.py
     optim_wrapper=dict(optimizer=dict(type='SophiaG', lr=2e-4, betas=(0.965, 0.99), rho = 0.01, weight_decay=1e-1)),
     train_cfg=dict(by_epoch=True, max_epochs=3),
