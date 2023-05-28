@@ -376,7 +376,12 @@ def _get_device_id():
             cuda_visible_devices = list(range(num_device))
         else:
             cuda_visible_devices = cuda_visible_devices.split(',')
-        return int(cuda_visible_devices[local_rank])
+        if cuda_visible_devices[local_rank].isdigit():
+            return int(cuda_visible_devices[local_rank])
+        else:
+            # handle case for Multi-Instance GPUs
+            # see #1148 for details
+            return cuda_visible_devices[local_rank]
 
 
 def _get_host_info() -> str:
