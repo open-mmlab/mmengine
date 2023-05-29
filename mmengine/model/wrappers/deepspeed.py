@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Optional, Union
 
 import torch
 from deepspeed.runtime.engine import DeepSpeedEngine
@@ -24,6 +24,7 @@ class MMDeepSpeedEngine(DeepSpeedEngine):
         collate_fn=None,
         config=None,
         dont_change_device=False,
+        inputs_to_half: Optional[List[Union[int, str]]] = None,
     ):
         if config is None:
             config = dict()
@@ -41,12 +42,15 @@ class MMDeepSpeedEngine(DeepSpeedEngine):
             config=config,
             dont_change_device=dont_change_device)
 
+        self._inputs_to_half = inputs_to_half
+
     def train_step(
         self,
         data: Union[dict, tuple, list],
         optim_wrapper: OptimWrapper,
     ) -> Dict[str, torch.Tensor]:
         data = self.module.data_preprocessor(data, training=True)
+        data = self._cast_inputs_half(data)
         losses = self._run_forward(data, mode='loss')
         parsed_loss, log_vars = self.module.parse_losses(losses)
         optim_wrapper.update_params(parsed_loss, model=self)
@@ -62,7 +66,9 @@ class MMDeepSpeedEngine(DeepSpeedEngine):
         Returns:
             list: The predictions of given data.
         """
-        return self.module.val_step(data)
+        data = self.module.data_preprocessor(data, False)
+        data = self._cast_inputs_half(data)
+        return self._run_forward(data, mode='predict')
 
     def test_step(self, data: Union[dict, tuple, list]) -> list:
         """Gets the predictions of module during testing process.
@@ -73,7 +79,9 @@ class MMDeepSpeedEngine(DeepSpeedEngine):
         Returns:
             list: The predictions of given data.
         """
-        return self.module.test_step(data)
+        data = self.module.data_preprocessor(data, False)
+        data = self._cast_inputs_half(data)
+        return self._run_forward(data, mode='predict')
 
     def _run_forward(self, data: Union[dict, tuple, list], mode: str) -> Any:
         """Unpacks data for :meth:`forward`
@@ -93,3 +101,24 @@ class MMDeepSpeedEngine(DeepSpeedEngine):
             raise TypeError('Output of `data_preprocessor` should be '
                             f'list, tuple or dict, but got {type(data)}')
         return results
+
+    def _cast_inputs_half(self, inputs):
+        if self._inputs_to_half is None:
+            return inputs
+
+        if isinstance(inputs, (list, tuple)):
+            new_inputs = []
+            for i, v in enumerate(inputs):
+                if i in self._inputs_to_half:
+                    new_inputs.append(v.half())
+                else:
+                    new_inputs.append(v)
+            return inputs.__class__(new_inputs)
+        elif isinstance(inputs, dict):
+            for k, v in inputs.items():
+                if k in self._inputs_to_half:
+                    inputs[k] = v.half()
+            return inputs
+        else:
+            raise TypeError('inputs should be list, tuple or dict, '
+                            f'but got {type(inputs)}')

@@ -352,9 +352,7 @@ class FlexibleRunner:
         self._randomness_cfg = randomness
         self.strategy = self.build_strategy(strategy, launcher=launcher)
         self.strategy.setup_env(
-            launcher=launcher,
-            randomness=randomness,
-            **env_cfg)
+            launcher=launcher, randomness=randomness, **env_cfg)
 
         if experiment_name is not None:
             self._experiment_name = f'{experiment_name}_{self.timestamp}'
@@ -1385,6 +1383,7 @@ class FlexibleRunner:
                 specifying how to remap storage locations.
                 Defaults to 'default'.
         """
+
         def callback(checkpoint):
             self.call_hook('after_load_checkpoint', checkpoint=checkpoint)
 
@@ -1459,6 +1458,7 @@ class FlexibleRunner:
                 pair of the regular expression operations. Defaults to strip
                 the prefix 'module.' by [(r'^module\\.', '')].
         """
+
         def callback(checkpoint):
             self.call_hook('after_load_checkpoint', checkpoint=checkpoint)
 
@@ -1468,7 +1468,6 @@ class FlexibleRunner:
 
         return checkpoint
 
-    @master_only
     def save_checkpoint(
         self,
         out_dir: str,
@@ -1534,8 +1533,7 @@ class FlexibleRunner:
                 out_dir, filename, backend_args=backend_args)
 
         meta.update(
-            cfg=self.cfg.pretty_text,
-            experiment_name=self.experiment_name)
+            cfg=self.cfg.pretty_text, experiment_name=self.experiment_name)
 
         if hasattr(self.train_dataloader.dataset, 'metainfo'):
             meta.update(dataset_meta=self.train_dataloader.dataset.metainfo)

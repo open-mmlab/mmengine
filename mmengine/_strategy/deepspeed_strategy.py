@@ -28,10 +28,13 @@ class DeepSpeedStrategy(BaseStrategy):
         config: Union[str, dict, None] = None,
         zero_optimization: Optional[dict] = None,
         fp16: Optional[dict] = None,
+        inputs_to_half: Optional[List[Union[int, str]]] = None,
         bf16: Optional[dict] = None,
         amp: Optional[dict] = None,
         activation_checkpointing: Optional[dict] = None,
         aio: Optional[dict] = None,
+        steps_per_print:
+        int = 10000000000000,  # disable the log printed by deepseed
         # the following args are for BaseStrategy
         **kwargs,
     ):
@@ -50,6 +53,10 @@ class DeepSpeedStrategy(BaseStrategy):
             self.config['activation_checkpointing'] = activation_checkpointing
         if aio is not None:
             self.config['aio'] = aio
+
+        self.config['steps_per_print'] = steps_per_print
+
+        self._inputs_to_half = inputs_to_half
 
     def _parse_config(self, config):
         if config is None:
@@ -153,6 +160,7 @@ class DeepSpeedStrategy(BaseStrategy):
             model=model,
             optimizer=self.optim_wrapper.optimizer,
             config=self.config,
+            inputs_to_half=self._inputs_to_half,
         )
         model = MODEL_WRAPPERS.build(wrapper_cfg)
         return model
