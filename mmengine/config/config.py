@@ -475,12 +475,25 @@ class Config:
             return base_modules
 
         for idx, inst in enumerate(codes):
+            if (isinstance(inst, ast.Assign)
+                    and isinstance(inst.targets[0], ast.Name)
+                    and inst.targets[0].id == BASE_KEY):
+                raise RuntimeError(
+                    'The configuration file type in the inheritance chain '
+                    'must match the current configuration file type, either '
+                    '"lazy_import" or non-"lazy_import". You got this error '
+                    f'since you use the syntax like `_base_ = "{inst.targets[0].id}"` '  # noqa: E501
+                    'in your config. You should use `if "_base_": ... to` '
+                    'mark the inherited config file. See more information '
+                    'in https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html'  # noqa: E501
+                )
+
             if not isinstance(inst, ast.If):
                 continue
             value = inst.test
-            if isinstance(value, ast.Constant) and not value.value == '_base_':
+            if isinstance(value, ast.Constant) and not value.value == BASE_KEY:
                 continue
-            if isinstance(value, ast.Str) and not value.s == '_base_':
+            if isinstance(value, ast.Str) and not value.s == BASE_KEY:
                 continue
 
             # The original code:
@@ -722,6 +735,16 @@ class Config:
         Returns:
             Tuple[dict, str]: Variables dictionary and text of Config.
         """
+        if Config._is_lazy_import(filename):
+            raise RuntimeError(
+                'The configuration file type in the inheritance chain '
+                'must match the current configuration file type, either '
+                '"lazy_import" or non-"lazy_import". You got this error '
+                'since you use the syntax like `if "_base_": ...` '
+                f'or import non-builtin module in {filename}. See more '
+                'information in https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html'  # noqa: E501
+            )
+
         filename = osp.abspath(osp.expanduser(filename))
         check_file_exist(filename)
         fileExtname = osp.splitext(filename)[1]
@@ -785,7 +808,7 @@ class Config:
                 codeobj = compile(codes, '', mode='exec')
                 # Support load global variable in nested function of the
                 # config.
-                global_locals_var = {'_base_': base_cfg_dict}
+                global_locals_var = {BASE_KEY: base_cfg_dict}
                 ori_keys = set(global_locals_var.keys())
                 eval(codeobj, global_locals_var, global_locals_var)
                 cfg_dict = {
@@ -1492,7 +1515,7 @@ class Config:
                 return False
             if (isinstance(node, ast.If)
                     and isinstance(node.test, ast.Constant)
-                    and node.test.value == '_base_'):
+                    and node.test.value == BASE_KEY):
                 return True
             if isinstance(node, ast.ImportFrom):
                 # relative import -> lazy_import

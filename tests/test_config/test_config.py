@@ -7,7 +7,6 @@ import platform
 import sys
 import tempfile
 from importlib import import_module
-from importlib.util import find_spec
 from pathlib import Path
 from unittest import TestCase
 from unittest.mock import patch
@@ -973,15 +972,17 @@ class TestConfig:
 
         _compare_dict(cfg, dumped_cfg)
 
-        if find_spec('mmdet') is not None:
-            cfg = Config.fromfile(
-                osp.join(self.data_path,
-                         'config/lazy_module_config/load_mmdet_config.py'))
-            assert cfg.model.backbone.depth == 101
-            cfg.work_dir = str(tmp_path)
-        else:
-            pytest.skip('skip testing loading config from mmdet since mmdet '
-                        'is not installed or mmdet version is too low')
+        # TODO reimplement this part of unit test when mmdetection adds the
+        # new config.
+        # if find_spec('mmdet') is not None:
+        #     cfg = Config.fromfile(
+        #         osp.join(self.data_path,
+        #                  'config/lazy_module_config/load_mmdet_config.py'))
+        #     assert cfg.model.backbone.depth == 101
+        #     cfg.work_dir = str(tmp_path)
+        # else:
+        #     pytest.skip('skip testing loading config from mmdet since mmdet '
+        #                 'is not installed or mmdet version is too low')
 
         # catch import error correctly
         error_obj = tmp_path / 'error_obj.py'
@@ -1004,6 +1005,18 @@ error_attr = mmengine.error_attr
         with pytest.raises(ImportError, match=f'.*{error_module}, line 1.*'):
             cfg = Config.fromfile(str(error_module))
             cfg.error_module
+
+        # lazy-import and non-lazy-import should not be used mixed.
+        # current text config, base lazy-import config
+        with pytest.raises(RuntimeError, match='if "_base_"'):
+            Config.fromfile(
+                osp.join(self.data_path,
+                         'config/lazy_module_config/error_mix_using1.py'))
+        # current lazy-import config, base text config
+        with pytest.raises(RuntimeError, match='_base_ ='):
+            Config.fromfile(
+                osp.join(self.data_path,
+                         'config/lazy_module_config/error_mix_using2.py'))
 
 
 class TestConfigDict(TestCase):
