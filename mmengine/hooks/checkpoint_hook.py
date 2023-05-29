@@ -3,7 +3,6 @@ import hashlib
 import logging
 import os.path as osp
 import pickle
-from collections import deque
 from math import inf
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Union
@@ -145,10 +144,7 @@ class CheckpointHook(Hook):
         self.save_optimizer = save_optimizer
         self.save_param_scheduler = save_param_scheduler
         self.out_dir = out_dir  # type: ignore
-
         self.max_keep_ckpts = max_keep_ckpts
-        if max_keep_ckpts > 0:
-            self.keep_ckpt_ids: deque = deque([], max_keep_ckpts)
 
         self.save_last = save_last
         self.args = kwargs
@@ -422,14 +418,16 @@ class CheckpointHook(Hook):
             else:
                 current_ckpt = runner.iter + 1
 
-            while len(self.keep_ckpt_ids) >= self.max_keep_ckpts:
-                step = self.keep_ckpt_ids.popleft()
+            redundant_ckpts = range(
+                current_ckpt - self.max_keep_ckpts * self.interval, 0,
+                -self.interval)
+            for _step in redundant_ckpts:
                 ckpt_path = self.file_backend.join_path(
-                    self.out_dir, self.filename_tmpl.format(step))
+                    self.out_dir, self.filename_tmpl.format(_step))
                 if self.file_backend.isfile(ckpt_path):
                     self.file_backend.remove(ckpt_path)
-
-            self.keep_ckpt_ids.append(current_ckpt)
+                else:
+                    break
 
         save_file = osp.join(runner.work_dir, 'last_checkpoint')
         with open(save_file, 'w') as f:
@@ -540,20 +538,6 @@ class CheckpointHook(Hook):
                     self.last_ckpt,
                     file_client_args=self.file_client_args,
                     backend_args=self.backend_args)
-            else:
-                if self.by_epoch:
-                    ckpt_filename = self.filename_tmpl.format(runner.epoch)
-                else:
-                    ckpt_filename = self.filename_tmpl.format(runner.iter)
-                runner.save_checkpoint(
-                    self.out_dir,
-                    ckpt_filename,
-                    self.file_client_args,
-                    save_optimizer=self.save_optimizer,
-                    save_param_scheduler=self.save_param_scheduler,
-                    by_epoch=self.by_epoch,
-                    backend_args=self.backend_args,
-                    **self.args)
 
     def _init_rule(self, rules, key_indicators) -> None:
         """Initialize rule, key_indicator, comparison_func, and best score. If

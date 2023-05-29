@@ -433,12 +433,13 @@ class TestCheckpointHook(RunnerTestCase):
         setattr(common_cfg.train_cfg, f'max_{training_type}s', 11)
         checkpoint_cfg = dict(
             type='CheckpointHook',
-            interval=2,
+            interval=1,
             by_epoch=training_type == 'epoch')
         common_cfg.default_hooks = dict(checkpoint=checkpoint_cfg)
 
         # Test interval in epoch based training
         cfg = copy.deepcopy(common_cfg)
+        cfg.default_hooks.checkpoint.interval = 2
         runner = self.build_runner(cfg)
         runner.train()
 
@@ -528,7 +529,6 @@ class TestCheckpointHook(RunnerTestCase):
 
         # Test save_best
         cfg = copy.deepcopy(common_cfg)
-        cfg.default_hooks.checkpoint.interval = 1
         cfg.default_hooks.checkpoint.save_best = 'test/acc'
         cfg.val_evaluator = dict(type='TriangleMetric', length=11)
         cfg.train_cfg.val_interval = 1
