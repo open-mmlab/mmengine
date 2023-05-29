@@ -376,7 +376,9 @@ def _get_device_id():
             cuda_visible_devices = list(range(num_device))
         else:
             cuda_visible_devices = cuda_visible_devices.split(',')
-        if cuda_visible_devices[local_rank].isdigit():
+        if isinstance(cuda_visible_devices[local_rank], int):
+            return cuda_visible_devices[local_rank]
+        elif cuda_visible_devices[local_rank].isdigit():
             return int(cuda_visible_devices[local_rank])
         else:
             # handle case for Multi-Instance GPUs
