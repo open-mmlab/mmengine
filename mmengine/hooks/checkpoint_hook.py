@@ -145,7 +145,6 @@ class CheckpointHook(Hook):
         self.save_param_scheduler = save_param_scheduler
         self.out_dir = out_dir  # type: ignore
         self.max_keep_ckpts = max_keep_ckpts
-
         self.save_last = save_last
         self.args = kwargs
 
@@ -417,7 +416,6 @@ class CheckpointHook(Hook):
                 current_ckpt = runner.epoch + 1
             else:
                 current_ckpt = runner.iter + 1
-
             redundant_ckpts = range(
                 current_ckpt - self.max_keep_ckpts * self.interval, 0,
                 -self.interval)
