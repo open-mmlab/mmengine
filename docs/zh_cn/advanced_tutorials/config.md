@@ -630,7 +630,7 @@ print(type(cfg['optimizer']['type']))
     <tr>
         <th>模块</th>
         <th>别名</th>
-        <th>无</th>
+        <th>注意事项</th>
     <thead>
     <tbody>
     <tr>
