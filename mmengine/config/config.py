@@ -397,14 +397,20 @@ class Config:
                 filename=filename,
                 env_variables=env_variables)
         else:
-            # enable lazy import when parsing the config
+            # Enable lazy import when parsing the config.
+            # Using try-except to make sure ``ConfigDict.lazy`` will be reset
+            # to False
             ConfigDict.lazy = True
-            cfg_dict, imported_names = Config._parse_lazy_import(filename)
+            try:
+                cfg_dict, imported_names = Config._parse_lazy_import(filename)
+            except Exception as e:
+                raise e
+            finally:
+                ConfigDict.lazy = False
             for key, value in list(cfg_dict.to_dict().items()):
                 if isinstance(value, (types.FunctionType, types.ModuleType)):
                     cfg_dict.pop(key)
             # disable lazy import to get the real type.
-            ConfigDict.lazy = False
             cfg = Config(cfg_dict, filename=filename)
             object.__setattr__(cfg, '_imported_names', imported_names)
             return cfg
@@ -750,84 +756,91 @@ class Config:
         fileExtname = osp.splitext(filename)[1]
         if fileExtname not in ['.py', '.json', '.yaml', '.yml']:
             raise OSError('Only py/yml/yaml/json type are supported now!')
+        try:
+            with tempfile.TemporaryDirectory() as temp_config_dir:
+                temp_config_file = tempfile.NamedTemporaryFile(
+                    dir=temp_config_dir, suffix=fileExtname, delete=False)
+                if platform.system() == 'Windows':
+                    temp_config_file.close()
 
-        with tempfile.TemporaryDirectory() as temp_config_dir:
-            temp_config_file = tempfile.NamedTemporaryFile(
-                dir=temp_config_dir, suffix=fileExtname)
-            if platform.system() == 'Windows':
+                # Substitute predefined variables
+                if use_predefined_variables:
+                    Config._substitute_predefined_vars(filename,
+                                                       temp_config_file.name)
+                else:
+                    shutil.copyfile(filename, temp_config_file.name)
+                # Substitute environment variables
+                env_variables = dict()
+                if use_environment_variables:
+                    env_variables = Config._substitute_env_variables(
+                        temp_config_file.name, temp_config_file.name)
+                # Substitute base variables from placeholders to strings
+                base_var_dict = Config._pre_substitute_base_vars(
+                    temp_config_file.name, temp_config_file.name)
+
+                # Handle base files
+                base_cfg_dict = ConfigDict()
+                cfg_text_list = list()
+                for base_cfg_path in Config._get_base_files(
+                        temp_config_file.name):
+                    base_cfg_path, scope = Config._get_cfg_path(
+                        base_cfg_path, filename)
+                    _cfg_dict, _cfg_text, _env_variables = Config._file2dict(
+                        filename=base_cfg_path,
+                        use_predefined_variables=use_predefined_variables,
+                        use_environment_variables=use_environment_variables)
+                    cfg_text_list.append(_cfg_text)
+                    env_variables.update(_env_variables)
+                    duplicate_keys = base_cfg_dict.keys() & _cfg_dict.keys()
+                    if len(duplicate_keys) > 0:
+                        raise KeyError(
+                            'Duplicate key is not allowed among bases. '
+                            f'Duplicate keys: {duplicate_keys}')
+
+                    # _dict_to_config_dict will do the following things:
+                    # 1. Recursively converts ``dict`` to :obj:`ConfigDict`.
+                    # 2. Set `_scope_` for the outer dict variable for the base
+                    # config.
+                    # 3. Set `scope` attribute for each base variable.
+                    # Different from `_scope_`， `scope` is not a key of base
+                    # dict, `scope` attribute will be parsed to key `_scope_`
+                    # by function `_parse_scope` only if the base variable is
+                    # accessed by the current config.
+                    _cfg_dict = Config._dict_to_config_dict(_cfg_dict, scope)
+                    base_cfg_dict.update(_cfg_dict)
+
+                if filename.endswith('.py'):
+                    with open(temp_config_file.name, encoding='utf-8') as f:
+                        codes = ast.parse(f.read())
+                        codes = RemoveAssignFromAST(BASE_KEY).visit(codes)
+                    codeobj = compile(codes, '', mode='exec')
+                    # Support load global variable in nested function of the
+                    # config.
+                    global_locals_var = {BASE_KEY: base_cfg_dict}
+                    ori_keys = set(global_locals_var.keys())
+                    eval(codeobj, global_locals_var, global_locals_var)
+                    cfg_dict = {
+                        key: value
+                        for key, value in global_locals_var.items()
+                        if (key not in ori_keys and not key.startswith('__'))
+                    }
+                elif filename.endswith(('.yml', '.yaml', '.json')):
+                    cfg_dict = load(temp_config_file.name)
+                # close temp file
+                for key, value in list(cfg_dict.items()):
+                    if isinstance(value,
+                                  (types.FunctionType, types.ModuleType)):
+                        cfg_dict.pop(key)
                 temp_config_file.close()
 
-            # Substitute predefined variables
-            if use_predefined_variables:
-                Config._substitute_predefined_vars(filename,
-                                                   temp_config_file.name)
-            else:
-                shutil.copyfile(filename, temp_config_file.name)
-            # Substitute environment variables
-            env_variables = dict()
-            if use_environment_variables:
-                env_variables = Config._substitute_env_variables(
-                    temp_config_file.name, temp_config_file.name)
-            # Substitute base variables from placeholders to strings
-            base_var_dict = Config._pre_substitute_base_vars(
-                temp_config_file.name, temp_config_file.name)
-
-            # Handle base files
-            base_cfg_dict = ConfigDict()
-            cfg_text_list = list()
-            for base_cfg_path in Config._get_base_files(temp_config_file.name):
-                base_cfg_path, scope = Config._get_cfg_path(
-                    base_cfg_path, filename)
-                _cfg_dict, _cfg_text, _env_variables = Config._file2dict(
-                    filename=base_cfg_path,
-                    use_predefined_variables=use_predefined_variables,
-                    use_environment_variables=use_environment_variables)
-                cfg_text_list.append(_cfg_text)
-                env_variables.update(_env_variables)
-                duplicate_keys = base_cfg_dict.keys() & _cfg_dict.keys()
-                if len(duplicate_keys) > 0:
-                    raise KeyError('Duplicate key is not allowed among bases. '
-                                   f'Duplicate keys: {duplicate_keys}')
-
-                # _dict_to_config_dict will do the following things:
-                # 1. Recursively converts ``dict`` to :obj:`ConfigDict`.
-                # 2. Set `_scope_` for the outer dict variable for the base
-                # config.
-                # 3. Set `scope` attribute for each base variable. Different
-                # from `_scope_`， `scope` is not a key of base dict,
-                # `scope` attribute will be parsed to key `_scope_` by
-                # function `_parse_scope` only if the base variable is
-                # accessed by the current config.
-                _cfg_dict = Config._dict_to_config_dict(_cfg_dict, scope)
-                base_cfg_dict.update(_cfg_dict)
-
-            if filename.endswith('.py'):
-                with open(temp_config_file.name, encoding='utf-8') as f:
-                    codes = ast.parse(f.read())
-                    codes = RemoveAssignFromAST(BASE_KEY).visit(codes)
-                codeobj = compile(codes, '', mode='exec')
-                # Support load global variable in nested function of the
-                # config.
-                global_locals_var = {BASE_KEY: base_cfg_dict}
-                ori_keys = set(global_locals_var.keys())
-                eval(codeobj, global_locals_var, global_locals_var)
-                cfg_dict = {
-                    key: value
-                    for key, value in global_locals_var.items()
-                    if (key not in ori_keys and not key.startswith('__'))
-                }
-            elif filename.endswith(('.yml', '.yaml', '.json')):
-                cfg_dict = load(temp_config_file.name)
-            # close temp file
-            for key, value in list(cfg_dict.items()):
-                if isinstance(value, (types.FunctionType, types.ModuleType)):
-                    cfg_dict.pop(key)
-            temp_config_file.close()
-
-            # If the current config accesses a base variable of base
-            # configs, The ``scope`` attribute of corresponding variable
-            # will be converted to the `_scope_`.
-            Config._parse_scope(cfg_dict)
+                # If the current config accesses a base variable of base
+                # configs, The ``scope`` attribute of corresponding variable
+                # will be converted to the `_scope_`.
+                Config._parse_scope(cfg_dict)
+        except Exception as e:
+            if osp.exists(temp_config_dir):
+                shutil.rmtree(temp_config_dir)
+            raise e
 
         # check deprecation information
         if DEPRECATION_KEY in cfg_dict:
@@ -1504,7 +1517,9 @@ class Config:
                 option_cfg_dict, cfg_dict, allow_list_keys=allow_list_keys))
 
     @staticmethod
-    def _is_lazy_import(filename):
+    def _is_lazy_import(filename: str) -> bool:
+        if not filename.endswith('.py'):
+            return False
         with open(filename) as f:
             codes_str = f.read()
             codes = ast.parse(codes_str)
@@ -1524,6 +1539,8 @@ class Config:
                 # Skip checking when using `mmengine.config` in cfg file
                 if (node.module == 'mmengine' and len(node.names) == 1
                         and node.names[0].name == 'Config'):
+                    continue
+                if not isinstance(node.module, str):
                     continue
                 # non-builtin module -> lazy_import
                 if not _is_builtin_module(node.module):
