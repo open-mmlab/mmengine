@@ -45,7 +45,6 @@ def parse_args():
     parser.add_argument(
         '--launcher',
         choices=['none', 'pytorch', 'slurm', 'mpi'],
-        default='none',
         help='job launcher')
     parser.add_argument('--local_rank', '--local-rank', type=int, default=0)
 
@@ -74,12 +73,12 @@ def main():
             [transforms.ToTensor(),
              transforms.Normalize(**norm_cfg)]))
     train_dataloader = dict(
-        batch_size=32,
+        batch_size=128,
         dataset=train_set,
         sampler=dict(type='DefaultSampler', shuffle=True),
         collate_fn=dict(type='default_collate'))
     val_dataloader = dict(
-        batch_size=32,
+        batch_size=128,
         dataset=valid_set,
         sampler=dict(type='DefaultSampler', shuffle=False),
         collate_fn=dict(type='default_collate'))
@@ -88,6 +87,7 @@ def main():
         work_dir='./work_dir',
         train_dataloader=train_dataloader,
         optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+        param_scheduler=dict(type='LinearLR'),
         train_cfg=dict(by_epoch=True, max_epochs=10, val_interval=1),
         val_dataloader=val_dataloader,
         val_cfg=dict(),

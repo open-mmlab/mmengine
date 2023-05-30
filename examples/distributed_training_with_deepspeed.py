@@ -44,7 +44,7 @@ def parse_args():
     parser.add_argument(
         '--launcher',
         choices=['none', 'pytorch', 'slurm', 'mpi'],
-        default='none',
+        default=None,
         help='job launcher')
     parser.add_argument('--local_rank', '--local-rank', type=int, default=0)
 
@@ -73,12 +73,12 @@ def main():
             [transforms.ToTensor(),
              transforms.Normalize(**norm_cfg)]))
     train_dataloader = dict(
-        batch_size=32,
+        batch_size=128,
         dataset=train_set,
         sampler=dict(type='DefaultSampler', shuffle=True),
         collate_fn=dict(type='default_collate'))
     val_dataloader = dict(
-        batch_size=32,
+        batch_size=128,
         dataset=valid_set,
         sampler=dict(type='DefaultSampler', shuffle=False),
         collate_fn=dict(type='default_collate'))
@@ -95,7 +95,7 @@ def main():
         ),
         inputs_to_half=[0],
         zero_optimization=dict(
-            stage=2,
+            stage=0,
             allgather_partitions=True,
             reduce_scatter=True,
             allgather_bucket_size=50000000,
@@ -109,7 +109,8 @@ def main():
         strategy=strategy,
         train_dataloader=train_dataloader,
         optim_wrapper=dict(type='DSOptimWrapper', optimizer=dict(type='Adam')),
-        train_cfg=dict(by_epoch=True, max_epochs=10, val_interval=1),
+        param_scheduler=dict(type='LinearLR'),
+        train_cfg=dict(by_epoch=True, max_epochs=20, val_interval=1),
         val_dataloader=val_dataloader,
         val_cfg=dict(),
         val_evaluator=dict(type=Accuracy),
@@ -119,5 +120,4 @@ def main():
 
 
 if __name__ == '__main__':
-    # torchrun --nproc_per_node=2 examples/distributed_training_with_deepspeed.py --launcher pytorch
     main()

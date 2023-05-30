@@ -1,11 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Any, Dict, List, Optional, Union
 
+import deepspeed
 import torch
 from deepspeed.runtime.engine import DeepSpeedEngine
 
 from mmengine.optim import OptimWrapper
 from mmengine.registry import MODEL_WRAPPERS
+from mmengine.utils import digit_version
 
 
 @MODEL_WRAPPERS.register_module()
@@ -23,24 +25,41 @@ class MMDeepSpeedEngine(DeepSpeedEngine):
         dist_init_required=None,
         collate_fn=None,
         config=None,
+        config_class=None,
         dont_change_device=False,
         inputs_to_half: Optional[List[Union[int, str]]] = None,
     ):
-        if config is None:
-            config = dict()
 
-        super().__init__(
-            args=args,
-            model=model,
-            optimizer=optimizer,
-            model_parameters=model_parameters,
-            training_data=training_data,
-            lr_scheduler=lr_scheduler,
-            mpu=mpu,
-            dist_init_required=dist_init_required,
-            collate_fn=collate_fn,
-            config=config,
-            dont_change_device=dont_change_device)
+        if digit_version(deepspeed.__version__) >= digit_version('0.9.0'):
+            from deepspeed.runtime.config import DeepSpeedConfig
+            config_class = DeepSpeedConfig(config, mpu)
+
+            super().__init__(
+                args=args,
+                model=model,
+                optimizer=optimizer,
+                model_parameters=model_parameters,
+                training_data=training_data,
+                lr_scheduler=lr_scheduler,
+                mpu=mpu,
+                dist_init_required=dist_init_required,
+                collate_fn=collate_fn,
+                config=config,
+                config_class=config_class,
+                dont_change_device=dont_change_device)
+        else:
+            super().__init__(
+                args=args,
+                model=model,
+                optimizer=optimizer,
+                model_parameters=model_parameters,
+                training_data=training_data,
+                lr_scheduler=lr_scheduler,
+                mpu=mpu,
+                dist_init_required=dist_init_required,
+                collate_fn=collate_fn,
+                config=config,
+                dont_change_device=dont_change_device)
 
         self._inputs_to_half = inputs_to_half
 

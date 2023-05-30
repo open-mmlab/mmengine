@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import List, Optional, Union
 
 from mmengine.registry import OPTIM_WRAPPERS
 from .optimizer_wrapper import OptimWrapper
