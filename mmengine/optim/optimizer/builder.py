@@ -117,7 +117,7 @@ def register_sophia_optimizers() -> List[str]:
     except ImportError:
         pass
     else:
-        for module_name in ['Sophia', 'SophiaG', 'DecoupledSophia', 'Sophia2']:
+        for module_name in dir(Sophia):
             _optim = getattr(Sophia, module_name)
             if inspect.isclass(_optim) and issubclass(_optim,
                                                       torch.optim.Optimizer):
