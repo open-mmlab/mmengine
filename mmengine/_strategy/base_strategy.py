@@ -67,6 +67,10 @@ class BaseStrategy(metaclass=ABCMeta):
         self._resume = resume
 
     @property
+    def work_dir(self):
+        return self._work_dir
+
+    @property
     def launcher(self):
         return self._launcher
 
@@ -820,7 +824,7 @@ class BaseStrategy(metaclass=ABCMeta):
         resume_from = None
         if self._resume and self._load_from is None:
             # auto resume from the latest checkpoint
-            resume_from = find_latest_checkpoint(self.work_dir)
+            resume_from = find_latest_checkpoint(self._work_dir)
             self.logger.info(
                 f'Auto resumed from the latest checkpoint {resume_from}.')
         elif self._resume and self._load_from is not None:

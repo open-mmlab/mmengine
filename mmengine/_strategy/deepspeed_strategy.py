@@ -248,4 +248,4 @@ class DeepSpeedStrategy(BaseStrategy):
 
         dirname, basename = osp.split(filename)
         self.model.save_checkpoint(
-            dirname, tag=basename, client_state=extra_ckpt)
+            dirname, tag=basename, client_state=extra_ckpt, save_latest=False)
