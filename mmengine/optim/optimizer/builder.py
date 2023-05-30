@@ -105,6 +105,30 @@ def register_lion_optimizers() -> List[str]:
 LION_OPTIMIZERS = register_lion_optimizers()
 
 
+def register_sophia_optimizers() -> List[str]:
+    """Register Sophia optimizer to the ``OPTIMIZERS`` registry.
+
+    Returns:
+        List[str]: A list of registered optimizers' name.
+    """
+    optimizers = []
+    try:
+        import Sophia
+    except ImportError:
+        pass
+    else:
+        for module_name in dir(Sophia):
+            _optim = getattr(Sophia, module_name)
+            if inspect.isclass(_optim) and issubclass(_optim,
+                                                      torch.optim.Optimizer):
+                OPTIMIZERS.register_module(module=_optim)
+                optimizers.append(module_name)
+    return optimizers
+
+
+SOPHIA_OPTIMIZERS = register_sophia_optimizers()
+
+
 def build_optim_wrapper(model: nn.Module,
                         cfg: Union[dict, Config, ConfigDict]) -> OptimWrapper:
     """Build function of OptimWrapper.
