@@ -41,6 +41,7 @@ class BaseStrategy(metaclass=ABCMeta):
 
     Args:
         compile (dict or bool): Config to compile model. Defaults to False.
+            Requires PyTorch>=2.0.
         load_from (str, optional): The checkpoint file to load from.
             Defaults to None.
         resume (bool): Whether to resume training. Defaults to False. If
@@ -56,7 +57,6 @@ class BaseStrategy(metaclass=ABCMeta):
         compile: Union[dict, bool] = False,
         load_from: Optional[str] = None,
         resume: bool = False,
-        **kwargs,
     ):
         self._work_dir = osp.abspath(work_dir)
         mmengine.mkdir_or_exist(self._work_dir)
@@ -65,7 +65,6 @@ class BaseStrategy(metaclass=ABCMeta):
 
         self._load_from = load_from
         self._resume = resume
-        self._has_loaded = False
 
     @property
     def launcher(self):
@@ -774,7 +773,7 @@ class BaseStrategy(metaclass=ABCMeta):
 
         # resume param scheduler
         if 'param_schedulers' in state_dict:
-            self.load_param_scheduler(state_dict['param_schedulers'])
+            self.load_scheduler_state_dict(state_dict['param_schedulers'])
 
     def load_model_state_dict(
         self,
@@ -814,9 +813,6 @@ class BaseStrategy(metaclass=ABCMeta):
         """Load checkpoint or resume from checkpoint."""
         from mmengine.runner import find_latest_checkpoint
 
-        if self._has_loaded:
-            return None
-
         if not self._resume and self._load_from is None:
             return None
 
@@ -832,10 +828,8 @@ class BaseStrategy(metaclass=ABCMeta):
             resume_from = self._load_from
 
         if resume_from is not None:
-            self._has_loaded = True
             return self.resume(resume_from)
         elif self._load_from is not None:
-            self._has_loaded = True
             return self.load_checkpoint(self._load_from)
 
     def load_checkpoint(
@@ -856,17 +850,26 @@ class BaseStrategy(metaclass=ABCMeta):
         """
         from mmengine.runner.checkpoint import _load_checkpoint
 
+        if hasattr(self, 'extra_ckpt'):
+            return self.extra_ckpt
+
+        self.logger.info(f'Load checkpoint from {filename}')
+
         if map_location == 'default':
             device = get_device()
-            checkpoint = _load_checkpoint(filename, map_location=device)
+            self.extra_ckpt = _load_checkpoint(filename, map_location=device)
         else:
-            checkpoint = _load_checkpoint(filename, map_location=map_location)
+            self.extra_ckpt = _load_checkpoint(
+                filename, map_location=map_location)
 
         # users can do some modification after loading checkpoint
         if callback is not None:
-            callback(checkpoint)
+            callback(self.extra_ckpt)
 
-        return checkpoint
+        state_dict = self.extra_ckpt.pop('state_dict')
+        self.load_model_state_dict(state_dict)
+
+        return self.extra_ckpt
 
     def resume(
         self,
@@ -877,16 +880,40 @@ class BaseStrategy(metaclass=ABCMeta):
         map_location: Union[str, Callable] = 'default',
         callback: Optional[Callable] = None,
     ) -> dict:
-        checkpoint = self.load_checkpoint(
+        """Resume training from given ``filename``.
+
+        Four types of states will be resumed.
+
+        - model state
+        - optimizer state
+        - scheduler state
+        - randomness state
+
+        Args:
+            filename (str): Accept local filepath, URL, ``torchvision://xxx``,
+                ``open-mmlab://xxx``.
+        """
+        if hasattr(self, 'extra_ckpt'):
+            return self.extra_ckpt
+
+        self.logger.info(f'Resume checkpoint from {filename}')
+
+        self.extra_ckpt = self.load_checkpoint(
             filename, map_location=map_location, callback=callback)
 
         if not resume_optimizer:
-            checkpoint.pop('optimizer', None)
+            self.extra_ckpt.pop('optimizer', None)
+        else:
+            self.load_optim_state_dict(self.extra_ckpt.pop('optimizer'))
+
         if not resume_param_scheduler:
-            checkpoint.pop('param_schedulers', None)
+            self.extra_ckpt.pop('param_schedulers', None)
+        else:
+            self.load_scheduler_state_dict(
+                self.extra_ckpt.pop('param_schedulers'))
 
         # resume random seed
-        resumed_seed = checkpoint['meta'].get('seed', None)
+        resumed_seed = self.extra_ckpt['meta'].get('seed', None)
         current_seed = self._randomness.get('seed')
         if resumed_seed is not None and resumed_seed != current_seed:
             if current_seed is not None:
@@ -897,7 +924,7 @@ class BaseStrategy(metaclass=ABCMeta):
             self._randomness.update(seed=resumed_seed)
             self._set_randomness(**self._randomness)
 
-        return checkpoint
+        return self.extra_ckpt
 
     def save_checkpoint(
         self,
@@ -916,8 +943,10 @@ class BaseStrategy(metaclass=ABCMeta):
                 the checkpoint. Defaults to True.
             save_param_scheduler (bool): Whether to save the param_scheduler
                 to the checkpoint. Defaults to True.
-            extra_ckpt (dict): Extra checkpoint to save. Defaults to None.
-            callback (callable): Callback function to modify the checkpoint.
+            extra_ckpt (dict, optional): Extra checkpoint to save.
+                Defaults to None.
+            callback (callable, callable): Callback function to modify the
+                checkpoint before saving the checkpoint.
                 Defaults to None.
         """
         from mmengine.runner.checkpoint import save_checkpoint

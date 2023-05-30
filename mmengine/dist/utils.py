@@ -41,6 +41,17 @@ def get_default_group() -> Optional[ProcessGroup]:
     return torch_dist.distributed_c10d._get_default_group()
 
 
+def infer_launcher():
+    if 'WORLD_SIZE' in os.environ:
+        return 'pytorch'
+    elif 'SLURM_NTASKS' in os.environ:
+        return 'slurm'
+    elif 'OMPI_COMM_WORLD_LOCAL_RANK' in os.environ:
+        return 'mpi'
+    else:
+        return 'none'
+
+
 def init_dist(launcher, backend='nccl', **kwargs) -> None:
     """Initialize distributed environment.
 

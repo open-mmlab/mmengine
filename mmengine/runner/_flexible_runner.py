@@ -3,9 +3,7 @@ import copy
 import logging
 import os.path as osp
 import pickle
-import time
 import warnings
-from collections import OrderedDict
 from functools import partial
 from typing import Callable, Dict, List, Optional, Union
 
@@ -13,22 +11,20 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 import mmengine
-from mmengine._strategy import BaseStrategy
+from mmengine._strategy import BaseStrategy, DeepSpeedStrategy
 from mmengine.config import Config, ConfigDict
 from mmengine.dataset import worker_init_fn
-from mmengine.device import get_device
-from mmengine.dist import get_rank, master_only
+from mmengine.dist import get_rank, infer_launcher, master_only
 from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient, join_path
 from mmengine.hooks import Hook
 from mmengine.logging import MessageHub, print_log
-from mmengine.model import is_model_wrapper
 from mmengine.optim import OptimWrapper, OptimWrapperDict, _ParamScheduler
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, FUNCTIONS,
                                HOOKS, LOG_PROCESSORS, LOOPS, RUNNERS,
                                STRATEGIES, VISUALIZERS, DefaultScope)
-from mmengine.utils import digit_version, get_git_hash, is_seq_of
-from mmengine.utils.dl_utils import TORCH_VERSION, collect_env
+from mmengine.utils import digit_version, is_seq_of
+from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
 from .checkpoint import find_latest_checkpoint
@@ -148,9 +144,11 @@ class FlexibleRunner:
             ``resume`` is True and ``load_from`` is None, automatically to
             find latest checkpoint from ``work_dir``. If not found, resuming
             does nothing.
-        launcher (str): Way to launcher multi-process. Supported launchers
-            are 'pytorch', 'mpi', 'slurm' and 'none'. If 'none' is provided,
-            non-distributed environment will be launched.
+        launcher (str, optional): Way to launcher multi-process. Supported
+            launchers are 'pytorch', 'mpi', 'slurm' and 'none'. If 'none' is
+            provided, non-distributed environment will be launched.
+            If launcher is None, the launcher will be inferred according some
+            specified environments. Defaults to None.
         env_cfg (dict): A dict used for setting environment. Defaults to
             dict(dist_cfg=dict(backend='nccl')).
         log_processor (dict, optional): A processor to format logs. Defaults to
@@ -258,7 +256,7 @@ class FlexibleRunner:
         data_preprocessor: Union[nn.Module, Dict, None] = None,
         load_from: Optional[str] = None,
         resume: bool = False,
-        launcher: str = 'none',
+        launcher: Optional[str] = None,
         env_cfg: Dict = dict(dist_cfg=dict(backend='nccl')),
         log_processor: Optional[Dict] = None,
         log_level: str = 'INFO',
@@ -349,6 +347,13 @@ class FlexibleRunner:
                 f'compile should be a bool or dict, but got {type(compile)}')
         self._compile = compile
 
+        self._load_from = load_from
+        self._resume = resume
+        # flag to mark whether checkpoint has been loaded or resumed
+        self._has_loaded = False
+
+        if launcher is None:
+            launcher = infer_launcher()
         self._randomness_cfg = randomness
         self.strategy = self.build_strategy(strategy, launcher=launcher)
         self.strategy.setup_env(
@@ -396,11 +401,6 @@ class FlexibleRunner:
         if self.cfg:
             self.visualizer.add_config(self.cfg)
 
-        self._load_from = load_from
-        self._resume = resume
-        # flag to mark whether checkpoint has been loaded or resumed
-        self._has_loaded = False
-
         self._hooks: List[Hook] = []
         # register hooks to `self._hooks`
         self.register_hooks(default_hooks, custom_hooks)
@@ -444,7 +444,7 @@ class FlexibleRunner:
             data_preprocessor=cfg.get('data_preprocessor'),
             load_from=cfg.get('load_from'),
             resume=cfg.get('resume', False),
-            launcher=cfg.get('launcher', 'none'),
+            launcher=cfg.get('launcher'),
             env_cfg=cfg.get('env_cfg'),  # type: ignore
             log_processor=cfg.get('log_processor'),
             log_level=cfg.get('log_level', 'INFO'),
@@ -619,21 +619,36 @@ class FlexibleRunner:
         Returns:
             BaseStrategy: A strategy object.
         """
-        if isinstance(strategy, BaseStrategy):
-            return strategy
+        if not isinstance(strategy, BaseStrategy):
+            if launcher == 'none':
+                if strategy is None:
+                    strategy = dict(type='SingleDeviceStrategy')
+            else:
+                if strategy is None:
+                    strategy = dict(type='DDPStrategy')
 
-        if launcher == 'none':
-            if strategy is None:
-                strategy = dict(type='SingleDeviceStrategy')
-        else:
-            if strategy is None:
-                strategy = dict(type='DDPStrategy')
+                if strategy['type'] == 'DDPStrategy':
+                    strategy.setdefault('auto_scale_lr', self._auto_scale_lr)
 
-        strategy.setdefault('work_dir', self._work_dir)
-        strategy.setdefault('compile', self._compile)
-        strategy.setdefault('auto_scale_lr', self._auto_scale_lr)
+            strategy.setdefault('work_dir', self._work_dir)
+            strategy.setdefault('compile', self._compile)
+            strategy.setdefault('load_from', self._load_from)
+            strategy.setdefault('resume', self._resume)
 
-        return STRATEGIES.build(strategy)
+            strategy = STRATEGIES.build(strategy)
+
+        def callback(checkpoint):
+            self.call_hook('after_load_checkpoint', checkpoint=checkpoint)
+
+        # Wrap the two methods to facilitate the execution of load_checkpoint
+        # or resume in the `prepare` method of the strategy.
+
+        if not isinstance(strategy, DeepSpeedStrategy):
+            strategy.load_checkpoint = partial(
+                strategy.load_checkpoint, callback=callback)
+            strategy.resume = partial(strategy.resume, callback=callback)
+
+        return strategy
 
     def build_message_hub(
         self,
@@ -1090,10 +1105,10 @@ class FlexibleRunner:
 
         if resume_from is not None:
             self._has_loaded = True
-            return self.resume(resume_from)
+            self.resume(resume_from)
         elif self._load_from is not None:
             self._has_loaded = True
-            return self.load_checkpoint(self._load_from)
+            self.load_checkpoint(self._load_from)
 
     def train(self) -> nn.Module:
         """Launch training.
@@ -1115,10 +1130,6 @@ class FlexibleRunner:
             self._val_loop = self.build_val_loop(
                 self._val_loop)  # type: ignore
 
-        checkpoint = self.load_or_resume()
-
-        # decide which keys of checkpoint should be kept
-
         batch_size = self.train_dataloader.batch_size
         result = self.strategy.prepare(
             self.model,
@@ -1130,12 +1141,14 @@ class FlexibleRunner:
             max_epochs=self.max_epochs,
             max_iters=self.max_iters,
             cur_iter=self.iter,
-            checkpoint=checkpoint)
+        )
 
         if self.param_schedulers is not None:
             self.model, self.optim_wrapper, self.param_schedulers, *_ = result
         else:
             self.model, self.optim_wrapper, *_ = result
+
+        self.load_or_resume()
 
         # TODO: add a contextmanager to avoid calling `before_run` many times
         self.call_hook('before_run')
@@ -1158,8 +1171,8 @@ class FlexibleRunner:
 
         self._val_loop = self.build_val_loop(self._val_loop)  # type: ignore
 
-        checkpoint = self.load_or_resume()
-        self.model = self.strategy.prepare(self.model, checkpoint=checkpoint)
+        self.model = self.strategy.prepare(self.model)
+        self.load_or_resume()
 
         self.call_hook('before_run')
         metrics = self.val_loop.run()  # type: ignore
@@ -1181,8 +1194,8 @@ class FlexibleRunner:
 
         self._test_loop = self.build_test_loop(self._test_loop)  # type: ignore
 
-        checkpoint = self.load_or_resume()
-        self.model = self.strategy.prepare(self.model, checkpoint=checkpoint)
+        self.model = self.strategy.prepare(self.model)
+        self.load_or_resume()
 
         self.call_hook('before_run')
         metrics = self.test_loop.run()  # type: ignore
@@ -1383,16 +1396,11 @@ class FlexibleRunner:
                 specifying how to remap storage locations.
                 Defaults to 'default'.
         """
-
-        def callback(checkpoint):
-            self.call_hook('after_load_checkpoint', checkpoint=checkpoint)
-
         checkpoint = self.strategy.resume(
             filename,
             resume_optimizer=resume_optimizer,
             resume_param_scheduler=resume_param_scheduler,
             map_location=map_location,
-            callback=callback,
         )
 
         self.train_loop._epoch = checkpoint['meta']['epoch']
@@ -1458,15 +1466,7 @@ class FlexibleRunner:
                 pair of the regular expression operations. Defaults to strip
                 the prefix 'module.' by [(r'^module\\.', '')].
         """
-
-        def callback(checkpoint):
-            self.call_hook('after_load_checkpoint', checkpoint=checkpoint)
-
-        self.logger.info(f'Load checkpoint from {filename}')
-        checkpoint = self.strategy.load_checkpoint(
-            filename, map_location=map_location, callback=callback)
-
-        return checkpoint
+        self.strategy.load_checkpoint(filename, map_location=map_location)
 
     def save_checkpoint(
         self,
@@ -1551,7 +1551,8 @@ class FlexibleRunner:
             save_optimizer=save_optimizer,
             save_param_scheduler=save_param_scheduler,
             extra_ckpt=checkpoint,
-            callback=callback)
+            callback=callback,
+        )
 
     @master_only
     def dump_config(self) -> None:

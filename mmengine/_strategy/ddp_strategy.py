@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel
 
 from mmengine.device import get_device
-from mmengine.dist import get_dist_info, init_dist, is_distributed, master_only
+from mmengine.dist import init_dist, is_distributed, master_only
 from mmengine.model import convert_sync_batchnorm, is_model_wrapper
 from mmengine.optim import OptimWrapper, OptimWrapperDict, _ParamScheduler
 from mmengine.registry import MODEL_WRAPPERS, STRATEGIES
@@ -53,7 +53,6 @@ class DDPStrategy(BaseStrategy):
         optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
         compile_target: str = 'forward',
-        checkpoint: Optional[dict] = None,
         train_batch_size: Optional[int] = None,
         num_batches_per_epoch: Optional[int] = None,
         max_epochs: Optional[int] = None,
@@ -82,8 +81,6 @@ class DDPStrategy(BaseStrategy):
                 See :meth:`build_param_scheduler` for examples.
             compile_target (str): The method of model to be compiled.
                 Defaults to 'forward'.
-            checkpoint (dict, optional): Checkpoint to load strategy state.
-                Defaults to None.
             train_batch_size (int, optional): Batch size of training. It will
                 be used to scale the learning rate. Defaults to None.
             num_batches_per_epoch (int, optional): Number of batches per epoch.
@@ -117,10 +114,7 @@ class DDPStrategy(BaseStrategy):
                 param_scheduler, _default_args)
             return_items.append(self.param_schedulers)
 
-        if checkpoint is None:
-            checkpoint = self.load_or_resume()
-        if checkpoint is not None:
-            self.load_state_dict(checkpoint)
+        self.load_or_resume()
 
         if optim_wrapper is not None:
             self._scale_lr(train_batch_size)

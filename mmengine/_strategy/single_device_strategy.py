@@ -23,7 +23,6 @@ class SingleDeviceStrategy(BaseStrategy):
         optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
         compile_target: str = 'forward',
-        checkpoint: Optional[dict] = None,
         num_batches_per_epoch: Optional[int] = None,
         max_epochs: Optional[int] = None,
         max_iters: Optional[int] = None,
@@ -51,8 +50,6 @@ class SingleDeviceStrategy(BaseStrategy):
                 See :meth:`build_param_scheduler` for examples.
             compile_target (str): The method of model to be compiled.
                 Defaults to 'forward'.
-            checkpoint (dict, optional): Checkpoint to load strategy state.
-                Defaults to None.
             num_batches_per_epoch (int, optional): Number of batches per epoch.
                 Defaults to None.
             max_epochs (int, optional): Number of epochs. Defaults to None.
@@ -83,10 +80,7 @@ class SingleDeviceStrategy(BaseStrategy):
                 param_scheduler, _default_args)
             return_items.append(self.param_schedulers)
 
-        if checkpoint is None:
-            checkpoint = self.load_or_resume()
-        if checkpoint is not None:
-            self.load_state_dict(checkpoint)
+        self.load_or_resume()
 
         if optim_wrapper is not None:
             # Initiate inner count of `optim_wrapper`.

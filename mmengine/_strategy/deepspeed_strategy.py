@@ -1,14 +1,18 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import json
 import os
-from typing import Dict, List, Optional, Union
+import os.path as osp
+import time
+from typing import Callable, Dict, List, Optional, Union
 
 import deepspeed
 import torch
 import torch.nn as nn
 
+import mmengine
 from mmengine.optim import OptimWrapper, _ParamScheduler
 from mmengine.registry import MODEL_WRAPPERS, STRATEGIES
+from mmengine.utils import get_git_hash
 from .base_strategy import BaseStrategy
 
 
@@ -33,8 +37,8 @@ class DeepSpeedStrategy(BaseStrategy):
         amp: Optional[dict] = None,
         activation_checkpointing: Optional[dict] = None,
         aio: Optional[dict] = None,
-        steps_per_print:
-        int = 10000000000000,  # disable the log printed by deepseed
+        # disable the log printed by deepseed
+        steps_per_print: int = 10000000000000,
         # the following args are for BaseStrategy
         **kwargs,
     ):
@@ -78,7 +82,6 @@ class DeepSpeedStrategy(BaseStrategy):
         optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
         compile_target: str = 'forward',
-        checkpoint: Optional[dict] = None,
         train_batch_size: Optional[int] = None,
         num_batches_per_epoch: Optional[int] = None,
         max_epochs: Optional[int] = None,
@@ -107,8 +110,6 @@ class DeepSpeedStrategy(BaseStrategy):
                 See :meth:`build_param_scheduler` for examples.
             compile_target (str): The method of model to be compiled.
                 Defaults to 'forward'.
-            checkpoint (dict, optional): Checkpoint to load strategy state.
-                Defaults to None.
             train_batch_size (int, optional): Batch size of training. It will
                 be used to scale the learning rate. Defaults to None.
             num_batches_per_epoch (int, optional): Number of batches per epoch.
@@ -147,10 +148,7 @@ class DeepSpeedStrategy(BaseStrategy):
                 param_scheduler, _default_args)
             return_items.append(self.param_schedulers)
 
-        if checkpoint is None:
-            checkpoint = self.load_or_resume()
-        if checkpoint is not None:
-            self.load_state_dict(checkpoint)
+        self.load_or_resume()
 
         return return_items[0] if len(return_items) == 1 else return_items
 
@@ -164,3 +162,90 @@ class DeepSpeedStrategy(BaseStrategy):
         )
         model = MODEL_WRAPPERS.build(wrapper_cfg)
         return model
+
+    def load_checkpoint(
+        self,
+        filename: str,
+        *,
+        map_location: Union[str, Callable] = 'cpu',
+        callback: Optional[Callable] = None,
+    ) -> None:
+        """Load checkpoint from given ``filename``.
+
+        Args:
+            filename (str): Accept local filepath, URL, ``torchvision://xxx``,
+                ``open-mmlab://xxx``.
+            map_location (str or callable): A string or a callable function to
+                specifying how to remap storage locations.
+                Defaults to 'cpu'.
+        """
+        if hasattr(self, 'extra_ckpt'):
+            return self.extra_ckpt
+
+        self.logger.info(f'Load checkpoint from {filename}')
+
+        dirname, basename = osp.split(filename)
+        _, self.extra_ckpt = self.model.load_checkpoint(
+            dirname, tag=basename, load_optimizer_states=False)
+
+        return self.extra_ckpt
+
+    def resume(
+        self,
+        filename: str,
+        *,
+        resume_optimizer: bool = True,
+        resume_param_scheduler: bool = True,
+        map_location: Union[str, Callable] = 'default',
+        callback: Optional[Callable] = None,
+    ) -> dict:
+        if hasattr(self, 'extra_ckpt'):
+            return self.extra_ckpt
+
+        self.logger.info(f'Resume checkpoint from {filename}')
+
+        dirname, basename = osp.split(filename)
+        _, self.extra_ckpt = self.model.load_checkpoint(dirname, tag=basename)
+
+        if 'param_schedulers' in self.extra_ckpt:
+            param_schedulers = self.extra_ckpt.pop('param_schedulers')
+            self.load_scheduler_state_dict(param_schedulers)
+
+        # resume random seed
+        resumed_seed = self.extra_ckpt['meta'].get('seed', None)
+        current_seed = self._randomness.get('seed')
+        if resumed_seed is not None and resumed_seed != current_seed:
+            if current_seed is not None:
+                self.logger.warning(f'The value of random seed in the '
+                                    f'checkpoint "{resumed_seed}" is '
+                                    f'different from the value in '
+                                    f'`randomness` config "{current_seed}"')
+            self._randomness.update(seed=resumed_seed)
+            self._set_randomness(**self._randomness)
+
+        return self.extra_ckpt
+
+    def save_checkpoint(
+        self,
+        filename: str,
+        *,
+        save_optimizer: bool = True,
+        save_param_scheduler: bool = True,
+        extra_ckpt: Optional[dict] = None,
+        callback: Optional[Callable] = None,
+    ) -> None:
+        if extra_ckpt is None:
+            extra_ckpt = dict()
+        if 'meta' not in extra_ckpt:
+            extra_ckpt['meta'] = dict()
+        extra_ckpt['meta'].update(
+            seed=self.seed,
+            time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
+            mmengine=mmengine.__version__ + get_git_hash(),
+        )
+
+        extra_ckpt['param_schedulers'] = self.scheduler_state_dict()
+
+        dirname, basename = osp.split(filename)
+        self.model.save_checkpoint(
+            dirname, tag=basename, client_state=extra_ckpt)
