@@ -2,6 +2,7 @@
 import os
 import os.path as osp
 from pathlib import Path
+from typing import Union, List
 
 from .misc import is_str
 
@@ -101,16 +102,21 @@ def find_vcs_root(path, markers=('.git', )):
     return None
 
 
-def is_abs(path: str) -> bool:
+def is_abs(path: Union[str, List[str]]) -> bool:
     """Check if path is an absolute path in different backends.
 
     Args:
-        path (str): path of directory or file.
+        path (Union[str, List[str]]): path of directory or file.
 
     Returns:
         bool: whether path is an absolute path.
     """
-    if osp.isabs(path) or path.startswith(('http://', 'https://', 's3://')):
+    if isinstance(path, list):
+        for p in path:
+            if not osp.isabs(p) and not p.startswith(('http://', 'https://', 's3://')):
+                return False
+        return True
+    elif osp.isabs(path) or path.startswith(('http://', 'https://', 's3://')):
         return True
     else:
         return False
