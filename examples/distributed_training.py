@@ -93,8 +93,7 @@ def main():
         val_cfg=dict(),
         val_evaluator=dict(type=Accuracy),
         launcher=args.launcher,
-        visualizer=dict(
-            type='Visualizer', vis_backends=[dict(type='ClearMLVisBackend')]))
+    )
     runner.train()
 
 
