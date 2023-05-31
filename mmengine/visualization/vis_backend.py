@@ -836,29 +836,30 @@ class ClearMLVisBackend(BaseVisBackend):
         >>> vis_backend.add_config(cfg)
 
     Args:
-        save_dir (str): The file ends with `artifact_suffix` in the `save_dir` will be uploaded to ``ClearML`` artifact.
-        init_kwargs (dict): A dict contains the `clearml.Task.init`
-            initialization keys. See `taskinit`_  for more details.
-        artifact_suffix (Tuple[str] or str, optional): The artifact suffix.
-            Default to ('.py', 'pth').
+        save_dir (str): Useless parameter. Just for interface unification.
+            Defaults to None.
+        init_kwargs (dict, optional): A dict contains the arguments of
+            ``clearml.Task.init`` . See `taskinit`_  for more details.
+            Defaults to None
+        artifact_suffix (Tuple[str] or str): The artifact suffix.
+            Defaults to ('.py', 'pth').
 
     .. _clearml:
         https://clear.ml/docs/latest/docs/
+
     .. _taskinit:
         https://clear.ml/docs/latest/docs/references/sdk/task/#taskinit
     """
 
     def __init__(self,
-                 save_dir: str,
+                 save_dir: Optional[str] = None,
                  init_kwargs: Optional[dict] = None,
                  artifact_suffix: SUFFIX_TYPE = ('.py', '.pth')):
-        super().__init__(save_dir)
+        super().__init__(save_dir)  # type: ignore
         self._init_kwargs = init_kwargs
         self._artifact_suffix = artifact_suffix
 
     def _init_env(self) -> None:
-        if not os.path.exists(self._save_dir):
-            os.makedirs(self._save_dir, exist_ok=True)
         try:
             import clearml
         except ImportError:
@@ -899,7 +900,7 @@ class ClearMLVisBackend(BaseVisBackend):
             name (str): The image identifier.
             image (np.ndarray): The image to be saved. The format
                 should be RGB.
-            step (int): Global step value to record. Default to 0.
+            step (int): Global step value to record. Defaults to 0.
         """
         self._logger.report_image(
             title=name, series=name, iteration=step, image=image)
@@ -915,7 +916,7 @@ class ClearMLVisBackend(BaseVisBackend):
         Args:
             name (str): The scalar identifier.
             value (int, float, torch.Tensor, np.ndarray): Value to save.
-            step (int): Global step value to record. Default to 0.
+            step (int): Global step value to record. Defaults to 0.
         """
         self._logger.report_scalar(
             title=name, series=name, value=value, iteration=step)
@@ -931,9 +932,9 @@ class ClearMLVisBackend(BaseVisBackend):
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Global step value to record. Default to 0.
+            step (int): Global step value to record. Defaults to 0.
             file_path (str, optional): Useless parameter. Just for
-                interface unification. Default to None.
+                interface unification. Defaults to None.
         """
         assert 'step' not in scalar_dict, 'Please set it directly ' \
                                           'through the step parameter'
@@ -943,15 +944,17 @@ class ClearMLVisBackend(BaseVisBackend):
 
     def close(self) -> None:
         """Close the clearml."""
+        if not hasattr(self, '_clearml'):
+            return
+
         file_paths: List[str] = list()
-        if hasattr(self, '_cfg'):
+        if (hasattr(self, '_cfg')
+                and osp.isdir(getattr(self._cfg, 'work_dir', ''))):
             for filename in scandir(self._cfg.work_dir, self._artifact_suffix,
                                     False):
                 file_path = osp.join(self._cfg.work_dir, filename)
                 file_paths.append(file_path)
 
-        if hasattr(self, '_clearml'):
-            for file_path in file_paths:
-                self._task.upload_artifact(
-                    os.path.basename(file_path), file_path)
-            self._task.close()
+        for file_path in file_paths:
+            self._task.upload_artifact(os.path.basename(file_path), file_path)
+        self._task.close()
