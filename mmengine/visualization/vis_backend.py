@@ -836,8 +836,8 @@ class ClearMLVisBackend(BaseVisBackend):
         >>> vis_backend.add_config(cfg)
 
     Args:
-        save_dir (str): Useless parameter. Just for interface unification.
-            Defaults to None.
+        save_dir (str, optional): Useless parameter. Just for
+            interface unification. Defaults to None.
         init_kwargs (dict, optional): A dict contains the arguments of
             ``clearml.Task.init`` . See `taskinit`_  for more details.
             Defaults to None
