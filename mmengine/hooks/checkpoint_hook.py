@@ -550,8 +550,7 @@ class CheckpointHook(Hook):
         # or `after_train_iter` stage only keep the previous best checkpoint
         # not the current best checkpoint which causes the current best
         # checkpoint can not be removed when resuming training.
-        if (best_ckpt_updated and self.last_ckpt is not None
-                and is_main_process()):
+        if best_ckpt_updated and self.last_ckpt is not None:
             self._save_checkpoint_with_step(runner, cur_time, meta)
 
     def _init_rule(self, rules, key_indicators) -> None:
