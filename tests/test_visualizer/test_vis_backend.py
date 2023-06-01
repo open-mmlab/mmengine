@@ -324,9 +324,7 @@ class TestClearMLVisBackend:
         clearml_vis_backend.add_scalars({'map': 0.8, 'acc': 0.8})
 
     def test_close(self):
-        cfg = Config(dict(work_dir='temp_dir'))
         clearml_vis_backend = ClearMLVisBackend('temp_dir')
         clearml_vis_backend._init_env()
         clearml_vis_backend.add_config(cfg)
         clearml_vis_backend.close()
-        shutil.rmtree('temp_dir')
