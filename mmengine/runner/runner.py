@@ -2067,7 +2067,6 @@ class Runner:
 
         return checkpoint
 
-    @master_only
     def save_checkpoint(
         self,
         out_dir: str,

@@ -1,19 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from functools import partial
+from itertools import chain
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 import torch
 import torch.distributed as dist
 import torch.nn as nn
 from torch.distributed import ProcessGroup
-from torch.distributed.fsdp.api import (FullStateDictConfig,
-                                        LocalOptimStateDictConfig,
-                                        LocalStateDictConfig,
-                                        OptimStateDictConfig,
-                                        ShardedOptimStateDictConfig,
-                                        ShardedStateDictConfig,
-                                        ShardingStrategy, StateDictConfig,
-                                        StateDictSettings, StateDictType)
+from torch.distributed.fsdp.api import (
+    FullStateDictConfig, LocalOptimStateDictConfig, LocalStateDictConfig,
+    OptimStateDictConfig, ShardedOptimStateDictConfig, ShardedStateDictConfig,
+    ShardingStrategy, StateDictConfig, StateDictSettings, StateDictType)
 from torch.distributed.fsdp.fully_sharded_data_parallel import (
     BackwardPrefetch, CPUOffload, FullOptimStateDictConfig,
     FullyShardedDataParallel, LocalOptimStateDictConfig, MixedPrecision,
@@ -65,7 +62,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             for params and grads to be on same device to work with optimizer.
             This API is subject to change. Default is ``None`` in which case
             there will be no offloading.
-        auto_wrap_policy: (str or Callable, optional):
+        auto_wrap_policy (str or Callable, optional):
             Specifying a policy to recursively wrap layers with FSDP.
             Different from FullyShardedDataParallel, Since it can be set by
             users' pre-defined config in MMEngine, its type is expected to be
@@ -97,11 +94,12 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                 >>> ) -> bool:
                 >>>     return unwrapped_params >= min_num_params
 
-        backward_prefetch: (str or BackwardPrefetch, optional):
+        backward_prefetch (str or BackwardPrefetch, optional):
             Different from FullyShardedDataParallel, this argument could be a
             string or a BackwardPrefetch instance. If it's a string, then
             it should be ``BACKWARD_PRE`` or ``BACKWARD_POST``
-
+        use_orig_params (bool): Different from native
+            ``FullyShardedDataParallel``, it defaults to True.
         **kwargs: Keyword arguments passed to
             :class:`FullyShardedDataParallel`.
     """
@@ -118,6 +116,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         ignored_modules: Union[Iterable[str], Iterable[nn.Module],
                                None] = None,
         param_init_fn: Union[str, Callable[[nn.Module], None]] = None,
+        use_orig_params: bool = True,
         **kwargs,
     ):
         if isinstance(sharding_strategy, str):
@@ -191,6 +190,9 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                 '`mixed_precision` should be `None`, `dict` or '
                 f'`MixedPrecision`, but has type {type(mixed_precision)}')
 
+        self._fixed_modules = self._get_fixed_module(module, ignored_modules)
+        ignored_modules = [] if ignored_modules is None else ignored_modules
+        ignored_modules = chain(ignored_modules, self._fixed_modules)
         super().__init__(
             module=module,
             process_group=process_group,
@@ -201,8 +203,8 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             mixed_precision=mixed_precision,
             ignored_modules=ignored_modules,
             param_init_fn=param_init_fn,
+            use_orig_params=use_orig_params,
             **kwargs)
-        self._fixed_modules = self._get_fixed_module(module, ignored_modules)
 
     def train_step(self, data: dict,
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
@@ -241,9 +243,9 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
 
         # manually zero_grad fixed parameters,
         # since they are not in any optimizer
-        if optim_wrapper.should_update():
-            for m in self._fixed_modules:
-                m.zero_grad(set_to_none=True)
+        # if optim_wrapper.should_update():
+        #     for m in self._fixed_modules:
+        #         m.zero_grad(set_to_none=True)
         return log_vars
 
     def val_step(self, data: dict) -> List[BaseDataElement]:
