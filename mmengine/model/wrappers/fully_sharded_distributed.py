@@ -7,10 +7,14 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 from torch.distributed import ProcessGroup
-from torch.distributed.fsdp.api import (
-    FullStateDictConfig, LocalOptimStateDictConfig, LocalStateDictConfig,
-    OptimStateDictConfig, ShardedOptimStateDictConfig, ShardedStateDictConfig,
-    ShardingStrategy, StateDictConfig, StateDictSettings, StateDictType)
+from torch.distributed.fsdp.api import (FullStateDictConfig,
+                                        LocalOptimStateDictConfig,
+                                        LocalStateDictConfig,
+                                        OptimStateDictConfig,
+                                        ShardedOptimStateDictConfig,
+                                        ShardedStateDictConfig,
+                                        ShardingStrategy, StateDictConfig,
+                                        StateDictSettings, StateDictType)
 from torch.distributed.fsdp.fully_sharded_data_parallel import (
     BackwardPrefetch, CPUOffload, FullOptimStateDictConfig,
     FullyShardedDataParallel, LocalOptimStateDictConfig, MixedPrecision,
@@ -98,6 +102,17 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             Different from FullyShardedDataParallel, this argument could be a
             string or a BackwardPrefetch instance. If it's a string, then
             it should be ``BACKWARD_PRE`` or ``BACKWARD_POST``
+        mixed_precision  (dict or MixedPrecision, optional):
+            This configures native mixed precision for FSDP. If this is set to
+            ``None``. Different from the native FSDP, this argument can a dict
+            like this:
+
+            Examples:
+                >>> mixed_precision=dict(param_dtype='float16',
+                >>>                      buffer_dtype='float32',
+                >>>                      reduce_dtype='float32')
+
+            Defaults to None.
         use_orig_params (bool): Different from native
             ``FullyShardedDataParallel``, it defaults to True.
         **kwargs: Keyword arguments passed to
@@ -167,7 +182,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             if dtype is None:
                 return None
             elif isinstance(dtype, str):
-                return getattr(torch, 'dtype')
+                return getattr(torch, dtype)
             elif isinstance(dtype, torch.dtype):
                 return dtype
             else:
