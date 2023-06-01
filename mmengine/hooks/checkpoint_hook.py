@@ -404,7 +404,8 @@ class CheckpointHook(Hook):
         # remove other checkpoints before save checkpoint to make the
         # self.keep_ckpt_ids are saved as expected
         if self.max_keep_ckpts > 0:
-            # _save_checkpoint may be called multiple times in one epoch
+            # _save_checkpoint and _save_best_checkpoint may call this
+            # _save_checkpoint_with_step in one epoch
             if len(self.keep_ckpt_ids) > 0 and self.keep_ckpt_ids[-1] == step:
                 pass
             else:
