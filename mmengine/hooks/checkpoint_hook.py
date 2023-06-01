@@ -422,6 +422,8 @@ class CheckpointHook(Hook):
                     self.out_dir, self.filename_tmpl.format(_step))
                 if self.file_backend.isfile(ckpt_path):
                     self.file_backend.remove(ckpt_path)
+                elif self.file_backend.isdir(ckpt_path):
+                    self.file_backend.rmtree(ckpt_path)
                 else:
                     break
 
@@ -477,23 +479,25 @@ class CheckpointHook(Hook):
             best_score = key_score
             runner.message_hub.update_info(best_score_key, best_score)
 
-            if best_ckpt_path and \
-               self.file_client.isfile(best_ckpt_path) and \
-               is_main_process():
-                self.file_client.remove(best_ckpt_path)
+            if best_ckpt_path and is_main_process():
+                if self.file_backend.isfile(best_ckpt_path):
+                    self.file_backend.remove(best_ckpt_path)
+                else:
+                    self.file_backend.rmtree(best_ckpt_path)
+
                 runner.logger.info(
                     f'The previous best checkpoint {best_ckpt_path} '
                     'is removed')
 
             best_ckpt_name = f'best_{key_indicator}_{ckpt_filename}'
             if len(self.key_indicators) == 1:
-                self.best_ckpt_path = self.file_client.join_path(  # type: ignore # noqa: E501
+                self.best_ckpt_path = self.file_backend.join_path(  # type: ignore # noqa: E501
                     self.out_dir, best_ckpt_name)
                 runner.message_hub.update_info(runtime_best_ckpt_key,
                                                self.best_ckpt_path)
             else:
                 self.best_ckpt_path_dict[
-                    key_indicator] = self.file_client.join_path(  # type: ignore # noqa: E501
+                    key_indicator] = self.file_backend.join_path(  # type: ignore # noqa: E501
                         self.out_dir, best_ckpt_name)
                 runner.message_hub.update_info(
                     runtime_best_ckpt_key,
