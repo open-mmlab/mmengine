@@ -3,6 +3,7 @@ import hashlib
 import logging
 import os.path as osp
 import pickle
+from collections import deque
 from math import inf
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Union
@@ -11,7 +12,7 @@ from mmengine.dist import is_main_process, master_only
 from mmengine.fileio import FileClient, get_file_backend
 from mmengine.logging import print_log
 from mmengine.registry import HOOKS
-from mmengine.utils import apply_to, is_list_of, is_seq_of
+from mmengine.utils import is_list_of, is_seq_of
 from .hook import Hook
 
 DATA_BATCH = Optional[Union[dict, tuple, list]]
@@ -296,6 +297,22 @@ class CheckpointHook(Hook):
                             key_indicator] = runner.message_hub.get_info(
                                 best_ckpt_name)
 
+        if self.max_keep_ckpts > 0:
+            keep_ckpt_ids = []
+            if 'keep_ckpt_ids' in runner.message_hub.runtime_info:
+                keep_ckpt_ids = runner.message_hub.get_info('keep_ckpt_ids')
+
+                while len(keep_ckpt_ids) > self.max_keep_ckpts:
+                    step = keep_ckpt_ids.pop(0)
+                    if is_main_process():
+                        path = self.file_backend.join_path(
+                            self.out_dir, self.filename_tmpl.format(step))
+                        if self.file_backend.isfile(path):
+                            self.file_backend.remove(path)
+
+            self.keep_ckpt_ids: deque = deque(keep_ckpt_ids,
+                                              self.max_keep_ckpts)
+
     def after_train_epoch(self, runner) -> None:
         """Save the checkpoint and synchronize buffers after each epoch.
 
@@ -380,16 +397,30 @@ class CheckpointHook(Hook):
             f'{final_path}.',
             logger='current')
 
-    def _save_checkpoint(self, runner) -> None:
-        """Save the current checkpoint and delete outdated checkpoint.
+    def _save_checkpoint_with_step(self, runner, step, meta):
+        # remove other checkpoints
+        if self.max_keep_ckpts > 0 and is_main_process():
+            # _save_checkpoint may be called multiple times in one epoch
+            if len(self.keep_ckpt_ids) > 0 and self.keep_ckpt_ids[-1] == step:
+                pass
+            else:
+                while len(self.keep_ckpt_ids) >= self.max_keep_ckpts:
+                    _step = self.keep_ckpt_ids.popleft()
+                    ckpt_path = self.file_backend.join_path(
+                        self.out_dir, self.filename_tmpl.format(_step))
+                    if self.file_backend.isfile(ckpt_path):
+                        self.file_backend.remove(ckpt_path)
+                    else:
+                        break
 
-        Args:
-            runner (Runner): The runner of the training process.
-        """
-        if self.by_epoch:
-            ckpt_filename = self.filename_tmpl.format(runner.epoch + 1)
-        else:
-            ckpt_filename = self.filename_tmpl.format(runner.iter + 1)
+                self.keep_ckpt_ids.append(step)
+                runner.message_hub.update_info('keep_ckpt_ids',
+                                               list(self.keep_ckpt_ids))
+
+        ckpt_filename = self.filename_tmpl.format(step)
+        self.last_ckpt = self.file_backend.join_path(self.out_dir,
+                                                     ckpt_filename)
+        runner.message_hub.update_info('last_ckpt', self.last_ckpt)
 
         runner.save_checkpoint(
             self.out_dir,
@@ -397,39 +428,34 @@ class CheckpointHook(Hook):
             self.file_client_args,
             save_optimizer=self.save_optimizer,
             save_param_scheduler=self.save_param_scheduler,
+            meta=meta,
             by_epoch=self.by_epoch,
             backend_args=self.backend_args,
             **self.args)
-
-        self.last_ckpt = self.file_backend.join_path(self.out_dir,
-                                                     ckpt_filename)
-        runner.message_hub.update_info('last_ckpt', self.last_ckpt)
 
         # Model parallel-like training should involve pulling sharded states
         # from all ranks, but skip the following procedure.
         if not is_main_process():
             return
 
-        # remove other checkpoints
-        if self.max_keep_ckpts > 0:
-            if self.by_epoch:
-                current_ckpt = runner.epoch + 1
-            else:
-                current_ckpt = runner.iter + 1
-            redundant_ckpts = range(
-                current_ckpt - self.max_keep_ckpts * self.interval, 0,
-                -self.interval)
-            for _step in redundant_ckpts:
-                ckpt_path = self.file_backend.join_path(
-                    self.out_dir, self.filename_tmpl.format(_step))
-                if self.file_backend.isfile(ckpt_path):
-                    self.file_backend.remove(ckpt_path)
-                else:
-                    break
-
         save_file = osp.join(runner.work_dir, 'last_checkpoint')
         with open(save_file, 'w') as f:
             f.write(self.last_ckpt)  # type: ignore
+
+    def _save_checkpoint(self, runner) -> None:
+        """Save the current checkpoint and delete outdated checkpoint.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
+        if self.by_epoch:
+            step = runner.epoch + 1
+            meta = dict(epoch=step, iter=runner.iter)
+        else:
+            step = runner.iter + 1
+            meta = dict(epoch=runner.epoch, iter=step)
+
+        self._save_checkpoint_with_step(runner, step, meta=meta)
 
     def _save_best_checkpoint(self, runner, metrics) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
@@ -438,8 +464,6 @@ class CheckpointHook(Hook):
             runner (Runner): The runner of the training process.
             metrics (dict): Evaluation results of all metrics.
         """
-        from mmengine.runner.checkpoint import (_load_checkpoint,
-                                                save_checkpoint)
         if not self.save_best:
             return
 
@@ -449,6 +473,8 @@ class CheckpointHook(Hook):
         else:
             ckpt_filename = self.filename_tmpl.format(runner.iter)
             cur_type, cur_time = 'iter', runner.iter
+
+        meta = dict(epoch=runner.epoch, iter=runner.iter)
 
         # handle auto in self.key_indicators and self.rules before the loop
         if 'auto' in self.key_indicators:
@@ -512,6 +538,7 @@ class CheckpointHook(Hook):
                 file_client_args=self.file_client_args,
                 save_optimizer=False,
                 save_param_scheduler=False,
+                meta=meta,
                 by_epoch=False,
                 backend_args=self.backend_args)
             runner.logger.info(
@@ -525,17 +552,7 @@ class CheckpointHook(Hook):
         # checkpoint can not be removed when resuming training.
         if (best_ckpt_updated and self.last_ckpt is not None
                 and is_main_process()):
-            if self.file_backend.isfile(self.last_ckpt):
-                checkpoint = _load_checkpoint(self.last_ckpt)
-                checkpoint['message_hub'] = apply_to(
-                    runner.message_hub.state_dict(),
-                    lambda x: hasattr(x, 'cpu'), lambda x: x.cpu())
-
-                save_checkpoint(
-                    checkpoint,
-                    self.last_ckpt,
-                    file_client_args=self.file_client_args,
-                    backend_args=self.backend_args)
+            self._save_checkpoint_with_step(runner, cur_time, meta)
 
     def _init_rule(self, rules, key_indicators) -> None:
         """Initialize rule, key_indicator, comparison_func, and best score. If
