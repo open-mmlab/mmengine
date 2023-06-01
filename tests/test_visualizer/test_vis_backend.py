@@ -244,6 +244,30 @@ class TestWandbVisBackend:
         wandb_vis_backend.close()
         shutil.rmtree('temp_dir')
 
+    def test_define_metric_cfg(self):
+        # list of dict
+        define_metric_cfg = [
+            dict(name='test1', step_metric='iter'),
+            dict(name='test2', step_metric='epoch'),
+        ]
+        wandb_vis_backend = WandbVisBackend(
+            'temp_dir', define_metric_cfg=define_metric_cfg)
+        wandb_vis_backend._init_env()
+        wandb_vis_backend._wandb.define_metric.assert_any_call(
+            name='test1', step_metric='iter')
+        wandb_vis_backend._wandb.define_metric.assert_any_call(
+            name='test2', step_metric='epoch')
+
+        # dict
+        define_metric_cfg = dict(test3='max')
+        wandb_vis_backend = WandbVisBackend(
+            'temp_dir', define_metric_cfg=define_metric_cfg)
+        wandb_vis_backend._init_env()
+        wandb_vis_backend._wandb.define_metric.assert_any_call(
+            'test3', summary='max')
+
+        shutil.rmtree('temp_dir')
+
 
 class TestMLflowVisBackend:
 
