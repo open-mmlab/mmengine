@@ -357,7 +357,7 @@ class WandbVisBackend(BaseVisBackend):
             means the maximum value of ``coco/bbox_mAP`` is logged on wandb UI.
             When ``define_metric_cfg=[dict(name='loss',
             step_metric='epoch')]``,
-            the "loss” will be plotted against the epoch.
+            the "loss" will be plotted against the epoch.
             See `wandb define_metric <https://docs.wandb.ai/ref/python/
             run#define_metric>`_ for details.
             Default: None
