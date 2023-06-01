@@ -401,23 +401,24 @@ class CheckpointHook(Hook):
             logger='current')
 
     def _save_checkpoint_with_step(self, runner, step, meta):
-        # remove other checkpoints
-        if self.max_keep_ckpts > 0 and is_main_process():
+        # remove other checkpoints before save checkpoint to make the
+        # self.keep_ckpt_ids are saved as expected
+        if self.max_keep_ckpts > 0:
             # _save_checkpoint may be called multiple times in one epoch
             if len(self.keep_ckpt_ids) > 0 and self.keep_ckpt_ids[-1] == step:
                 pass
             else:
-                while len(self.keep_ckpt_ids) >= self.max_keep_ckpts:
+                if len(self.keep_ckpt_ids) >= self.max_keep_ckpts:
                     _step = self.keep_ckpt_ids.popleft()
-                    ckpt_path = self.file_backend.join_path(
-                        self.out_dir, self.filename_tmpl.format(_step))
-                    if self.file_backend.isfile(ckpt_path):
-                        self.file_backend.remove(ckpt_path)
-                    elif self.file_backend.isdir(ckpt_path):
-                        # checkpoints saved by deepspeed are directories
-                        self.file_backend.rmtree(ckpt_path)
-                    else:
-                        break
+                    if is_main_process():
+                        ckpt_path = self.file_backend.join_path(
+                            self.out_dir, self.filename_tmpl.format(_step))
+
+                        if self.file_backend.isfile(ckpt_path):
+                            self.file_backend.remove(ckpt_path)
+                        elif self.file_backend.isdir(ckpt_path):
+                            # checkpoints saved by deepspeed are directories
+                            self.file_backend.rmtree(ckpt_path)
 
                 self.keep_ckpt_ids.append(step)
                 runner.message_hub.update_info('keep_ckpt_ids',
