@@ -409,7 +409,7 @@ class CheckpointHook(Hook):
             if len(self.keep_ckpt_ids) > 0 and self.keep_ckpt_ids[-1] == step:
                 pass
             else:
-                if len(self.keep_ckpt_ids) >= self.max_keep_ckpts:
+                if len(self.keep_ckpt_ids) == self.max_keep_ckpts:
                     _step = self.keep_ckpt_ids.popleft()
                     if is_main_process():
                         ckpt_path = self.file_backend.join_path(
