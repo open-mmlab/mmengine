@@ -309,6 +309,9 @@ class CheckpointHook(Hook):
                             self.out_dir, self.filename_tmpl.format(step))
                         if self.file_backend.isfile(path):
                             self.file_backend.remove(path)
+                        elif self.file_backend.isdir(path):
+                            # checkpoints saved by deepspeed are directories
+                            self.file_backend.rmtree(path)
 
             self.keep_ckpt_ids: deque = deque(keep_ckpt_ids,
                                               self.max_keep_ckpts)
@@ -410,6 +413,9 @@ class CheckpointHook(Hook):
                         self.out_dir, self.filename_tmpl.format(_step))
                     if self.file_backend.isfile(ckpt_path):
                         self.file_backend.remove(ckpt_path)
+                    elif self.file_backend.isdir(ckpt_path):
+                        # checkpoints saved by deepspeed are directories
+                        self.file_backend.rmtree(ckpt_path)
                     else:
                         break
 
@@ -509,10 +515,13 @@ class CheckpointHook(Hook):
             best_score = key_score
             runner.message_hub.update_info(best_score_key, best_score)
 
-            if best_ckpt_path and \
-               self.file_backend.isfile(best_ckpt_path) and \
-               is_main_process():
-                self.file_backend.remove(best_ckpt_path)
+            if best_ckpt_path and is_main_process():
+                if self.file_backend.isfile(best_ckpt_path):
+                    self.file_backend.remove(best_ckpt_path)
+                else:
+                    # checkpoints saved by deepspeed are directories
+                    self.file_backend.rmtree(best_ckpt_path)
+
                 runner.logger.info(
                     f'The previous best checkpoint {best_ckpt_path} '
                     'is removed')
