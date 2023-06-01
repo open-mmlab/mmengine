@@ -25,7 +25,6 @@ class MMDeepSpeedEngine(DeepSpeedEngine):
         dist_init_required=None,
         collate_fn=None,
         config=None,
-        config_class=None,
         dont_change_device=False,
         inputs_to_half: Optional[List[Union[int, str]]] = None,
     ):

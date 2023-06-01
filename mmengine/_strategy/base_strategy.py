@@ -48,15 +48,22 @@ class BaseStrategy(metaclass=ABCMeta):
             ``resume`` is True and ``load_from`` is None, automatically to
             find latest checkpoint from ``work_dir``. If not found, resuming
             does nothing.
+        env_kwargs (dict, optional): Environment config passed in
+            :meth:`setup_env`. Defaults to None.
+        log_kwargs (dict, optional): Logger config passed in
+            :meth:`build_logger`. Defaults to None.
     """
 
     def __init__(
         self,
         *,
         work_dir: str = 'work_dir',
+        experiment_name: Optional[str] = None,
         compile: Union[dict, bool] = False,
         load_from: Optional[str] = None,
         resume: bool = False,
+        env_kwargs: Optional[dict] = None,
+        log_kwargs: Optional[dict] = None,
     ):
         self._work_dir = osp.abspath(work_dir)
         mmengine.mkdir_or_exist(self._work_dir)
@@ -66,9 +73,29 @@ class BaseStrategy(metaclass=ABCMeta):
         self._load_from = load_from
         self._resume = resume
 
+        self.setup_env(**env_kwargs or {})
+
+        if experiment_name is not None:
+            self._experiment_name = f'{experiment_name}_{self.timestamp}'
+        else:
+            self._experiment_name = self.timestamp
+
+        self._log_dir = osp.join(self.work_dir, self.timestamp)
+        mmengine.mkdir_or_exist(self._log_dir)
+
+        self.build_logger(**log_kwargs or {})
+
     @property
     def work_dir(self):
         return self._work_dir
+
+    @property
+    def log_dir(self):
+        return self._log_dir
+
+    @property
+    def experiment_name(self):
+        return self._experiment_name
 
     @property
     def launcher(self):
@@ -659,9 +686,7 @@ class BaseStrategy(metaclass=ABCMeta):
     def build_logger(
         self,
         log_level: Union[int, str] = 'INFO',
-        log_dir: Optional[str] = None,
         log_file: Optional[str] = None,
-        exp_name: Optional[str] = None,
         **kwargs,
     ) -> MMLogger:
         """Build a global asscessable MMLogger.
@@ -677,10 +702,10 @@ class BaseStrategy(metaclass=ABCMeta):
             MMLogger: A MMLogger object build from ``logger``.
         """
         if log_file is None:
-            log_file = osp.join(log_dir, f'{self._timestamp}.log')
+            log_file = osp.join(self.log_dir, f'{self._timestamp}.log')
 
         log_cfg = dict(log_level=log_level, log_file=log_file, **kwargs)
-        log_cfg.setdefault('name', exp_name)
+        log_cfg.setdefault('name', self.experiment_name)
         # `torch.compile` in PyTorch 2.0 could close all user defined handlers
         # unexpectedly. Using file mode 'a' can help prevent abnormal
         # termination of the FileHandler and ensure that the log file could

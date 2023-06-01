@@ -354,34 +354,27 @@ class FlexibleRunner:
 
         if launcher is None:
             launcher = infer_launcher()
-        self._randomness_cfg = randomness
-        self.strategy = self.build_strategy(strategy, launcher=launcher)
-        self.strategy.setup_env(
-            launcher=launcher, randomness=randomness, **env_cfg)
 
-        if experiment_name is not None:
-            self._experiment_name = f'{experiment_name}_{self.timestamp}'
-        elif self.cfg.filename is not None:
-            filename_no_ext = osp.splitext(osp.basename(self.cfg.filename))[0]
-            self._experiment_name = f'{filename_no_ext}_{self.timestamp}'
-        else:
-            self._experiment_name = self.timestamp
-        self._log_dir = osp.join(self.work_dir, self.timestamp)
-        mmengine.mkdir_or_exist(self._log_dir)
+        if experiment_name is None and self.cfg.filename is not None:
+            experiment_name = osp.splitext(osp.basename(self.cfg.filename))[0]
+
+        self._randomness_cfg = randomness
+        self.strategy = self.build_strategy(
+            strategy,
+            launcher=launcher,
+            randomness=randomness,
+            env_cfg=env_cfg,
+            experiment_name=experiment_name,
+            log_level=log_level,
+        )
+
         # Used to reset registries location. See :meth:`Registry.build` for
         # more details.
         self.default_scope = DefaultScope.get_instance(
-            self._experiment_name, scope_name=default_scope)
+            self.experiment_name, scope_name=default_scope)
         # Build log processor to format message.
         log_processor = dict() if log_processor is None else log_processor
         self.log_processor = self.build_log_processor(log_processor)
-        # Since `get_instance` could return any subclass of ManagerMixin. The
-        # corresponding attribute needs a type hint.
-        self.logger = self.strategy.build_logger(
-            log_level=log_level,
-            log_dir=self._log_dir,
-            exp_name=self._experiment_name,
-        )
 
         # Collect and log environment information.
         self._log_env()
@@ -459,7 +452,7 @@ class FlexibleRunner:
     @property
     def experiment_name(self):
         """str: Name of experiment."""
-        return self._experiment_name
+        return self.strategy.experiment_name
 
     @property
     def model_name(self):
@@ -473,7 +466,11 @@ class FlexibleRunner:
 
     @property
     def log_dir(self):
-        return self._log_dir
+        return self.strategy.log_dir
+
+    @property
+    def logger(self):
+        return self.strategy.logger
 
     @property
     def max_epochs(self):
@@ -609,6 +606,10 @@ class FlexibleRunner:
         self,
         strategy: Optional[BaseStrategy] = None,
         launcher: str = 'none',
+        randomness: Optional[dict] = None,
+        env_cfg: Optional[dict] = None,
+        experiment_name: Optional[str] = None,
+        log_level: Optional[str] = None,
     ) -> BaseStrategy:
         """Build a strategy.
 
@@ -634,6 +635,17 @@ class FlexibleRunner:
             strategy.setdefault('compile', self._compile)
             strategy.setdefault('load_from', self._load_from)
             strategy.setdefault('resume', self._resume)
+            strategy.setdefault('experiment_name', experiment_name)
+
+            env_kwargs = dict(
+                launcher=launcher,
+                randomness=randomness,
+                **env_cfg,
+            )
+            strategy.setdefault('env_kwargs', env_kwargs)
+
+            log_kwargs = dict(log_level=log_level)
+            strategy.setdefault('log_kwargs', log_kwargs)
 
             strategy = STRATEGIES.build(strategy)
 
@@ -642,7 +654,6 @@ class FlexibleRunner:
 
         # Wrap the two methods to facilitate the execution of load_checkpoint
         # or resume in the `prepare` method of the strategy.
-
         if not isinstance(strategy, DeepSpeedStrategy):
             strategy.load_checkpoint = partial(
                 strategy.load_checkpoint, callback=callback)
@@ -665,10 +676,10 @@ class FlexibleRunner:
             MessageHub: A MessageHub object build from ``message_hub``.
         """
         if message_hub is None:
-            message_hub = dict(name=self._experiment_name)
+            message_hub = dict(name=self.experiment_name)
         elif isinstance(message_hub, dict):
             # ensure message_hub containing name key
-            message_hub.setdefault('name', self._experiment_name)
+            message_hub.setdefault('name', self.experiment_name)
         else:
             raise TypeError(
                 f'message_hub should be dict or None, but got {message_hub}')
@@ -693,9 +704,9 @@ class FlexibleRunner:
         """
         if visualizer is None:
             visualizer = dict(
-                name=self._experiment_name,
+                name=self.experiment_name,
                 vis_backends=[dict(type='LocalVisBackend')],
-                save_dir=self._log_dir)
+                save_dir=self.log_dir)
             return Visualizer.get_instance(**visualizer)
 
         if isinstance(visualizer, Visualizer):
@@ -703,8 +714,8 @@ class FlexibleRunner:
 
         if isinstance(visualizer, dict):
             # ensure visualizer containing name key
-            visualizer.setdefault('name', self._experiment_name)
-            visualizer.setdefault('save_dir', self._log_dir)
+            visualizer.setdefault('name', self.experiment_name)
+            visualizer.setdefault('save_dir', self.log_dir)
             return VISUALIZERS.build(visualizer)
         else:
             raise TypeError(
