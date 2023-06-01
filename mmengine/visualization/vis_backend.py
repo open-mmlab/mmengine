@@ -866,8 +866,7 @@ class ClearMLVisBackend(BaseVisBackend):
             raise ImportError(
                 'Please run "pip install clearml" to install clearml')
 
-        task_kwargs = \
-            self._init_kwargs if self._init_kwargs is not None else {}
+        task_kwargs = self._init_kwargs or {}
         self._clearml = clearml
         self._task = self._clearml.Task.init(**task_kwargs)
         self._logger = self._task.get_logger()
@@ -952,7 +951,7 @@ class ClearMLVisBackend(BaseVisBackend):
                 and osp.isdir(getattr(self.cfg, 'work_dir', ''))):
             for filename in scandir(self.cfg.work_dir, self._artifact_suffix,
                                     False):
-                file_path = osp.join(self._cfg.work_dir, filename)
+                file_path = osp.join(self.cfg.work_dir, filename)
                 file_paths.append(file_path)
 
         for file_path in file_paths:
