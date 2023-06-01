@@ -885,7 +885,7 @@ class ClearMLVisBackend(BaseVisBackend):
         Args:
             config (Config): The Config object
         """
-        self._cfg = config
+        self.cfg = config
         self._task.connect_configuration(vars(config))
 
     @force_init_env
@@ -948,9 +948,9 @@ class ClearMLVisBackend(BaseVisBackend):
             return
 
         file_paths: List[str] = list()
-        if (hasattr(self, '_cfg')
-                and osp.isdir(getattr(self._cfg, 'work_dir', ''))):
-            for filename in scandir(self._cfg.work_dir, self._artifact_suffix,
+        if (hasattr(self, 'cfg')
+                and osp.isdir(getattr(self.cfg, 'work_dir', ''))):
+            for filename in scandir(self.cfg.work_dir, self._artifact_suffix,
                                     False):
                 file_path = osp.join(self._cfg.work_dir, filename)
                 file_paths.append(file_path)
