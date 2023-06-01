@@ -78,7 +78,8 @@ class AmpOptimWrapper(OptimWrapper):
 
         if use_fsdp and digit_version(
                 torch.__version__) >= digit_version('2.0.0'):
-            from torch.distributed.fsdp import ShardedGradScaler
+            from torch.distributed.fsdp.sharded_grad_scaler import \
+                ShardedGradScaler
             scaler_type = ShardedGradScaler
         else:
             scaler_type = GradScaler
