@@ -167,6 +167,8 @@ class TestParameterScheduler(TestCase):
             self.optimizer, param_name='lr', step_size=3, gamma=0.1)
         for epoch in range(epochs):
             result = scheduler.get_last_value()
+            if 'is_state_tracker' in scheduler.optimizer.param_groups[-1]:
+                result.pop()
             self.optimizer.step()
             scheduler.step()
             target = [t[epoch] for t in targets]

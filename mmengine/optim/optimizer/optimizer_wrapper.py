@@ -15,8 +15,6 @@ from mmengine.utils.dl_utils import has_batch_norm
 
 @OPTIM_WRAPPERS.register_module()
 class OptimWrapper:
-
-
     """Optimizer wrapper provides a common interface for updating parameters.
 
     Optimizer wrapper provides a unified interface for single precision
@@ -163,15 +161,17 @@ class OptimWrapper:
         # last few iterations. If `_max_counts` has not been initialized,
         # the loss factor will always be the same as `_accumulative_counts`.
         self._remainder_counts = -1
+
         self.new_param_settings = {
-            'params': torch.tensor([0.0], requires_grad=True),
+            'params': torch.tensor([0.0],
+                                   requires_grad=True,
+                                   dtype=torch.float),
             'is_state_tracker': True
         }
 
-
-        if hasattr(self.optimizer, 'defaults'):
-            self.new_param_settings.update(**self.optimizer.defaults)
-            self.optimizer.param_groups.append(self.new_param_settings)
+        # if hasattr(self.optimizer, 'defaults'):
+        self.new_param_settings.update(**self.optimizer.defaults)
+        self.optimizer.param_groups.append(self.new_param_settings)
 
     def update_params(self,
                       loss: torch.Tensor,
@@ -296,6 +296,8 @@ class OptimWrapper:
             self.new_param_settings.update(**last_param)
             self.optimizer.param_groups.append(self.new_param_settings)
         else:
+            if not isinstance(state_tracker['params'], torch.Tensor):
+                state_tracker['params'] = torch.tensor(state_tracker['params'])
             self.optimizer.param_groups.append(state_tracker)
 
     @property
@@ -328,7 +330,10 @@ class OptimWrapper:
         Returns:
             Dict[str, List[float]]: Learning rate of the optimizer.
         """
-        lr = [group['lr'] for group in self.param_groups if 'is_state_tracker' in group and group['is_state_tracker'] is True]
+        lr = [
+            group['lr'] for group in self.param_groups if
+            'is_state_tracker' in group and group['is_state_tracker'] is True
+        ]
         return dict(lr=lr)
 
     def get_momentum(self) -> Dict[str, List[float]]:
@@ -341,7 +346,8 @@ class OptimWrapper:
         """
         momentum = []
         for group in self.param_groups:
-            if 'is_state_tracker' not in group or group['is_state_tracker'] is False:
+            if 'is_state_tracker' not in group or group[
+                    'is_state_tracker'] is False:
                 continue
             # Get momentum of SGD.
             if 'momentum' in group.keys():

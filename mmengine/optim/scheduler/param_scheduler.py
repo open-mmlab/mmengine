@@ -1410,9 +1410,12 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
         self.factor = factor
 
         if isinstance(min_value, (list, tuple)):
-            if len(min_value) != len(optimizer.param_groups):
+            min_len = len(min_value)
+            if 'is_state_tracker' in optimizer.param_groups[-1]:
+                min_len += 1
+            if min_len != len(optimizer.param_groups):
                 raise ValueError('expected {} min_lrs, got {}'.format(
-                    len(optimizer.param_groups), len(min_value)))
+                    len(optimizer.param_groups), min_len))
             self.min_values = list(min_value)
         else:
             self.min_values = [min_value] * len(  # type: ignore

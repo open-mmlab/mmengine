@@ -194,12 +194,18 @@ class TestOptimWrapper(MultiProcessTestCase):
 
     def test_zero_grad(self):
         optimizer = MagicMock(spec=Optimizer)
+        optimizer.defaults = {
+        }  # adjust this line according to what OptimWrapper expects
+        optimizer.param_groups = [{}]
         optim_wrapper = OptimWrapper(optimizer)
         optim_wrapper.zero_grad()
         optimizer.zero_grad.assert_called()
 
     def test_step(self):
         optimizer = MagicMock(spec=Optimizer)
+        optimizer.defaults = {
+        }  # adjust this line according to what OptimWrapper expects
+        optimizer.param_groups = [{}]
         optim_wrapper = OptimWrapper(optimizer)
         optim_wrapper.step()
         optimizer.step.assert_called()
@@ -448,6 +454,9 @@ class TestAmpOptimWrapper(TestCase):
         if dtype == 'bfloat16' and not bf16_supported():
             raise unittest.SkipTest('bfloat16 not supported by device')
         optimizer = MagicMock(spec=Optimizer)
+        optimizer.defaults = {
+        }  # adjust this line according to what OptimWrapper expects
+        optimizer.param_groups = [{}]
         amp_optim_wrapper = AmpOptimWrapper(optimizer=optimizer, dtype=dtype)
         amp_optim_wrapper.loss_scaler = MagicMock()
         amp_optim_wrapper.step()
