@@ -572,20 +572,24 @@ class TestCheckpointHook(RunnerTestCase):
         cfg.train_cfg.val_interval = 1
         runner = self.build_runner(cfg)
         runner.train()
-        best_ckpt = osp.join(cfg.work_dir,
-                             f'best_test_acc_{training_type}_5.pth')
-        self.assertTrue(osp.isfile(best_ckpt))
+        best_ckpt_path = osp.join(cfg.work_dir,
+                                  f'best_test_acc_{training_type}_5.pth')
+        best_ckpt = torch.load(best_ckpt_path)
 
         ckpt = torch.load(osp.join(cfg.work_dir, f'{training_type}_5.pth'))
-        self.assertEqual(best_ckpt,
+        self.assertEqual(best_ckpt_path,
                          ckpt['message_hub']['runtime_info']['best_ckpt'])
 
         if training_type == 'epoch':
             self.assertEqual(ckpt['meta']['epoch'], 5)
             self.assertEqual(ckpt['meta']['iter'], 20)
+            self.assertEqual(best_ckpt['meta']['epoch'], 5)
+            self.assertEqual(best_ckpt['meta']['iter'], 20)
         else:
             self.assertEqual(ckpt['meta']['epoch'], 0)
             self.assertEqual(ckpt['meta']['iter'], 5)
+            self.assertEqual(best_ckpt['meta']['epoch'], 0)
+            self.assertEqual(best_ckpt['meta']['iter'], 5)
 
         self.clear_work_dir()
 
@@ -597,24 +601,26 @@ class TestCheckpointHook(RunnerTestCase):
         cfg.train_cfg.val_interval = 1
         runner = self.build_runner(cfg)
         runner.train()
-        best_ckpt = osp.join(cfg.work_dir,
-                             f'best_test_acc_{training_type}_5.pth')
-        self.assertTrue(osp.isfile(best_ckpt))
+        best_ckpt_path = osp.join(cfg.work_dir,
+                                  f'best_test_acc_{training_type}_5.pth')
+        best_ckpt = torch.load(best_ckpt_path)
 
         # if the current ckpt is the best, the interval will be ignored the
         # the ckpt will also be saved
-        path = osp.join(cfg.work_dir, f'{training_type}_5.pth')
-        self.assertTrue(osp.isfile(path))
-        ckpt = torch.load(path)
-        self.assertEqual(best_ckpt,
+        ckpt = torch.load(osp.join(cfg.work_dir, f'{training_type}_5.pth'))
+        self.assertEqual(best_ckpt_path,
                          ckpt['message_hub']['runtime_info']['best_ckpt'])
 
         if training_type == 'epoch':
             self.assertEqual(ckpt['meta']['epoch'], 5)
             self.assertEqual(ckpt['meta']['iter'], 20)
+            self.assertEqual(best_ckpt['meta']['epoch'], 5)
+            self.assertEqual(best_ckpt['meta']['iter'], 20)
         else:
             self.assertEqual(ckpt['meta']['epoch'], 0)
             self.assertEqual(ckpt['meta']['iter'], 5)
+            self.assertEqual(best_ckpt['meta']['epoch'], 0)
+            self.assertEqual(best_ckpt['meta']['iter'], 5)
 
         # test save published keys
         cfg = copy.deepcopy(common_cfg)
