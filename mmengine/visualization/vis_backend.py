@@ -347,6 +347,10 @@ class WandbVisBackend(BaseVisBackend):
             input parameters.
             See `wandb.init <https://docs.wandb.ai/ref/python/init>`_ for
             details. Defaults to None.
+        allow_config_update (bool, optional): Uses this value for
+            `allow_val_change` in the call to `wandb.config.update`. One may
+            wish to set this to `True` if the are resuming runs and have any
+            changes to the MMDetection config.
         define_metric_cfg (dict or list[dict], optional):
             When a dict is set, it is a dict of metrics and summary for
             ``wandb.define_metric``.
@@ -379,12 +383,14 @@ class WandbVisBackend(BaseVisBackend):
     def __init__(self,
                  save_dir: str,
                  init_kwargs: Optional[dict] = None,
+                 allow_config_update: Optional[bool] = None,
                  define_metric_cfg: Union[dict, list, None] = None,
                  commit: Optional[bool] = True,
                  log_code_name: Optional[str] = None,
                  watch_kwargs: Optional[dict] = None):
         super().__init__(save_dir)
         self._init_kwargs = init_kwargs
+        self._allow_config_update = allow_config_update
         self._define_metric_cfg = define_metric_cfg
         self._commit = commit
         self._log_code_name = log_code_name
@@ -434,7 +440,7 @@ class WandbVisBackend(BaseVisBackend):
         Args:
             config (Config): The Config object
         """
-        self._wandb.config.update(dict(config))
+        self._wandb.config.update(dict(config), self._allow_config_update)
         self._wandb.run.log_code(name=self._log_code_name)
 
     @force_init_env
