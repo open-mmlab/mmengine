@@ -13,7 +13,7 @@ import mmengine
 from mmengine.optim import OptimWrapper, _ParamScheduler
 from mmengine.registry import MODEL_WRAPPERS, STRATEGIES
 from mmengine.utils import get_git_hash
-from .base_strategy import BaseStrategy
+from .base import BaseStrategy
 
 
 @STRATEGIES.register_module()
@@ -87,7 +87,6 @@ class DeepSpeedStrategy(BaseStrategy):
         max_epochs: Optional[int] = None,
         max_iters: Optional[int] = None,
         cur_iter: Optional[int] = None,
-        **kwargs,
     ):
         """Prepare model and some components.
 

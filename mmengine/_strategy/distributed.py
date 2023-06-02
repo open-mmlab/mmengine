@@ -10,7 +10,7 @@ from mmengine.dist import init_dist, is_distributed, master_only
 from mmengine.model import convert_sync_batchnorm, is_model_wrapper
 from mmengine.optim import OptimWrapper, OptimWrapperDict, _ParamScheduler
 from mmengine.registry import MODEL_WRAPPERS, STRATEGIES
-from .base_strategy import BaseStrategy
+from .base import BaseStrategy
 
 
 @STRATEGIES.register_module()

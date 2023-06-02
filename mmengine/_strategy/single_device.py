@@ -6,7 +6,7 @@ import torch.nn as nn
 from mmengine.device import get_device
 from mmengine.optim import OptimWrapper, _ParamScheduler
 from mmengine.registry import STRATEGIES
-from .base_strategy import BaseStrategy
+from .base import BaseStrategy
 
 
 @STRATEGIES.register_module()

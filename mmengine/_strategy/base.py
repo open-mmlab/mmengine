@@ -133,7 +133,6 @@ class BaseStrategy(metaclass=ABCMeta):
         optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
         compile_target: str = 'forward',
-        checkpoint: Optional[dict] = None,
         num_batches_per_epoch: Optional[int] = None,
         max_epochs: Optional[int] = None,
         max_iters: Optional[int] = None,
@@ -161,10 +160,6 @@ class BaseStrategy(metaclass=ABCMeta):
                 See :meth:`build_param_scheduler` for examples.
             compile_target (str): The method of model to be compiled.
                 Defaults to 'forward'.
-            checkpoint (dict, optional): Checkpoint to load strategy state.
-                Defaults to None.
-            resume (bool, optional): Whether resume training from checkpoint.
-                Defaults to False.
             num_batches_per_epoch (int, optional): Number of batches per epoch.
                 Defaults to None.
             max_epochs (int, optional): Number of epochs. Defaults to None.
