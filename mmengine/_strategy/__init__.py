@@ -2,7 +2,7 @@
 from mmengine.utils import is_installed
 from .base import BaseStrategy
 from .distributed import DDPStrategy
-from .fsdp_strategy import FSDPStrategy
+from .fsdp import FSDPStrategy
 from .single_device import SingleDeviceStrategy
 
 __all__ = [

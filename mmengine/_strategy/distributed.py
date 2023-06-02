@@ -99,9 +99,10 @@ class DDPStrategy(BaseStrategy):
             self._scale_lr()
 
             # Initiate inner count of `optim_wrapper`.
-            self.optim_wrapper.initialize_count_status(
-                self.model, self.dispatch_kwargs.get('cur_iter', 0),
-                self.dispatch_kwargs['max_iters'])
+            if 'max_iters' in self.dispatch_kwargs:
+                self.optim_wrapper.initialize_count_status(
+                    self.model, self.dispatch_kwargs.get('cur_iter', 0),
+                    self.dispatch_kwargs['max_iters'])
 
         return return_items[0] if len(return_items) == 1 else return_items
 
