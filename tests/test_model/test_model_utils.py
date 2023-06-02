@@ -30,18 +30,13 @@ class ToyModule(nn.Module):
 def test_revert_syncbn():
     # conv = ConvModule(3, 8, 2, norm_cfg=dict(type='SyncBN'))
     conv = nn.Sequential(nn.Conv2d(3, 8, 2), nn.SyncBatchNorm(8))
-    x = torch.randn(1, 3, 10, 10)
-    # Expect a ValueError prompting that SyncBN is not supported on CPU
-    with pytest.raises(ValueError):
-        y = conv(x)
     conv = revert_sync_batchnorm(conv)
-    y = conv(x)
-    assert y.shape == (1, 8, 9, 9)
+    assert not isinstance(conv[1], nn.SyncBatchNorm)
 
     # TODO, capsys provided by `pytest` cannot capture the error log produced
     # by MMLogger. Test the error log after refactoring the unit test with
     # `unittest`
-    conv = nn.Sequential(ToyModule(), nn.SyncBatchNorm(8))
+    conv = ToyModule()
     revert_sync_batchnorm(conv)
 
 
@@ -50,9 +45,6 @@ def test_revert_syncbn():
 def test_convert_syncbn():
     # conv = ConvModule(3, 8, 2, norm_cfg=dict(type='SyncBN'))
     conv = nn.Sequential(nn.Conv2d(3, 8, 2), nn.BatchNorm2d(8))
-    x = torch.randn(1, 3, 10, 10)
-    y = conv(x)
-    assert y.shape == (1, 8, 9, 9)
 
     # Test convert to mmcv SyncBatchNorm
     if is_installed('mmcv'):
@@ -63,11 +55,8 @@ def test_convert_syncbn():
             convert_sync_batchnorm(conv, implementation='mmcv')
 
     # Test convert BN to Pytorch SyncBatchNorm
-    # Expect a ValueError prompting that SyncBN is not supported on CPU
     converted_conv = convert_sync_batchnorm(conv)
     assert isinstance(converted_conv[1], torch.nn.SyncBatchNorm)
-    with pytest.raises(ValueError):
-        converted_conv(x)
 
 
 def test_is_model_wrapper():

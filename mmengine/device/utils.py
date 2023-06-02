@@ -6,6 +6,7 @@ import torch
 
 try:
     import torch_npu  # noqa: F401
+    import torch_npu.npu.utils as npu_utils
 
     # Enable operator support for dynamic shape and
     # binary operator support on the NPU.
@@ -14,6 +15,12 @@ try:
     IS_NPU_AVAILABLE = hasattr(torch, 'npu') and torch.npu.is_available()
 except Exception:
     IS_NPU_AVAILABLE = False
+
+try:
+    import torch_dipu  # noqa: F401
+    IS_DIPU_AVAILABLE = True
+except Exception:
+    IS_DIPU_AVAILABLE = False
 
 
 def get_max_cuda_memory(device: Optional[torch.device] = None) -> int:
@@ -62,6 +69,17 @@ def is_mps_available() -> bool:
     return hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
 
 
+def is_dipu_available() -> bool:
+    return IS_DIPU_AVAILABLE
+
+
+def is_npu_support_full_precision() -> bool:
+    """Returns True if npu devices support full precision training."""
+    version_of_support_full_precision = 220
+    return IS_NPU_AVAILABLE and npu_utils.get_soc_version(
+    ) >= version_of_support_full_precision
+
+
 DEVICE = 'cpu'
 if is_npu_available():
     DEVICE = 'npu'
@@ -71,6 +89,8 @@ elif is_mlu_available():
     DEVICE = 'mlu'
 elif is_mps_available():
     DEVICE = 'mps'
+elif is_dipu_available():
+    DEVICE = 'dipu'
 
 
 def get_device() -> str:

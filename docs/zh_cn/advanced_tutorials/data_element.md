@@ -27,10 +27,10 @@ for img, data_sample in dataloader:
 抽象数据接口实现了基本的增/删/改/查功能，同时支持不同设备之间的迁移，支持类字典和张量的操作，可以充分满足算法库对于这些数据的使用要求。
 基于 MMEngine 的算法库可以继承这套抽象数据接口并实现自己的抽象数据接口来适应不同算法中数据的特点与实际需要，在保持统一接口的同时提高了算法模块的拓展性。
 
-在实际实现过程中，算法库中的各个组件所具备的数据接口，一般为如下两个种：
+在实际实现过程中，算法库中的各个组件所具备的数据接口，一般为以下两种：
 
-- 一个训练或测试样本(例如一张图像)的所有的标注信息和预测信息的集合，例如数据集的输出、模型以及可视化器的输入一般为单个训练或测试样本的所有信息。MMEngine将其定义为数据样本(DataSample)
-- 单一类型的预测或标注，一般是算法模型中某个子模块的输出, 例如二阶段检测中RPN的输出、语义分割模型的输出、关键点分支的输出， GAN中生成器的输出等。MMengine将其定义为数据元素(XXXData)
+- 一个训练或测试样本（例如一张图像）的所有的标注信息和预测信息的集合，例如数据集的输出、模型以及可视化器的输入一般为单个训练或测试样本的所有信息。MMEngine 将其定义为数据样本（DataSample）
+- 单一类型的预测或标注，一般是算法模型中某个子模块的输出, 例如二阶段检测中RPN的输出、语义分割模型的输出、关键点分支的输出，GAN中生成器的输出等。MMEngine 将其定义为数据元素（XXXData）
 
 下边首先介绍一下数据样本与数据元素的基类 [BaseDataElement](mmengine.structures.BaseDataElement)。
 
@@ -42,8 +42,7 @@ for img, data_sample in dataloader:
 
 - 增/删/改/查 `data` 中不同字段的数据
 - 将 `data` 迁移至目标设备
-- 支持像访问字典/张量一样访问 data 内的数据
-  以充分满足算法库对于这些数据的使用要求。
+- 支持像访问字典/张量一样访问 data 内的数据以充分满足算法库对于这些数据的使用要求。
 
 ### 1. 数据元素的创建
 
@@ -73,7 +72,7 @@ data_element = BaseDataElement(
 
 ### 2. `new` 与 `clone` 函数
 
-用户可以使用 `new()` 函数通过已有的数据接口创建一个具有相同状态和数据的抽象数据接口。用户可以在创建新 `BaseDataElement` 时设置 `metainfo` 和 `data`，用于创建仅 `data` 或 `metainfo` 具有相同状态和数据的抽象接口。比如 `new(metainfo=xx)` 使得新的 `BaseDataElement` 与被 clone 的 `BaseDataElement` 包含相同的 `data` 内容，但 `metainfo` 为新设置的内容。
+用户可以使用 `new()` 方法基于已有的 `BaseDataElement` 创建一个具有相同 `data` 和 `metainfo` 的 `BaseDataElement`。用户也可以在调用 `new` 方法时传入新的 `data` 和 `metainfo`，例如 `new(metainfo=xx)` ，此时创建的 `BaseDataElement` 相较于已有的 `BaseDataElement`，`data` 完全一致 ，而 `metainfo` 则为新设置的内容。
 也可以直接使用 `clone()` 来获得一份深拷贝，`clone()` 函数的行为与 PyTorch 中 Tensor 的 `clone()` 参数保持一致。
 
 ```python
@@ -108,7 +107,7 @@ label in data_element2 is True
 
 ### 3. 属性的增加与查询
 
-对增加属性而言，用户可以像增加类属性那样增加 `data` 内的属性；对`metainfo` 而言，一般储存的为一些图像的元信息，一般情况下不会修改，如果需要增加，用户应当使用 `set_metainfo` 接口显示地修改。
+对增加属性而言，用户可以像增加类属性那样增加 `data` 内的属性；对 `metainfo` 而言，一般储存的为一些图像的元信息，一般情况下不会修改，如果需要增加，用户应当使用 `set_metainfo` 接口显示地修改。
 
 对查询而言，用户可以可以通过 `keys`，`values`，和 `items` 来访问只存在于 data 中的键值，也可以通过 `metainfo_keys`，`metainfo_values`，和`metainfo_items` 来访问只存在于 metainfo 中的键值。
 用户还能通过 `all_keys`，`all_values`， `all_items` 来访问 `BaseDataElement` 的所有的属性并且不区分他们的类型。
@@ -220,7 +219,7 @@ bboxes: tensor([[0.9204, 0.2110, 0.2886, 0.7925],
 
 ### 4. 属性的删改
 
-用户可以像修改实例属性一样修改 `BaseDataElement` 的 `data`, 对`metainfo` 而言 一般储存的为一些图像的元信息，一般情况下不会修改，如果需要修改，用户应当使用 `set_metainfo` 接口显示的修改。
+用户可以像修改实例属性一样修改 `BaseDataElement` 的 `data`, 对`metainfo` 而言，一般储存的为一些图像的元信息，一般情况下不会修改，如果需要修改，用户应当使用 `set_metainfo` 接口显示的修改。
 
 同时为了操作的便捷性，对 `data` 和 `metainfo` 中的数据可以通过 `del` 直接删除，也支持 `pop` 在访问属性后删除属性。
 
@@ -373,22 +372,23 @@ print(instance_data)
 
 ## 数据元素(xxxData)
 
-MMEngine 将数据元素情况划分为三个类别:
+MMEngine 将数据元素情况划分为三个类别：
 
-- 实例数据(InstanceData): 主要针对的是上层任务(high-level)中，对图像中所有实例相关的数据进行封装，比如检测框(bounding boxes), 物体类别(box labels),实例掩码(instance masks), 关键点(key points), 文字边界(polygons), 跟踪id(tracking ids) 等. 所有实例相关的数据的**长度一致**，均为图像中实例的个数。
-- 像素数据(PixelData): 主要针对底层任务(low-level) 以及需要感知像素级别标签的部分上层任务。像素数据对像素级相关的数据进行封装，比如语义分割中的分割图（segmentation map）, 光流任务中的光流图（flow map）, 全景分割中的全景分割图（panoptic seg map）；底层任务中生成的各种图像，比如超分辨图，去噪图，以及生成的各种风格图。这些数据的特点是都是三维或四维数组，最后两维度为数据的高度(height)和宽度(width)，且具有相同的height和width
-- 标签数据(LabelData): 主要标签级别的数据进行封装，比如图像分类，多分类中的类别，图像生成中生成图像的类别内容，或者文字识别中的文本等。
+- 实例数据 (InstanceData) : 主要针对的是上层任务 (high-level) 中，对图像中所有实例相关的数据进行封装，比如检测框 (bounding boxes)，物体类别 (box labels)，实例掩码 (instance masks)，关键点 (key points)，文字边界 (polygons)，跟踪 id (tracking ids) 等。所有实例相关的数据的**长度一致**，均为图像中实例的个数。
+- 像素数据 (PixelData) : 主要针对底层任务 (low-level) 以及需要感知像素级别标签的部分上层任务。像素数据对像素级相关的数据进行封装，比如语义分割中的分割图 (segmentation map), 光流任务中的光流图 (flow map), 全景分割中的全景分割图 (panoptic seg map)；底层任务中生成的各种图像，比如超分辨图，去噪图，以及生成的各种风格图。这些数据的特点是都是三维或四维数组，最后两维度为数据的高度 (height) 和宽度 (width)，且具有相同的 height 和 width
+- 标签数据 (LabelData) : 主要针对标签级别的数据进行封装，比如图像分类，多分类中的类别，图像生成中生成图像的类别内容，或者文字识别中的文本等。
 
 ### InstanceData
 
-[`InstanceData`](mmengine.structures.InstanceData) 在 `BaseDataElement` 的基础上，对 `data` 存储的数据做了限制，即要求存储在 `data` 中的数据的长度一致。比如在目标检测中, 假设一张图像中有 N 个目标(instance)，可以将图像的所有边界框(bbox)，类别(label)等存储在 `InstanceData` 中, `InstanceData` 的 bbox 和 label 的长度相同。
-基于上述假定对 `InstanceData`进行了扩展，包括：
+[`InstanceData`](mmengine.structures.InstanceData) 在 `BaseDataElement` 的基础上对 `data` 存储的数据做了限制，要求存储在 `data` 中的数据的长度一致。比如在目标检测中, 假设一张图像中有 N 个目标 (instance)，可以将图像的所有边界框 (bbox)，类别 (label) 等存储在 `InstanceData` 中, `InstanceData` 的 bbox 和 label 的长度相同。
+MMEngine 对 `InstanceData` 加入了如下支持：
 
 - 对 `InstanceData` 中 data 所存储的数据进行了长度校验
 - data 部分支持类字典访问和设置它的属性
 - 支持基础索引，切片以及高级索引功能
-- 支持具有**相同的 `key`** 但是不同 `InstanceData` 的拼接功能。
-  这些扩展功能除了支持基础的数据结构， 比如`torch.tensor`, `numpy.dnarray`, `list`, `str`, `tuple`, 也可以是自定义的数据结构，只要自定义数据结构实现了 `__len__`, `__getitem__` and `cat`.
+- 支持具有**相同的 `key`** 但是不同的 `InstanceData` 进行拼接的功能。
+
+这些扩展功能除了支持基础的数据结构， 比如 `torch.tensor`, `numpy.dnarray`, `list`, `str` 和 `tuple`, 也可以是自定义的数据结构，只要自定义数据结构实现了 `__len__`, `__getitem__` 和 `cat` 方法。
 
 #### 数据校验
 
@@ -720,11 +720,13 @@ print(InstanceData.cat([instance_data, instance_data]))
 
 ### PixelData
 
-[`PixelData`](mmengine.structures.PixelData) 在 `BaseDataElement` 的基础上，同样对对 data 中存储的数据做了限制:
+[`PixelData`](mmengine.structures.PixelData) 在 `BaseDataElement` 的基础上，同样对 data 中存储的数据做了限制:
 
-- 所有 data 内的数据均为 3 维，并且顺序为 (通道，高， 宽)
+- 所有 data 内的数据均为 3 维，并且顺序为 (通道，高，宽)
 - 所有在 data 内的数据要有相同的长和宽
-  基于上述假定对 `PixelData`进行了扩展，包括：
+
+基于上述假定对 `PixelData`进行了扩展，包括：
+
 - 对 `PixelData` 中 data 所存储的数据进行了尺寸的校验
 - 支持对 data 部分的数据对实例进行空间维度的索引和切片。
 
@@ -842,9 +844,9 @@ print(f'{onehot} is convert to ', index)
 tensor([0, 1, 0, 0, 0, 0, 0, 0, 0, 0]) is convert to tensor([1])
 ```
 
-## 数据样本(DataSample)
+## 数据样本(xxxDataSample)
 
-数据样本作为不同模块最外层的接口，提供了 xxxDataSample 用于单任务中各模块之间统一格式的传递，同时为了各个模块从统一字段获取或写入信息，数据样本中的命名以及类型要进行约束和统一，保证各模块接口的统一性。 OpenMMLab 中各个算法库的命名规范可以参考 [`OpenMMLab` 中的命名规范](TODO)。
+一份样本中可能存在不同类型的标签，例如一张图片里可能同时存在实例级别的标签（Box），像素级别的标签（SegMap），因此在 PixelData、InstanceData、PixelData 之上，还会有一层更加高级封装，用来表示图像级别的标签。OpenMMLab 系列项目将这层封装命名为 `XXDataSample`。以检测任务为例，MMDet 就实现了 DetDataSample。训练过程中所有的标签都会被封装在 XXXDataSample 中，这样能够保证不同的深度学习任务能够保持统一的数据流和统一的数据操作方式。
 
 ### 下游库使用
 
@@ -1010,7 +1012,6 @@ AssertionError: tensor([[0.4370, 0.1661, 0.0902, 0.8421],
 `img`， `img_metas`， `gt_bboxes`， `gt_labels`， `gt_bboxes_ignore` 作为输入，但是 `SingleStageInstanceSegmentor` 还需要 `gt_masks`，导致 detector 的训练接口不一致，影响了代码的灵活性。
 
 ```python
-
 class SingleStageDetector(BaseDetector):
     ...
 
@@ -1083,7 +1084,7 @@ class MaskHungarianAssigner(BaseAssigner):
                eps=1e-7):
 ```
 
-`InstanceData` 可以封装实例的框、分数、和掩码，将 `HungarianAssigner` 的核心参数简化成 `pred_instances`，`gt_instancess`，和 `gt_instances_ignore`
+`InstanceData` 可以封装实例的框、分数、和掩码，将 `HungarianAssigner` 的核心参数简化成 `pred_instances`，`gt_instances`，和 `gt_instances_ignore`
 使得 `HungarianAssigner` 和 `MaskHungarianAssigner` 可以合并成一个通用的 `HungarianAssigner`。
 
 ```python

@@ -122,6 +122,15 @@ class BaseDataPreprocessor(nn.Module):
         self._device = torch.device(torch.npu.current_device())
         return super().npu()
 
+    def mlu(self, *args, **kwargs) -> nn.Module:
+        """Overrides this method to set the :attr:`device`
+
+        Returns:
+            nn.Module: The model itself.
+        """
+        self._device = torch.device(torch.mlu.current_device())
+        return super().mlu()
+
     def cpu(self, *args, **kwargs) -> nn.Module:
         """Overrides this method to set the :attr:`device`
 

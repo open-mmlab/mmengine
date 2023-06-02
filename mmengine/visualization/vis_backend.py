@@ -6,7 +6,8 @@ import os
 import os.path as osp
 import warnings
 from abc import ABCMeta, abstractmethod
-from typing import Any, Callable, Optional, Sequence, Union
+from collections.abc import MutableMapping
+from typing import Any, Callable, List, Optional, Sequence, Union
 
 import cv2
 import numpy as np
@@ -14,8 +15,10 @@ import torch
 
 from mmengine.config import Config
 from mmengine.fileio import dump
-from mmengine.logging import print_log
+from mmengine.hooks.logger_hook import SUFFIX_TYPE
+from mmengine.logging import MMLogger, print_log
 from mmengine.registry import VISBACKENDS
+from mmengine.utils import scandir
 from mmengine.utils.dl_utils import TORCH_VERSION
 
 
@@ -344,33 +347,39 @@ class WandbVisBackend(BaseVisBackend):
             input parameters.
             See `wandb.init <https://docs.wandb.ai/ref/python/init>`_ for
             details. Defaults to None.
-        define_metric_cfg (dict, optional):
-            A dict of metrics and summary for wandb.define_metric.
+        define_metric_cfg (dict or list[dict], optional):
+            When a dict is set, it is a dict of metrics and summary for
+            ``wandb.define_metric``.
             The key is metric and the value is summary.
-            When ``define_metric_cfg={'coco/bbox_mAP': 'max'}``,
-            The maximum value of ``coco/bbox_mAP`` is logged on wandb UI.
+            When a list is set, each dict should be a valid argument of
+            the ``define_metric``.
+            For example, ``define_metric_cfg={'coco/bbox_mAP': 'max'}``,
+            means the maximum value of ``coco/bbox_mAP`` is logged on wandb UI.
+            When ``define_metric_cfg=[dict(name='loss',
+            step_metric='epoch')]``,
+            the "loss" will be plotted against the epoch.
             See `wandb define_metric <https://docs.wandb.ai/ref/python/
             run#define_metric>`_ for details.
-            Default: None
-        commit: (bool, optional) Save the metrics dict to the wandb server
+            Defaults to None.
+        commit (bool, optional) Save the metrics dict to the wandb server
             and increment the step.  If false `wandb.log` just updates the
             current metrics dict with the row argument and metrics won't be
             saved until `wandb.log` is called with `commit=True`.
             Defaults to True.
-        log_code_name: (str, optional) The name of code artifact.
+        log_code_name (str, optional) The name of code artifact.
             By default, the artifact will be named
             source-$PROJECT_ID-$ENTRYPOINT_RELPATH. See
             `wandb log_code <https://docs.wandb.ai/ref/python/run#log_code>`_
             for details. Defaults to None.
-            New in version 0.3.0.
+            `New in version 0.3.0.`
         watch_kwargs (optional, dict): Agurments for ``wandb.watch``.
-            New in version 0.4.0.
+            `New in version 0.4.0.`
     """
 
     def __init__(self,
                  save_dir: str,
                  init_kwargs: Optional[dict] = None,
-                 define_metric_cfg: Optional[dict] = None,
+                 define_metric_cfg: Union[dict, list, None] = None,
                  commit: Optional[bool] = True,
                  log_code_name: Optional[str] = None,
                  watch_kwargs: Optional[dict] = None):
@@ -397,8 +406,14 @@ class WandbVisBackend(BaseVisBackend):
 
         wandb.init(**self._init_kwargs)
         if self._define_metric_cfg is not None:
-            for metric, summary in self._define_metric_cfg.items():
-                wandb.define_metric(metric, summary=summary)
+            if isinstance(self._define_metric_cfg, dict):
+                for metric, summary in self._define_metric_cfg.items():
+                    wandb.define_metric(metric, summary=summary)
+            elif isinstance(self._define_metric_cfg, list):
+                for metric_cfg in self._define_metric_cfg:
+                    wandb.define_metric(**metric_cfg)
+            else:
+                raise ValueError('define_metric_cfg should be dict or list')
         self._wandb = wandb
 
     @property  # type: ignore
@@ -613,3 +628,358 @@ class TensorboardVisBackend(BaseVisBackend):
         """close an opened tensorboard object."""
         if hasattr(self, '_tensorboard'):
             self._tensorboard.close()
+
+
+@VISBACKENDS.register_module()
+class MLflowVisBackend(BaseVisBackend):
+    """MLflow visualization backend class.
+
+    It can write images, config, scalars, etc. to a
+    mlflow file.
+
+    Examples:
+        >>> from mmengine.visualization import MLflowVisBackend
+        >>> from mmengine import Config
+        >>> import numpy as np
+        >>> vis_backend = MLflowVisBackend(save_dir='temp_dir')
+        >>> img = np.random.randint(0, 256, size=(10, 10, 3))
+        >>> vis_backend.add_image('img.png', img)
+        >>> vis_backend.add_scalar('mAP', 0.6)
+        >>> vis_backend.add_scalars({'loss': 0.1,'acc':0.8})
+        >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        >>> vis_backend.add_config(cfg)
+
+    Args:
+        save_dir (str): The root directory to save the files
+            produced by the backend.
+        exp_name (str, optional): The experiment name. Defaults to None.
+        run_name (str, optional): The run name. Defaults to None.
+        tags (dict, optional): The tags to be added to the experiment.
+            Defaults to None.
+        params (dict, optional): The params to be added to the experiment.
+            Defaults to None.
+        tracking_uri (str, optional): The tracking uri. Defaults to None.
+        artifact_suffix (Tuple[str] or str, optional): The artifact suffix.
+            Defaults to ('.json', '.log', '.py', 'yaml').
+        tracked_config_keys (dict, optional): The top level keys of config that
+            will be added to the experiment. If it is None, which means all
+            the config will be added. Defaults to None.
+            `New in version 0.7.4.`
+    """
+
+    def __init__(self,
+                 save_dir: str,
+                 exp_name: Optional[str] = None,
+                 run_name: Optional[str] = None,
+                 tags: Optional[dict] = None,
+                 params: Optional[dict] = None,
+                 tracking_uri: Optional[str] = None,
+                 artifact_suffix: SUFFIX_TYPE = ('.json', '.log', '.py',
+                                                 'yaml'),
+                 tracked_config_keys: Optional[dict] = None):
+        super().__init__(save_dir)
+        self._exp_name = exp_name
+        self._run_name = run_name
+        self._tags = tags
+        self._params = params
+        self._tracking_uri = tracking_uri
+        self._artifact_suffix = artifact_suffix
+        self._tracked_config_keys = tracked_config_keys
+
+    def _init_env(self):
+        """Setup env for MLflow."""
+        if not os.path.exists(self._save_dir):
+            os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
+
+        try:
+            import mlflow
+        except ImportError:
+            raise ImportError(
+                'Please run "pip install mlflow" to install mlflow'
+            )  # type: ignore
+        self._mlflow = mlflow
+
+        # when mlflow is imported, a default logger is created.
+        # at this time, the default logger's stream is None
+        # so the stream is reopened only when the stream is None
+        # or the stream is closed
+        logger = MMLogger.get_current_instance()
+        for handler in logger.handlers:
+            if handler.stream is None or handler.stream.closed:
+                handler.stream = open(handler.baseFilename, 'a')
+
+        if self._tracking_uri is not None:
+            logger.warning(
+                'Please make sure that the mlflow server is running.')
+            self._mlflow.set_tracking_uri(self._tracking_uri)
+        else:
+            if os.name == 'nt':
+                file_url = f'file:\\{os.path.abspath(self._save_dir)}'
+            else:
+                file_url = f'file://{os.path.abspath(self._save_dir)}'
+            self._mlflow.set_tracking_uri(file_url)
+
+        self._exp_name = self._exp_name or 'Default'
+
+        if self._mlflow.get_experiment_by_name(self._exp_name) is None:
+            self._mlflow.create_experiment(self._exp_name)
+
+        self._mlflow.set_experiment(self._exp_name)
+
+        if self._run_name is not None:
+            self._mlflow.set_tag('mlflow.runName', self._run_name)
+        if self._tags is not None:
+            self._mlflow.set_tags(self._tags)
+        if self._params is not None:
+            self._mlflow.log_params(self._params)
+
+    @property  # type: ignore
+    @force_init_env
+    def experiment(self):
+        """Return MLflow object."""
+        return self._mlflow
+
+    @force_init_env
+    def add_config(self, config: Config, **kwargs) -> None:
+        """Record the config to mlflow.
+
+        Args:
+            config (Config): The Config object
+        """
+        self.cfg = config
+        if self._tracked_config_keys is None:
+            self._mlflow.log_params(self._flatten(self.cfg))
+        else:
+            tracked_cfg = dict()
+            for k in self._tracked_config_keys:
+                tracked_cfg[k] = self.cfg[k]
+            self._mlflow.log_params(self._flatten(tracked_cfg))
+        self._mlflow.log_text(self.cfg.pretty_text, 'config.py')
+
+    @force_init_env
+    def add_image(self,
+                  name: str,
+                  image: np.ndarray,
+                  step: int = 0,
+                  **kwargs) -> None:
+        """Record the image to mlflow.
+
+        Args:
+            name (str): The image identifier.
+            image (np.ndarray): The image to be saved. The format
+                should be RGB.
+            step (int): Global step value to record. Default to 0.
+        """
+        self._mlflow.log_image(image, name)
+
+    @force_init_env
+    def add_scalar(self,
+                   name: str,
+                   value: Union[int, float, torch.Tensor, np.ndarray],
+                   step: int = 0,
+                   **kwargs) -> None:
+        """Record the scalar data to mlflow.
+
+        Args:
+            name (str): The scalar identifier.
+            value (int, float, torch.Tensor, np.ndarray): Value to save.
+            step (int): Global step value to record. Default to 0.
+        """
+        self._mlflow.log_metric(name, value, step)
+
+    @force_init_env
+    def add_scalars(self,
+                    scalar_dict: dict,
+                    step: int = 0,
+                    file_path: Optional[str] = None,
+                    **kwargs) -> None:
+        """Record the scalar's data to mlflow.
+
+        Args:
+            scalar_dict (dict): Key-value pair storing the tag and
+                corresponding values.
+            step (int): Global step value to record. Default to 0.
+            file_path (str, optional): Useless parameter. Just for
+                interface unification. Defaults to None.
+        """
+        assert isinstance(scalar_dict, dict)
+        assert 'step' not in scalar_dict, 'Please set it directly ' \
+                                          'through the step parameter'
+        self._mlflow.log_metrics(scalar_dict, step)
+
+    def close(self) -> None:
+        """Close the mlflow."""
+        if not hasattr(self, '_mlflow'):
+            return
+
+        file_paths = dict()
+        for filename in scandir(self.cfg.work_dir, self._artifact_suffix,
+                                True):
+            file_path = osp.join(self.cfg.work_dir, filename)
+            relative_path = os.path.relpath(file_path, self.cfg.work_dir)
+            dir_path = os.path.dirname(relative_path)
+            file_paths[file_path] = dir_path
+
+        for file_path, dir_path in file_paths.items():
+            self._mlflow.log_artifact(file_path, dir_path)
+
+        self._mlflow.end_run()
+
+    def _flatten(self, d, parent_key='', sep='.') -> dict:
+        """Flatten the dict."""
+        items = dict()
+        for k, v in d.items():
+            new_key = parent_key + sep + k if parent_key else k
+            if isinstance(v, MutableMapping):
+                items.update(self._flatten(v, new_key, sep=sep))
+            elif isinstance(v, list):
+                if any(isinstance(x, dict) for x in v):
+                    for i, x in enumerate(v):
+                        items.update(
+                            self._flatten(x, new_key + sep + str(i), sep=sep))
+                else:
+                    items[new_key] = v
+            else:
+                items[new_key] = v
+        return items
+
+
+@VISBACKENDS.register_module()
+class ClearMLVisBackend(BaseVisBackend):
+    """Clearml visualization backend class. It requires `clearml`_ to be
+    installed.
+
+    Examples:
+        >>> from mmengine.visualization import ClearMLVisBackend
+        >>> from mmengine import Config
+        >>> import numpy as np
+        >>> vis_backend = ClearMLVisBackend(save_dir='temp_dir')
+        >>> img = np.random.randint(0, 256, size=(10, 10, 3))
+        >>> vis_backend.add_image('img.png', img)
+        >>> vis_backend.add_scalar('mAP', 0.6)
+        >>> vis_backend.add_scalars({'loss': 0.1,'acc':0.8})
+        >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        >>> vis_backend.add_config(cfg)
+
+    Args:
+        save_dir (str, optional): Useless parameter. Just for
+            interface unification. Defaults to None.
+        init_kwargs (dict, optional): A dict contains the arguments of
+            ``clearml.Task.init`` . See `taskinit`_  for more details.
+            Defaults to None
+        artifact_suffix (Tuple[str] or str): The artifact suffix.
+            Defaults to ('.py', 'pth').
+
+    .. _clearml:
+        https://clear.ml/docs/latest/docs/
+
+    .. _taskinit:
+        https://clear.ml/docs/latest/docs/references/sdk/task/#taskinit
+    """
+
+    def __init__(self,
+                 save_dir: Optional[str] = None,
+                 init_kwargs: Optional[dict] = None,
+                 artifact_suffix: SUFFIX_TYPE = ('.py', '.pth')):
+        super().__init__(save_dir)  # type: ignore
+        self._init_kwargs = init_kwargs
+        self._artifact_suffix = artifact_suffix
+
+    def _init_env(self) -> None:
+        try:
+            import clearml
+        except ImportError:
+            raise ImportError(
+                'Please run "pip install clearml" to install clearml')
+
+        task_kwargs = self._init_kwargs or {}
+        self._clearml = clearml
+        self._task = self._clearml.Task.init(**task_kwargs)
+        self._logger = self._task.get_logger()
+
+    @property  # type: ignore
+    @force_init_env
+    def experiment(self):
+        """Return clearml object."""
+        return self._clearml
+
+    @force_init_env
+    def add_config(self, config: Config, **kwargs) -> None:
+        """Record the config to clearml.
+
+        Args:
+            config (Config): The Config object
+        """
+        self.cfg = config
+        self._task.connect_configuration(vars(config))
+
+    @force_init_env
+    def add_image(self,
+                  name: str,
+                  image: np.ndarray,
+                  step: int = 0,
+                  **kwargs) -> None:
+        """Record the image to clearml.
+
+        Args:
+            name (str): The image identifier.
+            image (np.ndarray): The image to be saved. The format
+                should be RGB.
+            step (int): Global step value to record. Defaults to 0.
+        """
+        self._logger.report_image(
+            title=name, series=name, iteration=step, image=image)
+
+    @force_init_env
+    def add_scalar(self,
+                   name: str,
+                   value: Union[int, float, torch.Tensor, np.ndarray],
+                   step: int = 0,
+                   **kwargs) -> None:
+        """Record the scalar data to clearml.
+
+        Args:
+            name (str): The scalar identifier.
+            value (int, float, torch.Tensor, np.ndarray): Value to save.
+            step (int): Global step value to record. Defaults to 0.
+        """
+        self._logger.report_scalar(
+            title=name, series=name, value=value, iteration=step)
+
+    @force_init_env
+    def add_scalars(self,
+                    scalar_dict: dict,
+                    step: int = 0,
+                    file_path: Optional[str] = None,
+                    **kwargs) -> None:
+        """Record the scalar's data to clearml.
+
+        Args:
+            scalar_dict (dict): Key-value pair storing the tag and
+                corresponding values.
+            step (int): Global step value to record. Defaults to 0.
+            file_path (str, optional): Useless parameter. Just for
+                interface unification. Defaults to None.
+        """
+        assert 'step' not in scalar_dict, 'Please set it directly ' \
+                                          'through the step parameter'
+        for key, value in scalar_dict.items():
+            self._logger.report_scalar(
+                title=key, series=key, value=value, iteration=step)
+
+    def close(self) -> None:
+        """Close the clearml."""
+        if not hasattr(self, '_clearml'):
+            return
+
+        file_paths: List[str] = list()
+        if (hasattr(self, 'cfg')
+                and osp.isdir(getattr(self.cfg, 'work_dir', ''))):
+            for filename in scandir(self.cfg.work_dir, self._artifact_suffix,
+                                    False):
+                file_path = osp.join(self.cfg.work_dir, filename)
+                file_paths.append(file_path)
+
+        for file_path in file_paths:
+            self._task.upload_artifact(os.path.basename(file_path), file_path)
+        self._task.close()

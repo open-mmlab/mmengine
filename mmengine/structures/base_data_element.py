@@ -521,6 +521,16 @@ class BaseDataElement:
                 new_data.set_data(data)
         return new_data
 
+    def mlu(self) -> 'BaseDataElement':
+        """Convert all tensors to MLU in data."""
+        new_data = self.new()
+        for k, v in self.items():
+            if isinstance(v, (torch.Tensor, BaseDataElement)):
+                v = v.mlu()
+                data = {k: v}
+                new_data.set_data(data)
+        return new_data
+
     # Tensor-like methods
     def detach(self) -> 'BaseDataElement':
         """Detach all tensors in data."""

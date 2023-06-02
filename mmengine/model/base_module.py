@@ -11,6 +11,7 @@ import torch.nn as nn
 from mmengine.dist import master_only
 from mmengine.logging import MMLogger, print_log
 from .weight_init import initialize, update_init_info
+from .wrappers.utils import is_model_wrapper
 
 
 class BaseModule(nn.Module, metaclass=ABCMeta):
@@ -123,6 +124,8 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                 initialize(self, other_cfgs)
 
             for m in self.children():
+                if is_model_wrapper(m) and not hasattr(m, 'init_weights'):
+                    m = m.module
                 if hasattr(m, 'init_weights'):
                     m.init_weights()
                     # users may overload the `init_weights`
