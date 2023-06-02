@@ -5,6 +5,7 @@ import os
 import os.path as osp
 import platform
 import shutil
+import sys
 import tempfile
 import types
 import uuid
@@ -180,7 +181,15 @@ class Config:
             try:
                 import_modules_from_strings(**cfg_dict['custom_imports'])
             except ImportError as e:
-                raise ImportError('Failed to custom import!') from e
+                err_msg = (
+                    'Failed to import custom modules from '
+                    f"{cfg_dict['custom_imports']}, the current sys.path is: ")
+                for p in sys.path:
+                    err_msg += f'\n    {p}'
+                err_msg += (
+                    '\nYou should set `PYTHONPATH` to make `sys.path` include '
+                    'the directory which contains your custom module')
+                raise ImportError(err_msg) from e
         return Config(
             cfg_dict,
             cfg_text=cfg_text,

@@ -207,3 +207,23 @@ class HistoryBuffer:
             raise ValueError('HistoryBuffer._log_history is an empty array! '
                              'please call update first')
         return self._log_history[-1]
+
+    def __getstate__(self) -> dict:
+        """Make ``_statistics_methods`` can be resumed.
+
+        Returns:
+            dict: State dict including statistics_methods.
+        """
+        self.__dict__.update(statistics_methods=self._statistics_methods)
+        return self.__dict__
+
+    def __setstate__(self, state):
+        """Try to load ``_statistics_methods`` from state.
+
+        Args:
+            state (dict): State dict.
+        """
+        statistics_methods = state.pop('statistics_methods', {})
+        self._set_default_statistics()
+        self._statistics_methods.update(statistics_methods)
+        self.__dict__.update(state)

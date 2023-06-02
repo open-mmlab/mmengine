@@ -85,6 +85,8 @@ class BaseStrategy(metaclass=ABCMeta):
 
         self.build_logger(**log_kwargs or {})
 
+        self.dispatch_kwargs = {}
+
     @property
     def work_dir(self):
         return self._work_dir
@@ -132,13 +134,7 @@ class BaseStrategy(metaclass=ABCMeta):
         *,
         optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
-        compile_target: str = 'forward',
-        checkpoint: Optional[dict] = None,
-        num_batches_per_epoch: Optional[int] = None,
-        max_epochs: Optional[int] = None,
-        max_iters: Optional[int] = None,
-        cur_iter: Optional[int] = None,
-        **kwargs,
+        dispatch_kwargs: Optional[dict] = None,
     ):
         """Prepare model and some components.
 
@@ -159,17 +155,6 @@ class BaseStrategy(metaclass=ABCMeta):
                 specified, :attr:`optimizer` should also be specified.
                 Defaults to None.
                 See :meth:`build_param_scheduler` for examples.
-            compile_target (str): The method of model to be compiled.
-                Defaults to 'forward'.
-            checkpoint (dict, optional): Checkpoint to load strategy state.
-                Defaults to None.
-            resume (bool, optional): Whether resume training from checkpoint.
-                Defaults to False.
-            num_batches_per_epoch (int, optional): Number of batches per epoch.
-                Defaults to None.
-            max_epochs (int, optional): Number of epochs. Defaults to None.
-            max_iters (int, optional): Number of iterations. Defaults to None.
-            cur_iter (int, optional): Current iteration. Defaults to None.
         """
 
     def setup_env(
@@ -328,7 +313,6 @@ class BaseStrategy(metaclass=ABCMeta):
     def compile_model(
         self,
         model: nn.Module,
-        target: str = 'forward',
     ) -> nn.Module:
         """Compile model.
 
@@ -345,7 +329,8 @@ class BaseStrategy(metaclass=ABCMeta):
             'PyTorch >= 2.0.0 is required to enable torch.compile')
 
         compile = dict() if isinstance(self.compile, bool) else self.compile
-        target = compile.pop('target', target)
+        target = compile.pop(
+            'target', self.dispatch_kwargs.get('compile_target', 'forward'))
         func = getattr(model, target)
         compiled_func = torch.compile(func, **compile)
         setattr(model, target, compiled_func)
@@ -595,7 +580,6 @@ class BaseStrategy(metaclass=ABCMeta):
     def build_param_scheduler(
         self,
         scheduler: Union[_ParamScheduler, Dict, List],
-        default_args,
     ) -> ParamSchedulerType:
         """Build parameter schedulers.
 
@@ -654,6 +638,15 @@ class BaseStrategy(metaclass=ABCMeta):
         .. _optimizer-docs:
            https://mmengine.readthedocs.io/en/latest/tutorials/optim_wrapper.html
         """
+        default_args = {}
+        if 'num_batches_per_epoch' in self.dispatch_kwargs:
+            default_args['epoch_length'] = self.dispatch_kwargs[
+                'num_batches_per_epoch']
+        if 'max_epochs' in self.dispatch_kwargs:
+            default_args['max_epochs'] = self.dispatch_kwargs['max_epochs']
+        if 'max_iters' in self.dispatch_kwargs:
+            default_args['max_iters'] = self.dispatch_kwargs['max_iters']
+
         param_schedulers: ParamSchedulerType
         if not isinstance(self.optim_wrapper, OptimWrapperDict):
             # Since `OptimWrapperDict` inherits from `OptimWrapper`,
@@ -952,6 +945,9 @@ class BaseStrategy(metaclass=ABCMeta):
                                     f'`randomness` config "{current_seed}"')
             self._randomness.update(seed=resumed_seed)
             self._set_randomness(**self._randomness)
+
+        # resume iter
+        self.dispatch_kwargs['cur_iter'] = self.extra_ckpt['meta']['iter']
 
         return self.extra_ckpt
 

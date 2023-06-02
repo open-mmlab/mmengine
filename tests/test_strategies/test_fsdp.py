@@ -19,8 +19,7 @@ from mmengine.dist import broadcast_object_list, is_main_process
 from mmengine.optim import LinearLR, OptimWrapper
 from mmengine.testing.runner_test_case import ToyModel
 from mmengine.utils import digit_version
-import torchvision.datasets as datasets
-from torchvision.models.detection import RetinaNet
+
 
 def linear_wrap_policy(
     module,
@@ -32,51 +31,54 @@ def linear_wrap_policy(
     return isinstance(module, nn.Linear)
 
 
-@skipIf(not torch.cuda.is_available or 
-        digit_version(torch.__version__) < digit_version('2.0.0'),
+@skipIf(not torch.cuda.is_available
+        or digit_version(torch.__version__) < digit_version('2.0.0'),
         'Only test FSDP with CUDA and PyTorch >= 2.0.0')
 class TestStrategy(TestCase):
+
     def setUp(self):
         self.world_size = 2
         self.temp_dir = TemporaryDirectory()
-    
+
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
-
 
     def test_init(self):
         strategy = FSDPStrategy()
         self.assertFalse(strategy.skip_init_weights)
         strategy = FSDPStrategy(state_dict_cfg='local')
         self._assert_local(strategy)
-        
+
         strategy = FSDPStrategy(state_dict_cfg='full')
         self._assert_full(strategy)
 
-        strategy = FSDPStrategy(state_dict_cfg=dict(
-            state_dict_type=StateDictType.LOCAL_STATE_DICT,
-        ))
+        strategy = FSDPStrategy(
+            state_dict_cfg=dict(
+                state_dict_type=StateDictType.LOCAL_STATE_DICT, ))
         self._assert_local(strategy)
 
-        strategy = FSDPStrategy(state_dict_cfg=dict(
-            state_dict_type=StateDictType.FULL_STATE_DICT,
-            state_dict_config=FullStateDictConfig(),
-            optim_state_dict_config=FullOptimStateDictConfig(),
-        ))
+        strategy = FSDPStrategy(
+            state_dict_cfg=dict(
+                state_dict_type=StateDictType.FULL_STATE_DICT,
+                state_dict_config=FullStateDictConfig(),
+                optim_state_dict_config=FullOptimStateDictConfig(),
+            ))
         self._assert_full(strategy)
 
-        strategy = FSDPStrategy(state_dict_cfg=dict(
-            state_dict_type='FULL_STATE_DICT',
-            state_dict_config=dict(type='FullStateDictConfig'),
-            optim_state_dict_config=dict(type='FullOptimStateDictConfig'),
-        ))
+        strategy = FSDPStrategy(
+            state_dict_cfg=dict(
+                state_dict_type='FULL_STATE_DICT',
+                state_dict_config=dict(type='FullStateDictConfig'),
+                optim_state_dict_config=dict(type='FullOptimStateDictConfig'),
+            ))
         self._assert_full(strategy)
 
-        strategy = FSDPStrategy(state_dict_cfg=dict(
-            state_dict_type=StateDictType.FULL_STATE_DICT,
-            state_dict_config=dict(type=FullStateDictConfig),
-            optim_state_dict_config=dict(type=FullOptimStateDictConfig),
-        ))
+        strategy = FSDPStrategy(
+            state_dict_cfg=dict(
+                state_dict_type=StateDictType.FULL_STATE_DICT,
+                state_dict_config=dict(type=FullStateDictConfig),
+                optim_state_dict_config=dict(type=FullOptimStateDictConfig),
+            ))
         self._assert_full(strategy)
 
         with self.assertRaises(ValueError):
@@ -88,40 +90,43 @@ class TestStrategy(TestCase):
 
         # state_dict_type must be a str or a enumerate of StateDictType
         with self.assertRaises(TypeError):
-            strategy = FSDPStrategy(state_dict_cfg=dict(
-                state_dict_type=[],
-                state_dict_config=dict(type=FullStateDictConfig),
-                optim_state_dict_config=dict(type=FullOptimStateDictConfig),
-            ))
+            strategy = FSDPStrategy(
+                state_dict_cfg=dict(
+                    state_dict_type=[],
+                    state_dict_config=dict(type=FullStateDictConfig),
+                    optim_state_dict_config=dict(
+                        type=FullOptimStateDictConfig),
+                ))
 
         # state_dict_config should be a dict or a subclass of StateDictConfig
         with self.assertRaises(TypeError):
-            strategy = FSDPStrategy(state_dict_cfg=dict(
-                state_dict_type=StateDictType.FULL_STATE_DICT,
-                state_dict_config=[],
-                optim_state_dict_config=dict(type=FullOptimStateDictConfig),
-            ))
+            strategy = FSDPStrategy(
+                state_dict_cfg=dict(
+                    state_dict_type=StateDictType.FULL_STATE_DICT,
+                    state_dict_config=[],
+                    optim_state_dict_config=dict(
+                        type=FullOptimStateDictConfig),
+                ))
 
         # optim_state_dict_config should be a dict or a subclass of
         # OptimStateDictConfig
         with self.assertRaises(TypeError):
-            strategy = FSDPStrategy(state_dict_cfg=dict(
-                state_dict_type=StateDictType.FULL_STATE_DICT,
-                state_dict_config=dict(type=FullStateDictConfig),
-                optim_state_dict_config=[],
-            ))
+            strategy = FSDPStrategy(
+                state_dict_cfg=dict(
+                    state_dict_type=StateDictType.FULL_STATE_DICT,
+                    state_dict_config=dict(type=FullStateDictConfig),
+                    optim_state_dict_config=[],
+                ))
 
     def run_strategy(self):
-        for skip_init_weights, state_dict_cfg in [
-            (True, 'local'), (False, 'full')
-        ]:
+        for skip_init_weights, state_dict_cfg in [(True, 'local'),
+                                                  (False, 'full')]:
             strategy = FSDPStrategy(
                 skip_init_weights=skip_init_weights,
                 state_dict_cfg=state_dict_cfg,
-                model_wrapper=dict(
-                    auto_wrap_policy=linear_wrap_policy))
+                model_wrapper=dict(auto_wrap_policy=linear_wrap_policy))
             model = ToyModel()
-            optim = OptimWrapper(SGD(model.parameters(), lr=0.1))
+            optim = OptimWrapper(SGD(model.parameters(), lr=0.1, momentum=0.9))
             lr_scheduler = LinearLR(optimizer=optim)
             strategy.setup_env(launcher='pytorch')
             model, optim, lr_scheduler = strategy.prepare(
@@ -172,10 +177,11 @@ class TestStrategy(TestCase):
         self.tearDown()
 
     def test_run_strategy(self):
-        start_processes(TestStrategy._worker, args=('run_strategy', ),
-                        nprocs=self.world_size)
+        start_processes(
+            TestStrategy._worker,
+            args=('run_strategy', ),
+            nprocs=self.world_size)
 
-    
     def test_build_model(self):
         ...
         # TODO
@@ -184,11 +190,15 @@ class TestStrategy(TestCase):
         # state_dict = dict()
 
     def _assert_local(self, strategy):
-        self.assertEqual(strategy.state_dict_type, StateDictType.LOCAL_STATE_DICT)
+        self.assertEqual(strategy.state_dict_type,
+                         StateDictType.LOCAL_STATE_DICT)
         self.assertIsInstance(strategy.state_dict_config, LocalStateDictConfig)
-        self.assertIsInstance(strategy.optim_state_dict_config, LocalOptimStateDictConfig)
+        self.assertIsInstance(strategy.optim_state_dict_config,
+                              LocalOptimStateDictConfig)
 
     def _assert_full(self, strategy):
-        self.assertEqual(strategy.state_dict_type, StateDictType.FULL_STATE_DICT)
+        self.assertEqual(strategy.state_dict_type,
+                         StateDictType.FULL_STATE_DICT)
         self.assertIsInstance(strategy.state_dict_config, FullStateDictConfig)
-        self.assertIsInstance(strategy.optim_state_dict_config, FullOptimStateDictConfig)
+        self.assertIsInstance(strategy.optim_state_dict_config,
+                              FullOptimStateDictConfig)

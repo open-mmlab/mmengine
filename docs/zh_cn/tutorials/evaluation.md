@@ -6,13 +6,13 @@
 
 ### 使用单个评测指标
 
-在基于 MMEngine 进行模型训练或测试时，用户只需要在配置文件中通过 `val_evaluator` 和 `test_evaluator` 2 个字段分别指定模型验证和测试阶段的评测指标即可。例如，用户在使用 [MMClassification](https://github.com/open-mmlab/mmclassification) 训练分类模型时，希望在模型验证阶段评测 top-1 和 top-5 分类正确率，可以按以下方式配置：
+在基于 MMEngine 进行模型训练或测试时，用户只需要在配置文件中通过 `val_evaluator` 和 `test_evaluator` 2 个字段分别指定模型验证和测试阶段的评测指标即可。例如，用户在使用 [MMPretrain](https://github.com/open-mmlab/mmpretrain) 训练分类模型时，希望在模型验证阶段评测 top-1 和 top-5 分类正确率，可以按以下方式配置：
 
 ```python
 val_evaluator = dict(type='Accuracy', top_k=(1, 5))  # 使用分类正确率评测指标
 ```
 
-关于具体评测指标的参数设置，用户可以查阅相关算法库的文档。如上例中的 [Accuracy 文档](https://mmclassification.readthedocs.io/en/1.x/api/generated/mmcls.evaluation.Accuracy.html#mmcls.evaluation.Accuracy)。
+关于具体评测指标的参数设置，用户可以查阅相关算法库的文档。如上例中的 [Accuracy 文档](https://mmpretrain.readthedocs.io/en/latest/api/generated/mmpretrain.evaluation.Accuracy.html#mmpretrain.evaluation.Accuracy)。
 
 ### 使用多个评测指标
 
@@ -50,6 +50,8 @@ test_evaluator = [
 具体实现如下：
 
 ```python
+from typing import Sequence, List
+
 from mmengine.evaluator import BaseMetric
 from mmengine.registry import METRICS
 

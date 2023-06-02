@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import datetime
+import re
 from collections import OrderedDict
 from itertools import chain
 from typing import List, Optional, Tuple
@@ -59,6 +60,9 @@ class LogProcessor:
             ``train/loss``, and accuracy will be saved as ``val/accuracy``.
             Defaults to False.
             `New in version 0.7.0.`
+        mean_pattern (str): This is a regular expression used to match the log
+            that need to be included in the smoothing statistics.
+            `New in version 0.7.3.`
 
     Examples:
         >>> # `log_name` is defined, `loss_large_window` will be an additional
@@ -106,12 +110,14 @@ class LogProcessor:
                  by_epoch=True,
                  custom_cfg: Optional[List[dict]] = None,
                  num_digits: int = 4,
-                 log_with_hierarchy: bool = False):
+                 log_with_hierarchy: bool = False,
+                 mean_pattern=r'.*(loss|time|data_time|grad_norm).*'):
         self.window_size = window_size
         self.by_epoch = by_epoch
         self.custom_cfg = custom_cfg if custom_cfg else []
         self.num_digits = num_digits
         self.log_with_hierarchy = log_with_hierarchy
+        self.mean_pattern = re.compile(mean_pattern)
         self._check_custom_cfg()
 
     def get_log_after_iter(self, runner, batch_idx: int,
@@ -129,7 +135,6 @@ class LogProcessor:
             recorded by :obj:`runner.message_hub` and :obj:`runner.visualizer`.
         """
         assert mode in ['train', 'test', 'val']
-        cur_iter = self._get_iter(runner, batch_idx=batch_idx)
         # Overwrite ``window_size`` defined in ``custom_cfg`` to int value.
         parsed_cfg = self._parse_windows_size(runner, batch_idx,
                                               self.custom_cfg)
@@ -166,19 +171,23 @@ class LogProcessor:
             # ...                 ||| |||
             # Epoch(train)  [ 10][100/270]
             dataloader_len = self._get_dataloader_size(runner, mode)
+            cur_iter = self._get_iter(runner, batch_idx)
             cur_iter_str = str(cur_iter).rjust(len(str(dataloader_len)))
-
             if mode in ['train', 'val']:
-                # Right Align the epoch log:
-                # Epoch(train)   [9][100/270]
-                # ...             ||
-                # Epoch(train) [100][100/270]
                 cur_epoch = self._get_epoch(runner, mode)
-                max_epochs = runner.max_epochs
-                # 3 means the three characters: "[", "]", and " " occupied in
-                # " [{max_epochs}]"
-                cur_epoch_str = f'[{cur_epoch}]'.rjust(
-                    len(str(max_epochs)) + 3, ' ')
+                if not (isinstance(runner._train_loop, dict)
+                        or runner._train_loop is None):
+                    # Right Align the epoch log:
+                    # Epoch(train)   [9][100/270]
+                    # ...             ||
+                    # Epoch(train) [100][100/270]
+                    max_epochs = runner.max_epochs
+                    # 3 means the three characters: "[", "]", and " " occupied
+                    # in " [{max_epochs}]"
+                    cur_epoch_str = f'[{cur_epoch}]'.rjust(
+                        len(str(max_epochs)) + 3, ' ')
+                else:
+                    cur_epoch_str = f'[{cur_epoch}]'
                 tag['epoch'] = cur_epoch
                 log_str = (f'Epoch({mode}){cur_epoch_str}'
                            f'[{cur_iter_str}/{dataloader_len}]  ')
@@ -187,6 +196,7 @@ class LogProcessor:
                            f'[{cur_iter_str}/{dataloader_len}]  ')
         else:
             if mode == 'train':
+                cur_iter = self._get_iter(runner, batch_idx)
                 cur_iter_str = str(cur_iter).rjust(len(str(runner.max_iters)))
                 log_str = (f'Iter({mode}) '
                            f'[{cur_iter_str}/{runner.max_iters}]  ')
@@ -195,6 +205,11 @@ class LogProcessor:
                 cur_iter_str = str(batch_idx + 1).rjust(
                     len(str(dataloader_len)))
                 log_str = (f'Iter({mode}) [{cur_iter_str}/{dataloader_len}]  ')
+        # Add global iter.
+        if isinstance(runner._train_loop, dict) or runner._train_loop is None:
+            tag['iter'] = 0
+        else:
+            tag['iter'] = runner.iter + 1
         # Concatenate lr, momentum string with log header.
         log_str += f'{lr_str}  '
         # If IterTimerHook used in runner, eta, time, and data_time should be
@@ -280,14 +295,11 @@ class LogProcessor:
         # Count the averaged time and data_time by epoch
         if 'time' not in custom_keys:
             custom_cfg_copy.append(
-                dict(
-                    data_src=f'{mode}/time',
-                    window_size='epoch',
-                    method_name='mean'))
+                dict(data_src='time', window_size='epoch', method_name='mean'))
         if 'data_time' not in custom_keys:
             custom_cfg_copy.append(
                 dict(
-                    data_src=f'{mode}/data_time',
+                    data_src='data_time',
                     window_size='epoch',
                     method_name='mean'))
         parsed_cfg = self._parse_windows_size(runner, batch_idx,
@@ -307,6 +319,7 @@ class LogProcessor:
                 tag[key] = value
         # Log other messages.
         log_items = []
+        log_str += '  '
         for name, val in chain(tag.items(), non_scalar_tag.items(),
                                time_tag.items()):
             if isinstance(val, float):
@@ -340,6 +353,7 @@ class LogProcessor:
         Returns:
             dict: Statistical values of logs.
         """
+        custom_cfg = copy.deepcopy(custom_cfg)
         tag = OrderedDict()
         # history_scalars of train/val/test phase.
         history_scalars = runner.message_hub.log_scalars
@@ -356,18 +370,19 @@ class LogProcessor:
                 mode_history_scalars[key] = log_buffer
         for key in mode_history_scalars:
             # Update the latest learning rate and smoothed time logs.
-            if 'loss' in key or key in ('time', 'data_time', 'grad_norm'):
+            if re.search(self.mean_pattern, key) is not None:
                 tag[key] = mode_history_scalars[key].mean(self.window_size)
             else:
                 # Default statistic method is current.
                 tag[key] = mode_history_scalars[key].current()
         # Update custom keys.
         for log_cfg in custom_cfg:
-            data_src = log_cfg.pop('data_src')
-            if 'log_name' in log_cfg:
-                log_name = log_cfg.pop('log_name')
+            if not reserve_prefix:
+                data_src = log_cfg.pop('data_src')
+                log_name = f"{log_cfg.pop('log_name', data_src)}"
             else:
-                log_name = data_src
+                data_src = f"{mode}/{log_cfg.pop('data_src')}"
+                log_name = f"{mode}/{log_cfg.pop('log_name', data_src)}"
             # log item in custom_cfg could only exist in train or val
             # mode.
             if data_src in mode_history_scalars:
@@ -486,19 +501,19 @@ class LogProcessor:
         device = getattr(runner.model, 'output_device', None)
         return get_max_cuda_memory(device)
 
-    def _get_iter(self, runner, batch_idx: int = None) -> int:
+    def _get_iter(self, runner, batch_idx: int) -> int:
         """Get current iteration index.
 
         Args:
             runner (Runner): The runner of the training/testing/validation
                 process.
-            batch_idx (int, optional): The iteration index of current
+            batch_idx (int): The iteration index of current
                 dataloader. Defaults to None.
 
         Returns:
             int: The current global iter or inner iter.
         """
-        if self.by_epoch and batch_idx is not None:
+        if self.by_epoch:
             current_iter = batch_idx + 1
         else:
             current_iter = runner.iter + 1
@@ -518,9 +533,13 @@ class LogProcessor:
         if mode == 'train':
             epoch = runner.epoch + 1
         elif mode == 'val':
-            # normal val mode
-            # runner.epoch += 1 has been done before validation
-            epoch = runner.epoch
+            if (isinstance(runner._train_loop, dict)
+                    or runner._train_loop is None):
+                epoch = 0
+            else:
+                # normal val mode
+                # runner.epoch += 1 has been done before validation
+                epoch = runner.epoch
         else:
             raise ValueError(
                 f"runner mode should be 'train' or 'val', but got {mode}")

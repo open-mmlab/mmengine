@@ -46,9 +46,6 @@ class TestRuntimeInfoHook(RunnerTestCase):
         self.assertEqual(runner.message_hub.get_info('max_epochs'), 2)
         self.assertEqual(runner.message_hub.get_info('max_iters'), 8)
 
-        with self.assertRaisesRegex(KeyError, 'dataset_meta is not found'):
-            runner.message_hub.get_info('dataset_meta')
-
         cfg.train_dataloader.dataset.type = 'DatasetWithMetainfo'
         runner = self.build_runner(cfg)
         hook.before_train(runner)

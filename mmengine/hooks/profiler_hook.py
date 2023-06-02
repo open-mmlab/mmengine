@@ -51,13 +51,12 @@ class ProfilerHook(Hook):
             Two officially recommended ways are provided:
 
             - ``schedule=dict(type='log_trace')``: Print the profiling result
-              in the terminal See more details in the `official tutorial`_.
-              The configurable arguments is the same as
+              in the terminal. See more details in the `PyTorch official tutorial`_.
+              The configurable arguments are the same as
               ``prof.key_averages().table``
-
             - ``scheduler=dict(type='tb_trace')``: Profile the performance
-               with tensorboard. See more details in the tutorial
-               `profile with tensorboard`_.
+              with tensorboard. See more details in the tutorial
+              `profile with tensorboard`_.
 
         record_shapes (bool): Save information about operator's input shapes.
             Defaults to False.
@@ -234,8 +233,7 @@ class ProfilerHook(Hook):
             self._export_chrome_trace(runner)
 
     def after_train_iter(self, runner, batch_idx, data_batch, outputs):
-        """Update the content according to the schedule, and determine if the
-        content is exported."""
+        """profiler will call `step` method if it is not closed."""
         if not self._closed:
             self.profiler.step()
         if runner.iter == self.profile_times - 1 and not self.by_epoch:

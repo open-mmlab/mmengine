@@ -75,7 +75,7 @@ class ComplexModel(BaseModel):
 
 class TestDistributedDataParallel(MultiProcessTestCase):
 
-    def setUp(self) -> None:
+    def setUp(self):
         super().setUp()
         self._spawn_processes()
 
@@ -260,8 +260,7 @@ class TestMMFullyShardedDataParallel(MultiProcessTestCase):
             broadcast(param)
         model.conv1.requires_grad_(False)
         ori_weight = model.conv1.weight.clone()
-        fsdp_model = MMFullyShardedDataParallel(
-            module=model.cuda())
+        fsdp_model = MMFullyShardedDataParallel(module=model.cuda())
         optimizer = SGD(fsdp_model.parameters(), lr=0)
         optim_wrapper = OptimWrapper(optimizer, accumulative_counts=1)
         inputs = torch.randn(1, 3, 1, 1) * self.rank * 255
@@ -273,7 +272,6 @@ class TestMMFullyShardedDataParallel(MultiProcessTestCase):
         with fsdp_model.summon_full_params(fsdp_model):
             updated_weight = fsdp_model.module.conv1.weight.cpu()
             assert_allclose(ori_weight, updated_weight)
-
 
     def test_val_step(self):
         self._init_dist_env(self.rank, self.world_size)

@@ -1141,17 +1141,18 @@ class FlexibleRunner:
             self._val_loop = self.build_val_loop(
                 self._val_loop)  # type: ignore
 
-        batch_size = self.train_dataloader.batch_size
+        dispatch_kwargs = dict(
+            compile_target='train_step',
+            train_batch_size=self.train_dataloader.batch_size,
+            num_batches_per_epoch=len(self.train_dataloader),
+            max_epochs=self.max_epochs,
+            max_iters=self.max_iters,
+        )
         result = self.strategy.prepare(
             self.model,
             optim_wrapper=self.optim_wrapper,
             param_scheduler=self.param_schedulers,
-            compile_target='train_step',
-            train_batch_size=batch_size,
-            num_batches_per_epoch=len(self.train_dataloader),
-            max_epochs=self.max_epochs,
-            max_iters=self.max_iters,
-            cur_iter=self.iter,
+            dispatch_kwargs=dispatch_kwargs,
         )
 
         if self.param_schedulers is not None:
@@ -1429,8 +1430,8 @@ class FlexibleRunner:
                 self.logger.info(
                     'Number of GPU used for current experiment is not '
                     'consistent with resuming from checkpoint')
-                if (self.auto_scale_lr is None
-                        or not self.auto_scale_lr.get('enable', False)):
+                if (self._auto_scale_lr is None
+                        or not self._auto_scale_lr.get('enable', False)):
                     raise RuntimeError(
                         'Cannot automatically rescale lr in resuming. Please '
                         'make sure the number of GPU is consistent with the '
