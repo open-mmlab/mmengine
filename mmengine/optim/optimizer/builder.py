@@ -131,6 +131,7 @@ SOPHIA_OPTIMIZERS = register_sophia_optimizers()
 
 def register_deepspeed_optimizers() -> List[str]:
     """Register optimizers in ``deepspeed`` to the ``OPTIMIZERS`` registry.
+
     Returns:
         List[str]: A list of registered optimizers' name.
     """
