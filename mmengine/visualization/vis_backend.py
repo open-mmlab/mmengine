@@ -349,8 +349,8 @@ class WandbVisBackend(BaseVisBackend):
             details. Defaults to None.
         allow_config_update (bool, optional): Uses this value for
             `allow_val_change` in the call to `wandb.config.update`. One may
-            wish to set this to `True` if the are resuming runs and have any
-            changes to the MMDetection config.
+            wish to set this to `True` if they are resuming a run and have
+            any changes to the MMDetection config.
         define_metric_cfg (dict or list[dict], optional):
             When a dict is set, it is a dict of metrics and summary for
             ``wandb.define_metric``.
