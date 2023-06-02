@@ -75,7 +75,7 @@ class ComplexModel(BaseModel):
 
 class TestDistributedDataParallel(MultiProcessTestCase):
 
-    def setUp(self) -> None:
+    def setUp(self):
         super().setUp()
         self._spawn_processes()
 
@@ -105,9 +105,12 @@ class TestDistributedDataParallel(MultiProcessTestCase):
         # Test update params and clean grads.
         ddp_model.train_step(data, optim_wrapper=optim_wrapper)
         grad = ddp_model.module.conv1.weight.grad
-        all_grads = all_gather(grad)
-        assert_allclose(all_grads[0], torch.zeros_like(all_grads[0]))
-        assert_allclose(all_grads[1], torch.zeros_like(all_grads[0]))
+        if digit_version(torch.__version__) < digit_version('2.0.0'):
+            all_grads = all_gather(grad)
+            assert_allclose(all_grads[0], torch.zeros_like(all_grads[0]))
+            assert_allclose(all_grads[1], torch.zeros_like(all_grads[0]))
+        else:
+            self.assertIsNone(grad)
 
         # Test enable detect_anomalous_params.
         ddp_model = MMDistributedDataParallel(

@@ -188,7 +188,7 @@ runner = Runner(
     log_level='INFO',
 
     # 加载权重的路径 (None 表示不加载)
-    load_from=None
+    load_from=None,
     # 从加载的权重文件中恢复训练
     resume=False
 )

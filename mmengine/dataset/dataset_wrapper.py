@@ -429,12 +429,16 @@ class ClassBalancedDataset:
         #    r(I) = max_{c in L(I)} r(c)
         repeat_factors = []
         for idx in range(num_images):
+            # the length of `repeat_factors` need equal to the length of
+            # dataset. Hence, if the `cat_ids` is empty,
+            # the repeat_factor should be 1.
+            repeat_factor: float = 1.
             cat_ids = set(self.dataset.get_cat_ids(idx))
             if len(cat_ids) != 0:
                 repeat_factor = max(
                     {category_repeat[cat_id]
                      for cat_id in cat_ids})
-                repeat_factors.append(repeat_factor)
+            repeat_factors.append(repeat_factor)
 
         return repeat_factors
 

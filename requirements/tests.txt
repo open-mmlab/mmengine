@@ -1,6 +1,8 @@
+clearml
 coverage
 dadaptation
 lion-pytorch
 lmdb
+mlflow
 parameterized
 pytest

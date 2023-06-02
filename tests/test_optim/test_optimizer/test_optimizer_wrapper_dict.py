@@ -6,6 +6,7 @@ import torch.nn as nn
 from torch.optim import SGD
 
 from mmengine.optim import OptimWrapper, OptimWrapperDict
+from mmengine.utils import digit_version
 
 
 class TestOptimWrapperDict(TestCase):
@@ -54,8 +55,12 @@ class TestOptimWrapperDict(TestCase):
         self.assertTrue((self.model1.weight.grad != 0).any())
         self.assertTrue((self.model2.weight.grad != 0).any())
         optim_wrapper_dict.zero_grad()
-        self.assertTrue((self.model1.weight.grad == 0).all())
-        self.assertTrue((self.model2.weight.grad == 0).all())
+        if digit_version(torch.__version__) < digit_version('2.0.0'):
+            self.assertTrue((self.model1.weight.grad == 0).all())
+            self.assertTrue((self.model2.weight.grad == 0).all())
+        else:
+            self.assertIsNone(self.model1.weight.grad)
+            self.assertIsNone(self.model2.weight.grad)
 
     def test_optim_context(self):
         optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)

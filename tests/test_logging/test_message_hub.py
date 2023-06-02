@@ -82,8 +82,7 @@ class TestMessageHub:
 
     def test_get_runtime(self):
         message_hub = MessageHub.get_instance('mmengine')
-        with pytest.raises(KeyError):
-            message_hub.get_info('unknown')
+        assert message_hub.get_info('unknown') is None
         recorded_dict = dict(a=1, b=2)
         message_hub.update_info('test_value', recorded_dict)
         assert message_hub.get_info('test_value') == recorded_dict
@@ -186,10 +185,8 @@ class TestMessageHub:
         obj = pickle.dumps(message_hub)
         instance = pickle.loads(obj)
 
-        with pytest.raises(KeyError):
-            instance.get_info('feat')
-        with pytest.raises(KeyError):
-            instance.get_info('lr')
+        assert instance.get_info('feat') is None
+        assert instance.get_info('lr') is None
 
         instance.get_info('iter')
         instance.get_scalar('loss')

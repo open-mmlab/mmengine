@@ -48,12 +48,16 @@ class ProfilerHook(Hook):
             of generating handler. Defaults to None, which means profiling
             without an on_trace_ready.The Callable type needs to construct its
             own function that can handle 'torch.autograd.profiler.profile'.
-            Two officially recommended ways are provided, namely terminal
-            display or tensorboard display. The terminal display content can be
-            adjusted through 'EventList.table()'
-            from 'torch.autograd.profiler_util.py'.
-            If using tensorboard, save to '{work_dir}/tf_tracing_logs'
-            by default.
+            Two officially recommended ways are provided:
+
+            - ``schedule=dict(type='log_trace')``: Print the profiling result
+              in the terminal. See more details in the `PyTorch official tutorial`_.
+              The configurable arguments are the same as
+              ``prof.key_averages().table``
+            - ``scheduler=dict(type='tb_trace')``: Profile the performance
+              with tensorboard. See more details in the tutorial
+              `profile with tensorboard`_.
+
         record_shapes (bool): Save information about operator's input shapes.
             Defaults to False.
         profile_memory (bool): Track tensor memory allocation/deallocation.
@@ -67,11 +71,20 @@ class ProfilerHook(Hook):
             JSON format. Chrome use 'chrome://tracing' view json file.
             Defaults to None, which means profiling does not store json files.
 
+    Warnings:
+        The profiler will be closed after ``profile_times`` iterations
+        automatically. Please make sure the configuration of your scheduler
+        will not close the profiler before the iteration reach the value of
+        ``profile_times``
+
     Examples:
         >>> # tensorboard trace
         >>> trace_config = dict(type='tb_trace')
         >>> profiler_hook_cfg = dict(on_trace_ready=trace_config)
-    """
+
+    .. _PyTorch official tutorial: https://pytorch.org/tutorials/recipes/recipes/profiler_recipe.html#using-profiler-to-analyze-execution-time
+    .. _profile with tensorboard: https://pytorch.org/tutorials/intermediate/tensorboard_profiler_tutorial.html#pytorch-profiler-with-tensorboard
+    """  # noqa: E501
     priority = 'VERY_LOW'
 
     def __init__(self,
@@ -135,8 +148,8 @@ class ProfilerHook(Hook):
         self.with_flops = with_flops
 
         self.json_trace_path = json_trace_path
+        self._closed = False
 
-    @master_only
     def before_run(self, runner):
         """Initialize the profiler.
 
@@ -212,23 +225,23 @@ class ProfilerHook(Hook):
                 f'but got {self.on_trace_ready}')
         return _on_trace_ready
 
-    @master_only
     def after_train_epoch(self, runner):
         """Determine if the content is exported."""
-        if self.by_epoch and runner.epoch == self.profile_times - 1:
+        # `after_train_epoch` will also be called in IterBasedTrainLoop.
+        # Here we check `self._closed` to avoid exiting twice.
+        if not self._closed:
             self._export_chrome_trace(runner)
 
-    @master_only
     def after_train_iter(self, runner, batch_idx, data_batch, outputs):
-        """Update the content according to the schedule, and determine if the
-        content is exported."""
-        if self.schedule is None:
+        """profiler will call `step` method if it is not closed."""
+        if not self._closed:
             self.profiler.step()
-        if not self.by_epoch and runner.iter == self.profile_times - 1:
+        if runner.iter == self.profile_times - 1 and not self.by_epoch:
             self._export_chrome_trace(runner)
 
     def _export_chrome_trace(self, runner):
         """Exporting content."""
+        self._closed = True
         runner.logger.info('profiler may take a few minutes...')
         self.profiler.__exit__(None, None, None)
         if self.json_trace_path is not None:

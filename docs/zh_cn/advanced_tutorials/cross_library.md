@@ -1,22 +1,22 @@
 # 跨库调用模块
 
 通过使用 MMEngine 的[注册器（Registry）](registry.md)和[配置文件（Config）](config.md)，用户可以实现跨软件包的模块构建。
-例如，在 [MMDetection](https://github.com/open-mmlab/mmdetection) 中使用 [MMClassification](https://github.com/open-mmlab/mmclassification) 的 Backbone，或者在 [MMRotate](https://github.com/open-mmlab/mmrotate) 中使用 [MMDetection](https://github.com/open-mmlab/mmdetection) 的 Transform，或者在 [MMTracking](https://github.com/open-mmlab/mmtracking) 中使用 [MMDetection](https://github.com/open-mmlab/mmdetection) 的 Detector。
+例如，在 [MMDetection](https://github.com/open-mmlab/mmdetection) 中使用 [MMPretrain](https://github.com/open-mmlab/mmpretrain) 的 Backbone，或者在 [MMRotate](https://github.com/open-mmlab/mmrotate) 中使用 [MMDetection](https://github.com/open-mmlab/mmdetection) 的 Transform，或者在 [MMTracking](https://github.com/open-mmlab/mmtracking) 中使用 [MMDetection](https://github.com/open-mmlab/mmdetection) 的 Detector。
 一般来说，同类模块都可以进行跨库调用，只需要在配置文件的模块类型前加上软件包名的前缀即可。下面举几个常见的例子：
 
 ## 跨库调用 Backbone:
 
-以在 MMDetection 中调用 MMClassification 的 ConvNeXt 为例，首先需要在配置中加入 `custom_imports` 字段将 MMClassification 的 Backbone 添加进注册器，然后只需要在 Backbone 的配置中的 `type` 加上 MMClassification 的软件包名 `mmcls` 作为前缀，即 `mmcls.ConvNeXt` 即可：
+以在 MMDetection 中调用 MMPretrain 的 ConvNeXt 为例，首先需要在配置中加入 `custom_imports` 字段将 MMPretrain 的 Backbone 添加进注册器，然后只需要在 Backbone 的配置中的 `type` 加上 MMPretrain 的软件包名 `mmpretrain` 作为前缀，即 `mmpretrain.ConvNeXt` 即可：
 
 ```python
-# 使用 custom_imports 将 mmcls 的 models 添加进注册器
-custom_imports = dict(imports=['mmcls.models'], allow_failed_imports=False)
+# 使用 custom_imports 将 mmpretrain 的 models 添加进注册器
+custom_imports = dict(imports=['mmpretrain.models'], allow_failed_imports=False)
 
 model = dict(
   type='MaskRCNN',
   data_preprocessor=dict(...),
   backbone=dict(
-      type='mmcls.ConvNeXt',  # 添加 mmcls 前缀完成跨库调用
+      type='mmpretrain.ConvNeXt',  # 添加 mmpretrain 前缀完成跨库调用
       arch='tiny',
       out_indices=[0, 1, 2, 3],
       drop_path_rate=0.4,
