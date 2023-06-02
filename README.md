@@ -84,8 +84,8 @@ v0.7.4 was released on 2023-06-02.
 
 ### Highlights
 
-- Support using `ClearML` to record experiment data
-- Add `Sophia` optimizers
+- Support using [`ClearML`](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#clearml) to record experiment data
+- Add [`Sophia`](https://mmengine.readthedocs.io/en/latest/common_usage/better_optimizers.html#sophia) optimizers
 
 Read [Changelog](./docs/en/notes/changelog.md#v074-06022023) for more details.
 

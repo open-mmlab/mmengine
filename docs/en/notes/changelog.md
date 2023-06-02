@@ -13,7 +13,7 @@
 - Support Sophia optimizers by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1170
 - Refactor unittest syncbuffer by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/813
 - Allow `ann_file`, `data_root` is `None` for `BaseDataset` by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/850
-- Enable full precision training on Ascend NPU. by [@Ginray](https://github.com/Ginray) in https://github.com/open-mmlab/mmengine/pull/1109
+- Enable full precision training on Ascend NPU by [@Ginray](https://github.com/Ginray) in https://github.com/open-mmlab/mmengine/pull/1109
 - Creating a text classification example by [@TankNee](https://github.com/TankNee) in https://github.com/open-mmlab/mmengine/pull/1122
 - Add option to log selected config only by [@KickCellarDoor](https://github.com/KickCellarDoor) in https://github.com/open-mmlab/mmengine/pull/1159
 - Add an option to control whether to show progress bar in BaseInference by [@W-ZN](https://github.com/W-ZN) in https://github.com/open-mmlab/mmengine/pull/1135
@@ -26,10 +26,10 @@
 - Fix the incorrect device of inputs in get_model_complexity_info by [@CescMessi](https://github.com/CescMessi) in https://github.com/open-mmlab/mmengine/pull/1130
 - Correctly saves `_metadata` of `state_dict` when saving checkpoints by [@Bomsw](https://github.com/Bomsw) in https://github.com/open-mmlab/mmengine/pull/1131
 - Correctly record random seed in log by [@Shiyang980713](https://github.com/Shiyang980713) in https://github.com/open-mmlab/mmengine/pull/1152
-- Close MLflowVisBackend only if active (#1144) by [@zimonitrome](https://github.com/zimonitrome) in https://github.com/open-mmlab/mmengine/pull/1151
+- Close MLflowVisBackend only if active by [@zimonitrome](https://github.com/zimonitrome) in https://github.com/open-mmlab/mmengine/pull/1151
 - Fix `ProfileHook` cannot profile ddp-training by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1140
 - Handle the case for Multi-Instance GPUs when using `cuda_visible_devices` by [@adrianjoshua-strutt](https://github.com/adrianjoshua-strutt) in https://github.com/open-mmlab/mmengine/pull/1164
-- Fix attribute error when parsing `CUDA_VISIBLE_DEVICES` in logger  [@Xiangxu-0103](https://github.com/Xiangxu-0103) in https://github.com/open-mmlab/mmengine/pull/1172
+- Fix attribute error when parsing `CUDA_VISIBLE_DEVICES` in logger [@Xiangxu-0103](https://github.com/Xiangxu-0103) in https://github.com/open-mmlab/mmengine/pull/1172
 
 ### Docs
 

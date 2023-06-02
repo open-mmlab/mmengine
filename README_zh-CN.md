@@ -84,8 +84,8 @@ MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的�
 
 亮点：
 
-- 支持使用 ClearML 记录实验数据
-- 新增 Sophia 优化器
+- 支持使用 [ClearML](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/visualize_training_log.html#clearml) 记录实验数据
+- 新增 [Sophia](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/better_optimizers.html#sophia) 优化器
 
 如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v074-06022023)
 
