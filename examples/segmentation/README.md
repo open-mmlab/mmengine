@@ -11,7 +11,7 @@ This segmentation task example will be divided into the following steps:
 
 First, you should get the collated Camvid dataset on OpenDataLab to use for the segmentation training example. The official download steps are shown below.
 
-```python
+```bash
 # https://opendatalab.com/CamVid
 # Configure install
 pip install opendatalab
@@ -20,7 +20,9 @@ pip install -U opendatalab
 # Login
 odl login
 # Download this dataset
-odl get Camvid
+odl get    CamVid
+# preprocess data
+python prepare_data.py
 ```
 
 Or, after register your account, you can use the following code to download the dataset.
