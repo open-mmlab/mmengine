@@ -22,12 +22,7 @@ class SingleDeviceStrategy(BaseStrategy):
         *,
         optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
-        compile_target: str = 'forward',
-        num_batches_per_epoch: Optional[int] = None,
-        max_epochs: Optional[int] = None,
-        max_iters: Optional[int] = None,
-        cur_iter: Optional[int] = None,
-        **kwargs,
+        dispatch_kwargs: Optional[dict] = None,
     ):
         """Prepare model and some components.
 
@@ -48,19 +43,15 @@ class SingleDeviceStrategy(BaseStrategy):
                 specified, :attr:`optimizer` should also be specified.
                 Defaults to None.
                 See :meth:`build_param_scheduler` for examples.
-            compile_target (str): The method of model to be compiled.
-                Defaults to 'forward'.
-            num_batches_per_epoch (int, optional): Number of batches per epoch.
-                Defaults to None.
-            max_epochs (int, optional): Number of epochs. Defaults to None.
-            max_iters (int, optional): Number of iterations. Defaults to None.
-            cur_iter (int, optional): Current iteration. Defaults to None.
         """
+        if dispatch_kwargs is not None:
+            self.dispatch_kwargs.update(dispatch_kwargs)
+
         return_items = []
         model = self.build_model(model)
         model = self._init_model_weights(model)
         model = self.wrap_model(model)
-        self.model = self.compile_model(model, target=compile_target)
+        self.model = self.compile_model(model)
         return_items.append(self.model)
 
         if optim_wrapper is not None:
@@ -68,24 +59,16 @@ class SingleDeviceStrategy(BaseStrategy):
             return_items.append(self.optim_wrapper)
 
         if param_scheduler is not None:
-            _default_args = {}
-            if num_batches_per_epoch is not None:
-                _default_args['epoch_length'] = num_batches_per_epoch
-            if max_epochs is not None:
-                _default_args['max_epochs'] = max_epochs
-            if max_iters is not None:
-                _default_args['max_iters'] = max_iters
-
-            self.param_schedulers = self.build_param_scheduler(
-                param_scheduler, _default_args)
+            self.param_schedulers = self.build_param_scheduler(param_scheduler)
             return_items.append(self.param_schedulers)
 
         self.load_or_resume()
 
         if optim_wrapper is not None:
             # Initiate inner count of `optim_wrapper`.
-            self.optim_wrapper.initialize_count_status(self.model, cur_iter,
-                                                       max_iters)
+            self.optim_wrapper.initialize_count_status(
+                self.model, self.dispatch_kwargs.get('cur_iter', 0),
+                self.dispatch_kwargs['max_iters'])
 
         return return_items[0] if len(return_items) == 1 else return_items
 

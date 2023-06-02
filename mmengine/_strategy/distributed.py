@@ -52,13 +52,7 @@ class DDPStrategy(BaseStrategy):
         *,
         optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
-        compile_target: str = 'forward',
-        train_batch_size: Optional[int] = None,
-        num_batches_per_epoch: Optional[int] = None,
-        max_epochs: Optional[int] = None,
-        max_iters: Optional[int] = None,
-        cur_iter: Optional[int] = None,
-        **kwargs,
+        dispatch_kwargs: Optional[dict] = None,
     ):
         """Prepare model and some components.
 
@@ -79,22 +73,16 @@ class DDPStrategy(BaseStrategy):
                 specified, :attr:`optimizer` should also be specified.
                 Defaults to None.
                 See :meth:`build_param_scheduler` for examples.
-            compile_target (str): The method of model to be compiled.
-                Defaults to 'forward'.
-            train_batch_size (int, optional): Batch size of training. It will
-                be used to scale the learning rate. Defaults to None.
-            num_batches_per_epoch (int, optional): Number of batches per epoch.
-                Defaults to None.
-            max_epochs (int, optional): Number of epochs. Defaults to None.
-            max_iters (int, optional): Number of iterations. Defaults to None.
-            cur_iter (int, optional): Current iteration. Defaults to None.
         """
+        if dispatch_kwargs is not None:
+            self.dispatch_kwargs.update(dispatch_kwargs)
+
         return_items = []
 
         model = self.build_model(model)
         model = self._init_model_weights(model)
         model = self.wrap_model(model)
-        self.model = self.compile_model(model, target=compile_target)
+        self.model = self.compile_model(model)
         return_items.append(self.model)
 
         if optim_wrapper is not None:
@@ -102,26 +90,18 @@ class DDPStrategy(BaseStrategy):
             return_items.append(self.optim_wrapper)
 
         if param_scheduler is not None:
-            _default_args = {}
-            if num_batches_per_epoch is not None:
-                _default_args['epoch_length'] = num_batches_per_epoch
-            if max_epochs is not None:
-                _default_args['max_epochs'] = max_epochs
-            if max_iters is not None:
-                _default_args['max_iters'] = max_iters
-
-            self.param_schedulers = self.build_param_scheduler(
-                param_scheduler, _default_args)
+            self.param_schedulers = self.build_param_scheduler(param_scheduler)
             return_items.append(self.param_schedulers)
 
         self.load_or_resume()
 
         if optim_wrapper is not None:
-            self._scale_lr(train_batch_size)
+            self._scale_lr()
 
             # Initiate inner count of `optim_wrapper`.
-            self.optim_wrapper.initialize_count_status(self.model, cur_iter,
-                                                       max_iters)
+            self.optim_wrapper.initialize_count_status(
+                self.model, self.dispatch_kwargs.get('cur_iter', 0),
+                self.dispatch_kwargs['max_iters'])
 
         return return_items[0] if len(return_items) == 1 else return_items
 
@@ -143,7 +123,7 @@ class DDPStrategy(BaseStrategy):
         if not is_distributed():
             init_dist(launcher, backend, **kwargs)
 
-    def _scale_lr(self, train_batch_size: int) -> None:
+    def _scale_lr(self) -> None:
         """Automatically scaling learning rate in training according to the
         ratio of ``base_batch_size`` in ``autoscalelr_cfg`` and real batch
         size.
@@ -162,7 +142,7 @@ class DDPStrategy(BaseStrategy):
         assert 'base_batch_size' in self.auto_scale_lr, \
             'Lack of `base_batch_size` in `auto_scale_lr`.'
 
-        real_bs = self.world_size * train_batch_size
+        real_bs = self.world_size * self.dispatch_kwargs['train_batch_size']
         base_bs = self.auto_scale_lr['base_batch_size']
         ratio = float(real_bs) / float(base_bs)
         self.logger.info(f'LR is set based on batch size of {base_bs} '

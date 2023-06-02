@@ -24,6 +24,9 @@ class DeepSpeedStrategy(BaseStrategy):
         zero_optimization (dict, optional):
         fp16 (dict, optional):
     """
+    dispatch_keys = [
+        'train_batch_size', 'num_batches_per_epoch', 'max_epochs', 'max_iters'
+    ]
 
     def __init__(
         self,
@@ -81,12 +84,7 @@ class DeepSpeedStrategy(BaseStrategy):
         *,
         optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
         param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
-        compile_target: str = 'forward',
-        train_batch_size: Optional[int] = None,
-        num_batches_per_epoch: Optional[int] = None,
-        max_epochs: Optional[int] = None,
-        max_iters: Optional[int] = None,
-        cur_iter: Optional[int] = None,
+        dispatch_kwargs: Optional[dict] = None,
     ):
         """Prepare model and some components.
 
@@ -107,23 +105,15 @@ class DeepSpeedStrategy(BaseStrategy):
                 specified, :attr:`optimizer` should also be specified.
                 Defaults to None.
                 See :meth:`build_param_scheduler` for examples.
-            compile_target (str): The method of model to be compiled.
-                Defaults to 'forward'.
-            train_batch_size (int, optional): Batch size of training. It will
-                be used to scale the learning rate. Defaults to None.
-            num_batches_per_epoch (int, optional): Number of batches per epoch.
-                Defaults to None.
-            max_epochs (int, optional): Number of epochs. Defaults to None.
-            max_iters (int, optional): Number of iterations. Defaults to None.
-            cur_iter (int, optional): Current iteration. Defaults to None.
         """
+        assert dispatch_kwargs is not None
+        self.dispatch_kwargs.update(dispatch_kwargs)
+
         return_items = []
 
         self.model = self.build_model(model)
         self.model = self._init_model_weights(self.model)
         return_items.append(self.model)
-
-        self.config['train_batch_size'] = train_batch_size
 
         if optim_wrapper is not None:
             self.optim_wrapper = self.build_optim_wrapper(optim_wrapper)
@@ -135,16 +125,7 @@ class DeepSpeedStrategy(BaseStrategy):
             return_items.append(self.optim_wrapper)
 
         if param_scheduler is not None:
-            _default_args = {}
-            if num_batches_per_epoch is not None:
-                _default_args['epoch_length'] = num_batches_per_epoch
-            if max_epochs is not None:
-                _default_args['max_epochs'] = max_epochs
-            if max_iters is not None:
-                _default_args['max_iters'] = max_iters
-
-            self.param_schedulers = self.build_param_scheduler(
-                param_scheduler, _default_args)
+            self.param_schedulers = self.build_param_scheduler(param_scheduler)
             return_items.append(self.param_schedulers)
 
         self.load_or_resume()
@@ -152,6 +133,9 @@ class DeepSpeedStrategy(BaseStrategy):
         return return_items[0] if len(return_items) == 1 else return_items
 
     def wrap_model(self, model: nn.Module) -> nn.Module:
+        self.config['train_batch_size'] = self.dispatch_kwargs[
+            'train_batch_size']
+
         wrapper_cfg = dict(
             type='MMDeepSpeedEngine',
             model=model,
