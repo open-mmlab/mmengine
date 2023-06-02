@@ -4,10 +4,10 @@ from .apex_optimizer_wrapper import ApexOptimWrapper
 from .builder import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                       build_optim_wrapper)
 from .default_constructor import DefaultOptimWrapperConstructor
-from .ds_optimizer_wrapper import DSOptimWrapper
 from .optimizer_wrapper import OptimWrapper
 from .optimizer_wrapper_dict import OptimWrapperDict
 from .zero_optimizer import ZeroRedundancyOptimizer
+
 
 __all__ = [
     'OPTIM_WRAPPER_CONSTRUCTORS', 'OPTIMIZERS',
@@ -15,3 +15,8 @@ __all__ = [
     'AmpOptimWrapper', 'ApexOptimWrapper', 'OptimWrapperDict',
     'ZeroRedundancyOptimizer', 'DSOptimWrapper'
 ]
+
+
+if is_installed('deepspeed'):
+    from ._deepspeed import DSOptimWrapper  # noqa:F401
+    __all__.append('DSOptimWrapper')

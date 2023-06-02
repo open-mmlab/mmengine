@@ -12,7 +12,7 @@ __all__ = [
 ]
 
 if is_installed('deepspeed'):
-    from .deepspeed import MMDeepSpeedEngine  # noqa:F401
+    from ._deepspeed import MMDeepSpeedEngine  # noqa:F401
     __all__.append('MMDeepSpeedEngine')
 
 if digit_version(TORCH_VERSION) >= digit_version('1.11.0'):
