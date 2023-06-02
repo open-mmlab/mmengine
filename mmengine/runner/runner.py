@@ -1978,19 +1978,19 @@ class Runner:
                 if (self.auto_scale_lr is None
                         or self.auto_scale_lr.get('enable', False)):
                     raise RuntimeError(
-                         'Number of GPU used for current experiment is not '
-                         'consistent with resuming from checkpoint, '
-                         'which may result in poor performance due to the '
-                         'learning rate. If you want the learning rate to '
-                         'be automatically adjusted, set the '
-                         '`auto_scale_lr` parameter for Runner and make '
-                         '`auto_scale_lr["enable"]=True`.')
-               else:
-                   self.logger.info(
-                     'Number of GPU used for current experiment is not '
-                     'consistent with resuming from checkpoint but the
-                     'leaning rate will be adjusted according to the '
-                     f'setting in auto_scale_lr={self.auto_scale_lr}')
+                        'Number of GPU used for current experiment is not '
+                        'consistent with resuming from checkpoint, '
+                        'which may result in poor performance due to the '
+                        'learning rate. If you want the learning rate to '
+                        'be automatically adjusted, set the '
+                        '`auto_scale_lr` parameter for Runner and make '
+                        '`auto_scale_lr["enable"]=True`.')
+                else:
+                    self.logger.info(
+                        'Number of GPU used for current experiment is not '
+                        'consistent with resuming from checkpoint but the '
+                        'leaning rate will be adjusted according to the '
+                        f'setting in auto_scale_lr={self.auto_scale_lr}')
 
         # resume random seed
         resumed_seed = checkpoint['meta'].get('seed', None)
