@@ -65,8 +65,14 @@ class TestConfig:
         # If import successfully, os.environ[''TEST_VALUE''] will be
         # set to 'test'
         assert os.environ.pop('TEST_VALUE') == 'test'
+        sys.path.pop()
+
         Config.fromfile(cfg_file, import_custom_modules=False)
         assert 'TEST_VALUE' not in os.environ
+        sys.modules.pop('test_custom_import_module')
+        with pytest.raises(
+                ImportError, match='Failed to import custom modules from'):
+            Config.fromfile(cfg_file, import_custom_modules=True)
 
     @pytest.mark.parametrize('file_format', ['py', 'json', 'yaml'])
     def test_fromstring(self, file_format):

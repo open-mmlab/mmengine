@@ -1,6 +1,6 @@
 # 注册器（Registry）
 
-OpenMMLab 的算法库支持了丰富的算法和数据集，因此实现了很多功能相近的模块。例如 ResNet 和 SE-ResNet 的算法实现分别基于 `ResNet` 和 `SEResNet` 类，这些类有相似的功能和接口，都属于算法库中的模型组件。为了管理这些功能相似的模块，MMEngine 实现了 [注册器](mmengine.registry.Registry)。OpenMMLab 大多数算法库均使用注册器来管理它们的代码模块，包括 [MMDetection](https://github.com/open-mmlab/mmdetection)， [MMDetection3D](https://github.com/open-mmlab/mmdetection3d)，[MMClassification](https://github.com/open-mmlab/mmclassification) 和 [MMEditing](https://github.com/open-mmlab/mmediting) 等。
+OpenMMLab 的算法库支持了丰富的算法和数据集，因此实现了很多功能相近的模块。例如 ResNet 和 SE-ResNet 的算法实现分别基于 `ResNet` 和 `SEResNet` 类，这些类有相似的功能和接口，都属于算法库中的模型组件。为了管理这些功能相似的模块，MMEngine 实现了 [注册器](mmengine.registry.Registry)。OpenMMLab 大多数算法库均使用注册器来管理它们的代码模块，包括 [MMDetection](https://github.com/open-mmlab/mmdetection)， [MMDetection3D](https://github.com/open-mmlab/mmdetection3d)，[MMPretrain](https://github.com/open-mmlab/mmpretrain) 和 [MMagic](https://github.com/open-mmlab/mmagic) 等。
 
 ## 什么是注册器
 

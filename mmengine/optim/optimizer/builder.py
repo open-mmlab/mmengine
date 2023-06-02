@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 
 from mmengine.config import Config, ConfigDict
-from mmengine.device import is_npu_available
+from mmengine.device import is_npu_available, is_npu_support_full_precision
 from mmengine.registry import OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS
 from .optimizer_wrapper import OptimWrapper
 
@@ -33,37 +33,32 @@ def register_torch_optimizers() -> List[str]:
 TORCH_OPTIMIZERS = register_torch_optimizers()
 
 
-def register_deepspeed_optimizers() -> List[str]:
-    """Register optimizers in ``deepspeed`` to the ``OPTIMIZERS`` registry.
+def register_torch_npu_optimizers() -> List[str]:
+    """Register optimizers in ``torch npu`` to the ``OPTIMIZERS`` registry.
 
     Returns:
         List[str]: A list of registered optimizers' name.
     """
-    deepspeed_optimizers = []
-    try:
-        import deepspeed  # noqa: F401
-    except ImportError:
-        pass
-    else:
-        from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
-        from deepspeed.ops.lamb import FusedLamb
-        from deepspeed.runtime.fp16.onebit import (OnebitAdam, OnebitLamb,
-                                                   ZeroOneAdam)
+    if not is_npu_available():
+        return []
 
-        OPTIMIZERS.register_module(module=DeepSpeedCPUAdam)
-        deepspeed_optimizers.append('DeepSpeedCPUAdam')
-        OPTIMIZERS.register_module(module=FusedAdam)
-        deepspeed_optimizers.append('FusedAdam')
-        OPTIMIZERS.register_module(module=FusedLamb)
-        deepspeed_optimizers.append('FusedLamb')
-        OPTIMIZERS.register_module(module=OnebitAdam)
-        deepspeed_optimizers.append('OnebitAdam')
-        OPTIMIZERS.register_module(module=OnebitLamb)
-        deepspeed_optimizers.append('OnebitLamb')
-        OPTIMIZERS.register_module(module=ZeroOneAdam)
-        deepspeed_optimizers.append('ZeroOneAdam')
+    import torch_npu
+    if not hasattr(torch_npu, 'optim'):
+        return []
 
-    return deepspeed_optimizers
+    torch_npu_optimizers = []
+    for module_name in dir(torch_npu.optim):
+        if module_name.startswith('__') or module_name in OPTIMIZERS:
+            continue
+        _optim = getattr(torch_npu.optim, module_name)
+        if inspect.isclass(_optim) and issubclass(_optim,
+                                                  torch.optim.Optimizer):
+            OPTIMIZERS.register_module(module=_optim)
+            torch_npu_optimizers.append(module_name)
+    return torch_npu_optimizers
+
+
+NPU_OPTIMIZERS = register_torch_npu_optimizers()
 
 
 def register_dadaptation_optimizers() -> List[str]:
@@ -110,6 +105,62 @@ def register_lion_optimizers() -> List[str]:
 LION_OPTIMIZERS = register_lion_optimizers()
 
 
+def register_sophia_optimizers() -> List[str]:
+    """Register Sophia optimizer to the ``OPTIMIZERS`` registry.
+
+    Returns:
+        List[str]: A list of registered optimizers' name.
+    """
+    optimizers = []
+    try:
+        import Sophia
+    except ImportError:
+        pass
+    else:
+        for module_name in dir(Sophia):
+            _optim = getattr(Sophia, module_name)
+            if inspect.isclass(_optim) and issubclass(_optim,
+                                                      torch.optim.Optimizer):
+                OPTIMIZERS.register_module(module=_optim)
+                optimizers.append(module_name)
+    return optimizers
+
+
+SOPHIA_OPTIMIZERS = register_sophia_optimizers()
+
+
+def register_deepspeed_optimizers() -> List[str]:
+    """Register optimizers in ``deepspeed`` to the ``OPTIMIZERS`` registry.
+    Returns:
+        List[str]: A list of registered optimizers' name.
+    """
+    deepspeed_optimizers = []
+    try:
+        import deepspeed  # noqa: F401
+    except ImportError:
+        pass
+    else:
+        from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
+        from deepspeed.ops.lamb import FusedLamb
+        from deepspeed.runtime.fp16.onebit import (OnebitAdam, OnebitLamb,
+                                                   ZeroOneAdam)
+
+        OPTIMIZERS.register_module(module=DeepSpeedCPUAdam)
+        deepspeed_optimizers.append('DeepSpeedCPUAdam')
+        OPTIMIZERS.register_module(module=FusedAdam)
+        deepspeed_optimizers.append('FusedAdam')
+        OPTIMIZERS.register_module(module=FusedLamb)
+        deepspeed_optimizers.append('FusedLamb')
+        OPTIMIZERS.register_module(module=OnebitAdam)
+        deepspeed_optimizers.append('OnebitAdam')
+        OPTIMIZERS.register_module(module=OnebitLamb)
+        deepspeed_optimizers.append('OnebitLamb')
+        OPTIMIZERS.register_module(module=ZeroOneAdam)
+        deepspeed_optimizers.append('ZeroOneAdam')
+
+    return deepspeed_optimizers
+
+
 def build_optim_wrapper(model: nn.Module,
                         cfg: Union[dict, Config, ConfigDict]) -> OptimWrapper:
     """Build function of OptimWrapper.
@@ -133,9 +184,9 @@ def build_optim_wrapper(model: nn.Module,
     paramwise_cfg = optim_wrapper_cfg.pop('paramwise_cfg', None)
 
     # Since the current generation of NPU(Ascend 910) only supports
-    # mixed precision training, here we turn on mixed precision by default
-    # on the NPU to make the training normal
-    if is_npu_available():
+    # mixed precision training, here we turn on mixed precision
+    # to make the training normal
+    if is_npu_available() and not is_npu_support_full_precision():
         optim_wrapper_cfg['type'] = 'AmpOptimWrapper'
 
     optim_wrapper_constructor = OPTIM_WRAPPER_CONSTRUCTORS.build(

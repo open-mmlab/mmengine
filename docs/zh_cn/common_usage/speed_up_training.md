@@ -2,62 +2,9 @@
 
 ## 分布式训练
 
-MMEngine 支持 CPU、单卡、单机多卡以及多机多卡的训练。当环境中有多张显卡时，我们可以使用以下命令开启单机多卡或者多机多卡的方式从而缩短模型的训练时间。
-
-- 单机多卡
-
-  假设当前机器有 8 张显卡，可以使用以下命令开启多卡训练
-
-  ```bash
-  python -m torch.distributed.launch --nproc_per_node=8 examples/train.py --launcher pytorch
-  ```
-
-  如果需要指定显卡的编号，可以设置 `CUDA_VISIBLE_DEVICES` 环境变量，例如使用第 0 和第 3 张卡
-
-  ```bash
-  CUDA_VISIBLE_DEVICES=0,3 python -m torch.distributed.launch --nproc_per_node=2 examples/train.py --launcher pytorch
-  ```
-
-- 多机多卡
-
-  假设有 2 台机器，每台机器有 8 张卡。
-
-  第一台机器运行以下命令
-
-  ```bash
-  python -m torch.distributed.launch \
-      --nnodes 8 \
-      --node_rank 0 \
-      --master_addr 127.0.0.1 \
-      --master_port 29500 \
-      --nproc_per_node=8 \
-      examples/train.py --launcher pytorch
-  ```
-
-  第 2 台机器运行以下命令
-
-  ```bash
-  python -m torch.distributed.launch \
-      --nnodes 8 \
-      --node_rank 1 \
-      --master_addr 127.0.0.1 \
-      --master_port 29500 \
-      --nproc_per_node=8 \
-      examples/train.py --launcher pytorch
-  ```
-
-  如果在 slurm 集群运行 MMEngine，只需运行以下命令即可开启 2 机 16 卡的训练
-
-  ```bash
-  srun -p mm_dev \
-      --job-name=test \
-      --gres=gpu:8 \
-      --ntasks=16 \
-      --ntasks-per-node=8 \
-      --cpus-per-task=5 \
-      --kill-on-bad-exit=1 \
-      python examples/train.py --launcher="slurm"
-  ```
+```{warning}
+内容已被迁移至 [分布式训练](./distributed_training.md)。
+```
 
 ## 混合精度训练
 
@@ -114,3 +61,19 @@ runner = Runner(
 ```{warning}
 `torch.compile` 目前仍然由 PyTorch 团队持续开发中，一些模型可能会编译失败。如果遇到了类似问题，你可以查阅 [PyTorch Dynamo FAQ](https://pytorch.org/docs/2.0/dynamo/faq.html) 解决常见问题，或参考 [TorchDynamo Troubleshooting](https://pytorch.org/docs/2.0/dynamo/troubleshooting.html) 向 PyTorch 提 issue.
 ```
+
+## 使用更快的优化器
+
+如果使用了昇腾的设备，可以使用昇腾的优化器从而缩短模型的训练时间。昇腾设备支持的优化器如下
+
+- NpuFusedAdadelta
+- NpuFusedAdam
+- NpuFusedAdamP
+- NpuFusedAdamW
+- NpuFusedBertAdam
+- NpuFusedLamb
+- NpuFusedRMSprop
+- NpuFusedRMSpropTF
+- NpuFusedSGD
+
+使用方式同原生优化器一样，可参考[优化器的使用](../tutorials/optim_wrapper.md#在执行器中配置优化器封装)。
