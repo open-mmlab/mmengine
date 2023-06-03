@@ -12,7 +12,7 @@ following three features:
    - Easily compatible with models from popular algorithm libraries like TIMM,
      TorchVision, and Detectron2.
 
-1. **Open architecture with unified interfaces**:
+2. **Open architecture with unified interfaces**:
 
    - Handles different tasks with a unified API: you can implement a method
      once and apply it to all compatible models.
@@ -20,7 +20,7 @@ following three features:
      abstraction. Currently, MMEngine supports model training on Nvidia CUDA,
      Mac MPS, AMD, MLU, and other devices.
 
-1. **Customizable training process**:
+3. **Customizable training process**:
 
    - Defines a highly modular training engine with "Lego"-like composability.
    - Offers a rich set of components and strategies.
