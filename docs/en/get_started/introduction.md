@@ -12,7 +12,7 @@ following three features:
    - Easily compatible with models from popular algorithm libraries like TIMM,
      TorchVision, and Detectron2.
 
-2. **Open architecture with unified interfaces**:
+1. **Open architecture with unified interfaces**:
 
    - Handles different tasks with a unified API: you can implement a method
      once and apply it to all compatible models.
@@ -20,12 +20,11 @@ following three features:
      abstraction. Currently, MMEngine supports model training on Nvidia CUDA,
      Mac MPS, AMD, MLU, and other devices.
 
-3. **Customizable training process**:
+1. **Customizable training process**:
 
    - Defines a highly modular training engine with "Lego"-like composability.
    - Offers a rich set of components and strategies.
    - Total control over the training process with different levels of APIs.
-
 
 ## Architecture
 
@@ -42,7 +41,6 @@ engine, evaluation engine, and module management.
 MMEngine abstracts the components involved in the training process and their
 relationships. Components of the same type in different algorithm libraries
 share the same interface definition.
-
 
 ### Core Modules and Related Components
 
@@ -95,7 +93,6 @@ sent to the `Logger` and `Visualizer` for management and display. The
 visualizing the model's feature maps, prediction results, and structured logs
 generated during the training process. It supports multiple visualization
 backends such as TensorBoard and WanDB.
-
 
 ### Common Base Modules
 
