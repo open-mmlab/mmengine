@@ -47,11 +47,11 @@ share the same interface definition.
 ### Core Modules and Related Components
 
 The core module of the training engine is the
-[Runner](../tutorials/runner.md). The Runner is responsible for executing
+[`Runner`](../tutorials/runner.md). The `Runner` is responsible for executing
 training, testing, and inference tasks and managing the various components
 required during these processes. In specific locations throughout the
-execution of training, testing, and inference tasks, the Runner sets up Hooks
-to allow users to extend, insert, and execute custom logic. The Runner
+execution of training, testing, and inference tasks, the `Runner` sets up Hooks
+to allow users to extend, insert, and execute custom logic. The `Runner`
 primarily invokes the following components to complete the training and
 inference loops:
 
@@ -80,8 +80,8 @@ others.
 
 To ensure a unified interface, the communication interfaces between the
 evaluators, models, and data in various algorithm libraries within OpenMMLab
-2.0 are encapsulated using [Data
-Elements](../advanced_tutorials/data_element.md).
+2.0 are encapsulated using
+[Data Elements](../advanced_tutorials/data_element.md).
 
 During training and inference execution, the aforementioned components can
 utilize the logging management module and visualizer for structured and
