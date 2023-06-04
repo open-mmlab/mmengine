@@ -249,8 +249,10 @@ class TestOptimWrapper(MultiProcessTestCase):
 
     def test_param_groups(self):
         optim_wrapper = OptimWrapper(self.optimizer)
-        self.assertEqual(optim_wrapper.param_groups,
-                         self.optimizer.param_groups)
+        p1 = optim_wrapper.param_groups
+        p2 = self.optimizer.param_groups
+        p1.pop()
+        self.assertEqual(p1, p2)
 
     def test_optim_context(self):
         self._init_dist_env(self.rank, self.world_size)

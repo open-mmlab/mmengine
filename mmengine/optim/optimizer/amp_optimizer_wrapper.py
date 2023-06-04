@@ -153,9 +153,8 @@ class AmpOptimWrapper(OptimWrapper):
         if 'loss_scaler' in state_dict:
             self.loss_scaler.load_state_dict(state_dict.pop('loss_scaler'))
 
-            # remote the current state tracker during the loading in optimizer
-        if self.optimizer.param_groups[-1].get('is_state_tracker', False):
-            self.optimizer.param_groups.pop()
+        if self.param_groups[-1].get('is_state_tracker', False):
+            self.param_groups.pop()
 
             # remote the state tracker in state_dict if exists
             # save it and add it back after loading
@@ -168,16 +167,14 @@ class AmpOptimWrapper(OptimWrapper):
 
         # add the state tracker back
         if state_tracker is None:
-            last_param = copy.deepcopy(self.optimizer.param_groups[-1])
+            last_param = copy.deepcopy(self.param_groups[-1])
             last_param.pop('params')
-            new_param_settings = {
-                'params': torch.tensor([0.0], requires_grad=True),
-                'is_state_tracker': True,
-                **last_param
-            }
-            self.optimizer.param_groups.append(new_param_settings)
+            self.new_param_settings.update(**last_param)
+            self.param_groups.append(self.new_param_settings)
         else:
-            self.optimizer.param_groups.append(state_tracker)
+            if not isinstance(state_tracker['params'], torch.Tensor):
+                state_tracker['params'] = torch.tensor(state_tracker['params'])
+            self.param_groups.append(state_tracker)
 
     @contextmanager
     def optim_context(self, model: nn.Module):

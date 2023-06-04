@@ -171,7 +171,8 @@ class OptimWrapper:
 
         # if hasattr(self.optimizer, 'defaults'):
         self.new_param_settings.update(**self.optimizer.defaults)
-        self.optimizer.param_groups.append(self.new_param_settings)
+        self.local_param_groups = [v for v in self.optimizer.param_groups]
+        self.local_param_groups.append(self.new_param_settings)
 
     def update_params(self,
                       loss: torch.Tensor,
@@ -277,8 +278,8 @@ class OptimWrapper:
         Args:
             state_dict (dict): The state dictionary of :attr:`optimizer`.
         """
-        if self.optimizer.param_groups[-1].get('is_state_tracker', False):
-            self.optimizer.param_groups.pop()
+        if self.param_groups[-1].get('is_state_tracker', False):
+            self.param_groups.pop()
 
             # remote the state tracker in state_dict if exists
             # save it and add it back after loading
@@ -291,14 +292,14 @@ class OptimWrapper:
 
         # add the state tracker back
         if state_tracker is None:
-            last_param = copy.deepcopy(self.optimizer.param_groups[-1])
+            last_param = copy.deepcopy(self.param_groups[-1])
             last_param.pop('params')
             self.new_param_settings.update(**last_param)
-            self.optimizer.param_groups.append(self.new_param_settings)
+            self.param_groups.append(self.new_param_settings)
         else:
             if not isinstance(state_tracker['params'], torch.Tensor):
                 state_tracker['params'] = torch.tensor(state_tracker['params'])
-            self.optimizer.param_groups.append(state_tracker)
+            self.param_groups.append(state_tracker)
 
     @property
     def param_groups(self) -> List[dict]:
@@ -309,7 +310,8 @@ class OptimWrapper:
         Returns:
              dict: the ``param_groups`` of :attr:`optimizer`.
         """
-        return self.optimizer.param_groups
+
+        return self.local_param_groups
 
     @property
     def defaults(self) -> dict:

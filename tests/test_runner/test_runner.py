@@ -2241,7 +2241,7 @@ class TestRunner(TestCase):
         self.assertTrue(runner._has_loaded)
         self.assertIsInstance(runner.optim_wrapper.optimizer, SGD)
         self.assertIsInstance(runner.optim_wrapper.optimizer, SGD)
-        self.assertEqual(runner.optim_wrapper.param_groups[0]['lr'], 0.0001)
+        self.assertEqual(runner.optim_wrapper.param_groups[0]['lr'], 0.2)
         self.assertIsInstance(runner.param_schedulers[0], MultiStepLR)
         self.assertEqual(runner.param_schedulers[0].milestones, {1: 1, 2: 1})
         self.assertIsInstance(runner.message_hub, MessageHub)
@@ -2340,10 +2340,10 @@ class TestRunner(TestCase):
         self.assertIsInstance(runner.optim_wrapper, OptimWrapperDict)
         self.assertIsInstance(runner.optim_wrapper['linear1'].optimizer, SGD)
         self.assertEqual(runner.optim_wrapper['linear1'].param_groups[0]['lr'],
-                         0.0001)
+                         0.2)
         self.assertIsInstance(runner.optim_wrapper['linear2'].optimizer, Adam)
         self.assertEqual(runner.optim_wrapper['linear2'].param_groups[0]['lr'],
-                         0.0002)
+                         0.03)
         self.assertIsInstance(runner.param_schedulers, dict)
         self.assertEqual(len(runner.param_schedulers['linear1']), 1)
         self.assertIsInstance(runner.param_schedulers['linear1'][0],
