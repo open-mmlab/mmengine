@@ -2,9 +2,9 @@
 
 This segmentation task example will be divided into the following steps:
 
-> - \[Download Camvid Dataset\](#Download Camvid Dataset)
-> - \[Building Camvid Dataset\](#Building Camvid Dataset)
-> - \[Build a Segmentation Model\](#Build a Segmentation Model)
+> - [Download Camvid Dataset](#download-camvid-dataset)
+> - [Building Camvid Dataset](#building-camvid-dataset)
+> - [Build a Segmentation Model](#build-a-segmentation-model)
 > - [Train with Runner](#training-with-runner)
 
 ## Download Camvid Dataset
@@ -33,8 +33,6 @@ import shutil
 import subprocess
 import tarfile
 
-print('Downloading dataset from https://opendatalab.com/CamVid.\n')
-print('You need register an account before downloading the dataset.\n')
 try:
     # Install and upgrade opendatalab
     subprocess.check_call(['pip', 'install', 'opendatalab'],
@@ -48,13 +46,14 @@ try:
 except subprocess.CalledProcessError as e:
     print(f'Error: {e}')
 
-print('Please input your username and password to login to OpenDataLab.')
-# Login to OpenDataLab (Please manually enter your credentials when asked)
-subprocess.check_call(['odl', 'login'])
-
 # Check if the file exists
 file_path = 'CamVid/raw/CamVid.tar.gz.00'
 if not os.path.exists(file_path):
+    print('Downloading dataset from https://opendatalab.com/CamVid.\n')
+    print('You need register an account before downloading the dataset.\n')
+    print('Please input your username and password to login to OpenDataLab.')
+    # Login to OpenDataLab (Please manually enter your credentials when asked)
+    subprocess.check_call(['odl', 'login'])
     # Download the dataset
     subprocess.check_call(['odl', 'get', 'CamVid'])
 
