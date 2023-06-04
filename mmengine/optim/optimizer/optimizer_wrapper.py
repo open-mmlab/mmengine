@@ -332,11 +332,16 @@ class OptimWrapper:
         Returns:
             Dict[str, List[float]]: Learning rate of the optimizer.
         """
-        lr = [
-            group['lr'] for group in self.param_groups if
-            'is_state_tracker' in group and group['is_state_tracker'] is True
-        ]
-        return dict(lr=lr)
+        lr = []
+        base_lr = []
+        for group in self.param_groups:
+            if 'is_state_tracker' in group and group[
+                    'is_state_tracker'] is True:
+                base_lr.append(group['lr'])
+            else:
+                lr.append(group['lr'])
+
+        return dict(lr=lr, base_lr=base_lr)
 
     def get_momentum(self) -> Dict[str, List[float]]:
         """Get the momentum of the optimizer.
