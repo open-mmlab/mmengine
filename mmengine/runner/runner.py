@@ -1976,7 +1976,7 @@ class Runner:
                     and len(previous_gpu_ids) != self._world_size):
                 # TODO, should we modify the iteration?
                 if (self.auto_scale_lr is None
-                        or self.auto_scale_lr.get('enable', False)):
+                        or not self.auto_scale_lr.get('enable', False)):
                     raise RuntimeError(
                         'Number of GPUs used for current experiment is not '
                         'consistent with the checkpoint being resumed from. '
