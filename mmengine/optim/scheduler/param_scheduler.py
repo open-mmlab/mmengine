@@ -1409,14 +1409,20 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
             raise ValueError('Factor should be < 1.0.')
         self.factor = factor
 
+        if isinstance(optimizer, OptimWrapper):
+            raw_optimizer = optimizer.optimizer
+        else:
+            raw_optimizer = optimizer
+
         if isinstance(min_value, (list, tuple)):
-            min_len = len(min_value)
-            if 'is_state_tracker' in optimizer.param_groups[-1]:
-                min_len += 1
-            if min_len != len(optimizer.param_groups):
+            if len(min_value) != len(raw_optimizer.param_groups):
                 raise ValueError('expected {} min_lrs, got {}'.format(
-                    len(optimizer.param_groups), min_len))
+                    len(raw_optimizer.param_groups), len(min_value)))
             self.min_values = list(min_value)
+            # Consider the `min_value` of the last param_groups
+            # as the base setting.
+            self.min_values.append(self.min_values[-1])
+
         else:
             self.min_values = [min_value] * len(  # type: ignore
                 optimizer.param_groups)

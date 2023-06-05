@@ -134,7 +134,7 @@ class AmpOptimWrapper(OptimWrapper):
             :attr:`optimizer`.
         """
         # save state_dict of loss_scaler
-        state_dict = self.optimizer.state_dict()
+        state_dict = super().state_dict()
         state_dict['loss_scaler'] = self.loss_scaler.state_dict()
         return state_dict
 
@@ -153,14 +153,9 @@ class AmpOptimWrapper(OptimWrapper):
         if 'loss_scaler' in state_dict:
             self.loss_scaler.load_state_dict(state_dict.pop('loss_scaler'))
 
-        if self.param_groups[-1].get('is_state_tracker', False):
-            self.param_groups.pop()
-
-            # remote the state tracker in state_dict if exists
-            # save it and add it back after loading
-        state_tracker = None
-        if state_dict['param_groups'][-1].get('is_state_tracker', False):
-            state_tracker = state_dict['param_groups'].pop()
+        if 'base_param_settings' in state_dict:
+            self.base_param_settings = state_dict.pop('base_param_settings',
+                                                      None)
 
         # load state_dict of optimizer
         self.optimizer.load_state_dict(state_dict)
