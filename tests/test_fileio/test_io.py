@@ -270,7 +270,8 @@ def test_split():
     assert fileio.split(filepath) == expected
 
     filepath = fileio.join_path(test_data_dir, 'file/')
-    assert fileio.split(filepath) == (filepath, '')
+    assert fileio.split(filepath) == (fileio.join_path(test_data_dir,
+                                                       'file'), '')
 
     assert fileio.split('file') == ('', 'file')
 

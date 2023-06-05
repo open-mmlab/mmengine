@@ -171,9 +171,9 @@ class TestLocalBackend(TestCase):
             self.assertEqual(
                 backend.split(path_type(filepath)), (str(tmp_dir), 'test.txt'))
 
-        self.assertEqual(backend.split('/data/test/'), ('/data/test/', ''))
+        self.assertEqual(backend.split('/data/test/'), ('/data/test', ''))
         self.assertEqual(backend.split('test'), ('', 'test'))
-        self.assertEqual(backend.split('test/'), ('test/', ''))
+        self.assertEqual(backend.split('test/'), ('test', ''))
 
     @parameterized.expand([[Path], [str]])
     def test_get_local_path(self, path_type):

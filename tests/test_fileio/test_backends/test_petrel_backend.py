@@ -162,10 +162,10 @@ except ImportError:
             backend = PetrelBackend()
             self.assertEqual(
                 backend.split('petrel://user/data/test.jpg'),
-                ('petrel://user/data/', 'test.jpg'))
+                ('petrel://user/data', 'test.jpg'))
             self.assertEqual(
                 backend.split('petrel://user/data/test/'),
-                ('petrel://user/data/test/', ''))
+                ('petrel://user/data/test', ''))
 
         def test_get(self):
             backend = PetrelBackend()
