@@ -76,3 +76,28 @@ class HTTPBackend(BaseStorageBackend):
             yield f.name
         finally:
             os.remove(f.name)
+
+    def isabs(self, filepath: str) -> bool:
+        """Check whether a file path is absolute. If it starts with prefixes,
+        it is absolute.
+
+        Args:
+            filepath (str): Path to be checked whether it is absolute.
+
+        Returns:
+            bool: Return ``True`` if ``filepath`` is an absolute path,
+            ``False`` otherwise.
+
+        Examples:
+            >>> backend = PetrelBackend()
+            >>> filepath = 'petrel://path/of/file'
+            >>> backend.isabs(filepath)
+            True
+            >>> backend.isabs('file')
+            False
+        """
+        if not hasattr(self, 'prefixes'):
+            raise AttributeError('`prefixes` is not set in the backend. '
+                                 'Please manually set it in the backend.')
+
+        return filepath.startswith(self.prefixes)  # type: ignore

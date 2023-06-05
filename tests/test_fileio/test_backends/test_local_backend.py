@@ -144,6 +144,12 @@ class TestLocalBackend(TestCase):
             self.assertTrue(backend.isfile(path_type(filepath)))
 
     @parameterized.expand([[Path], [str]])
+    def test_isabs(self, path_type):
+        backend = LocalBackend()
+        self.assertTrue(backend.isabs(path_type('/tmp')))
+        self.assertFalse(backend.isabs(path_type('tmp')))
+
+    @parameterized.expand([[Path], [str]])
     def test_join_path(self, path_type):
         backend = LocalBackend()
         filepath = backend.join_path(
@@ -156,6 +162,18 @@ class TestLocalBackend(TestCase):
         expected = osp.join(
             path_type(self.test_data_dir), path_type('dir'), path_type('file'))
         self.assertEqual(filepath, expected)
+
+    @parameterized.expand([[Path], [str]])
+    def test_split(self, path_type):
+        backend = LocalBackend()
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            filepath = Path(tmp_dir) / 'test.txt'
+            self.assertEqual(
+                backend.split(path_type(filepath)), (str(tmp_dir), 'test.txt'))
+
+        self.assertEqual(backend.split('/data/test/'), ('/data/test/', ''))
+        self.assertEqual(backend.split('test'), ('', 'test'))
+        self.assertEqual(backend.split('test/'), ('test/', ''))
 
     @parameterized.expand([[Path], [str]])
     def test_get_local_path(self, path_type):

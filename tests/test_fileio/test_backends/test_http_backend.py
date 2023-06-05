@@ -49,3 +49,9 @@ class TestHTTPBackend(TestCase):
         with backend.get_local_path(self.img_url) as filepath:
             img = imread(filepath)
             self.assertEqual(img.shape, self.img_shape)
+
+    def test_isabs(self):
+        backend = HTTPBackend()
+        self.assertTrue(backend.isabs('http://color.jpg'))
+        self.assertTrue(backend.isabs('https://color.jpg'))
+        self.assertFalse(backend.isabs('color.jpg'))

@@ -59,6 +59,9 @@ def _register_backend(name: str,
 
             prefix_to_backends[prefix] = backend
 
+        # add the prefixes to the backend for supporting isabs method
+        backend.prefixes = tuple(prefixes)  # type: ignore
+
 
 def register_backend(name: str,
                      backend: Optional[Type[BaseStorageBackend]] = None,

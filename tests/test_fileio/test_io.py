@@ -242,6 +242,12 @@ def test_isfile():
         assert fileio.isfile(filepath)
 
 
+def test_isabs():
+    # test LocalBackend
+    assert fileio.isabs('/data/test.txt')
+    assert not fileio.isabs('data/test.txt')
+
+
 def test_join_path():
     # test LocalBackend
     filepath = fileio.join_path(test_data_dir, 'file')
@@ -251,6 +257,22 @@ def test_join_path():
     filepath = fileio.join_path(test_data_dir, 'dir', 'file')
     expected = osp.join(test_data_dir, 'dir', 'file')
     assert filepath == expected
+
+
+def test_split():
+    # test LocalBackend
+    filepath = fileio.join_path(test_data_dir, 'file')
+    expected = (str(test_data_dir), 'file')
+    assert fileio.split(filepath) == expected
+
+    filepath = fileio.join_path(test_data_dir, 'dir', 'file')
+    expected = (str(fileio.join_path(test_data_dir, 'dir')), 'file')
+    assert fileio.split(filepath) == expected
+
+    filepath = fileio.join_path(test_data_dir, 'file/')
+    assert fileio.split(filepath) == (filepath, '')
+
+    assert fileio.split('file') == ('', 'file')
 
 
 def test_get_local_path():

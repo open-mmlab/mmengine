@@ -158,6 +158,15 @@ except ImportError:
                 backend.join_path(self.petrel_dir, 'dir', 'file'),
                 f'{self.petrel_dir}/dir/file')
 
+        def test_split(self):
+            backend = PetrelBackend()
+            self.assertEqual(
+                backend.split('petrel://user/data/test.jpg'),
+                ('petrel://user/data/', 'test.jpg'))
+            self.assertEqual(
+                backend.split('petrel://user/data/test/'),
+                ('petrel://user/data/test/', ''))
+
         def test_get(self):
             backend = PetrelBackend()
             with patch.object(
@@ -236,6 +245,16 @@ except ImportError:
                     return_value=True) as patched_contains:
                 self.assertTrue(backend.isfile(self.petrel_path))
                 patched_contains.assert_called_once_with(self.expected_path)
+
+        def test_isabs(self):
+            backend = PetrelBackend()
+            self.assertTrue(backend.isabs('petrel://user/data/test.jpg'))
+            self.assertTrue(backend.isabs('s3://user/data/test.jpg'))
+            self.assertTrue(
+                backend.isabs('cluster-name:petrel://user/data/test.jpg'))
+            self.assertTrue(
+                backend.isabs('cluster-name:s3://user/data/test.jpg'))
+            self.assertFalse(backend.isabs('data/test.jpg'))
 
         def test_get_local_path(self):
             backend = PetrelBackend()

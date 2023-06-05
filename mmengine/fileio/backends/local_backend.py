@@ -156,6 +156,24 @@ class LocalBackend(BaseStorageBackend):
         """
         return osp.isfile(filepath)
 
+    def isabs(self, filepath: Union[str, Path]) -> bool:
+        """Check whether a file path is absolute.
+
+        Args:
+            filepath (str or Path): Path to be checked whether it is absolute.
+
+        Returns:
+            bool: Return ``True`` if ``filepath`` is an absolute path,
+            ``False`` otherwise.
+
+        Examples:
+            >>> backend = LocalBackend()
+            >>> filepath = '/path/of/file'
+            >>> backend.isabs(filepath)
+            True
+        """
+        return osp.isabs(filepath)
+
     def join_path(self, filepath: Union[str, Path],
                   *filepaths: Union[str, Path]) -> str:
         r"""Concatenate all file paths.
@@ -179,6 +197,26 @@ class LocalBackend(BaseStorageBackend):
         """
         # TODO, if filepath or filepaths are Path, should return Path
         return osp.join(filepath, *filepaths)
+
+    def split(self, filepath: Union[str, Path]) -> Tuple[str, str]:
+        r"""Split the filepath into dirname and basename.
+
+        Args:
+            filepath (str or Path): Path to be split.
+
+        Returns:
+            Tuple[str, str]: A pair of dirname and basename.
+
+        Examples:
+            >>> backend = LocalBackend()
+            >>> filepath = '/path/of/file'
+            >>> backend.split(filepath)
+            ('/path/of', 'file')
+
+        Note:
+            New in version 0.8.0.
+        """
+        return osp.split(filepath)
 
     @contextmanager
     def get_local_path(
