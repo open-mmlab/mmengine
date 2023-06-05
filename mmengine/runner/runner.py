@@ -1978,11 +1978,10 @@ class Runner:
                 if (self.auto_scale_lr is None
                         or self.auto_scale_lr.get('enable', False)):
                     raise RuntimeError(
-                        'Number of GPU used for current experiment is not '
-                        'consistent with resuming from checkpoint, '
-                        'which may result in poor performance due to the '
-                        'learning rate. If you want the learning rate to '
-                        'be automatically adjusted, set the '
+                        'Number of GPUs used for current experiment is not '
+                        'consistent with the checkpoint being resumed from. '
+                        'This will result in poor performance due to the '
+                        'learning rate. You must set the '
                         '`auto_scale_lr` parameter for Runner and make '
                         '`auto_scale_lr["enable"]=True`.')
                 else:
