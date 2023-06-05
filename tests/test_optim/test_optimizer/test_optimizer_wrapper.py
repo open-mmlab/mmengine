@@ -173,7 +173,7 @@ class TestOptimWrapper(MultiProcessTestCase):
         model = ToyModel()
         optim = SGD(model.parameters(), lr=0.1)
         optim_wrapper = OptimWrapper(optim)
-        self.assertEqual(optim_wrapper.get_lr(), dict(lr=[0.1], base_lr=[0.1]))
+        self.assertEqual(optim_wrapper.get_lr(), dict(lr=[0.1]))
 
     def test_get_momentum(self):
         # Get momentum from SGD
@@ -249,10 +249,8 @@ class TestOptimWrapper(MultiProcessTestCase):
 
     def test_param_groups(self):
         optim_wrapper = OptimWrapper(self.optimizer)
-        p1 = optim_wrapper.param_groups
-        p2 = self.optimizer.param_groups
-        p1.pop()
-        self.assertEqual(p1, p2)
+        self.assertEqual(optim_wrapper.param_groups,
+                         self.optimizer.param_groups)
 
     def test_optim_context(self):
         self._init_dist_env(self.rank, self.world_size)

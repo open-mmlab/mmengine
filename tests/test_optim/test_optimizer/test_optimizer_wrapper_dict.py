@@ -76,10 +76,8 @@ class TestOptimWrapperDict(TestCase):
 
     def test_param_groups(self):
         optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
-        optim_wrapper_dict.param_groups['optim1'].pop()
         self.assertEqual(optim_wrapper_dict.param_groups['optim1'],
                          self.optim1.param_groups)
-        optim_wrapper_dict.param_groups['optim2'].pop()
         self.assertEqual(optim_wrapper_dict.param_groups['optim2'],
                          self.optim2.param_groups)
 

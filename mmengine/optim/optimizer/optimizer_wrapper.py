@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import copy
 import logging
 from collections import defaultdict
 from contextlib import contextmanager
@@ -288,18 +287,6 @@ class OptimWrapper:
 
         # load state_dict of optimizer
         self.optimizer.load_state_dict(state_dict)
-        return
-
-        # add the state tracker back
-        if state_tracker is None:
-            last_param = copy.deepcopy(self.param_groups[-1])
-            last_param.pop('params')
-            self.new_param_settings.update(**last_param)
-            self.param_groups.append(self.new_param_settings)
-        else:
-            if not isinstance(state_tracker['params'], torch.Tensor):
-                state_tracker['params'] = torch.tensor(state_tracker['params'])
-            self.param_groups.append(state_tracker)
 
     @property
     def param_groups(self) -> List[dict]:
@@ -312,7 +299,10 @@ class OptimWrapper:
         """
 
         return list(
-            chain(self.optimizer.param_groups, [self.base_param_settings]))
+            chain(self.optimizer.param_groups,
+                  [self.base_param_settings
+                   ])) if self.base_param_settings is not None else list(
+                       self.optimizer.param_groups)
 
     @property
     def defaults(self) -> dict:
@@ -340,7 +330,7 @@ class OptimWrapper:
         for group in self.param_groups:
             res['lr'].append(group['lr'])
 
-        return res
+        return dict(res)
 
     def get_momentum(self) -> Dict[str, List[float]]:
         """Get the momentum of the optimizer.

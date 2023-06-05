@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import copy
 from contextlib import contextmanager
 from typing import Union
 
@@ -159,17 +158,6 @@ class AmpOptimWrapper(OptimWrapper):
 
         # load state_dict of optimizer
         self.optimizer.load_state_dict(state_dict)
-
-        # add the state tracker back
-        if state_tracker is None:
-            last_param = copy.deepcopy(self.param_groups[-1])
-            last_param.pop('params')
-            self.new_param_settings.update(**last_param)
-            self.param_groups.append(self.new_param_settings)
-        else:
-            if not isinstance(state_tracker['params'], torch.Tensor):
-                state_tracker['params'] = torch.tensor(state_tracker['params'])
-            self.param_groups.append(state_tracker)
 
     @contextmanager
     def optim_context(self, model: nn.Module):
