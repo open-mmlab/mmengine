@@ -171,6 +171,9 @@ class LocalBackend(BaseStorageBackend):
             >>> filepath = '/path/of/file'
             >>> backend.isabs(filepath)
             True
+
+        Note:
+            New in version 0.8.0.
         """
         return osp.isabs(filepath)
 

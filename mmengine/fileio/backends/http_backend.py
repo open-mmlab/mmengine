@@ -95,6 +95,9 @@ class HTTPBackend(BaseStorageBackend):
             True
             >>> backend.isabs('file')
             False
+
+        Note:
+            New in version 0.8.0.
         """
         if not hasattr(self, 'prefixes'):
             raise AttributeError('`prefixes` is not set in the backend. '

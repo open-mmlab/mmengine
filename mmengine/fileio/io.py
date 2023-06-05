@@ -356,6 +356,9 @@ def isabs(
         >>> filepath = '/path/of/file'
         >>> isabs(filepath)
         True
+
+    Note:
+        New in version 0.8.0.
     """
     backend = get_file_backend(
         filepath, backend_args=backend_args, enable_singleton=True)

@@ -264,6 +264,9 @@ class PetrelBackend(BaseStorageBackend):
             True
             >>> backend.isabs('file')
             False
+
+        Note:
+            New in version 0.8.0.
         """
         filepath = self._format_path(self._map_path(filepath))
         if not hasattr(self, 'prefixes'):
