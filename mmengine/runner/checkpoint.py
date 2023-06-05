@@ -652,10 +652,11 @@ def weights_to_cpu(state_dict):
     Returns:
         OrderedDict: Model weights on GPU.
     """
+    # stash metadata to put in state_dict later
+    metadata = getattr(state_dict, '_metadata', OrderedDict())
     state_dict = apply_to(state_dict, lambda x: hasattr(x, 'cpu'),
                           lambda x: x.cpu())
-    # Keep metadata in state_dict
-    state_dict._metadata = getattr(state_dict, '_metadata', OrderedDict())
+    state_dict._metadata = metadata
     return state_dict
 
 

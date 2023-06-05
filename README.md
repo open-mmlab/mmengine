@@ -80,14 +80,14 @@ Major features:
 
 ## What's New
 
-v0.7.3 was released on 2023-04-28.
+v0.7.4 was released on 2023-06-03.
 
 ### Highlights
 
-- Support using MLflow to record experiment data
-- Support registering callable objects to the registry
+- Support using [`ClearML`](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#clearml) to record experiment data
+- Add [`Sophia`](https://mmengine.readthedocs.io/en/latest/common_usage/better_optimizers.html#sophia) optimizers
 
-Read [Changelog](./docs/en/notes/changelog.md#v073-04282023) for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v074-06032023) for more details.
 
 ## Installation
 

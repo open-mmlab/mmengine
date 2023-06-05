@@ -2090,7 +2090,7 @@ class Runner:
         file_client_args: Optional[dict] = None,
         save_optimizer: bool = True,
         save_param_scheduler: bool = True,
-        meta: dict = None,
+        meta: Optional[dict] = None,
         by_epoch: bool = True,
         backend_args: Optional[dict] = None,
     ):
@@ -2112,8 +2112,8 @@ class Runner:
                 to the checkpoint. Defaults to True.
             meta (dict, optional): The meta information to be saved in the
                 checkpoint. Defaults to None.
-            by_epoch (bool): Whether the scheduled momentum is updated by
-                epochs. Defaults to True.
+            by_epoch (bool): Decide the number of epoch or iteration saved in
+                checkpoint. Defaults to True.
             backend_args (dict, optional): Arguments to instantiate the
                 prefix of uri corresponding backend. Defaults to None.
                 New in v0.2.0.
@@ -2129,9 +2129,11 @@ class Runner:
             # `self.call_hook('after_train_epoch)` but `save_checkpoint` is
             # called by `after_train_epoch`` method of `CheckpointHook` so
             # `epoch` should be `self.epoch + 1`
-            meta.update(epoch=self.epoch + 1, iter=self.iter)
+            meta.setdefault('epoch', self.epoch + 1)
+            meta.setdefault('iter', self.iter)
         else:
-            meta.update(epoch=self.epoch, iter=self.iter + 1)
+            meta.setdefault('epoch', self.epoch)
+            meta.setdefault('iter', self.iter + 1)
 
         if file_client_args is not None:
             warnings.warn(
@@ -2306,6 +2308,7 @@ class Runner:
         runtime_env = OrderedDict()
         runtime_env.update(env_cfg)
         runtime_env.update(self._randomness_cfg)
+        runtime_env['seed'] = self._seed
         runtime_env['Distributed launcher'] = self._launcher
         runtime_env['Distributed training'] = self._distributed
         runtime_env['GPU number'] = self._world_size

@@ -21,8 +21,10 @@
    :caption: 常用功能
 
    common_usage/resume_training.md
+   common_usage/distributed_training.md
    common_usage/speed_up_training.md
    common_usage/save_gpu_memory.md
+   common_usage/better_optimizers.md
    common_usage/visualize_training_log.md
    common_usage/set_random_seed.md
    common_usage/debug_tricks.md
