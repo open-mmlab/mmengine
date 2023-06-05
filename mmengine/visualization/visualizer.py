@@ -382,7 +382,8 @@ class Visualizer(ManagerMixin):
     @master_only
     def draw_points(self,
                     positions: Union[np.ndarray, torch.Tensor],
-                    colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+                    colors: Union[str, tuple, List[str],
+                                  List[tuple]] = (0, 255, 0),
                     marker: Optional[str] = None,
                     sizes: Optional[Union[np.ndarray, torch.Tensor]] = None,
                     backend: str = 'matplotlib'):
@@ -471,10 +472,18 @@ class Visualizer(ManagerMixin):
                 x = int(positions[i, 0])
                 y = int(positions[i, 1])
                 if sizes is not None:
-                    size = int(sizes[i]) if isinstance(
-                        sizes, (np.ndarray, torch.Tensor)) else int(sizes)
+                    if isinstance(sizes, (np.ndarray, torch.Tensor)):
+                        size = int(sizes[i])
+                    else:
+                        size = int(sizes[i])
                 else:
                     size = 0  # Use default marker size
+                if colors[i] == 'g':
+                    colors[i] = (0, 255, 0)  # type: ignore
+                elif colors[i] == 'r':
+                    colors[i] = (0, 0, 255)  # type: ignore
+                elif colors[i] == 'b':
+                    colors[i] = (255, 0, 0)  # type: ignore
                 cv2.circle(self._image, (x, y), size, colors[i], -1)
 
         else:
@@ -485,8 +494,9 @@ class Visualizer(ManagerMixin):
     def draw_texts(self,
                    texts: Union[str, List[str]],
                    positions: Union[np.ndarray, torch.Tensor],
-                   font_sizes: Optional[Union[int, List[int]]] = None,
-                   colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+                   font_sizes: Optional[Union[int, List[int]]] = 1,
+                   colors: Union[str, tuple, List[str],
+                                 List[tuple]] = (0, 255, 0),
                    vertical_alignments: Union[str, List[str]] = 'top',
                    horizontal_alignments: Union[str, List[str]] = 'left',
                    font_families: Union[str, List[str]] = 'sans-serif',
@@ -608,48 +618,48 @@ class Visualizer(ManagerMixin):
               indicating that the drawn text may not appear within the image
               boundaries.
         """  # noqa: E501
+        check_type('texts', texts, (str, list))
+        if isinstance(texts, str):
+            texts = [texts]
+        num_text = len(texts)
         check_type('positions', positions, (np.ndarray, torch.Tensor))
         positions = tensor2ndarray(positions)
-        num_text = len(texts)
+        if len(positions.shape) == 1:
+            positions = positions[None]
+        assert positions.shape == (num_text, 2), (
+            '`positions` should have the shape of '
+            f'({num_text}, 2), but got {positions.shape}')
+        if not self._is_posion_valid(positions):
+            warnings.warn(
+                'Warning: The text is out of bounds,'
+                ' the drawn text may not be in the image', UserWarning)
         positions = positions.tolist()
+        check_type_and_length('font_sizes', font_sizes, (int, float, list),
+                              num_text)
+
+        check_type_and_length('colors', colors, (str, tuple, list), num_text)
+        check_type_and_length('vertical_alignments', vertical_alignments,
+                              (str, list), num_text)
+        check_type_and_length('horizontal_alignments', horizontal_alignments,
+                              (str, list), num_text)
+        check_type_and_length('font_families', font_families, (str, list),
+                              num_text)
 
         if backend == 'matplotlib':
             from matplotlib.font_manager import FontProperties
-            check_type('texts', texts, (str, list))
-            if isinstance(texts, str):
-                texts = [texts]
-
-            assert positions.shape == (num_text, 2), (
-                '`positions` should have the shape of '
-                f'({num_text}, 2), but got {positions.shape}')
-            if not self._is_posion_valid(positions):
-                warnings.warn(
-                    'Warning: The text is out of bounds,'
-                    ' the drawn text may not be in the image', UserWarning)
-
             if font_sizes is None:
                 font_sizes = self._default_font_size
-            check_type_and_length('font_sizes', font_sizes, (int, float, list),
-                                  num_text)
             font_sizes = value2list(font_sizes, (int, float), num_text)
 
-            check_type_and_length('colors', colors, (str, tuple, list),
-                                  num_text)
             colors = value2list(colors, (str, tuple), num_text)
             colors = color_val_matplotlib(colors)  # type: ignore
 
-            check_type_and_length('vertical_alignments', vertical_alignments,
-                                  (str, list), num_text)
             vertical_alignments = value2list(vertical_alignments, str,
                                              num_text)
 
-            check_type_and_length('horizontal_alignments',
-                                  horizontal_alignments, (str, list), num_text)
             horizontal_alignments = value2list(horizontal_alignments, str,
                                                num_text)
 
-            check_type_and_length('font_families', font_families, (str, list),
-                                  num_text)
             font_families = value2list(font_families, str, num_text)
 
             if font_properties is None:
@@ -682,67 +692,65 @@ class Visualizer(ManagerMixin):
             return self
 
         elif backend == 'cv2':
-            check_type_and_length('texts', texts, (str, list),
-                                  positions.shape[0])
-            texts = value2list(texts, str, positions.shape[0])
-
             if font_sizes is None:
-                font_sizes = 10
-            check_type_and_length('font_sizes', font_sizes, (int, list),
-                                  positions.shape[0])
-            font_sizes = value2list(font_sizes, int, positions.shape[0])
+                font_sizes = [16] * num_text
+            elif isinstance(font_sizes, int):
+                font_sizes = [font_sizes] * num_text
+            else:
+                font_sizes = font_sizes[:num_text]
 
-            check_type_and_length('colors', colors, (tuple, list),
-                                  positions.shape[0])
-            colors = value2list(colors, tuple, positions.shape[0])
+            if colors is None:
+                colors = [(0, 0, 255)] * num_text
 
-            check_type_and_length('vertical_alignments', vertical_alignments,
-                                  (str, list), positions.shape[0])
-            vertical_alignments = value2list(vertical_alignments, str,
-                                             positions.shape[0])
+            if vertical_alignments is None:
+                vertical_alignments = ['bottom'] * num_text
 
-            check_type_and_length('horizontal_alignments',
-                                  horizontal_alignments, (str, list),
-                                  positions.shape[0])
-            horizontal_alignments = value2list(horizontal_alignments, str,
-                                               positions.shape[0])
+            if horizontal_alignments is None:
+                horizontal_alignments = [
+                    'left'
+                ] * num_text  # Default horizontal alignment is left
 
-            for idx, (text, position, font_size, color, vertical_alignment,
-                      horizontal_alignment) in enumerate(
-                          zip(
-                              texts,
-                              positions,
-                              font_sizes,
-                              colors,
-                              vertical_alignments,
-                              horizontal_alignments,
-                          )):
-                x, y = int(position[0]), int(position[1])
-                font_face = cv2.FONT_HERSHEY_SIMPLEX
-                font_scale = font_size / 10.0
-                thickness = 1
+            if font_families is None or font_families == 'sans-serif':
+                font_families = [
+                    cv2.FONT_HERSHEY_SIMPLEX
+                ] * num_text  # Default font family is HERSHEY_SIMPLEX
 
-                text_size, _ = cv2.getTextSize(text, font_face, font_scale,
-                                               thickness)
+            for i in range(num_text):
+                position = tuple(positions[i])
+                text = texts[i]
+                font_size = font_sizes[i]
+                if colors[i] == 'r':
+                    color = (0, 0, 255)
+                elif colors[i] == 'g':
+                    color = (0, 255, 0)
+                elif colors[i] == 'b':
+                    color = (255, 0, 0)
+                else:
+                    color = colors[i]  # type: ignore
+                vertical_alignment = vertical_alignments[i]
+                horizontal_alignment = horizontal_alignments[i]
+                font_family = font_families[i]
 
-                if bboxes is not None:
-                    bbox = bboxes[idx]
-                    if 'color' in bbox:
-                        bbox_color = color_str2rgb(bbox['color'])
-                    else:
-                        bbox_color = color
+                print(f'color: {color}')
+                # Calculate text size to determine the bounding box
+                (text_width,
+                 text_height), _ = cv2.getTextSize(text, font_family,
+                                                   font_size, 1)
 
-                    if 'thickness' in bbox:
-                        bbox_thickness = bbox['thickness']
-                    else:
-                        bbox_thickness = 1
+                # Adjust position based on alignment
+                if vertical_alignment == 'top':
+                    position = (position[0], position[1] + text_height)
+                elif vertical_alignment == 'center':
+                    position = (position[0], position[1] + text_height // 2)
 
-                    cv2.rectangle(self._image, (x, y - text_size[1]),
-                                  (x + text_size[0], y), bbox_color,
-                                  bbox_thickness)
+                if horizontal_alignment == 'right':
+                    position = (position[0] - text_width, position[1])
+                elif horizontal_alignment == 'center':
+                    position = (position[0] - text_width // 2, position[1])
 
-                cv2.putText(self._image, text, (x, y), font_face, font_scale,
-                            color, thickness)
+                # Draw the text on the image
+                cv2.putText(self._image, text, position, font_family,
+                            font_size, color, 1, cv2.LINE_AA)
 
             return self
 
@@ -754,7 +762,8 @@ class Visualizer(ManagerMixin):
     def draw_lines(self,
                    x_datas: Union[np.ndarray, torch.Tensor],
                    y_datas: Union[np.ndarray, torch.Tensor],
-                   colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+                   colors: Union[str, tuple, List[str],
+                                 List[tuple]] = (0, 255, 0),
                    line_styles: Union[str, List[str]] = '-',
                    line_widths: Union[Union[int, float],
                                       List[Union[int, float]], int] = 2,
@@ -834,7 +843,7 @@ class Visualizer(ManagerMixin):
             warnings.warn(
                 'Warning: The line is out of bounds,'
                 ' the drawn line may not be in the image', UserWarning)
-        if backend == 'matplolib':
+        if backend == 'matplotlib':
             from matplotlib.collections import LineCollection
             colors = color_val_matplotlib(colors)  # type: ignore
             line_collect = LineCollection(
@@ -869,6 +878,13 @@ class Visualizer(ManagerMixin):
                 else:
                     raise TypeError('Invalid type for line_widths')
                 # Draw the line segment
+
+                if colors == 'r':
+                    colors = (0, 0, 255)
+                elif colors == 'g':
+                    colors = (0, 255, 0)
+                elif colors == 'b':
+                    colors = (255, 0, 0)
                 cv2.line(
                     image_with_lines,
                     start,
@@ -889,12 +905,12 @@ class Visualizer(ManagerMixin):
                      center: Union[np.ndarray, torch.Tensor],
                      radius: Union[np.ndarray, torch.Tensor],
                      edge_colors: Union[str, tuple, List[str],
-                                        List[tuple]] = 'g',
+                                        List[tuple]] = (0, 255, 0),
                      line_styles: Union[str, List[str]] = '-',
                      line_widths: Union[Union[int, float],
                                         List[Union[int, float]]] = 2,
                      face_colors: Union[str, tuple, List[str],
-                                        List[tuple]] = 'none',
+                                        List[tuple]] = (0, 255, 0),
                      alpha: Union[float, int] = 0.8,
                      backend: str = 'matplotlib') -> 'Visualizer':
         """Draw single or multiple circles on the plot or image.
@@ -1026,31 +1042,37 @@ class Visualizer(ManagerMixin):
 
         elif backend == 'cv2':
             if not isinstance(edge_colors, list):
-                edgeColors = [edge_colors] * len(center)
+                edge_colors = [edge_colors] * len(center)  # type: ignore
             if not isinstance(face_colors, list):
-                faceColors = [face_colors] * len(center)
-
+                face_colors = [face_colors] * len(center)  # type: ignore
             for i in range(len(center)):
                 x, y = int(center[i][0]), int(center[i][1])
                 r = int(radius[i])
 
                 # Get the edge color and face color for the current circle
-                current_edge_color = edgeColors[i]
-                current_face_color = faceColors[i]
+                current_edge_color = edge_colors[i]
+                current_face_color = face_colors[i]
 
                 # Get the line width for the current circle
                 current_line_width = line_widths[i] if isinstance(
                     line_widths, list) else int(line_widths)
 
                 # Draw the circle for the edge
+                if current_edge_color == 'g':
+                    current_edge_color = (0, 255, 0)
+                elif current_edge_color == 'r':
+                    current_edge_color = (0, 0, 255)
+                elif current_edge_color == 'b':
+                    current_edge_color = (255, 0, 0)
+
                 cv2.circle(
                     self._image, (x, y),
                     r,
                     current_edge_color,
-                    thickness=line_widths)
+                    thickness=current_line_width)
 
                 # Draw the circle for the face
-                cv2.circle(self._image, (x, y), r - current_line_width,
+                cv2.circle(self._image, (x, y), abs(r - current_line_width),
                            current_face_color, -1)
 
             return self
@@ -1063,12 +1085,12 @@ class Visualizer(ManagerMixin):
     def draw_bboxes(self,
                     bboxes: Union[np.ndarray, torch.Tensor],
                     edge_colors: Union[str, tuple, List[str],
-                                       List[tuple]] = 'g',
+                                       List[tuple]] = (0, 255, 0),
                     line_styles: Union[str, List[str]] = '-',
                     line_widths: Union[Union[int, float],
                                        List[Union[int, float]]] = 2,
                     face_colors: Union[str, tuple, List[str],
-                                       List[tuple]] = 'none',
+                                       List[tuple]] = (0, 255, 0),
                     alpha: Union[int, float] = 0.8,
                     backend: str = 'matplotlib') -> 'Visualizer':
         """Draw single or multiple bounding boxes.
@@ -1206,12 +1228,12 @@ class Visualizer(ManagerMixin):
                       polygons: Union[Union[np.ndarray, torch.Tensor],
                                       List[Union[np.ndarray, torch.Tensor]]],
                       edge_colors: Union[str, tuple, List[str],
-                                         List[tuple]] = 'g',
+                                         List[tuple]] = (0, 255, 0),
                       line_styles: Union[str, List[str]] = '-',
                       line_widths: Union[Union[int, float],
                                          List[Union[int, float]]] = 2,
                       face_colors: Union[str, tuple, List[str],
-                                         List[tuple]] = 'none',
+                                         List[tuple]] = (0, 255, 0),
                       alpha: Union[int, float] = 0.8,
                       backend: str = 'matplotlib') -> 'Visualizer':
         """Draw single or multiple polygons.
@@ -1353,6 +1375,25 @@ class Visualizer(ManagerMixin):
             else:
                 line_widths = line_widths
 
+            if isinstance(edge_colors, (tuple)):
+                edge_colors = [edge_colors]
+            else:
+                edge_colors = edge_colors
+
+            if isinstance(face_colors, (tuple)):
+                face_colors = [face_colors]
+            else:
+                face_colors = face_colors
+
+            if len(edge_colors) != len(polygons):
+                edge_colors = edge_colors * len(polygons)
+
+            if len(face_colors) != len(polygons):
+                face_colors = face_colors * len(polygons)
+
+            if len(line_widths) != len(polygons):
+                line_widths = line_widths * len(polygons)
+
             assert len(polygons) == len(
                 edge_colors), 'Number of polygons and edge colors must match'
             assert len(polygons) == len(
@@ -1367,6 +1408,12 @@ class Visualizer(ManagerMixin):
                     1] == 2, f'Invalid shape for polygon {i + 1}'
                 polygon = polygon.reshape((-1, 1, 2)).astype(np.int32)
                 if face_colors is not None:
+                    if edge_colors[i] == 'r':
+                        edge_colors[i] = (0, 0, 255)  # type: ignore
+                    elif edge_colors[i] == 'g':
+                        edge_colors[i] = (0, 255, 0)  # type: ignore
+                    elif edge_colors[i] == 'b':
+                        edge_colors[i] = (255, 0, 0)  # type: ignore
                     cv2.fillPoly(self._image, [polygon], face_colors[i])
                 cv2.polylines(self._image, [polygon], True, edge_colors[i],
                               line_widths[i])

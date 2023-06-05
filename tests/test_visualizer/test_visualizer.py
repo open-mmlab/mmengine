@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 import torch
 import torch.nn as nn
+from parameterized import parameterized
 
 from mmengine import VISBACKENDS, Config
 from mmengine.logging import MMLogger
@@ -136,18 +137,23 @@ class TestVisualizer(TestCase):
         visualizer = Visualizer(image=self.image)
         visualizer.get_image()
 
-    def test_draw_bboxes(self):
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_draw_bboxes(self, backend):
         visualizer = Visualizer(image=self.image)
 
         # only support 4 or nx4 tensor and numpy
-        visualizer.draw_bboxes(torch.tensor([1, 1, 2, 2]))
+        visualizer.draw_bboxes(torch.tensor([1, 1, 2, 2]), backend=backend)
         # valid bbox
-        visualizer.draw_bboxes(torch.tensor([1, 1, 1, 2]))
+        visualizer.draw_bboxes(torch.tensor([1, 1, 1, 2]), backend=backend)
         bboxes = torch.tensor([[1, 1, 2, 2], [1, 2, 2, 2.5]])
         visualizer.draw_bboxes(
-            bboxes, alpha=0.5, edge_colors=(255, 0, 0), line_styles='-')
+            bboxes,
+            alpha=0.5,
+            edge_colors=(255, 0, 0),
+            line_styles='-',
+            backend=backend)
         bboxes = bboxes.numpy()
-        visualizer.draw_bboxes(bboxes)
+        visualizer.draw_bboxes(bboxes, backend=backend)
 
         # test invalid bbox
         with pytest.raises(AssertionError):
@@ -177,130 +183,167 @@ class TestVisualizer(TestCase):
         for name in ['mock1', 'mock2']:
             assert visualizer.get_backend(name)._close is True
 
-    def test_draw_points(self):
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_draw_points(self, backend):
         visualizer = Visualizer(image=self.image)
 
         with pytest.raises(TypeError):
-            visualizer.draw_points(positions=[1, 2])
+            visualizer.draw_points(positions=[1, 2], backend=backend)
         with pytest.raises(AssertionError):
-            visualizer.draw_points(positions=np.array([1, 2, 3], dtype=object))
+            visualizer.draw_points(
+                positions=np.array([1, 2, 3], dtype=object), backend=backend)
         # test color
         visualizer.draw_points(
             positions=torch.tensor([[1, 1], [3, 3]]),
-            colors=['g', (255, 255, 0)])
+            colors=['g', (255, 255, 0)],
+            backend=backend)
         visualizer.draw_points(
             positions=torch.tensor([[1, 1], [3, 3]]),
             colors=['g', (255, 255, 0)],
             marker='.',
-            sizes=[1, 5])
+            sizes=[1, 5],
+            backend=backend)
 
-    def test_draw_texts(self):
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_draw_texts(self, backend):
         visualizer = Visualizer(image=self.image)
 
         # only support tensor and numpy
         visualizer.draw_texts(
-            'text1', positions=torch.tensor([5, 5]), colors=(0, 255, 0))
+            'text1',
+            positions=torch.tensor([5, 5]),
+            colors=(0, 255, 0),
+            backend=backend)
         visualizer.draw_texts(['text1', 'text2'],
                               positions=torch.tensor([[5, 5], [3, 3]]),
-                              colors=[(255, 0, 0), (255, 0, 0)])
-        visualizer.draw_texts('text1', positions=np.array([5, 5]))
+                              colors=[(255, 0, 0), (255, 0, 0)],
+                              backend=backend)
+        visualizer.draw_texts(
+            'text1', positions=np.array([5, 5]), backend=backend)
         visualizer.draw_texts(['text1', 'text2'],
-                              positions=np.array([[5, 5], [3, 3]]))
+                              positions=np.array([[5, 5], [3, 3]]),
+                              backend=backend)
         visualizer.draw_texts(
             'text1',
             positions=torch.tensor([5, 5]),
-            bboxes=dict(facecolor='r', alpha=0.6))
+            bboxes=dict(facecolor='r', alpha=0.6),
+            backend=backend)
         # test out of bounds
         with pytest.warns(
                 UserWarning,
                 match='Warning: The text is out of bounds,'
                 ' the drawn text may not be in the image'):
-            visualizer.draw_texts('text1', positions=torch.tensor([15, 5]))
+            visualizer.draw_texts(
+                'text1', positions=torch.tensor([15, 5]), backend=backend)
 
         # test incorrect format
         with pytest.raises(TypeError):
-            visualizer.draw_texts('text', positions=[5, 5])
+            visualizer.draw_texts('text', positions=[5, 5], backend=backend)
 
         # test length mismatch
         with pytest.raises(AssertionError):
             visualizer.draw_texts(['text1', 'text2'],
-                                  positions=torch.tensor([5, 5]))
+                                  positions=torch.tensor([5, 5]),
+                                  backend=backend)
         with pytest.raises(AssertionError):
             visualizer.draw_texts(
-                'text1', positions=torch.tensor([[5, 5], [3, 3]]))
+                'text1',
+                positions=torch.tensor([[5, 5], [3, 3]]),
+                backend=backend)
         with pytest.raises(AssertionError):
             visualizer.draw_texts(['text1', 'test2'],
                                   positions=torch.tensor([[5, 5], [3, 3]]),
-                                  colors=['r'])
+                                  colors=['r'],
+                                  backend=backend)
         with pytest.raises(AssertionError):
             visualizer.draw_texts(['text1', 'test2'],
                                   positions=torch.tensor([[5, 5], [3, 3]]),
-                                  vertical_alignments=['top'])
+                                  vertical_alignments=['top'],
+                                  backend=backend)
         with pytest.raises(AssertionError):
             visualizer.draw_texts(['text1', 'test2'],
                                   positions=torch.tensor([[5, 5], [3, 3]]),
-                                  horizontal_alignments=['left'])
+                                  horizontal_alignments=['left'],
+                                  backend=backend)
         with pytest.raises(AssertionError):
             visualizer.draw_texts(['text1', 'test2'],
                                   positions=torch.tensor([[5, 5], [3, 3]]),
-                                  font_sizes=[1])
+                                  font_sizes=[1],
+                                  backend=backend)
 
         # test type valid
         with pytest.raises(TypeError):
             visualizer.draw_texts(['text1', 'test2'],
                                   positions=torch.tensor([[5, 5], [3, 3]]),
-                                  font_sizes='b')
+                                  font_sizes='b',
+                                  backend=backend)
 
-    def test_draw_lines(self):
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_draw_lines(self, backend):
         visualizer = Visualizer(image=self.image)
 
         # only support tensor and numpy
         visualizer.draw_lines(
-            x_datas=torch.tensor([1, 5]), y_datas=torch.tensor([2, 6]))
+            x_datas=torch.tensor([1, 5]),
+            y_datas=torch.tensor([2, 6]),
+            backend=backend)
         visualizer.draw_lines(
             x_datas=np.array([[1, 5], [2, 4]]),
-            y_datas=np.array([[2, 6], [4, 7]]))
+            y_datas=np.array([[2, 6], [4, 7]]),
+            backend=backend)
         visualizer.draw_lines(
             x_datas=np.array([[1, 5], [2, 4]]),
             y_datas=np.array([[2, 6], [4, 7]]),
             colors='r',
             line_styles=['-', '-.'],
-            line_widths=[1, 2])
+            line_widths=[1, 2],
+            backend=backend)
         # test out of bounds
         with pytest.warns(
                 UserWarning,
                 match='Warning: The line is out of bounds,'
                 ' the drawn line may not be in the image'):
             visualizer.draw_lines(
-                x_datas=torch.tensor([12, 5]), y_datas=torch.tensor([2, 6]))
+                x_datas=torch.tensor([12, 5]),
+                y_datas=torch.tensor([2, 6]),
+                backend=backend)
 
         # test incorrect format
         with pytest.raises(TypeError):
-            visualizer.draw_lines(x_datas=[5, 5], y_datas=torch.tensor([2, 6]))
+            visualizer.draw_lines(
+                x_datas=[5, 5], y_datas=torch.tensor([2, 6]), backend=backend)
         with pytest.raises(TypeError):
-            visualizer.draw_lines(y_datas=[5, 5], x_datas=torch.tensor([2, 6]))
+            visualizer.draw_lines(
+                y_datas=[5, 5], x_datas=torch.tensor([2, 6]), backend=backend)
 
         # test length mismatch
         with pytest.raises(AssertionError):
             visualizer.draw_lines(
                 x_datas=torch.tensor([1, 5]),
-                y_datas=torch.tensor([[2, 6], [4, 7]]))
+                y_datas=torch.tensor([[2, 6], [4, 7]]),
+                backend=backend)
 
-    def test_draw_circles(self):
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_draw_circles(self, backend):
         visualizer = Visualizer(image=self.image)
 
         # only support tensor and numpy
-        visualizer.draw_circles(torch.tensor([1, 5]), torch.tensor([1]))
-        visualizer.draw_circles(np.array([1, 5]), np.array([1]))
         visualizer.draw_circles(
-            torch.tensor([[1, 5], [2, 6]]), radius=torch.tensor([1, 2]))
+            torch.tensor([1, 5]), torch.tensor([1]), backend=backend)
+        visualizer.draw_circles(
+            np.array([1, 5]), np.array([1]), backend=backend)
+        visualizer.draw_circles(
+            torch.tensor([[1, 5], [2, 6]]),
+            radius=torch.tensor([1, 2]),
+            backend=backend)
 
         # test face_colors
         visualizer.draw_circles(
             torch.tensor([[1, 5], [2, 6]]),
             radius=torch.tensor([1, 2]),
             face_colors=(255, 0, 0),
-            edge_colors=(255, 0, 0))
+            edge_colors=(255, 0, 0),
+            backend=backend)
 
         # test config
         visualizer.draw_circles(
@@ -308,7 +351,8 @@ class TestVisualizer(TestCase):
             radius=torch.tensor([1, 2]),
             edge_colors=['g', 'r'],
             line_styles=['-', '-.'],
-            line_widths=[1, 2])
+            line_widths=[1, 2],
+            backend=backend)
 
         # test out of bounds
         with pytest.warns(
@@ -316,37 +360,51 @@ class TestVisualizer(TestCase):
                 match='Warning: The circle is out of bounds,'
                 ' the drawn circle may not be in the image'):
             visualizer.draw_circles(
-                torch.tensor([12, 5]), radius=torch.tensor([1]))
+                torch.tensor([12, 5]),
+                radius=torch.tensor([1]),
+                backend=backend)
             visualizer.draw_circles(
-                torch.tensor([1, 5]), radius=torch.tensor([10]))
+                torch.tensor([1, 5]),
+                radius=torch.tensor([10]),
+                backend=backend)
 
         # test incorrect format
         with pytest.raises(TypeError):
-            visualizer.draw_circles([1, 5], radius=torch.tensor([1]))
+            visualizer.draw_circles([1, 5],
+                                    radius=torch.tensor([1]),
+                                    backend=backend)
         with pytest.raises(TypeError):
-            visualizer.draw_circles(np.array([1, 5]), radius=10)
+            visualizer.draw_circles(
+                np.array([1, 5]), radius=10, backend=backend)
 
         # test length mismatch
         with pytest.raises(AssertionError):
             visualizer.draw_circles(
-                torch.tensor([[1, 5]]), radius=torch.tensor([1, 2]))
+                torch.tensor([[1, 5]]),
+                radius=torch.tensor([1, 2]),
+                backend=backend)
 
-    def test_draw_polygons(self):
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_draw_polygons(self, backend):
         visualizer = Visualizer(image=self.image)
         # shape Nx2 or list[Nx2]
-        visualizer.draw_polygons(torch.tensor([[1, 1], [2, 2], [3, 4]]))
-        visualizer.draw_polygons(np.array([[1, 1], [2, 2], [3, 4]]))
+        visualizer.draw_polygons(
+            torch.tensor([[1, 1], [2, 2], [3, 4]]), backend=backend)
+        visualizer.draw_polygons(
+            np.array([[1, 1], [2, 2], [3, 4]]), backend=backend)
         visualizer.draw_polygons([
             np.array([[1, 1], [2, 2], [3, 4]]),
             torch.tensor([[1, 1], [2, 2], [3, 4]])
-        ])
+        ],
+                                 backend=backend)
         visualizer.draw_polygons(
             polygons=[
                 np.array([[1, 1], [2, 2], [3, 4]]),
                 torch.tensor([[1, 1], [2, 2], [3, 4]])
             ],
             face_colors=(255, 0, 0),
-            edge_colors=(255, 0, 0))
+            edge_colors=(255, 0, 0),
+            backend=backend)
         visualizer.draw_polygons(
             polygons=[
                 np.array([[1, 1], [2, 2], [3, 4]]),
@@ -354,14 +412,16 @@ class TestVisualizer(TestCase):
             ],
             edge_colors=['r', 'g'],
             line_styles='-',
-            line_widths=[2, 1])
+            line_widths=[2, 1],
+            backend=backend)
 
         # test out of bounds
         with pytest.warns(
                 UserWarning,
                 match='Warning: The polygon is out of bounds,'
                 ' the drawn polygon may not be in the image'):
-            visualizer.draw_polygons(torch.tensor([[1, 1], [2, 2], [16, 4]]))
+            visualizer.draw_polygons(
+                torch.tensor([[1, 1], [2, 2], [16, 4]]), backend=backend)
 
     def test_draw_binary_masks(self):
         binary_mask = np.random.randint(0, 2, size=(10, 10)).astype(bool)
