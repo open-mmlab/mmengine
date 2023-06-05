@@ -1,6 +1,6 @@
 # 可视化训练日志
 
-MMEngine 集成了 [TensorBoard](https://www.tensorflow.org/tensorboard?hl=zh-cn)、[Weights & Biases (WandB)](https://docs.wandb.ai/) 和 [MLflow](https://mlflow.org/docs/latest/index.html) 实验管理工具，你可以很方便地跟踪和可视化损失及准确率等指标。
+MMEngine 集成了 [TensorBoard](https://www.tensorflow.org/tensorboard?hl=zh-cn)、[Weights & Biases (WandB)](https://docs.wandb.ai/)、[MLflow](https://mlflow.org/docs/latest/index.html) 和 [ClearML](https://clear.ml/docs/latest/docs) 实验管理工具，你可以很方便地跟踪和可视化损失及准确率等指标。
 
 下面基于[15 分钟上手 MMENGINE](../get_started/15_minutes.md)中的例子介绍如何一行配置实验管理工具。
 
@@ -71,3 +71,31 @@ runner.train()
 ```
 
 ## MLflow (WIP)
+
+## ClearML
+
+使用 ClearML 前需安装依赖库 `clearml` 并参考 [Connect ClearML SDK to the Server](https://clear.ml/docs/latest/docs/getting_started/ds/ds_first_steps#connect-clearml-sdk-to-the-server) 进行配置。
+
+```bash
+pip install clearml
+clearml-init
+```
+
+设置 `Runner` 初始化参数中的 `visualizer`，并将 `vis_backends` 设置为 `ClearMLVisBackend`。
+
+```python
+runner = Runner(
+    model=MMResNet50(),
+    work_dir='./work_dir',
+    train_dataloader=train_dataloader,
+    optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+    train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
+    val_dataloader=val_dataloader,
+    val_cfg=dict(),
+    val_evaluator=dict(type=Accuracy),
+    visualizer=dict(type='Visualizer', vis_backends=[dict(type='ClearMLVisBackend')]),
+)
+runner.train()
+```
+
+![image](https://github.com/open-mmlab/mmengine/assets/58739961/d68e1dd2-9e82-40fb-ad81-00a647549adc)
