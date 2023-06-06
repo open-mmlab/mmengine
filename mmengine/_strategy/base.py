@@ -155,6 +155,8 @@ class BaseStrategy(metaclass=ABCMeta):
                 specified, :attr:`optimizer` should also be specified.
                 Defaults to None.
                 See :meth:`build_param_scheduler` for examples.
+            dispatch_kwargs (dict, optional): Kwargs to be passed to other
+                methods of Strategy. Defaults to None.
         """
 
     def setup_env(

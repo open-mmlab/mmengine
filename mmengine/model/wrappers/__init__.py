@@ -8,12 +8,8 @@ from .utils import is_model_wrapper
 
 __all__ = [
     'MMDistributedDataParallel', 'is_model_wrapper',
-    'MMSeparateDistributedDataParallel', 'MMDeepSpeedEngine'
+    'MMSeparateDistributedDataParallel'
 ]
-
-if is_installed('deepspeed'):
-    from ._deepspeed import MMDeepSpeedEngine  # noqa:F401
-    __all__.append('MMDeepSpeedEngine')
 
 if digit_version(TORCH_VERSION) >= digit_version('1.11.0'):
     from .fully_sharded_distributed import \

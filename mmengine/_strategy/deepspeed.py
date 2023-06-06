@@ -11,6 +11,7 @@ import torch.nn as nn
 
 import mmengine
 from mmengine.optim import OptimWrapper, _ParamScheduler
+from mmengine.model.wrappers._deepspeed import MMDeepSpeedEngineWrapper
 from mmengine.registry import MODEL_WRAPPERS, STRATEGIES
 from mmengine.utils import get_git_hash
 from .base import BaseStrategy
@@ -113,16 +114,14 @@ class DeepSpeedStrategy(BaseStrategy):
 
         self.model = self.build_model(model)
         self.model = self._init_model_weights(self.model)
-        return_items.append(self.model)
 
         if optim_wrapper is not None:
             self.optim_wrapper = self.build_optim_wrapper(optim_wrapper)
-
             self.model = self.wrap_model(self.model)
-            self.optim_wrapper.optimizer = self.model.optimizer
-            return_items.clear()
             return_items.append(self.model)
             return_items.append(self.optim_wrapper)
+        else:
+            self.model = self.wrap_model(self.model)
 
         if param_scheduler is not None:
             self.param_schedulers = self.build_param_scheduler(param_scheduler)
@@ -136,15 +135,20 @@ class DeepSpeedStrategy(BaseStrategy):
         self.config['train_batch_size'] = self.dispatch_kwargs[
             'train_batch_size']
 
-        wrapper_cfg = dict(
-            type='MMDeepSpeedEngine',
-            model=model,
-            optimizer=self.optim_wrapper.optimizer,
-            config=self.config,
-            inputs_to_half=self._inputs_to_half,
-        )
-        model = MODEL_WRAPPERS.build(wrapper_cfg)
-        return model
+        if hasattr(self, 'optim_wrapper'):
+            engine, self.optim_wrapper.optimizer, *_ = deepspeed.initialize(
+                model=model,
+                optimizer=self.optim_wrapper.optimizer,
+                config=self.config
+            )
+        else:
+            engine, *_ = deepspeed.initialize(
+                model=model,
+                config=self.config
+            )
+
+        wrapper = MMDeepSpeedEngineWrapper(model=engine, inputs_to_half=self._inputs_to_half)
+        return wrapper
 
     def load_checkpoint(
         self,
