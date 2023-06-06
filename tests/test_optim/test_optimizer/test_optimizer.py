@@ -17,7 +17,6 @@ from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
 from mmengine.optim.optimizer.builder import (DADAPTATION_OPTIMIZERS,
                                               LION_OPTIMIZERS,
                                               TORCH_OPTIMIZERS)
-from mmengine.optim.optimizer.default_constructor import reduce_param_groups
 from mmengine.registry import build_from_cfg
 from mmengine.testing._internal import MultiProcessTestCase
 from mmengine.utils.dl_utils import TORCH_VERSION, mmcv_full_available
@@ -811,7 +810,7 @@ class TestBuilder(TestCase):
                 'params': ['p5'],
             },
         ]
-        out = reduce_param_groups(params)
+        out = DefaultOptimWrapperConstructor.reduce_param_groups(params)
         self.assertEqual(out, gt_groups)
 
 
