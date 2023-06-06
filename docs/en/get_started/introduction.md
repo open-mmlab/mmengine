@@ -99,14 +99,10 @@ backends such as TensorBoard and WanDB.
 MMEngine also implements various common base modules required during the
 execution of algorithmic models, including:
 
-- [Configuration](../advanced_tutorials/config.md): In the OpenMMLab
-  collection of libraries, users can configure the training, testing process,
+- [Config](../advanced_tutorials/config.md): In the OpenMMLab algorithm library, users can configure the training, testing process,
   and related components by writing a configuration file (config).
-- [Registries](../advanced_tutorials/registry.md): Responsible for managing
-  modules with the same functionality within the algorithm library. MMEngine
-  defines a root registry based on the abstraction of algorithm library
-  modules. The registries in the algorithm library can inherit from this root
-  registry, enabling cross-algorithm library module invocation.
+- [Registry](../advanced_tutorials/registry.md): Responsible for managing
+  modules within the algorithm library that have similar functionality. Based on the abstraction of algorithm library modules, MMEngine defines a set of root registries. Registries within the algorithm library can inherit from these root registries, enabling cross-algorithm library module invocations and interactions. This allows for seamless integration and utilization of modules across different algorithms within the OpenMMLab framework.
 - [File I/O](../advanced_tutorials/fileio.md): Provides a unified interface
   for file read/write operations in various modules, supporting multiple file
   backend systems and formats in a consistent manner, with extensibility.
@@ -120,6 +116,6 @@ execution of algorithmic models, including:
   and access global variables. The base class for many globally accessible
   objects within the `Runner` is `ManagerMixin`.
 
-Users can further read the tutorials to understand the advanced usage of these
-modules or refer to the design documents to understand their design principles
+Users can further read the [tutorials](../tutorials/runner.md) to understand the advanced usage of these
+modules or refer to the [design documents](../design/hook.md) to understand their design principles
 and details.
