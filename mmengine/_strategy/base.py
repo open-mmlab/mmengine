@@ -52,6 +52,9 @@ class BaseStrategy(metaclass=ABCMeta):
         log_kwargs (dict, optional): Logger config passed in
             :meth:`build_logger`. Defaults to None.
     """
+    model: nn.Module
+    optim_wrapper: Union[OptimWrapper, OptimWrapperDict]
+    param_schedulers: ParamSchedulerType
 
     def __init__(
         self,
@@ -84,7 +87,7 @@ class BaseStrategy(metaclass=ABCMeta):
 
         self.build_logger(**log_kwargs or {})
 
-        self.dispatch_kwargs = {}
+        self.dispatch_kwargs: dict = {}
 
     @property
     def work_dir(self):
@@ -728,7 +731,7 @@ class BaseStrategy(metaclass=ABCMeta):
     def scheduler_state_dict(self) -> Union[dict, list]:
         """Get parameter scheduler state dict."""
         if isinstance(self.param_schedulers, dict):
-            state_dict = dict()
+            state_dict: dict = dict()
             for name, schedulers in self.param_schedulers.items():
                 state_dict[name] = []
                 for scheduler in schedulers:
@@ -796,6 +799,8 @@ class BaseStrategy(metaclass=ABCMeta):
             return self.resume(resume_from)
         elif self._load_from is not None:
             return self.load_checkpoint(self._load_from)
+
+        return None
 
     @abstractmethod
     def load_checkpoint(

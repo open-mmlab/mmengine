@@ -10,6 +10,6 @@ class DSOptimWrapper(OptimWrapper):
     def __init__(self, optimizer):
         self.optimizer = optimizer
 
-    def update_params(self, loss, model) -> None:
+    def update_params(self, loss, model) -> None:  # type: ignore
         model.backward(loss)
         model.step()

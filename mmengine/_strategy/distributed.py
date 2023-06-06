@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Union
 
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel
@@ -105,12 +105,12 @@ class DDPStrategy(SingleDeviceStrategy):
 
         return return_items[0] if len(return_items) == 1 else return_items
 
-    def setup_distributed(
+    def setup_distributed(  # type: ignore
         self,
         launcher: str = 'pytorch',
         backend: str = 'nccl',
         **kwargs,
-    ) -> Tuple[int, int]:
+    ):
         """Setup distributed environment.
 
         Args:

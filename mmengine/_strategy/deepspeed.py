@@ -112,16 +112,18 @@ class DeepSpeedStrategy(BaseStrategy):
 
         return_items = []
 
-        self.model = self.build_model(model)
-        self.model = self._init_model_weights(self.model)
+        model = self.build_model(model)
+        model = self._init_model_weights(model)
 
         if optim_wrapper is not None:
+            self.model = model
             self.optim_wrapper = self.build_optim_wrapper(optim_wrapper)
             self.model = self.wrap_model(self.model)
             return_items.append(self.model)
             return_items.append(self.optim_wrapper)
         else:
-            self.model = self.wrap_model(self.model)
+            self.model = self.wrap_model(model)
+            return_items.append(self.model)
 
         if param_scheduler is not None:
             self.param_schedulers = self.build_param_scheduler(param_scheduler)
@@ -153,7 +155,7 @@ class DeepSpeedStrategy(BaseStrategy):
         *,
         map_location: Union[str, Callable] = 'cpu',
         callback: Optional[Callable] = None,
-    ) -> None:
+    ) -> dict:
         """Load checkpoint from given ``filename``.
 
         Args:
@@ -169,6 +171,7 @@ class DeepSpeedStrategy(BaseStrategy):
         self.logger.info(f'Load checkpoint from {filename}')
 
         dirname, basename = osp.split(filename)
+        self.extra_ckpt: dict
         _, self.extra_ckpt = self.model.load_checkpoint(
             dirname, tag=basename, load_optimizer_states=False)
 

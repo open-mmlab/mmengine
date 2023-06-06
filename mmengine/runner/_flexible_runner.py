@@ -604,10 +604,10 @@ class FlexibleRunner:
 
     def build_strategy(
         self,
-        strategy: Optional[BaseStrategy] = None,
+        strategy: Optional[Union[BaseStrategy, Dict]] = None,
         launcher: str = 'none',
         randomness: Optional[dict] = None,
-        env_cfg: Optional[dict] = None,
+        env_cfg: dict = dict(dist_cfg=dict(backend='nccl')),
         experiment_name: Optional[str] = None,
         log_level: Optional[str] = None,
     ) -> BaseStrategy:
@@ -620,7 +620,9 @@ class FlexibleRunner:
         Returns:
             BaseStrategy: A strategy object.
         """
-        if not isinstance(strategy, BaseStrategy):
+        if isinstance(strategy, BaseStrategy):
+            strategy_obj = strategy
+        else:
             if launcher == 'none':
                 if strategy is None:
                     strategy = dict(type='SingleDeviceStrategy')
@@ -649,7 +651,7 @@ class FlexibleRunner:
             log_kwargs = dict(log_level=log_level)
             strategy.setdefault('log_kwargs', log_kwargs)
 
-            strategy = STRATEGIES.build(strategy)
+            strategy_obj = STRATEGIES.build(strategy)
 
         def callback(checkpoint):
             self.call_hook('after_load_checkpoint', checkpoint=checkpoint)
@@ -657,11 +659,13 @@ class FlexibleRunner:
         # Wrap the two methods to facilitate the execution of load_checkpoint
         # or resume in the `prepare` method of the strategy.
         if not isinstance(strategy, DeepSpeedStrategy):
-            strategy.load_checkpoint = partial(
-                strategy.load_checkpoint, callback=callback)
-            strategy.resume = partial(strategy.resume, callback=callback)
+            strategy_obj.load_checkpoint = partial(  # type: ignore
+                strategy_obj.load_checkpoint,
+                callback=callback)
+            strategy_obj.resume = partial(  # type: ignore
+                strategy_obj.resume, callback=callback)
 
-        return strategy
+        return strategy_obj
 
     def build_message_hub(
         self,
@@ -1461,7 +1465,6 @@ class FlexibleRunner:
         self.message_hub.load_state_dict(checkpoint['message_hub'])
 
         self.logger.info(f'resumed epoch: {self.epoch}, iter: {self.iter}')
-        return checkpoint
 
     def save_checkpoint(
         self,

@@ -103,6 +103,7 @@ class SingleDeviceStrategy(BaseStrategy):
 
         self.logger.info(f'Load checkpoint from {filename}')
 
+        self.extra_ckpt: dict
         if map_location == 'default':
             device = get_device()
             self.extra_ckpt = _load_checkpoint(filename, map_location=device)
@@ -218,7 +219,8 @@ class SingleDeviceStrategy(BaseStrategy):
             save_param_scheduler = False
 
         if save_param_scheduler:
-            state_dict['param_schedulers'] = self.scheduler_state_dict()
+            state_dict['param_schedulers'] = self.scheduler_state_dict(
+            )  # type: ignore
 
         # save extra checkpoint passed by users
         if extra_ckpt is None:
