@@ -417,6 +417,7 @@ class WandbVisBackend(BaseVisBackend):
         Args:
             config (Config): The Config object
         """
+        assert isinstance(self._init_kwargs, dict)
         allow_val_change = self._init_kwargs.get('allow_val_change', False)
         self._wandb.config.update(
             dict(config), allow_val_change=allow_val_change)
