@@ -3,8 +3,6 @@ import os
 
 import PIL
 import torch
-import torchvision.transforms.functional as F
-import torchvision.transforms.transforms as T
 from mmeval import COCODetection
 from torchvision.models.detection import fasterrcnn_resnet50_fpn
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
@@ -12,7 +10,7 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
 from mmengine.runner import Runner
-from .utils import coco_file_to_dict, json_to_dict
+from .utils import coco_file_to_dict, get_transform, json_to_dict
 
 
 class MMFasterRCNN(BaseModel):
@@ -144,44 +142,6 @@ class COCODataset:
 
     def __len__(self):
         return len(self.files)
-
-
-class Compose:
-
-    def __init__(self, transforms=[]):
-        self.transforms = transforms
-
-    def __call__(self, image, target):
-        for t in self.transforms:
-            image, target = t(image, target)
-        return image, target
-
-
-class ToTensor(torch.nn.Module):
-
-    def forward(self, image, target=None):
-        image = F.pil_to_tensor(image)
-        image = F.convert_image_dtype(image)
-        return image, target
-
-
-class RandomHorizontalFlip(T.RandomHorizontalFlip):
-
-    def forward(self, image, target=None):
-        if torch.rand(1) < self.p:
-            image = F.hflip(image)
-            if target is not None:
-                width, _ = F.get_image_size(image)
-                target['boxes'][:, [0, 2]] = width - target['boxes'][:, [2, 0]]
-        return image, target
-
-
-def get_transform(train):
-    transforms = []
-    transforms.append(ToTensor())
-    if train:
-        transforms.append(RandomHorizontalFlip(0.5))
-    return Compose(transforms)
 
 
 # Collate image-target pairs into a tuple.

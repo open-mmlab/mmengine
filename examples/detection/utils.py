@@ -1,6 +1,10 @@
 import json
 import os
 
+import torch
+import torchvision.transforms.functional as F
+import torchvision.transforms.transforms as T
+
 
 def json_to_dict(file_path):
     image_name = os.path.basename(file_path)
@@ -59,3 +63,41 @@ def coco_file_to_dict(file_path):
     data_dict['None'] = 73
 
     return data_dict
+
+
+class Compose:
+
+    def __init__(self, transforms=[]):
+        self.transforms = transforms
+
+    def __call__(self, image, target):
+        for t in self.transforms:
+            image, target = t(image, target)
+        return image, target
+
+
+class ToTensor(torch.nn.Module):
+
+    def forward(self, image, target=None):
+        image = F.pil_to_tensor(image)
+        image = F.convert_image_dtype(image)
+        return image, target
+
+
+class RandomHorizontalFlip(T.RandomHorizontalFlip):
+
+    def forward(self, image, target=None):
+        if torch.rand(1) < self.p:
+            image = F.hflip(image)
+            if target is not None:
+                width, _ = F.get_image_size(image)
+                target['boxes'][:, [0, 2]] = width - target['boxes'][:, [2, 0]]
+        return image, target
+
+
+def get_transform(train):
+    transforms = []
+    transforms.append(ToTensor())
+    if train:
+        transforms.append(RandomHorizontalFlip(0.5))
+    return Compose(transforms)
