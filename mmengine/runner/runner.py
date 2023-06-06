@@ -1975,16 +1975,21 @@ class Runner:
             if (previous_gpu_ids is not None and len(previous_gpu_ids) > 0
                     and len(previous_gpu_ids) != self._world_size):
                 # TODO, should we modify the iteration?
-                self.logger.info(
-                    'Number of GPU used for current experiment is not '
-                    'consistent with resuming from checkpoint')
                 if (self.auto_scale_lr is None
                         or not self.auto_scale_lr.get('enable', False)):
                     raise RuntimeError(
-                        'Cannot automatically rescale lr in resuming. Please '
-                        'make sure the number of GPU is consistent with the '
-                        'previous training state resuming from the checkpoint '
-                        'or set `enable` in `auto_scale_lr to False.')
+                        'Number of GPUs used for current experiment is not '
+                        'consistent with the checkpoint being resumed from. '
+                        'This will result in poor performance due to the '
+                        'learning rate. You must set the '
+                        '`auto_scale_lr` parameter for Runner and make '
+                        '`auto_scale_lr["enable"]=True`.')
+                else:
+                    self.logger.info(
+                        'Number of GPU used for current experiment is not '
+                        'consistent with resuming from checkpoint but the '
+                        'leaning rate will be adjusted according to the '
+                        f'setting in auto_scale_lr={self.auto_scale_lr}')
 
         # resume random seed
         resumed_seed = checkpoint['meta'].get('seed', None)
