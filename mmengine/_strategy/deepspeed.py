@@ -10,9 +10,9 @@ import torch
 import torch.nn as nn
 
 import mmengine
-from mmengine.optim import OptimWrapper, _ParamScheduler
 from mmengine.model.wrappers._deepspeed import MMDeepSpeedEngineWrapper
-from mmengine.registry import MODEL_WRAPPERS, STRATEGIES
+from mmengine.optim import OptimWrapper, _ParamScheduler
+from mmengine.registry import STRATEGIES
 from mmengine.utils import get_git_hash
 from .base import BaseStrategy
 
@@ -139,15 +139,12 @@ class DeepSpeedStrategy(BaseStrategy):
             engine, self.optim_wrapper.optimizer, *_ = deepspeed.initialize(
                 model=model,
                 optimizer=self.optim_wrapper.optimizer,
-                config=self.config
-            )
+                config=self.config)
         else:
-            engine, *_ = deepspeed.initialize(
-                model=model,
-                config=self.config
-            )
+            engine, *_ = deepspeed.initialize(model=model, config=self.config)
 
-        wrapper = MMDeepSpeedEngineWrapper(model=engine, inputs_to_half=self._inputs_to_half)
+        wrapper = MMDeepSpeedEngineWrapper(
+            model=engine, inputs_to_half=self._inputs_to_half)
         return wrapper
 
     def load_checkpoint(

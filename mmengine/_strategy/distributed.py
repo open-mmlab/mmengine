@@ -10,11 +10,11 @@ from mmengine.dist import init_dist, is_distributed, master_only
 from mmengine.model import convert_sync_batchnorm, is_model_wrapper
 from mmengine.optim import OptimWrapper, OptimWrapperDict, _ParamScheduler
 from mmengine.registry import MODEL_WRAPPERS, STRATEGIES
-from .base import BaseStrategy
+from .single_device import SingleDeviceStrategy
 
 
 @STRATEGIES.register_module()
-class DDPStrategy(BaseStrategy):
+class DDPStrategy(SingleDeviceStrategy):
     """Distribution strategy for distributed data parallel training.
 
     Args:

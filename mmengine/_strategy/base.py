@@ -13,7 +13,6 @@ from torch.optim import Optimizer
 
 import mmengine
 from mmengine.config import Config, ConfigDict
-from mmengine.device import get_device
 from mmengine.dist import broadcast, get_dist_info, is_distributed
 from mmengine.logging import MMLogger
 from mmengine.model import revert_sync_batchnorm
@@ -21,7 +20,7 @@ from mmengine.model.wrappers import is_model_wrapper
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import MODELS, OPTIM_WRAPPERS, PARAM_SCHEDULERS
-from mmengine.utils import digit_version, get_git_hash
+from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
                                      set_multi_processing)
 
@@ -650,6 +649,8 @@ class BaseStrategy(metaclass=ABCMeta):
             default_args['max_iters'] = self.dispatch_kwargs['max_iters']
 
         param_schedulers: ParamSchedulerType
+        assert hasattr(self, 'optim_wrapper')
+
         if not isinstance(self.optim_wrapper, OptimWrapperDict):
             # Since `OptimWrapperDict` inherits from `OptimWrapper`,
             # `isinstance(self.optim_wrapper, OptimWrapper)` cannot tell
@@ -710,48 +711,6 @@ class BaseStrategy(metaclass=ABCMeta):
 
         return self.logger
 
-    def state_dict(
-        self,
-        *,
-        save_optimizer: bool = True,
-        save_param_scheduler: bool = True,
-    ) -> dict:
-        """Get the state of strategy.
-
-        The state of strategy contains the following items:
-        - state_dict: The state dict of model.
-        - optimizer: The state dict of optimizer.
-        - param_schedulers: The state dict of parameter scheduler.
-
-        Args:
-            save_optimizer (bool): Whether to save the optimizer to
-                the checkpoint. Defaults to True.
-            save_param_scheduler (bool): Whether to save the param_scheduler
-                to the checkpoint. Defaults to True.
-
-        Returns:
-            dict: The state of strategy.
-        """
-        state_dict = dict()
-        state_dict['state_dict'] = self.model_state_dict()
-
-        # save optimizer state dict
-        if save_optimizer and hasattr(self, 'optim_wrapper'):
-            state_dict['optimizer'] = self.optim_state_dict()
-
-        # save param scheduler state dict
-        if save_param_scheduler and not hasattr(self, 'param_schedulers'):
-            self.logger.warning(
-                '`save_param_scheduler` is True but strategy has no '
-                'param_schedulers attribute, so skip saving parameter '
-                'schedulers')
-            save_param_scheduler = False
-
-        if save_param_scheduler:
-            state_dict['param_schedulers'] = self.scheduler_state_dict()
-
-        return state_dict
-
     def model_state_dict(self) -> dict:
         """Get model state dict."""
         from mmengine.runner import get_state_dict, weights_to_cpu
@@ -780,24 +739,6 @@ class BaseStrategy(metaclass=ABCMeta):
             for scheduler in self.param_schedulers:  # type: ignore
                 state_list.append(scheduler.state_dict())
             return state_list
-
-    def load_state_dict(
-        self,
-        state_dict: dict,
-        strict: bool = False,
-        revise_keys: list = [(r'^module.', '')],
-    ) -> dict:
-        """Load strategy state."""
-        self.load_model_state_dict(
-            state_dict['state_dict'], strict=strict, revise_keys=revise_keys)
-
-        # resume optimizer
-        if 'optimizer' in state_dict:
-            self.load_optim_state_dict(state_dict['optimizer'])
-
-        # resume param scheduler
-        if 'param_schedulers' in state_dict:
-            self.load_scheduler_state_dict(state_dict['param_schedulers'])
 
     def load_model_state_dict(
         self,
@@ -856,6 +797,7 @@ class BaseStrategy(metaclass=ABCMeta):
         elif self._load_from is not None:
             return self.load_checkpoint(self._load_from)
 
+    @abstractmethod
     def load_checkpoint(
         self,
         filename: str,
@@ -872,29 +814,8 @@ class BaseStrategy(metaclass=ABCMeta):
                 specifying how to remap storage locations.
                 Defaults to 'cpu'.
         """
-        from mmengine.runner.checkpoint import _load_checkpoint
 
-        if hasattr(self, 'extra_ckpt'):
-            return self.extra_ckpt
-
-        self.logger.info(f'Load checkpoint from {filename}')
-
-        if map_location == 'default':
-            device = get_device()
-            self.extra_ckpt = _load_checkpoint(filename, map_location=device)
-        else:
-            self.extra_ckpt = _load_checkpoint(
-                filename, map_location=map_location)
-
-        # users can do some modification after loading checkpoint
-        if callback is not None:
-            callback(self.extra_ckpt)
-
-        state_dict = self.extra_ckpt.pop('state_dict')
-        self.load_model_state_dict(state_dict)
-
-        return self.extra_ckpt
-
+    @abstractmethod
     def resume(
         self,
         filename: str,
@@ -917,42 +838,8 @@ class BaseStrategy(metaclass=ABCMeta):
             filename (str): Accept local filepath, URL, ``torchvision://xxx``,
                 ``open-mmlab://xxx``.
         """
-        if hasattr(self, 'extra_ckpt'):
-            return self.extra_ckpt
 
-        self.logger.info(f'Resume checkpoint from {filename}')
-
-        self.extra_ckpt = self.load_checkpoint(
-            filename, map_location=map_location, callback=callback)
-
-        if not resume_optimizer:
-            self.extra_ckpt.pop('optimizer', None)
-        else:
-            self.load_optim_state_dict(self.extra_ckpt.pop('optimizer'))
-
-        if not resume_param_scheduler:
-            self.extra_ckpt.pop('param_schedulers', None)
-        else:
-            self.load_scheduler_state_dict(
-                self.extra_ckpt.pop('param_schedulers'))
-
-        # resume random seed
-        resumed_seed = self.extra_ckpt['meta'].get('seed', None)
-        current_seed = self._randomness.get('seed')
-        if resumed_seed is not None and resumed_seed != current_seed:
-            if current_seed is not None:
-                self.logger.warning(f'The value of random seed in the '
-                                    f'checkpoint "{resumed_seed}" is '
-                                    f'different from the value in '
-                                    f'`randomness` config "{current_seed}"')
-            self._randomness.update(seed=resumed_seed)
-            self._set_randomness(**self._randomness)
-
-        # resume iter
-        self.dispatch_kwargs['cur_iter'] = self.extra_ckpt['meta']['iter']
-
-        return self.extra_ckpt
-
+    @abstractmethod
     def save_checkpoint(
         self,
         filename: str,
@@ -976,30 +863,6 @@ class BaseStrategy(metaclass=ABCMeta):
                 checkpoint before saving the checkpoint.
                 Defaults to None.
         """
-        from mmengine.runner.checkpoint import save_checkpoint
-
-        state_dict = self.state_dict(
-            save_optimizer=save_optimizer,
-            save_param_scheduler=save_param_scheduler)
-
-        # save extra checkpoint passed by users
-        if extra_ckpt is None:
-            extra_ckpt = dict()
-        if 'meta' not in extra_ckpt:
-            extra_ckpt['meta'] = dict()
-        extra_ckpt['meta'].update(
-            seed=self.seed,
-            time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
-            mmengine=mmengine.__version__ + get_git_hash(),
-        )
-
-        state_dict.update(extra_ckpt)
-
-        # users can do some modification before saving checkpoint
-        if callback is not None:
-            callback(state_dict)
-
-        save_checkpoint(state_dict, filename)
 
     def collect_env(self) -> Tuple[dict, dict]:
         """Collect the information of the running environments."""
