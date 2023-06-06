@@ -1,9 +1,6 @@
 import argparse
-import json
 import os
-import xml.etree.ElementTree as ET  # Connect to the GPU if one exists.
 
-import numpy as np
 import PIL
 import torch
 import torchvision.transforms.functional as F
@@ -15,6 +12,7 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
 from mmengine.runner import Runner
+from .utils import coco_file_to_dict, json_to_dict
 
 
 class MMFasterRCNN(BaseModel):
@@ -43,46 +41,35 @@ class MMFasterRCNN(BaseModel):
 class Accuracy(BaseMetric):
 
     def process(self, targets, predictions):
-        label = []
-        pred = []
-        score = []
-        groundtruth = {}
-        predictionS = {}
-        labelS = []
+        label_boxes = []
+        label_labels = []
+        pred_boxes = []
+        pred_scores = []
         pred_labels = []
+        width = targets[1][0]['width']
+        height = targets[1][0]['height']
+
         for target in targets[1]:
-            boxes = target['boxes']
-            width = target['width']
-            height = target['height']
-            labels = target['labels'].cpu().numpy()
-            for i in range(len(boxes)):
-                x_min, y_min, x_max, y_max = boxes[i].tolist()
-                label.append([x_min, y_min, x_max, y_max])
-                labelS.append(labels[i].tolist())
+            label_boxes.append(target['boxes'])
+            label_labels.append(target['labels'])
+
         for prediction in predictions:
-            boxes = prediction['boxes']
-            scores = prediction['scores'].cpu().numpy()
-            pred_label = prediction['labels'].cpu().numpy()
-            for i in range(len(boxes)):
-                x_min, y_min, x_max, y_max = boxes[i].tolist()
-                pred_labels.append(pred_label[i].tolist())
-                score.append(scores[i].tolist())
-                pred.append([x_min, y_min, x_max, y_max])
+            pred_boxes.append(prediction['boxes'].cpu())
+            pred_scores.append(prediction['scores'].cpu())
+            pred_labels.append(prediction['labels'].cpu())
 
-        label = np.array(label)
-        labelS = np.array(labelS)
-        pred = np.array(pred)
-        score = np.array(score)
-        pred_labels = np.array(pred_labels)
+        groundtruth = {
+            'bboxes': torch.cat(label_boxes).cpu().numpy(),
+            'labels': torch.cat(label_labels).cpu().numpy(),
+            'width': width,
+            'height': height
+        }
 
-        groundtruth['bboxes'] = label
-        groundtruth['labels'] = labelS
-        groundtruth['width'] = width
-        groundtruth['height'] = height
-
-        predictionS['bboxes'] = pred
-        predictionS['scores'] = score
-        predictionS['labels'] = pred_labels
+        predictionS = {
+            'bboxes': torch.cat(pred_boxes).cpu().numpy(),
+            'scores': torch.cat(pred_scores).cpu().numpy(),
+            'labels': torch.cat(pred_labels).cpu().numpy()
+        }
 
         self.results.append({
             'groundtruth': groundtruth,
@@ -92,7 +79,7 @@ class Accuracy(BaseMetric):
     def compute_metrics(self, results):
         groundtruth = [(item['predictions'], item['groundtruth'])
                        for item in results]
-        fake_dataset_metas = {'classes': tuple([str(i) for i in range(73)])}
+        fake_dataset_metas = {'classes': tuple(map(str, range(73)))}
         coco_det_metric = COCODetection(
             dataset_meta=fake_dataset_metas, metric=['bbox'])
         r = coco_det_metric.compute_metric(groundtruth)
@@ -119,104 +106,12 @@ if torch.cuda.is_available():
 else:
     device = torch.device('cpu')
 
-
-def xml_to_dict(xml_path):
-    tree = ET.parse(xml_path)
-    root = tree.getroot()
-    return {
-        'filename': xml_path,
-        'image_width': int(root.find('./size/width').text),
-        'image_height': int(root.find('./size/height').text),
-        'image_channels': int(root.find('./size/depth').text),
-        'label': root.find('./object/name').text,
-        'x1': int(root.find('./object/bndbox/xmin').text),
-        'y1': int(root.find('./object/bndbox/ymin').text),
-        'x2': int(root.find('./object/bndbox/xmax').text),
-        'y2': int(root.find('./object/bndbox/ymax').text)
-    }
-
-
-def json_to_dict(file_path):
-    image_name = os.path.basename(file_path)
-    json_path = os.path.dirname(file_path)
-
-    with open(json_path) as file:
-        json_data = json.load(file)
-
-    images = json_data.get('images', [])
-    annotations = json_data.get('annotations', [])
-
-    image_info = next(
-        (image for image in images if image['file_name'] == image_name), None)
-
-    if image_info is None:
-        return None
-
-    image_id = image_info['id']
-    height = image_info['height']
-    width = image_info['width']
-
-    boxes = []
-    labels = []
-
-    for ann in annotations:
-        if ann['image_id'] == image_id:
-            x, y, width_box, height_box = ann['bbox']
-            xmin = x
-            ymin = y
-            xmax = x + width_box
-            ymax = y + height_box
-            boxes.append([xmin, ymin, xmax, ymax])
-            category_id = ann['category_id']
-            labels.append(category_id)
-
-    if len(boxes) == 0:
-        boxes.append([1, 1, 2, 2])
-        labels.append(73)
-
-    return {
-        'image_width': int(width),
-        'image_height': int(height),
-        'image_channels': 3,
-        'labels': labels,
-        'boxes': boxes
-    }
-
-
-def file_to_dict(file_path):
-    data_dict = {}
-    with open(file_path) as file:
-        for index, line in enumerate(file):
-            value = line.strip()
-            data_dict[index] = value
-    return data_dict
-
-
-def coco_file_to_dict(file_path):
-    with open(file_path) as file:
-        json_data = json.load(file)
-
-    categories = json_data.get('categories', [])
-
-    data_dict = {category['name']: category['id'] for category in categories}
-    data_dict['None'] = 73
-
-    return data_dict
-
-
-def reverse_dict(dictionary):
-    return {value: key for key, value in dictionary.items()}
-
-
 # Convert human readable str label to int.
 label_dict = coco_file_to_dict(
     'examples/detection/train/_annotations.coco.json')
-print(label_dict)
-# Convert label int to human readable str.
-reverse_label_dict = reverse_dict(label_dict)
 
 
-class vehicleDataset(torch.utils.data.Dataset):
+class COCODataset:
 
     def __init__(self, root, transforms=None):
         self.root = root
@@ -240,7 +135,6 @@ class vehicleDataset(torch.utils.data.Dataset):
         target['width'] = ann['image_width']
         target['height'] = ann['image_height']
         target['boxes'] = torch.as_tensor(ann['boxes'], dtype=torch.float32)
-        # labels=[label_dict[label] for label in ann['labels']]
         target['labels'] = torch.as_tensor(ann['labels'], dtype=torch.int64)
         target['img_id'] = torch.as_tensor(
             i)  # Apply any transforms to the data if required.
@@ -300,20 +194,21 @@ def main():
 
     # Train dataset.
     # Set train = True to apply the training image transforms.
-    train_ds = vehicleDataset('examples/detection/train',
-                              get_transform(train=True))  # Validation dataset.
-    val_ds = vehicleDataset('examples/detection/valid',
-                            get_transform(train=False))  # Valid dataset.
+    train_ds = COCODataset('examples/detection/train',
+                           get_transform(train=True))  # Train dataset.
+    val_ds = COCODataset('examples/detection/valid',
+                         get_transform(train=False))  # Validation dataset.
 
-    train_dl = torch.utils.data.DataLoader(
-        train_ds,
+    train_dl = dict(
         batch_size=args.batch_size,
-        shuffle=True,
+        dataset=train_ds,
+        sampler=dict(type='DefaultSampler', shuffle=True),
         collate_fn=collate_fn)
-    val_dl = torch.utils.data.DataLoader(
-        val_ds,
+
+    val_dl = dict(
         batch_size=args.batch_size,
-        shuffle=False,
+        dataset=val_ds,
+        sampler=dict(type='DefaultSampler', shuffle=False),
         collate_fn=collate_fn)
 
     runner = Runner(
