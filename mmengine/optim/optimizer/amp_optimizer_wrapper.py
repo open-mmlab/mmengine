@@ -153,8 +153,7 @@ class AmpOptimWrapper(OptimWrapper):
             self.loss_scaler.load_state_dict(state_dict.pop('loss_scaler'))
 
         if 'base_param_settings' in state_dict:
-            self.base_param_settings = state_dict.pop('base_param_settings',
-                                                      None)
+            self.base_param_settings = state_dict.pop('base_param_settings')
 
         # load state_dict of optimizer
         self.optimizer.load_state_dict(state_dict)
