@@ -6,11 +6,11 @@ import torch
 from mmeval import COCODetection
 from torchvision.models.detection import fasterrcnn_resnet50_fpn
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from utils import coco_file_to_dict, get_transform, json_to_dict
 
 from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
 from mmengine.runner import Runner
-from .utils import coco_file_to_dict, get_transform, json_to_dict
 
 
 class MMFasterRCNN(BaseModel):
