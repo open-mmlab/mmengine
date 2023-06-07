@@ -89,8 +89,8 @@ class HTTPBackend(BaseStorageBackend):
             ``False`` otherwise.
 
         Examples:
-            >>> backend = PetrelBackend()
-            >>> filepath = 'petrel://path/of/file'
+            >>> backend = HTTPBackend()
+            >>> filepath = 'http://path/of/file'
             >>> backend.isabs(filepath)
             True
             >>> backend.isabs('file')
