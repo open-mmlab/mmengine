@@ -163,12 +163,16 @@ class OptimWrapper:
         # the loss factor will always be the same as `_accumulative_counts`.
         self._remainder_counts = -1
 
+        # The Following code is used to initialize `base_param_settings`.
+        # `base_param_settings` is used to store the parameters that are not
+        # updated by the optimizer.
+        # The `base_param_settings` used for tracking the base learning in the
+        # optimizer. If the optimizer has multiple parameter groups, this
+        # params will not be scaled by the loss factor.
         if len(optimizer.param_groups) > 1:
             self.base_param_settings = {
-                'params': torch.tensor([0.0], dtype=torch.float),
-                'is_state_tracker': True
+                'params': torch.tensor([0.0], dtype=torch.float)
             }
-            # if hasattr(self.optimizer, 'defaults'):
             self.base_param_settings.update(**self.optimizer.defaults)
         else:
             self.base_param_settings = None  # type: ignore
@@ -298,11 +302,15 @@ class OptimWrapper:
              dict: the ``param_groups`` of :attr:`optimizer`.
         """
 
-        return list(
-            chain(self.optimizer.param_groups,
-                  [self.base_param_settings
-                   ])) if self.base_param_settings is not None else list(
-                       self.optimizer.param_groups)
+        # If ``self.base_param_settings`` is not None, the ``param_groups``
+        # of :attr:`optimizer` will be appended to
+        # ``self.base_param_settings``. Otherwise, the ``param_groups``
+        # of :attr:`optimizer` will be returned.
+        if self.base_param_settings is not None:
+            return list(
+                chain(self.optimizer.param_groups, [self.base_param_settings]))
+        else:
+            return list(self.optimizer.param_groups)
 
     @property
     def defaults(self) -> dict:
