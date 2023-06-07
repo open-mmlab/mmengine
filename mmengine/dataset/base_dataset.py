@@ -9,10 +9,9 @@ from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 import numpy as np
 from torch.utils.data import Dataset
 
-from mmengine.fileio import join_path, list_from_file, load
+from mmengine.fileio import isabs, join_path, list_from_file, load
 from mmengine.logging import print_log
 from mmengine.registry import TRANSFORMS
-from mmengine.utils import is_abs
 
 
 class Compose:
@@ -534,7 +533,7 @@ class BaseDataset(Dataset):
         """
         # Automatically join annotation file path with `self.root` if
         # `self.ann_file` is not an absolute path.
-        if self.ann_file and not is_abs(self.ann_file) and self.data_root:
+        if self.ann_file and not isabs(self.ann_file) and self.data_root:
             self.ann_file = join_path(self.data_root, self.ann_file)
         # Automatically join data directory with `self.root` if path value in
         # `self.data_prefix` is not an absolute path.
@@ -542,7 +541,7 @@ class BaseDataset(Dataset):
             if not isinstance(prefix, str):
                 raise TypeError('prefix should be a string, but got '
                                 f'{type(prefix)}')
-            if not is_abs(prefix) and self.data_root:
+            if not isabs(prefix) and self.data_root:
                 self.data_prefix[data_key] = join_path(self.data_root, prefix)
             else:
                 self.data_prefix[data_key] = prefix
