@@ -260,8 +260,8 @@ class ImportTransformer(ast.NodeTransformer):
         self.global_dict = global_dict
         # In Windows, the filename could be like this:
         # "C:\\Users\\runneradmin\\AppData\\Local\\"
-        # Although it has been an raw string, ast.parse will firstly it as the
-        # executed code:
+        # Although it has been an raw string, ast.parse will firstly escape
+        # it as the executed code:
         # "C:\Users\runneradmin\AppData\Local\\\"
         # As you see, the `\U` will be treated as a part of
         # the escape sequence during code parsing, leading to an
