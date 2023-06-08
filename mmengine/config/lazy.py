@@ -93,6 +93,12 @@ class LazyObject:
                 raise type(e)(f'Failed to import {self._module} '
                               f'in {self.location} for {e}')
 
+    @property
+    def module(self):
+        if isinstance(self._module, str):
+            return self._module
+        return self._module[0].split('.')[0]
+
     def __call__(self, *args, **kwargs):
         raise RuntimeError()
 
@@ -110,16 +116,10 @@ class LazyObject:
 
     def __str__(self) -> str:
         if self._imported is not None:
-            return str(self._imported)
+            return self._imported
         return self.module
 
     __repr__ = __str__
-
-    @property
-    def module(self):
-        if isinstance(self._module, str):
-            return self._module
-        return self._module[0].split('.')[0]
 
 
 class LazyAttr:
@@ -184,6 +184,10 @@ class LazyAttr:
             self._module = f'{self.source._module}.{self.source.name}'
         self.location = location
 
+    @property
+    def module(self):
+        self._module
+
     def __call__(self, *args, **kwargs: Any) -> Any:
         raise RuntimeError()
 
@@ -211,7 +215,3 @@ class LazyAttr:
         return self.name
 
     __repr__ = __str__
-
-    @property
-    def module(self):
-        self._module
