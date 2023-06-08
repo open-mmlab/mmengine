@@ -167,7 +167,7 @@ class TestParameterScheduler(TestCase):
             self.optimizer, param_name='lr', step_size=3, gamma=0.1)
         for epoch in range(epochs):
             result = scheduler.get_last_value()
-            if isinstance(scheduler.optimizer, OptimWrapper):
+            if isinstance(scheduler.optimizer, OptimWrapper) and scheduler.optimizer.base_param_settings is not None:
                 result.pop()
             self.optimizer.step()
             scheduler.step()
