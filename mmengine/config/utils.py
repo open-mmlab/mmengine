@@ -258,6 +258,17 @@ class ImportTransformer(ast.NodeTransformer):
                  filename=None):
         self.base_dict = base_dict if base_dict is not None else {}
         self.global_dict = global_dict
+        # In Windows, the filename could be like this:
+        # "C:\\Users\\runneradmin\\AppData\\Local\\"
+        # Although it has been an raw string, ast.parse will firstly it as the
+        # executed code:
+        # "C:\Users\runneradmin\AppData\Local\\\"
+        # As you see, the `\U` will be treated as a part of
+        # the escape sequence during code parsing, leading to an
+        # parsing error
+        # Here we use `encode('unicode_escape').decode()` for double escaping
+        if isinstance(filename, str):
+            filename = filename.encode('unicode_escape').decode()
         self.filename = filename
         self.imported_obj: set = set()
         super().__init__()
