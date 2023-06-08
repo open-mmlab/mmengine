@@ -175,7 +175,6 @@ class TestOptimWrapper(MultiProcessTestCase):
         optim = SGD(model.parameters(), lr=0.1)
         optim_wrapper = OptimWrapper(optim)
         self.assertEqual(optim_wrapper.get_lr(), dict(lr=[0.1]))
-        
         model = ToyModel()
         optimizer_cfg = dict(
             type='OptimWrapper', optimizer=dict(type='SGD', lr=0.1))
