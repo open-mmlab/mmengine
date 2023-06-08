@@ -115,7 +115,10 @@ class OptimWrapperDict(OptimWrapper):
         """
         lr_dict = dict()
         for name, optim_wrapper in self.optim_wrappers.items():
-            lr_dict[f'{name}.lr'] = optim_wrapper.get_lr()['lr']
+            inner_lr_dict = optim_wrapper.get_lr()
+            if 'base_lr' in inner_lr_dict:
+                lr_dict[f'{name}.base_lr'] = inner_lr_dict['base_lr']
+            lr_dict[f'{name}.lr'] = inner_lr_dict['lr']
         return lr_dict
 
     def get_momentum(self) -> Dict[str, List[float]]:
