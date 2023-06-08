@@ -299,11 +299,6 @@ class OptimWrapper:
         Returns:
              dict: the ``param_groups`` of :attr:`optimizer`.
         """
-
-        # If ``self.base_param_settings`` is not None, the ``param_groups``
-        # of :attr:`optimizer` will be appended to
-        # ``self.base_param_settings``. Otherwise, the ``param_groups``
-        # of :attr:`optimizer` will be returned.
         if self.base_param_settings is not None:
             return self.optimizer.param_groups + [self.base_param_settings]
         else:
