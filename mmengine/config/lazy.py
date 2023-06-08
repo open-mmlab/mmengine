@@ -44,7 +44,7 @@ class LazyObject:
                  location: str = None):
         if not isinstance(module, str) and not is_seq_of(module, str):
             raise TypeError('module should be `str`, `list`, `tuple` or '
-                            f'None, but got {type(module)}, this might be '
+                            f'but got {type(module)}, this might be '
                             'a bug of MMEngine, please report it to '
                             'https://github.com/open-mmlab/mmengine/issues')
         self._module: Union[str, list, tuple] = module
