@@ -1,8 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
-from collections import defaultdict
 from contextlib import contextmanager
-from itertools import chain
 from typing import Dict, List, Optional
 
 import torch
@@ -307,8 +305,7 @@ class OptimWrapper:
         # ``self.base_param_settings``. Otherwise, the ``param_groups``
         # of :attr:`optimizer` will be returned.
         if self.base_param_settings is not None:
-            return list(
-                chain(self.optimizer.param_groups, [self.base_param_settings]))
+            return self.optimizer.param_groups + [self.base_param_settings]
         else:
             return list(self.optimizer.param_groups)
 
@@ -329,13 +326,15 @@ class OptimWrapper:
         Provide unified interface to get learning rate of optimizer.
 
         Returns:
-            Dict[str, List[float]]: param_groups learning rate of the optimizer.
+            Dict[str, List[float]]:
+            param_groups learning rate of the optimizer.
         """
         res = {}
         if self.base_param_settings is not None:
             res['base_lr'] = [self.base_param_settings['lr']]
 
-        res['lr'] = [group['lr'] for group in self.param_groups]:
+        res['lr'] = [group['lr'] for group in self.optimizer.param_groups]
+
         return res
 
     def get_momentum(self) -> Dict[str, List[float]]:
