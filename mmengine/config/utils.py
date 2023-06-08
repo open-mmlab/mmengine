@@ -176,10 +176,10 @@ def _is_builtin_module(module_name: str) -> bool:
         return True
 
 
-class Transform(ast.NodeTransformer):
+class ImportTransformer(ast.NodeTransformer):
     """Convert the import syntax to the assignment of
-    ``mmengine.config.LazyObject`` and preload the base variable before parsing
-    the configuration file.
+    :class:`mmengine.config.LazyObject` and preload the base variable before
+    parsing the configuration file.
 
     Since you are already looking at this part of the code, I believe you must
     be interested in the mechanism of the ``lazy_import`` feature of
@@ -297,52 +297,55 @@ class Transform(ast.NodeTransformer):
             return node
 
         if module in self.base_dict:
-            for name in node.names:
-                if name.name == '*':
+            for alias_node in node.names:
+                if alias_node.name == '*':
                     self.global_dict.update(self.base_dict[module])
                     return None
-                if name.asname is not None:
-                    base_key = name.asname
+                if alias_node.asname is not None:
+                    base_key = alias_node.asname
                 else:
-                    base_key = name.name
-                self.global_dict[base_key] = self.base_dict[module][name.name]
+                    base_key = alias_node.name
+                self.global_dict[base_key] = self.base_dict[module][
+                    alias_node.name]
             return None
 
         # TODO: Support lazyimport module from relative path
         nodes: List[ast.Assign] = []
-        for name in node.names:
-            # `ast.alias`` have lineno attr after Python 3.10,
-            if hasattr(name, 'lineno'):
-                lineno = name.lineno
+        for alias_node in node.names:
+            # `ast.alias` has lineno attr after Python 3.10,
+            if hasattr(alias_node, 'lineno'):
+                lineno = alias_node.lineno
             else:
                 lineno = node.lineno
-            if name == '*':
+            if alias_node == '*':
                 # TODO If user import * from a non-config module, it should
                 # fallback to import the real module and raise a warning to
                 # remind user the real module will be imported which will slows
                 # donwn the parsing speed.
                 raise RuntimeError(
-                    'You cannot import * from a non-config module!')
-            elif name.asname is not None:
+                    'Illegal syntax in config! From xxx import * is not '
+                    'allowed to appear outside the `if base:` statement')
+            elif alias_node.asname is not None:
                 # case1:
                 # from mmengine.dataset import BaseDataset as Dataset ->
                 # Dataset = LazyObject('mmengine.dataset', 'BaseDataset')
-                code = f'{name.asname} = LazyObject("{module}", "{name.name}", "{self.filename}, line {lineno}")'  # noqa: E501
-                self.imported_obj.add(name.asname)
+                code = f'{alias_node.asname} = LazyObject("{module}", "{alias_node.name}", "{self.filename}, line {lineno}")'  # noqa: E501
+                self.imported_obj.add(alias_node.asname)
             else:
                 # case2:
                 # from mmengine.model import BaseModel
                 # BaseModel = LazyObject('mmengine.model', 'BaseModel')
-                code = f'{name.name} = LazyObject("{module}", "{name.name}", "{self.filename}, line {lineno}")'  # noqa: E501
-                self.imported_obj.add(name.name)
+                code = f'{alias_node.name} = LazyObject("{module}", "{alias_node.name}", "{self.filename}, line {lineno}")'  # noqa: E501
+                self.imported_obj.add(alias_node.name)
             try:
                 nodes.append(ast.parse(code).body[0])  # type: ignore
             except Exception as e:
                 raise ImportError(
-                    f'Cannot import {name} from {module}',
-                    '1. Cannot import * from 3rd party lib in the config file',
+                    f'Cannot import {alias_node} from {module}',
+                    '1. Cannot import * from 3rd party lib in the config '
+                    'file\n'
                     '2. Please check if the module is a base config which '
-                    'should be added to `_base_`',
+                    'should be added to `_base_`\n',
                 ) from e
         return nodes
 
@@ -382,15 +385,16 @@ class Transform(ast.NodeTransformer):
         # from the same module and construct the LazyObject.
         alias_list = node.names
         assert len(alias_list) == 1, (
-            'Does not support import multiple modules in one line')
+            'Illegal syntax in config! import multiple modules in one line is '
+            'not supported')
         # TODO Support multiline import
         alias = alias_list[0]
         if alias.asname is not None:
             self.imported_obj.add(alias.asname)
             return ast.parse(  # type: ignore
                 f'{alias.asname} = LazyObject('
-                rf'"{alias.name}",'
-                rf'location="{self.filename}: line, {node.lineno}")').body[0]
+                f'"{alias.name}",'
+                f'location="{self.filename}, line {node.lineno}")').body[0]
         return node
 
 

@@ -14,6 +14,3 @@ mmengine.config
    Config
    ConfigDict
    DictAction
-   Transform
-   LazyObject
-   LazyAttr

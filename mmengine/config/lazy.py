@@ -6,8 +6,8 @@ from mmengine.utils import is_seq_of
 
 
 class LazyObject:
-    """LazyObject is used to lazy initialize the imported module during parsing
-    the configuration file.
+    """LazyObject is used to lazily initialize the imported module during
+    parsing the configuration file.
 
     During parsing process, the syntax like:
 
@@ -29,18 +29,20 @@ class LazyObject:
         >>> mmcls = lazyObject(['mmcls', 'mmcls.datasets', 'mmcls.models'])
 
     ``LazyObject`` records all module information and will be further
-    referenced by configuration file.
+    referenced by the configuration file.
 
     Args:
         module (str or list or tuple): The module name to be imported.
         imported (str, optional): The imported module name. Defaults to None.
+        location (str, optional): The filename and line number of the imported
+            module statement happened.
     """
 
     def __init__(self,
                  module: Union[str, list, tuple],
                  imported: Optional[str] = None,
-                 location=None):
-        if (not isinstance(module, str) and not is_seq_of(module, str)):
+                 location: str = None):
+        if not isinstance(module, str) and not is_seq_of(module, str):
             raise TypeError('module should be `str`, `list`, `tuple` or '
                             f'None, but got {type(module)}, this might be '
                             'a bug of MMEngine, please report it to '
@@ -62,24 +64,19 @@ class LazyObject:
             Any: Imported object
         """
         if isinstance(self._module, str):
-            # For import xxx.xxx as xxx or from xxx.xxx import xxx
             try:
                 module = importlib.import_module(self._module)
-                if self._imported:
-                    module = getattr(module, self._imported)
-            except AttributeError or ImportError:
-                if self._imported is not None:
-                    raise ImportError(
-                        f'Cannot import {self._imported} '
-                        f'from {self._module} in {self.location}')
-                else:
-                    raise ImportError(f'Cannot import {self._module} '
-                                      f'in {self.location}')
             except Exception as e:
-                raise type(e)(
-                    f'{e} in {self.location}, if you have checked the '
-                    'correctness of your syntax, please report this bug '
-                    'to https://github.com/open-mmlab/mmengine/issues')
+                raise type(e)(f'Failed to import {self._module} '
+                              f'in {self.location} for {e}')
+
+            if self._imported is not None:
+                if hasattr(module, self._imported):
+                    module = getattr(module, self._imported)
+                else:
+                    raise ImportError(
+                        f'Failed to import {self._imported} '
+                        f'from {self._module} in {self.location}')
 
             return module
         else:
@@ -92,14 +89,9 @@ class LazyObject:
                     importlib.import_module(module)  # type: ignore
                 module_name = self._module[0].split('.')[0]
                 return importlib.import_module(module_name)
-            except ImportError:
-                raise ImportError(f'Cannot import {self._module} '
-                                  f'in {self.location}')
             except Exception as e:
-                raise type(e)(
-                    f'{e} in {self.location}, if you have checked the '
-                    'correctness of your syntax, please report this bug '
-                    'to https://github.com/open-mmlab/mmengine/issues')
+                raise type(e)(f'Failed to import {self._module} '
+                              f'in {self.location} for {e}')
 
     def __call__(self, *args, **kwargs):
         raise RuntimeError()

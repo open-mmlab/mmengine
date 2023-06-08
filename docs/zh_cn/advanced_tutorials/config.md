@@ -606,9 +606,10 @@ print(type(cfg['optimizer']['type']))
 
 ### 功能限制
 
-1. 不能在配置文件中定义函数、类等，只能定义 builtin 变量或从三方库导入变量
+1. 不能在配置文件中定义函数、类等
 2. 配置文件名必须符合 python 模块名的命名规范，即只能包含字母、数字、下划线，且不能以数字开头
 3. 导入 base 配置文件中的变量时候，例如 `from ._base_.alpha import beta`，此处的 `alpha` 必须是模块（module）名，即 python 文件，而能不是含有 `__init__.py` 的包（package）名
+4. 不支持在 absolute import 语句中同时导入多个变量，例如 `import torch, numpy, os`. 需要通过多个 import 语句来实现，例如 `import torch; import numpy; import os`
 
 ### 迁移指南
 

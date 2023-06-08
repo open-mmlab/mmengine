@@ -11,7 +11,7 @@ import numpy.linalg as linalg
 
 import mmengine
 from mmengine.config.lazy import LazyAttr, LazyObject
-from mmengine.config.utils import Transform, _gather_abs_import_lazyobj
+from mmengine.config.utils import ImportTransformer, _gather_abs_import_lazyobj
 from mmengine.fileio import LocalBackend, PetrelBackend
 
 
@@ -30,7 +30,7 @@ class TestTransform(TestCase):
             codestr = f.read()
         codeobj = ast.parse(codestr)
         global_dict = {'LazyObject': LazyObject}
-        codeobj = Transform(global_dict).visit(codeobj)
+        codeobj = ImportTransformer(global_dict).visit(codeobj)
         codeobj, _ = _gather_abs_import_lazyobj(codeobj)
         codeobj = ast.fix_missing_locations(codeobj)
 

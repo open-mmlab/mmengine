@@ -23,9 +23,10 @@ from mmengine.logging import print_log
 from mmengine.utils import (check_file_exist, get_installed_path,
                             import_modules_from_strings, is_installed)
 from .lazy import LazyAttr, LazyObject
-from .utils import (RemoveAssignFromAST, Transform, _gather_abs_import_lazyobj,
-                    _get_external_cfg_base_path, _get_external_cfg_path,
-                    _get_package_and_cfg_path, _is_builtin_module)
+from .utils import (ImportTransformer, RemoveAssignFromAST,
+                    _gather_abs_import_lazyobj, _get_external_cfg_base_path,
+                    _get_external_cfg_path, _get_package_and_cfg_path,
+                    _is_builtin_module)
 
 BASE_KEY = '_base_'
 DELETE_KEY = '_delete_'
@@ -45,7 +46,7 @@ class ConfigDict(Dict):
     The Config class would transform the nested fields (dictionary-like fields)
     in config file into ``ConfigDict``.
 
-    If the class attribute``lazy``  is ``False``, users will get the
+    If the class attribute ``lazy``  is ``False``, users will get the
     object built by ``LazyObject`` or ``LazyAttr``, otherwise users will get
     the ``LazyObject`` or ``LazyAttr`` itself.
 
@@ -53,10 +54,6 @@ class ConfigDict(Dict):
     object during configuration parsing, and it should be set to False outside
     the Config to ensure that users do not experience the ``LazyObject``.
     """
-    # Lazy should be False when parsing configs, otherwise the real object
-    # will be imported during parsing.
-    # Lazy should be True after parsing the configs, users will get the
-    # real object and will not perceive the existence of LazyObject
     lazy = False
 
     def __init__(__self, *args, **kwargs):
@@ -295,7 +292,7 @@ class Config:
         filename (str or Path, optional): Name of config file.
             Defaults to None.
 
-    Here is a simple examples:
+    Here is a simple example:
 
     Examples:
         >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
@@ -364,8 +361,10 @@ class Config:
             use_predefined_variables (bool, optional): Whether to use
                 predefined variables. Defaults to True.
             import_custom_modules (bool, optional): Whether to support
-                importing custom modules in config. Defaults to None. If it
-                is None, it will be deduced by the config file style.
+                importing custom modules in config. Defaults to None.
+            lazy_import (bool): Whether to load config in `lazy_import` mode.
+                If it is `None`, it will be deduced by the content of the
+                config file. Defaults to None.
 
         Returns:
             Config: Config instance built from config file.
@@ -453,10 +452,10 @@ class Config:
 
     @staticmethod
     def _get_base_modules(codes: list) -> list:
-        """Get base module name from python file.
+        """Get base module name from parsed code.
 
         Args:
-            filename (str): Name of python config file.
+            codes (str): Parsed code of the config file.
 
         Returns:
             list: Name of base modules.
@@ -932,7 +931,7 @@ class Config:
         #    recorded in the `imported_names` set. These variables can be
         #    accessed, but will not be dumped by default.
 
-        with open(filename) as f:
+        with open(filename, encoding='utf-8') as f:
             global_dict = {'LazyObject': LazyObject}
             base_dict = {}
 
@@ -994,7 +993,7 @@ class Config:
             # the global dict. After the ast transformation, most of import
             # syntax will be removed (except for the builtin import) and
             # replaced with the `LazyObject`
-            transform = Transform(
+            transform = ImportTransformer(
                 global_dict=global_dict,
                 base_dict=base_dict,
                 filename=filename)
@@ -1038,7 +1037,7 @@ class Config:
                 cfg = cfg.to_dict()
             cfg_dict = ConfigDict()
             for key, value in cfg.items():
-                cfg_dict[key] = Config._dict_to_config_dict_lazy(value, )
+                cfg_dict[key] = Config._dict_to_config_dict_lazy(value)
             return cfg_dict
         if isinstance(cfg, (tuple, list)):
             return type(cfg)(
@@ -1520,10 +1519,10 @@ class Config:
     def _is_lazy_import(filename: str) -> bool:
         if not filename.endswith('.py'):
             return False
-        with open(filename) as f:
+        with open(filename, encoding='utf-8') as f:
             codes_str = f.read()
-            codes = ast.parse(codes_str)
-        for node in ast.walk(codes):
+            nodes = ast.parse(codes_str)
+        for node in ast.walk(nodes):
             if (isinstance(node, ast.Assign)
                     and isinstance(node.targets[0], ast.Name)
                     and node.targets[0].id == BASE_KEY):
