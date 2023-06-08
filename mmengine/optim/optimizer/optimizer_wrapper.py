@@ -331,14 +331,12 @@ class OptimWrapper:
         Returns:
             Dict[str, List[float]]: param_groups learning rate of the optimizer.
         """
-        res = defaultdict(list)
+        res = {}
         if self.base_param_settings is not None:
-            res['base_lr'].append(self.base_param_settings['lr'])
+            res['base_lr'] = [self.base_param_settings['lr']]
 
-        for group in self.param_groups:
-            res['lr'].append(group['lr'])
-
-        return dict(res)
+        res['lr'] = [group['lr'] for group in self.param_groups]:
+        return res
 
     def get_momentum(self) -> Dict[str, List[float]]:
         """Get the momentum of the optimizer.
