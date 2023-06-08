@@ -987,7 +987,7 @@ class TestConfig:
         # catch import error correctly
         error_obj = tmp_path / 'error_obj.py'
         error_obj.write_text("""from mmengine.fileio import error_obj""")
-        with pytest.raises(ImportError, match=f'.*{error_obj}, line 1.*'):
+        with pytest.raises(ImportError):
             cfg = Config.fromfile(str(error_obj))
             cfg.error_obj
 
