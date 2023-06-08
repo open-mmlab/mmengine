@@ -329,7 +329,7 @@ class OptimWrapper:
         Provide unified interface to get learning rate of optimizer.
 
         Returns:
-            Dict[str, List[float]]:param_groups Learning rate of the optimizer.
+            Dict[str, List[float]]: param_groups learning rate of the optimizer.
         """
         res = defaultdict(list)
         if self.base_param_settings is not None:
