@@ -307,7 +307,7 @@ class OptimWrapper:
         if self.base_param_settings is not None:
             return self.optimizer.param_groups + [self.base_param_settings]
         else:
-            return list(self.optimizer.param_groups)
+            return self.optimizer.param_groups
 
     @property
     def defaults(self) -> dict:
