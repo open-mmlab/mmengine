@@ -1427,7 +1427,8 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
             # Consider the `min_value` of the last param_groups
             # as the base setting. And we only add this value when
             # the optimizer is OptimWrapper.
-            if isinstance(optimizer, OptimWrapper):
+            if isinstance(optimizer, OptimWrapper) and \
+                    optimizer.base_param_settings is not None:
                 self.min_values.append(self.min_values[-1])
 
         else:
