@@ -35,6 +35,7 @@ class DeepSpeedStrategy(BaseStrategy):
         # the following args are for deepspeed
         config: Union[str, dict, None] = None,
         zero_optimization: Optional[dict] = None,
+        gradient_clipping: float = 1.0,
         fp16: Optional[dict] = None,
         inputs_to_half: Optional[List[Union[int, str]]] = None,
         bf16: Optional[dict] = None,
@@ -51,6 +52,7 @@ class DeepSpeedStrategy(BaseStrategy):
         self.config = self._parse_config(config)
         if zero_optimization is not None:
             self.config['zero_optimization'] = zero_optimization
+        self.config['gradient_clipping'] = gradient_clipping
         if fp16 is not None:
             self.config['fp16'] = fp16
         if bf16 is not None:
