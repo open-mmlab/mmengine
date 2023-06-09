@@ -78,7 +78,7 @@ class ConfigDict(Dict):
                 for key, val in iter(arg):
                     __self[key] = __self._hook(val)
 
-        for key, val in kwargs.items():
+        for key, val in dict.items(kwargs):
             __self[key] = __self._hook(val)
 
     def __missing__(self, name):
@@ -134,7 +134,7 @@ class ConfigDict(Dict):
 
         Args:
             key (str): The key.
-            default (any, optional): _description_. Defaults to None.
+            default (any, optional): The default value. Defaults to None.
 
         Returns:
             Any: The value of the key.
@@ -455,7 +455,7 @@ class Config:
         """Get base module name from parsed code.
 
         Args:
-            codes (str): Parsed code of the config file.
+            codes (list): Parsed code of the config file.
 
         Returns:
             list: Name of base modules.
@@ -471,11 +471,15 @@ class Config:
                 list: Name of base modules.
             """
             base_modules = []
+            inst: ast.AST
             for inst in ifcodes:
                 assert isinstance(inst, ast.ImportFrom), (
-                    'Only support import from statement in _base_')
+                    'Illegal syntax in config file! Only '
+                    '`from ... import ...` could be implemented` in '
+                    '`if _base_`')
                 assert inst.module is not None, (
-                    'You must import base file by from xxx import yyy')
+                    'Illegal syntax in config file! Syntax like '
+                    '`from . import xxx` is not allowed in `if _base_` ')
                 base_modules.append(inst.level * '.' + inst.module)
             return base_modules
 
@@ -1545,8 +1549,8 @@ class Config:
                 if not _is_builtin_module(node.module):
                     return True
             if isinstance(node, ast.Import):
-                for name in node.names:
-                    if not _is_builtin_module(name.name):
+                for alias_node in node.names:
+                    if not _is_builtin_module(alias_node.name):
                         return True
         return False
 

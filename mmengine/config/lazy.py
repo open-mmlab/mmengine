@@ -24,7 +24,7 @@ class LazyObject:
         >>> # import torch.nn as nn
         >>> nn = lazyObject('torch.nn')
         >>> # from mmdet.models import RetinaNet
-        >>> RetinaNet = lazyObject(['mmdet.models', 'RetinaNet'])
+        >>> RetinaNet = lazyObject('mmdet.models', 'RetinaNet')
         >>> # import mmcls.models; import mmcls.datasets; import mmcls
         >>> mmcls = lazyObject(['mmcls', 'mmcls.datasets', 'mmcls.models'])
 
@@ -41,7 +41,7 @@ class LazyObject:
     def __init__(self,
                  module: Union[str, list, tuple],
                  imported: Optional[str] = None,
-                 location: str = None):
+                 location: Optional[str] = None):
         if not isinstance(module, str) and not is_seq_of(module, str):
             raise TypeError('module should be `str`, `list`, or `tuple`'
                             f'but got {type(module)}, this might be '
@@ -203,11 +203,12 @@ class LazyAttr:
         Returns:
             Any: attribute of the imported object.
         """
+        source = self.source.build()
         try:
-            return getattr(self.source.build(), self.name)
+            return getattr(source, self.name)
         except AttributeError:
             raise ImportError(
-                f'Cannot import f{self.module} in {self.location}')
+                f'Failed to import {self.module} in {self.location}')
         except ImportError as e:
             raise e
 

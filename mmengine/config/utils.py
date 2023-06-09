@@ -284,7 +284,7 @@ class ImportTransformer(ast.NodeTransformer):
         Will be parsed as:
 
         Examples:
-            >>> RetinaNet = lazyObject(['mmdet.models', 'RetinaNet'])
+            >>> RetinaNet = lazyObject('mmdet.models', 'RetinaNet')
 
         ``global_dict`` will also be updated by ``base_dict`` as the
         class docstring says.
