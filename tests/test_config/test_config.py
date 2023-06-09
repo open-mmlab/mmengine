@@ -987,7 +987,9 @@ class TestConfig:
         # catch import error correctly
         error_obj = tmp_path / 'error_obj.py'
         error_obj.write_text("""from mmengine.fileio import error_obj""")
-        with pytest.raises(ImportError):
+        # match pattern should be double escaped
+        match = str(error_obj).encode('unicode_escape').decode()
+        with pytest.raises(ImportError, match=f'.*{match}.*'):
             cfg = Config.fromfile(str(error_obj))
             cfg.error_obj
 
@@ -996,13 +998,15 @@ class TestConfig:
 import mmengine
 error_attr = mmengine.error_attr
 """)  # noqa: E122
-        with pytest.raises(ImportError, match=f'.*{error_attr}'):
+        match = str(error_attr).encode('unicode_escape').decode()
+        with pytest.raises(ImportError, match=f'.*{match}.*'):
             cfg = Config.fromfile(str(error_attr))
             cfg.error_attr
 
         error_module = tmp_path / 'error_module.py'
         error_module.write_text("""import error_module""")
-        with pytest.raises(ImportError, match=f'.*{error_module}, line 1.*'):
+        match = str(error_module).encode('unicode_escape').decode()
+        with pytest.raises(ImportError, match=f'.*{match}.*'):
             cfg = Config.fromfile(str(error_module))
             cfg.error_module
 

@@ -439,7 +439,7 @@ def _gather_abs_import_lazyobj(tree: ast.Module,
         else:
             lineno = module2node[key].lineno
         lazy_module_assign = ast.parse(
-            rf'{key} = LazyObject({names}, location="{filename}, line {lineno}")'  # noqa: E501
+            f'{key} = LazyObject({names}, location="{filename}, line {lineno}")'  # noqa: E501
         )  # noqa: E501
         abs_imported.add(key)
         new_body.insert(0, lazy_module_assign.body[0])
