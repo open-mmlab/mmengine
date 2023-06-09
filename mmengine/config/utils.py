@@ -200,12 +200,14 @@ class ImportTransformer(ast.NodeTransformer):
     corresponding to the "type" field using the ``import`` syntax. Similarly,
     we can also ``import`` base file.
 
-    However, this approach has a significant drawback. We need to trigger the
-    import logic to parse the configuration file, which can be time-consuming.
-    This also implies that we have to download numerous dependencies to parse
-    the configuration file. Yet, there may be instances where we simply want
-    to use string-like fields in the configuration rather than actually
-    importing them.
+    However, this approach has a significant drawback. It requires triggering
+    the import logic to parse the configuration file, which can be
+    time-consuming. Additionally, it implies downloading numerous dependencies
+    solely for the purpose of parsing the configuration file.
+    However, it's possible that only a portion of the config will actually be
+    used. For instance, the package used in the ``train_pipeline`` may not
+    be necessary for an evaluation task. Forcing users to download these
+    unused packages is not a desirable solution.
 
     To avoid this problem, we introduce :class:`mmengine.config.LazyObject` and
     :class:`mmengine.config.LazyAttr`. Before we proceed with further
