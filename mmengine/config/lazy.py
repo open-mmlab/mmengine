@@ -143,7 +143,7 @@ class LazyAttr:
                  source: Union['LazyObject', 'LazyAttr'],
                  location=None):
         self.name = name
-        self.source = source
+        self.source: Union[LazyAttr, LazyObject] = source
         # What is self._module meaning:
         # import a.b as b
         # b.c -> self._module of c is `a.b`
@@ -203,9 +203,9 @@ class LazyAttr:
         Returns:
             Any: attribute of the imported object.
         """
-        source = self.source.build()
+        obj = self.source.build()
         try:
-            return getattr(source, self.name)
+            return getattr(obj, self.name)
         except AttributeError:
             raise ImportError(
                 f'Failed to import {self.module} in {self.location}')

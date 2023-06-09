@@ -451,55 +451,54 @@ class Config:
         return cfg
 
     @staticmethod
-    def _get_base_modules(codes: list) -> list:
+    def _get_base_modules(nodes: list) -> list:
         """Get base module name from parsed code.
 
         Args:
-            codes (list): Parsed code of the config file.
+            nodes (list): Parsed code of the config file.
 
         Returns:
             list: Name of base modules.
         """
 
-        def _get_base_module_from_if(ifcodes: list) -> list:
+        def _get_base_module_from_if(if_nodes: list) -> list:
             """Get base module name from if statement in python file.
 
             Args:
-                ifcodes (list): List of if statement.
+                if_nodes (list): List of if statement.
 
             Returns:
                 list: Name of base modules.
             """
             base_modules = []
-            inst: ast.AST
-            for inst in ifcodes:
-                assert isinstance(inst, ast.ImportFrom), (
+            for node in if_nodes:
+                assert isinstance(node, ast.ImportFrom), (
                     'Illegal syntax in config file! Only '
                     '`from ... import ...` could be implemented` in '
                     '`if _base_`')
-                assert inst.module is not None, (
+                assert node.module is not None, (
                     'Illegal syntax in config file! Syntax like '
                     '`from . import xxx` is not allowed in `if _base_` ')
-                base_modules.append(inst.level * '.' + inst.module)
+                base_modules.append(node.level * '.' + node.module)
             return base_modules
 
-        for idx, inst in enumerate(codes):
-            if (isinstance(inst, ast.Assign)
-                    and isinstance(inst.targets[0], ast.Name)
-                    and inst.targets[0].id == BASE_KEY):
+        for idx, node in enumerate(nodes):
+            if (isinstance(node, ast.Assign)
+                    and isinstance(node.targets[0], ast.Name)
+                    and node.targets[0].id == BASE_KEY):
                 raise RuntimeError(
                     'The configuration file type in the inheritance chain '
                     'must match the current configuration file type, either '
                     '"lazy_import" or non-"lazy_import". You got this error '
-                    f'since you use the syntax like `_base_ = "{inst.targets[0].id}"` '  # noqa: E501
+                    f'since you use the syntax like `_base_ = "{node.targets[0].id}"` '  # noqa: E501
                     'in your config. You should use `if "_base_": ... to` '
                     'mark the inherited config file. See more information '
                     'in https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html'  # noqa: E501
                 )
 
-            if not isinstance(inst, ast.If):
+            if not isinstance(node, ast.If):
                 continue
-            value = inst.test
+            value = node.test
             if isinstance(value, ast.Constant) and not value.value == BASE_KEY:
                 continue
             if isinstance(value, ast.Str) and not value.s == BASE_KEY:
@@ -516,10 +515,10 @@ class Config:
             # ```
             # As you can see, the if statement is removed and the
             # from ... import statement will be unindent
-            for nested_idx, nested_inst in enumerate(inst.body):
-                codes.insert(idx + nested_idx + 1, nested_inst)
-            codes.pop(idx)
-            return _get_base_module_from_if(inst.body)
+            for nested_idx, nested_inst in enumerate(node.body):
+                nodes.insert(idx + nested_idx + 1, nested_inst)
+            nodes.pop(idx)
+            return _get_base_module_from_if(node.body)
         return []
 
     @staticmethod
@@ -814,9 +813,10 @@ class Config:
 
                 if filename.endswith('.py'):
                     with open(temp_config_file.name, encoding='utf-8') as f:
-                        codes = ast.parse(f.read())
-                        codes = RemoveAssignFromAST(BASE_KEY).visit(codes)
-                    codeobj = compile(codes, '', mode='exec')
+                        parsed_codes = ast.parse(f.read())
+                        parsed_codes = RemoveAssignFromAST(BASE_KEY).visit(
+                            parsed_codes)
+                    codeobj = compile(parsed_codes, '', mode='exec')
                     # Support load global variable in nested function of the
                     # config.
                     global_locals_var = {BASE_KEY: base_cfg_dict}
@@ -939,10 +939,10 @@ class Config:
             global_dict = {'LazyObject': LazyObject}
             base_dict = {}
 
-            code = ast.parse(f.read())
+            parsed_codes = ast.parse(f.read())
             # get the names of base modules, and remove the
             # `if '_base_:'` statement
-            base_modules = Config._get_base_modules(code.body)
+            base_modules = Config._get_base_modules(parsed_codes.body)
             base_imported_names = set()
             for base_module in base_modules:
                 # If base_module means a relative import, assuming the level is
@@ -1001,7 +1001,7 @@ class Config:
                 global_dict=global_dict,
                 base_dict=base_dict,
                 filename=filename)
-            modified_code = transform.visit(code)
+            modified_code = transform.visit(parsed_codes)
             modified_code, abs_imported = _gather_abs_import_lazyobj(
                 modified_code, filename=filename)
             imported_names = transform.imported_obj | abs_imported
@@ -1119,14 +1119,15 @@ class Config:
         if file_format == '.py':
             Config._validate_py_syntax(filename)
             with open(filename, encoding='utf-8') as f:
-                codes = ast.parse(f.read()).body
+                parsed_codes = ast.parse(f.read()).body
 
                 def is_base_line(c):
                     return (isinstance(c, ast.Assign)
                             and isinstance(c.targets[0], ast.Name)
                             and c.targets[0].id == BASE_KEY)
 
-                base_code = next((c for c in codes if is_base_line(c)), None)
+                base_code = next((c for c in parsed_codes if is_base_line(c)),
+                                 None)
                 if base_code is not None:
                     base_code = ast.Expression(  # type: ignore
                         body=base_code.value)  # type: ignore
@@ -1525,8 +1526,8 @@ class Config:
             return False
         with open(filename, encoding='utf-8') as f:
             codes_str = f.read()
-            nodes = ast.parse(codes_str)
-        for node in ast.walk(nodes):
+            parsed_codes = ast.parse(codes_str)
+        for node in ast.walk(parsed_codes):
             if (isinstance(node, ast.Assign)
                     and isinstance(node.targets[0], ast.Name)
                     and node.targets[0].id == BASE_KEY):
