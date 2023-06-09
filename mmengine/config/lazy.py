@@ -144,10 +144,7 @@ class LazyAttr:
                  location=None):
         self.name = name
         self.source: Union[LazyAttr, LazyObject] = source
-        # What is self._module meaning:
-        # import a.b as b
-        # b.c -> self._module of c is `a.b`
-        # b.c.d -> self._module of d = `a.b.c`
+
         if isinstance(self.source, LazyObject):
             if isinstance(self.source._module, str):
                 # In this case, the source code of LazyObject could be one of
@@ -156,7 +153,8 @@ class LazyAttr:
                 # 2. from xxx.yyy import zzz
 
                 # The equivalent code of LazyObject is:
-                # zzz = LazyObject('')
+                # 1. zzz = LazyObject('xxx.yyy')
+                # 2. zzz = LazyObject('xxx.yyy', 'zzz')
 
                 # The source code of LazyAttr will be:
                 # eee = zzz.eee

@@ -214,14 +214,14 @@ class ImportTransformer(ast.NodeTransformer):
     explanations, you may refer to the documentation of these two modules to
     gain an understanding of their functionalities.
 
-    Actually, one of the functions of ``Transform`` is to hack the ``import``
-    syntax. It will replace the import syntax (exclude import the base files)
-    with the assignment of ``LazyObject``.
+    Actually, one of the functions of ``ImportTransformer`` is to hack the
+    ``import`` syntax. It will replace the import syntax
+    (exclude import the base files) with the assignment of ``LazyObject``.
 
     As for the import syntax of the base file, we cannot lazy import it since
     we're eager to merge the fields of current file and base files. Therefore,
-    another function of the ``Transform`` is to collaborate with
-    ``Config._parse_lazy_import`` to parse base files.
+    another function of the ``ImportTransformer`` is to collaborate with
+    ``Config._parse_lazy_import`` to parse the base files.
 
     Args:
         global_dict (dict): The global dict of the current configuration file.
@@ -236,7 +236,7 @@ class ImportTransformer(ast.NodeTransformer):
         base_dict (dict): All variables defined in base files.
 
             Examples:
-                >>> if  '_base_':
+                >>> if '_base_':
                 >>>     from .._base_.default_runtime import *
                 >>>     from .._base_.datasets.coco_detection import dataset
 
@@ -257,7 +257,7 @@ class ImportTransformer(ast.NodeTransformer):
     def __init__(self,
                  global_dict: dict,
                  base_dict: Optional[dict] = None,
-                 filename=None):
+                 filename: Optional[str] = None):
         self.base_dict = base_dict if base_dict is not None else {}
         self.global_dict = global_dict
         # In Windows, the filename could be like this:
