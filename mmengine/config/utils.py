@@ -412,6 +412,8 @@ class ImportTransformer(ast.NodeTransformer):
 def _gather_abs_import_lazyobj(tree: ast.Module,
                                filename: Optional[str] = None):
     """Experimental implementation of gathering absolute import information."""
+    if isinstance(filename, str):
+        filename = filename.encode('unicode_escape').decode()
     imported = defaultdict(list)
     abs_imported = set()
     new_body: List[ast.stmt] = []
