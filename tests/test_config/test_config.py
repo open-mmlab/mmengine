@@ -989,7 +989,7 @@ class TestConfig:
         error_obj.write_text("""from mmengine.fileio import error_obj""")
         # match pattern should be double escaped
         match = str(error_obj).encode('unicode_escape').decode()
-        with pytest.raises(ImportError, match=f'.*{match}.*'):
+        with pytest.raises(ImportError, match=match):
             cfg = Config.fromfile(str(error_obj))
             cfg.error_obj
 
@@ -999,14 +999,14 @@ import mmengine
 error_attr = mmengine.error_attr
 """)  # noqa: E122
         match = str(error_attr).encode('unicode_escape').decode()
-        with pytest.raises(ImportError, match=f'.*{match}.*'):
+        with pytest.raises(ImportError, match=match):
             cfg = Config.fromfile(str(error_attr))
             cfg.error_attr
 
         error_module = tmp_path / 'error_module.py'
         error_module.write_text("""import error_module""")
         match = str(error_module).encode('unicode_escape').decode()
-        with pytest.raises(ImportError, match=f'.*{match}.*'):
+        with pytest.raises(ImportError, match=match):
             cfg = Config.fromfile(str(error_module))
             cfg.error_module
 
@@ -1016,6 +1016,7 @@ error_attr = mmengine.error_attr
             Config.fromfile(
                 osp.join(self.data_path,
                          'config/lazy_module_config/error_mix_using1.py'))
+
         # current lazy-import config, base text config
         with pytest.raises(RuntimeError, match='_base_ ='):
             Config.fromfile(

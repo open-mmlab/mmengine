@@ -90,7 +90,7 @@ class LazyObject:
                 module_name = self._module[0].split('.')[0]
                 return importlib.import_module(module_name)
             except Exception as e:
-                raise type(e)(f'Failed to import {self._module} '
+                raise type(e)(f'Failed to import {self.module} '
                               f'in {self.location} for {e}')
 
     @property
