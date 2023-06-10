@@ -651,13 +651,21 @@ class Config:
                             and isinstance(c.targets[0], ast.Name)
                             and c.targets[0].id == BASE_KEY)
 
-                base_code = next((c for c in codes if is_base_line(c)), None)
-                if base_code is not None:
-                    base_code = ast.Expression(  # type: ignore
-                        body=base_code.value)  # type: ignore
-                    base_files = eval(compile(base_code, '', mode='eval'))
-                else:
-                    base_files = []
+                # To resolve https://github.com/open-mmlab/mmengine/issues/758,
+                # We need to execute the code line by line to get the base
+                # file.
+                base_code = []
+                for c in codes:
+                    base_code.append(c)
+                    if is_base_line(c):
+                        break
+
+                variable_dict: dict = {}
+                code = ast.Module(body=base_code, type_ignores=[])
+                exec(
+                    compile(code, '', mode='exec'), variable_dict,
+                    variable_dict)
+                base_files = variable_dict.get('_base_', [])
         elif file_format in ('.yml', '.yaml', '.json'):
             import mmengine
             cfg_dict = mmengine.load(filename)
