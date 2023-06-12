@@ -531,10 +531,6 @@ def locate(obj_name: str):
         except ImportError:
             return None
 
-    # module does not exist
-    if module is None:
-        return module
-
     # get class or attribute from module
     while True:
         try:
