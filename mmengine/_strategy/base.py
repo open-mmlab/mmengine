@@ -75,7 +75,8 @@ class BaseStrategy(metaclass=ABCMeta):
         self._load_from = load_from
         self._resume = resume
 
-        self.setup_env(**env_kwargs or {})
+        self._env_kwargs = env_kwargs or {}
+        self.setup_env(**self._env_kwargs)
 
         if experiment_name is not None:
             self._experiment_name = f'{experiment_name}_{self.timestamp}'
@@ -314,10 +315,7 @@ class BaseStrategy(metaclass=ABCMeta):
         model = revert_sync_batchnorm(model)
         return model
 
-    def compile_model(
-        self,
-        model: nn.Module,
-    ) -> nn.Module:
+    def compile_model(self, model: nn.Module) -> nn.Module:
         """Compile model.
 
         Args:
@@ -341,17 +339,6 @@ class BaseStrategy(metaclass=ABCMeta):
         self.logger.info('Model has been "compiled". The first few iterations '
                          'will be slow, please be patient.')
 
-        return model
-
-    def wrap_model(self, model: nn.Module) -> nn.Module:
-        """Wrap model.
-
-        Args:
-            model (nn.Module): Model to wrap.
-
-        Returns:
-            nn.Module: Wrapped model.
-        """
         return model
 
     def _init_model_weights(self, model: nn.Module) -> nn.Module:
@@ -764,9 +751,10 @@ class BaseStrategy(metaclass=ABCMeta):
         """Load optimizer state from dict."""
         self.optim_wrapper.load_state_dict(state_dict)
 
-    def load_scheduler_state_dict(self, state_dict: dict) -> None:
+    def load_scheduler_state_dict(self, state_dict: Union[dict, list]) -> None:
         """Load scheduler state from dict."""
         if isinstance(self.param_schedulers, dict):
+            assert isinstance(state_dict, dict)
             for name, schedulers in self.param_schedulers.items():
                 for scheduler, ckpt_scheduler in zip(schedulers,
                                                      state_dict[name]):
@@ -872,8 +860,8 @@ class BaseStrategy(metaclass=ABCMeta):
     def collect_env(self) -> Tuple[dict, dict]:
         """Collect the information of the running environments."""
         system_env = collect_env()
-        runtime_env = OrderedDict()
-        # TODO: need to add env_cfg
+        runtime_env: OrderedDict = OrderedDict()
+        runtime_env.update(self._env_kwargs)
         runtime_env.update(self.randomness)
         runtime_env['Distributed launcher'] = self.launcher
         runtime_env['Distributed training'] = self.distributed
