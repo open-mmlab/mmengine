@@ -520,7 +520,7 @@ class CheckpointHook(Hook):
             if best_ckpt_path and is_main_process():
                 if self.file_backend.isfile(best_ckpt_path):
                     self.file_backend.remove(best_ckpt_path)
-                else:
+                elif self.file_backend.isdir(best_ckpt_path):
                     # checkpoints saved by deepspeed are directories
                     self.file_backend.rmtree(best_ckpt_path)
 
