@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from mmengine.utils import is_installed
 from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.utils.version_utils import digit_version
 from .averaged_model import (BaseAveragedModel, ExponentialMovingAverage,
@@ -33,10 +32,6 @@ __all__ = [
     'Caffe2XavierInit', 'PretrainedInit', 'initialize',
     'convert_sync_batchnorm', 'BaseTTAModel'
 ]
-
-if is_installed('deepspeed'):
-    from .wrappers import MMDeepSpeedEngine  # noqa:F401
-    __all__.append('MMDeepSpeedEngine')
 
 if digit_version(TORCH_VERSION) >= digit_version('2.0.0'):
     from .wrappers import MMFullyShardedDataParallel  # noqa:F401
