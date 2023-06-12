@@ -109,7 +109,7 @@ class LazyObject:
         # Cannot locate the line number of the getting attribute.
         # Therefore only record the filename.
         if self.location is not None:
-            location = self.location.split(', line')
+            location = self.location.split(', line')[0]
         else:
             location = self.location
         return LazyAttr(name, self, location)
