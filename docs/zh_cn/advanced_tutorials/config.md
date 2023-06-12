@@ -602,8 +602,6 @@ print(type(cfg['optimizer']['type']))
 
 然而对于 base 文件的继承（导入，import），我们不能够采取 lazy import 的策略，这是因为我们希望解析后的配置文件能够包含 base 配置文件定义的字段，需要真正的触发 import。因此我们对 base 文件的导入加了一层限制，即必须在 `if '_base_'` 的代码块中导入。
 
-关于 LazyObject 的更多细节，可以参考 [Transform](mmengine.config.Transform)、[LazyObject](mmengine.config.LazyObject)， [LazyAttr](mmengine.config.LazyAttr) 的 api 文档。
-
 ### 功能限制
 
 1. 不能在配置文件中定义函数、类等
