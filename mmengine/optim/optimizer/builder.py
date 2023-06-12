@@ -162,6 +162,9 @@ def register_deepspeed_optimizers() -> List[str]:
     return deepspeed_optimizers
 
 
+DEEPSPEED_OPTIMIZERS = register_deepspeed_optimizers()
+
+
 def build_optim_wrapper(model: nn.Module,
                         cfg: Union[dict, Config, ConfigDict]) -> OptimWrapper:
     """Build function of OptimWrapper.
