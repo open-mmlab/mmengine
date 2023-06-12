@@ -204,9 +204,9 @@ class ConfigDict(Dict):
         def _merge_a_into_b(a, b):
             if isinstance(a, dict):
                 if not isinstance(b, dict):
-                    a.pop('_delete_', None)
+                    a.pop(DELETE_KEY, None)
                     return a
-                if DELETE_KEY in a:
+                if a.pop(DELETE_KEY, False):
                     b.clear()
                 all_keys = list(b.keys()) + list(a.keys())
                 return {
@@ -398,7 +398,8 @@ class Config:
         else:
             # Enable lazy import when parsing the config.
             # Using try-except to make sure ``ConfigDict.lazy`` will be reset
-            # to False
+            # to False. See more details about lazy in the docstring of
+            # ConfigDict
             ConfigDict.lazy = True
             try:
                 cfg_dict, imported_names = Config._parse_lazy_import(filename)
@@ -409,7 +410,9 @@ class Config:
             for key, value in list(cfg_dict.to_dict().items()):
                 if isinstance(value, (types.FunctionType, types.ModuleType)):
                     cfg_dict.pop(key)
-            # disable lazy import to get the real type.
+
+            # disable lazy import to get the real type. See more details about
+            # lazy in the docstring of ConfigDict
             cfg = Config(cfg_dict, filename=filename)
             object.__setattr__(cfg, '_imported_names', imported_names)
             return cfg
@@ -515,8 +518,8 @@ class Config:
             # ```
             # As you can see, the if statement is removed and the
             # from ... import statement will be unindent
-            for nested_idx, nested_inst in enumerate(node.body):
-                nodes.insert(idx + nested_idx + 1, nested_inst)
+            for nested_idx, nested_node in enumerate(node.body):
+                nodes.insert(idx + nested_idx + 1, nested_node)
             nodes.pop(idx)
             return _get_base_module_from_if(node.body)
         return []
@@ -886,8 +889,6 @@ class Config:
 
         Args:
             filename (str): Name of config file.
-            use_predefined_variables (bool, optional): Whether to use
-                predefined variables. Defaults to True.
 
         Returns:
             Tuple[dict, dict]: ``cfg_dict`` and ``imported_names``.
@@ -979,7 +980,7 @@ class Config:
                         'make sure the base config module is valid '
                         'and is consistent with the prior import '
                         'logic')
-                base_cfg, _base_imported_names = Config._parse_lazy_import(
+                _base_cfg_dict, _base_imported_names = Config._parse_lazy_import(  # noqa: E501
                     module_path)
                 base_imported_names |= _base_imported_names
                 # The base_dict will be:
@@ -988,7 +989,7 @@ class Config:
                 #     'mmdet.configs.retinanet_r50_fpn_1x_coco': {...}
                 #     ...
                 # }
-                base_dict[base_module] = base_cfg
+                base_dict[base_module] = _base_cfg_dict
 
             # `base_dict` contains all the imported modules from `base_cfg`.
             # In order to collect the specific imported module from `base_cfg`

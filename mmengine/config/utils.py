@@ -322,7 +322,6 @@ class ImportTransformer(ast.NodeTransformer):
                     alias_node.name]
             return None
 
-        # TODO: Support lazyimport module from relative path
         nodes: List[ast.Assign] = []
         for alias_node in node.names:
             # `ast.alias` has lineno attr after Python 3.10,
@@ -331,10 +330,10 @@ class ImportTransformer(ast.NodeTransformer):
             else:
                 lineno = node.lineno
             if alias_node == '*':
-                # TODO If user import * from a non-config module, it should
+                # TODO: If users import * from a non-config module, it should
                 # fallback to import the real module and raise a warning to
-                # remind user the real module will be imported which will slows
-                # donwn the parsing speed.
+                # remind users the real module will be imported which will slow
+                # down the parsing speed.
                 raise RuntimeError(
                     'Illegal syntax in config! From xxx import * is not '
                     'allowed to appear outside the `if base:` statement')
