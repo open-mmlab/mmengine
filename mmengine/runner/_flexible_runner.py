@@ -350,7 +350,7 @@ class FlexibleRunner:
         self._load_from = load_from
         self._resume = resume
         # flag to mark whether checkpoint has been loaded or resumed
-        self._has_loaded = False
+        self._has_resumed = False
 
         if launcher is None:
             launcher = infer_launcher()
@@ -604,10 +604,10 @@ class FlexibleRunner:
 
     def build_strategy(
         self,
-        strategy: Optional[BaseStrategy] = None,
+        strategy: Optional[Union[BaseStrategy, Dict]] = None,
         launcher: str = 'none',
         randomness: Optional[dict] = None,
-        env_cfg: Optional[dict] = None,
+        env_cfg: dict = dict(dist_cfg=dict(backend='nccl')),
         experiment_name: Optional[str] = None,
         log_level: Optional[str] = None,
     ) -> BaseStrategy:
@@ -620,7 +620,9 @@ class FlexibleRunner:
         Returns:
             BaseStrategy: A strategy object.
         """
-        if not isinstance(strategy, BaseStrategy):
+        if isinstance(strategy, BaseStrategy):
+            strategy_obj = strategy
+        else:
             if launcher == 'none':
                 if strategy is None:
                     strategy = dict(type='SingleDeviceStrategy')
@@ -630,6 +632,8 @@ class FlexibleRunner:
 
                 if strategy['type'] == 'DDPStrategy':
                     strategy.setdefault('auto_scale_lr', self._auto_scale_lr)
+
+            assert isinstance(strategy, dict)
 
             strategy.setdefault('work_dir', self._work_dir)
             strategy.setdefault('compile', self._compile)
@@ -647,7 +651,7 @@ class FlexibleRunner:
             log_kwargs = dict(log_level=log_level)
             strategy.setdefault('log_kwargs', log_kwargs)
 
-            strategy = STRATEGIES.build(strategy)
+            strategy_obj = STRATEGIES.build(strategy)
 
         def callback(checkpoint):
             self.call_hook('after_load_checkpoint', checkpoint=checkpoint)
@@ -655,11 +659,13 @@ class FlexibleRunner:
         # Wrap the two methods to facilitate the execution of load_checkpoint
         # or resume in the `prepare` method of the strategy.
         if not isinstance(strategy, DeepSpeedStrategy):
-            strategy.load_checkpoint = partial(
-                strategy.load_checkpoint, callback=callback)
-            strategy.resume = partial(strategy.resume, callback=callback)
+            strategy_obj.load_checkpoint = partial(  # type: ignore
+                strategy_obj.load_checkpoint,
+                callback=callback)
+            strategy_obj.resume = partial(  # type: ignore
+                strategy_obj.resume, callback=callback)
 
-        return strategy
+        return strategy_obj
 
     def build_message_hub(
         self,
@@ -1095,31 +1101,8 @@ class FlexibleRunner:
                 stage_hook_infos.append(info)
         return '\n'.join(stage_hook_infos)
 
-    def load_or_resume(self):
+    def may_resume(self):
         """load or resume checkpoint."""
-        if self._has_loaded:
-            return None
-
-        if not self._resume and self._load_from is None:
-            return None
-
-        # decide to load from checkpoint or resume from checkpoint
-        resume_from = None
-        if self._resume and self._load_from is None:
-            # auto resume from the latest checkpoint
-            resume_from = find_latest_checkpoint(self.work_dir)
-            self.logger.info(
-                f'Auto resumed from the latest checkpoint {resume_from}.')
-        elif self._resume and self._load_from is not None:
-            # resume from the specified checkpoint
-            resume_from = self._load_from
-
-        if resume_from is not None:
-            self._has_loaded = True
-            self.resume(resume_from)
-        elif self._load_from is not None:
-            self._has_loaded = True
-            self.load_checkpoint(self._load_from)
 
     def train(self) -> nn.Module:
         """Launch training.
@@ -1160,7 +1143,7 @@ class FlexibleRunner:
         else:
             self.model, self.optim_wrapper, *_ = result
 
-        self.load_or_resume()
+        self.resume()
 
         # TODO: add a contextmanager to avoid calling `before_run` many times
         self.call_hook('before_run')
@@ -1184,7 +1167,7 @@ class FlexibleRunner:
         self._val_loop = self.build_val_loop(self._val_loop)  # type: ignore
 
         self.model = self.strategy.prepare(self.model)
-        self.load_or_resume()
+        self.resume()
 
         self.call_hook('before_run')
         metrics = self.val_loop.run()  # type: ignore
@@ -1207,7 +1190,7 @@ class FlexibleRunner:
         self._test_loop = self.build_test_loop(self._test_loop)  # type: ignore
 
         self.model = self.strategy.prepare(self.model)
-        self.load_or_resume()
+        self.resume()
 
         self.call_hook('before_run')
         metrics = self.test_loop.run()  # type: ignore
@@ -1390,7 +1373,7 @@ class FlexibleRunner:
 
     def resume(
         self,
-        filename: str,
+        filename: Optional[str] = None,
         resume_optimizer: bool = True,
         resume_param_scheduler: bool = True,
         map_location: Union[str, Callable] = 'default',
@@ -1408,6 +1391,34 @@ class FlexibleRunner:
                 specifying how to remap storage locations.
                 Defaults to 'default'.
         """
+        if self._has_resumed:
+            return None
+
+        if filename is None:
+            if not self._resume:
+                return None
+
+            if self._load_from is None:
+                # auto resume from the latest checkpoint
+                filename = find_latest_checkpoint(self.work_dir)
+                if filename is None:
+                    raise RuntimeError(
+                        f'Cannot find latest checkpoint in {self.work_dir}.'
+                        'You need to manually specify the load_from for '
+                        'Runner')
+
+                self.logger.info(
+                    f'Auto resumed from the latest checkpoint {filename}.')
+            else:
+                # resume from the specified checkpoint
+                filename = self._load_from
+
+        self._has_resumed = True
+
+        # the action to resume model, optimizer and param scheduler has been
+        # done in strategy.prepare and here just return the checkpoint
+        # (do not contain model, optimizer and param scheduler state)
+        # to the runner for resuming other states
         checkpoint = self.strategy.resume(
             filename,
             resume_optimizer=resume_optimizer,
@@ -1454,31 +1465,6 @@ class FlexibleRunner:
         self.message_hub.load_state_dict(checkpoint['message_hub'])
 
         self.logger.info(f'resumed epoch: {self.epoch}, iter: {self.iter}')
-        return checkpoint
-
-    def load_checkpoint(
-        self,
-        filename: str,
-        map_location: Union[str, Callable] = 'cpu',
-        strict: bool = False,
-        revise_keys: list = [(r'^module.', '')],
-    ):
-        """Load checkpoint from given ``filename``.
-
-        Args:
-            filename (str): Accept local filepath, URL, ``torchvision://xxx``,
-                ``open-mmlab://xxx``.
-            map_location (str or callable): A string or a callable function to
-                specifying how to remap storage locations.
-                Defaults to 'cpu'.
-            strict (bool): strict (bool): Whether to allow different params for
-                the model and checkpoint.
-            revise_keys (list): A list of customized keywords to modify the
-                state_dict in checkpoint. Each item is a (pattern, replacement)
-                pair of the regular expression operations. Defaults to strip
-                the prefix 'module.' by [(r'^module\\.', '')].
-        """
-        self.strategy.load_checkpoint(filename, map_location=map_location)
 
     def save_checkpoint(
         self,

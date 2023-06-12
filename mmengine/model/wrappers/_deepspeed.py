@@ -1,77 +1,41 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Any, Dict, List, Optional, Union
 
-import deepspeed
 import torch
 from deepspeed.runtime.engine import DeepSpeedEngine
 
-from mmengine.optim import OptimWrapper
+from mmengine.optim.optimizer._deepspeed import DSOptimWrapper
 from mmengine.registry import MODEL_WRAPPERS
-from mmengine.utils import digit_version
 
 
 @MODEL_WRAPPERS.register_module()
-class MMDeepSpeedEngine(DeepSpeedEngine):
+class MMDeepSpeedEngineWrapper:
 
     def __init__(
         self,
-        args=None,
-        model=None,
-        optimizer=None,
-        model_parameters=None,
-        training_data=None,
-        lr_scheduler=None,
-        mpu=None,
-        dist_init_required=None,
-        collate_fn=None,
-        config=None,
-        dont_change_device=False,
+        *,
+        model: DeepSpeedEngine,
         inputs_to_half: Optional[List[Union[int, str]]] = None,
     ):
-
-        if digit_version(deepspeed.__version__) >= digit_version('0.9.0'):
-            from deepspeed.runtime.config import DeepSpeedConfig
-            config_class = DeepSpeedConfig(config, mpu)
-
-            super().__init__(
-                args=args,
-                model=model,
-                optimizer=optimizer,
-                model_parameters=model_parameters,
-                training_data=training_data,
-                lr_scheduler=lr_scheduler,
-                mpu=mpu,
-                dist_init_required=dist_init_required,
-                collate_fn=collate_fn,
-                config=config,
-                config_class=config_class,
-                dont_change_device=dont_change_device)
-        else:
-            super().__init__(
-                args=args,
-                model=model,
-                optimizer=optimizer,
-                model_parameters=model_parameters,
-                training_data=training_data,
-                lr_scheduler=lr_scheduler,
-                mpu=mpu,
-                dist_init_required=dist_init_required,
-                collate_fn=collate_fn,
-                config=config,
-                dont_change_device=dont_change_device)
-
+        self.model = model
         self._inputs_to_half = inputs_to_half
+
+    def __getattr__(self, name):
+        try:
+            return super().__getattr__(name)
+        except AttributeError:
+            return getattr(self.model, name)
 
     def train_step(
         self,
         data: Union[dict, tuple, list],
-        optim_wrapper: OptimWrapper,
+        optim_wrapper: DSOptimWrapper,
     ) -> Dict[str, torch.Tensor]:
-        data = self.module.data_preprocessor(data, training=True)
+        data = self.model.module.data_preprocessor(data, training=True)
         data = self._cast_inputs_half(data)
         losses = self._run_forward(data, mode='loss')
         parsed_loss, log_vars = self.module.parse_losses(losses)
-        optim_wrapper.update_params(parsed_loss, model=self)
+        optim_wrapper.update_params(parsed_loss, model=self.model)
 
         return log_vars
 
@@ -84,7 +48,7 @@ class MMDeepSpeedEngine(DeepSpeedEngine):
         Returns:
             list: The predictions of given data.
         """
-        data = self.module.data_preprocessor(data, False)
+        data = self.model.module.data_preprocessor(data, False)
         data = self._cast_inputs_half(data)
         return self._run_forward(data, mode='predict')
 
@@ -97,7 +61,7 @@ class MMDeepSpeedEngine(DeepSpeedEngine):
         Returns:
             list: The predictions of given data.
         """
-        data = self.module.data_preprocessor(data, False)
+        data = self.model.module.data_preprocessor(data, False)
         data = self._cast_inputs_half(data)
         return self._run_forward(data, mode='predict')
 
@@ -112,9 +76,9 @@ class MMDeepSpeedEngine(DeepSpeedEngine):
             dict or list: Results of training or testing mode.
         """
         if isinstance(data, dict):
-            results = self(**data, mode=mode)
+            results = self.model(**data, mode=mode)
         elif isinstance(data, (list, tuple)):
-            results = self(*data, mode=mode)
+            results = self.model(*data, mode=mode)
         else:
             raise TypeError('Output of `data_preprocessor` should be '
                             f'list, tuple or dict, but got {type(data)}')

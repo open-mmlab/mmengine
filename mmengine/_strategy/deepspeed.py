@@ -10,8 +10,9 @@ import torch
 import torch.nn as nn
 
 import mmengine
+from mmengine.model.wrappers._deepspeed import MMDeepSpeedEngineWrapper
 from mmengine.optim import OptimWrapper, _ParamScheduler
-from mmengine.registry import MODEL_WRAPPERS, STRATEGIES
+from mmengine.registry import STRATEGIES
 from mmengine.utils import get_git_hash
 from .base import BaseStrategy
 
@@ -34,6 +35,7 @@ class DeepSpeedStrategy(BaseStrategy):
         # the following args are for deepspeed
         config: Union[str, dict, None] = None,
         zero_optimization: Optional[dict] = None,
+        gradient_clipping: float = 1.0,
         fp16: Optional[dict] = None,
         inputs_to_half: Optional[List[Union[int, str]]] = None,
         bf16: Optional[dict] = None,
@@ -50,6 +52,7 @@ class DeepSpeedStrategy(BaseStrategy):
         self.config = self._parse_config(config)
         if zero_optimization is not None:
             self.config['zero_optimization'] = zero_optimization
+        self.config['gradient_clipping'] = gradient_clipping
         if fp16 is not None:
             self.config['fp16'] = fp16
         if bf16 is not None:
@@ -111,18 +114,18 @@ class DeepSpeedStrategy(BaseStrategy):
 
         return_items = []
 
-        self.model = self.build_model(model)
-        self.model = self._init_model_weights(self.model)
-        return_items.append(self.model)
+        model = self.build_model(model)
+        model = self._init_model_weights(model)
 
         if optim_wrapper is not None:
+            self.model = model
             self.optim_wrapper = self.build_optim_wrapper(optim_wrapper)
-
             self.model = self.wrap_model(self.model)
-            self.optim_wrapper.optimizer = self.model.optimizer
-            return_items.clear()
             return_items.append(self.model)
             return_items.append(self.optim_wrapper)
+        else:
+            self.model = self.wrap_model(model)
+            return_items.append(self.model)
 
         if param_scheduler is not None:
             self.param_schedulers = self.build_param_scheduler(param_scheduler)
@@ -136,15 +139,17 @@ class DeepSpeedStrategy(BaseStrategy):
         self.config['train_batch_size'] = self.dispatch_kwargs[
             'train_batch_size']
 
-        wrapper_cfg = dict(
-            type='MMDeepSpeedEngine',
-            model=model,
-            optimizer=self.optim_wrapper.optimizer,
-            config=self.config,
-            inputs_to_half=self._inputs_to_half,
-        )
-        model = MODEL_WRAPPERS.build(wrapper_cfg)
-        return model
+        if hasattr(self, 'optim_wrapper'):
+            engine, self.optim_wrapper.optimizer, *_ = deepspeed.initialize(
+                model=model,
+                optimizer=self.optim_wrapper.optimizer,
+                config=self.config)
+        else:
+            engine, *_ = deepspeed.initialize(model=model, config=self.config)
+
+        wrapper = MMDeepSpeedEngineWrapper(
+            model=engine, inputs_to_half=self._inputs_to_half)
+        return wrapper
 
     def load_checkpoint(
         self,
@@ -152,7 +157,7 @@ class DeepSpeedStrategy(BaseStrategy):
         *,
         map_location: Union[str, Callable] = 'cpu',
         callback: Optional[Callable] = None,
-    ) -> None:
+    ) -> dict:
         """Load checkpoint from given ``filename``.
 
         Args:
@@ -168,6 +173,7 @@ class DeepSpeedStrategy(BaseStrategy):
         self.logger.info(f'Load checkpoint from {filename}')
 
         dirname, basename = osp.split(filename)
+        self.extra_ckpt: dict
         _, self.extra_ckpt = self.model.load_checkpoint(
             dirname, tag=basename, load_optimizer_states=False)
 
