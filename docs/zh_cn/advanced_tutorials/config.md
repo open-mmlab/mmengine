@@ -390,7 +390,7 @@ b=2
 
 ```{eval-rst}
 .. tabs::
-    .. tabs:: 模块注册
+    .. tabs::
 
         .. code-tab:: python 纯 python 风格
 
@@ -404,7 +404,7 @@ b=2
 
             OPTIMIZERS.register_module(module=SGD, name='SGD')
 
-    .. tabs:: 配置文件
+    .. tabs::
 
         .. code-tab:: python 纯 python 风格
 
@@ -419,7 +419,7 @@ b=2
             # 配置文件写法
             optimizer = dict(type='SGD', lr=0.1)
 
-    .. tabs:: 构建模块
+    .. tabs::
 
         .. code-tab:: python 纯 python 风格
 
@@ -458,7 +458,7 @@ b=2
 纯 Python 风格的配置文件继承语法有所不同：
 
 ```{eval-rst}
-.. tabs:: 配置文件的继承
+.. tabs::
 
     .. code-tab:: python 纯 python 风格继承
 
@@ -527,7 +527,7 @@ x.update(dict(b=dict(d=4)))
 ```{eval-rst}
 .. tabs::
 
-    .. tabs:: 导出 python 格式
+    .. tabs::
 
         .. code-tab:: python 纯 python 风格导出
 
@@ -537,7 +537,7 @@ x.update(dict(b=dict(d=4)))
 
             optimizer = dict(type='SGD', lr=0.1)
 
-    .. tabs:: 导出 yaml 格式
+    .. tabs::
 
         .. code-tab:: yaml 纯 python 风格导出
 
@@ -551,7 +551,7 @@ x.update(dict(b=dict(d=4)))
                 type: SGD
                 lr: 0.1
 
-    .. tabs:: 导出 json 格式
+    .. tabs::
 
         .. code-tab:: json 纯 python 风格导出
 
