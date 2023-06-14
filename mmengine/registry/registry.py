@@ -388,8 +388,8 @@ class Registry:
         information, for example, `mmengine.model.BaseModel`, ``get``
         will directly return the class object :class:`BaseModel`.
 
-        Otherwise, it will first parse :attr:`key` and check whether it
-        contains a scope name. The logic to search for :attr:`key`:
+        Otherwise, it will first parse ``key`` and check whether it
+        contains a scope name. The logic to search for ``key``:
 
         - ``key`` does not contain a scope name, i.e., it is purely a module
           name like "ResNet": :meth:`get` will search for ``ResNet`` from the
