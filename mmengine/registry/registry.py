@@ -435,11 +435,12 @@ class Registry:
             >>> mobilenet_cls = DETECTORS.get('cls.MobileNet')
         """
         # Avoid circular import
+        from ..logging import print_log
+
         if not isinstance(key, str):
             raise TypeError(
                 'The key argument of `Registry.get` must be a str, '
                 f'got {type(key)}')
-        from ..logging import print_log
 
         # Actually, it's strange to implement this `try ... except` to get the
         # object by its name in `Registry.get`. However, If we want to build
