@@ -368,8 +368,11 @@ class Runner:
         # Used to reset registries location. See :meth:`Registry.build` for
         # more details.
         if default_scope is not None:
-            self.default_scope = DefaultScope.get_instance(
-                self._experiment_name, scope_name=default_scope)
+            default_scope = DefaultScope.get_instance(  # type: ignore
+                self._experiment_name,
+                scope_name=default_scope)
+        self.default_scope = default_scope
+
         # Build log processor to format message.
         log_processor = dict() if log_processor is None else log_processor
         self.log_processor = self.build_log_processor(log_processor)
@@ -1393,7 +1396,7 @@ class Runner:
             else:
                 raise TypeError(
                     'type of worker_init_fn should be string or callable '
-                    'object!')
+                    f'object, but got {type(worker_init_fn)}')
             assert callable(worker_init_fn)
             init_fn = partial(worker_init_fn,
                               **worker_init_fn_cfg)  # type: ignore
