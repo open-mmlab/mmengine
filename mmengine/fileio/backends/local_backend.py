@@ -202,7 +202,7 @@ class LocalBackend(BaseStorageBackend):
         return osp.join(filepath, *filepaths)
 
     def split(self, filepath: Union[str, Path]) -> Tuple[str, str]:
-        r"""Split the filepath into dirname and basename.
+        """Split the filepath into dirname and basename.
 
         Args:
             filepath (str or Path): Path to be split.

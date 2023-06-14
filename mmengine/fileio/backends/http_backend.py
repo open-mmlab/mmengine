@@ -12,6 +12,8 @@ from .base import BaseStorageBackend
 class HTTPBackend(BaseStorageBackend):
     """HTTP and HTTPS storage bachend."""
 
+    prefixes = ['http', 'https']
+
     def get(self, filepath: str) -> bytes:
         """Read bytes from a given ``filepath``.
 
@@ -99,8 +101,4 @@ class HTTPBackend(BaseStorageBackend):
         Note:
             New in version 0.8.0.
         """
-        if not hasattr(self, 'prefixes'):
-            raise AttributeError('`prefixes` is not set in the backend. '
-                                 'Please manually set it in the backend.')
-
         return filepath.startswith(self.prefixes)  # type: ignore

@@ -59,8 +59,10 @@ def _register_backend(name: str,
 
             prefix_to_backends[prefix] = backend
 
-        # add the prefixes to the backend for supporting isabs method
-        backend.prefixes = tuple(prefixes)  # type: ignore
+        # only update the prefixes when the backend already has the prefixes
+        # attribute for supporting isabs method
+        if hasattr(backend, 'prefixes'):
+            backend.prefixes = tuple(prefixes)  # type: ignore
 
 
 def register_backend(name: str,
