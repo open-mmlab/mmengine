@@ -15,7 +15,7 @@ from mmengine.config.utils import ImportTransformer, _gather_abs_import_lazyobj
 from mmengine.fileio import LocalBackend, PetrelBackend
 
 
-class TestTransform(TestCase):
+class TestImportTransformer(TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
