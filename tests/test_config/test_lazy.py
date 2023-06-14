@@ -1,8 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import ast
+import copy
 import os
 import os.path as osp
 from importlib import import_module
+from importlib.util import find_spec
 from unittest import TestCase
 
 import numpy
@@ -10,6 +12,7 @@ import numpy.compat
 import numpy.linalg as linalg
 
 import mmengine
+from mmengine.config import Config
 from mmengine.config.lazy import LazyAttr, LazyObject
 from mmengine.config.utils import ImportTransformer, _gather_abs_import_lazyobj
 from mmengine.fileio import LocalBackend, PetrelBackend
@@ -29,8 +32,18 @@ class TestImportTransformer(TestCase):
         with open(cfg_path) as f:
             codestr = f.read()
         codeobj = ast.parse(codestr)
-        global_dict = {'LazyObject': LazyObject}
-        codeobj = ImportTransformer(global_dict).visit(codeobj)
+        global_dict = {
+            'LazyObject': LazyObject,
+        }
+        base_dict = {
+            '._base_.default_runtime': {
+                'default_scope': 'test_config'
+            },
+            '._base_.scheduler': {
+                'val_cfg': {}
+            },
+        }
+        codeobj = ImportTransformer(global_dict, base_dict).visit(codeobj)
         codeobj, _ = _gather_abs_import_lazyobj(codeobj)
         codeobj = ast.fix_missing_locations(codeobj)
 
@@ -77,6 +90,27 @@ class TestImportTransformer(TestCase):
         self.assertIsInstance(lazy_petrel_backend, LazyObject)
         self.assertIs(lazy_petrel_backend.build(), PetrelBackend)
 
+        # 2.3 from ... import builtin module or obj from `mmengine.Config`
+        self.assertIs(global_dict['find_module'], find_spec)
+        self.assertIs(global_dict['Config'], Config)
+
+        # 3 test import base config
+        # 3.1 simple from ... import and from ... import ... as
+        self.assertEqual(global_dict['scope'], 'test_config')
+        self.assertDictEqual(global_dict['val_cfg'], {})
+
+        # 4. Error catching
+        cfg_path = osp.join(self.data_dir,
+                            'test_ast_transform_error_catching1.py')
+        with open(cfg_path) as f:
+            codestr = f.read()
+        codeobj = ast.parse(codestr)
+        global_dict = {'LazyObject': LazyObject}
+        with self.assertRaisesRegex(
+                RuntimeError,
+                r'Illegal syntax in config! `from xxx import \*`'):
+            codeobj = ImportTransformer(global_dict).visit(codeobj)
+
 
 class TestLazyObject(TestCase):
 
@@ -118,6 +152,14 @@ class TestLazyObject(TestCase):
         # lazy_mmengine = LazyObject(['mmengine', 'mmengine.dataset'])
         # self.assertIs(lazy_mmengine.build().dataset,
         #               import_module('mmengine.config'))
+        copied = copy.deepcopy(lazy_local_backend)
+        self.assertDictEqual(copied.__dict__, lazy_local_backend.__dict__)
+
+        with self.assertRaises(RuntimeError):
+            lazy_mmengine()
+
+        with self.assertRaises(ImportError):
+            LazyObject('unknown').build()
 
 
 class TestLazyAttr(TestCase):
@@ -127,3 +169,14 @@ class TestLazyAttr(TestCase):
         lazy_mmengine = LazyObject('mmengine')
         local_backend = lazy_mmengine.fileio.LocalBackend
         self.assertIs(local_backend.build(), LocalBackend)
+
+        copied = copy.deepcopy(local_backend)
+        self.assertDictEqual(copied.__dict__, local_backend.__dict__)
+
+        with self.assertRaises(RuntimeError):
+            local_backend()
+
+        with self.assertRaisesRegex(
+                ImportError,
+                'Failed to import mmengine.fileio.LocalBackend.unknown'):
+            local_backend.unknown.build()

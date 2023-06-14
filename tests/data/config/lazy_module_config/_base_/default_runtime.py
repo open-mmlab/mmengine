@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-# defaults to use registries in mmcls
 from mmengine.hooks import (CheckpointHook, DistSamplerSeedHook, IterTimerHook,
                             LoggerHook, ParamSchedulerHook)
 

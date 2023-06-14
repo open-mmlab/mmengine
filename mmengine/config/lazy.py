@@ -184,7 +184,7 @@ class LazyAttr:
 
     @property
     def module(self):
-        self._module
+        return self._module
 
     def __call__(self, *args, **kwargs: Any) -> Any:
         raise RuntimeError()
@@ -205,8 +205,8 @@ class LazyAttr:
         try:
             return getattr(obj, self.name)
         except AttributeError:
-            raise ImportError(
-                f'Failed to import {self.module} in {self.location}')
+            raise ImportError(f'Failed to import {self.module}.{self.name} in '
+                              f'{self.location}')
         except ImportError as e:
             raise e
 

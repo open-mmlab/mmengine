@@ -329,13 +329,13 @@ class ImportTransformer(ast.NodeTransformer):
                 lineno = alias_node.lineno
             else:
                 lineno = node.lineno
-            if alias_node == '*':
+            if alias_node.name == '*':
                 # TODO: If users import * from a non-config module, it should
                 # fallback to import the real module and raise a warning to
                 # remind users the real module will be imported which will slow
                 # down the parsing speed.
                 raise RuntimeError(
-                    'Illegal syntax in config! From xxx import * is not '
+                    'Illegal syntax in config! `from xxx import *` is not '
                     'allowed to appear outside the `if base:` statement')
             elif alias_node.asname is not None:
                 # case1:

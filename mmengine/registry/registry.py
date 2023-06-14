@@ -387,6 +387,10 @@ class Registry:
         The method will first parse :attr:`key` and check whether it contains
         a scope name. The logic to search for :attr:`key`:
 
+        - ``key`` represents the whole object name with its module
+          information, for example, `mmengine.model.BaseModel`, ``get``
+          will directly return the class object :class:`BaseModel`.
+
         - ``key`` does not contain a scope name, i.e., it is purely a module
           name like "ResNet": :meth:`get` will search for ``ResNet`` from the
           current registry to its parent or ancestors until finding it.
@@ -436,12 +440,20 @@ class Registry:
                 'The key argument of `Registry.get` must be a str, '
                 f'got {type(key)}')
         from ..logging import print_log
+
+        # Actually, it's strange to implement this `try ... except` to get the
+        # object by its name in `Registry.get`. However, If we want to build
+        # the model using a configuration like
+        # `dict(type='mmengine.model.BaseModel')`, which can
+        # be dumped by lazy import config, we need the this code snippet
+        # for `Registry.get` to work.
         try:
             obj_cls = locate(key)
         except Exception:
             raise RuntimeError(f'Failed to get {key}')
         if obj_cls is not None:
             return obj_cls
+
         scope, real_key = self.split_scope_key(key)
         obj_cls = None
         registry_name = self.name
