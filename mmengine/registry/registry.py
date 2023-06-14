@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.table import Table
 
 from mmengine.config.utils import MODULE2PACKAGE
-from mmengine.utils import is_seq_of, locate
+from mmengine.utils import get_object_from_string, is_seq_of
 from .default_scope import DefaultScope
 
 
@@ -448,7 +448,7 @@ class Registry:
         # be dumped by lazy import config, we need the this code snippet
         # for `Registry.get` to work.
         try:
-            obj_cls = locate(key)
+            obj_cls = get_object_from_string(key)
         except Exception:
             raise RuntimeError(f'Failed to get {key}')
         if obj_cls is not None:

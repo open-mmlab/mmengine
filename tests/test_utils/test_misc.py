@@ -9,10 +9,10 @@ import torch
 from mmengine import MMLogger
 # yapf: disable
 from mmengine.utils.misc import (apply_to, concat_list, deprecated_api_warning,
-                                 deprecated_function, has_method,
-                                 import_modules_from_strings, is_list_of,
-                                 is_method_overridden, is_seq_of, is_tuple_of,
-                                 iter_cast, list_cast, locate,
+                                 deprecated_function, get_object_from_string,
+                                 has_method, import_modules_from_strings,
+                                 is_list_of, is_method_overridden, is_seq_of,
+                                 is_tuple_of, iter_cast, list_cast,
                                  requires_executable, requires_package,
                                  slice_list, to_1tuple, to_2tuple, to_3tuple,
                                  to_4tuple, to_ntuple, tuple_cast)
@@ -331,7 +331,8 @@ def test_apply_to():
 
 
 def test_locate():
-    assert locate('a.b.c') is None
+    assert get_object_from_string('a.b.c') is None
     model_module = import_module('mmengine.model')
-    assert locate('mmengine.model') is model_module
-    assert locate('mmengine.model.BaseModel') is model_module.BaseModel
+    assert get_object_from_string('mmengine.model') is model_module
+    assert get_object_from_string(
+        'mmengine.model.BaseModel') is model_module.BaseModel

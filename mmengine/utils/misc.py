@@ -502,14 +502,14 @@ def deprecated_function(since: str, removed_in: str,
     return decorator
 
 
-def locate(obj_name: str):
+def get_object_from_string(obj_name: str):
     """Get object from name.
 
     Args:
         obj_name (str): The name of the object.
 
     Examples:
-        >>> locate('torch.optim.sgd.SGD')
+        >>> get_object_from_string('torch.optim.sgd.SGD')
         >>> torch.optim.sgd.SGD
     """
     parts = iter(obj_name.split('.'))
