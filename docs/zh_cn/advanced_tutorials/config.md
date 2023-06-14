@@ -462,12 +462,13 @@ b=2
 
     .. code-tab:: python 纯 Python 风格继承
 
-        # _base_ = [./optimizer.py]
+        if '_base_':
+            from .optimizer import *
 
     .. code-tab:: python 纯文本风格继承
 
-        if '_base_':
-            from .optimizer import *
+        _base_ = [./optimizer.py]
+
 ```
 
 纯 Python 风格的配置文件通过 import 语法来实现继承，这样做的好处是，我们可以直接跳转到被继承的配置文件中，方便阅读和跳转。变量的继承规则（增删改查）完全对齐 Python 语法，例如我想修改 base 配置文件中 optimizer 的学习率：

@@ -464,12 +464,13 @@ The inheritance syntax of pure Python style configuration files is slightly diff
 
     .. code-tab:: python Pure Python style Inheritance
 
-        # _base_ = [./optimizer.py]
+        if '_base_':
+            from .optimizer import *
 
     .. code-tab:: python Pure text style Inheritance
 
-        if '_base_':
-            from .optimizer import *
+        _base_ = [./optimizer.py]
+
 ```
 
 Pure Python style configuration files use import syntax to achieve inheritance. The advantage of doing this is that we can directly jump to the inherited configuration file for easy reading and jumping. The variable inheritance rule (add, delete, change, and search) is completely aligned with Python syntax. For example, if I want to modify the learning rate of the optimizer in the base configuration file:
