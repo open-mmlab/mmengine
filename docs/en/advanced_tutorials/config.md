@@ -1,6 +1,31 @@
 # Config
 
-MMEngine implements an abstract configuration class (`Config`) to provide a unified configuration access interface for users. `Config` supports different type of configuration file, including `python`, `json` and `yaml`, and you can choose the type according to your preference. `Config` overrides some magic method, which could help you access the data stored in `Config` just like getting values from `dict`, or getting attributes from instances. Besides, `Config` also provides an inheritance mechanism, which could help you better organize and manage the configuration files.
+- [Config](#config)
+  - [Read the configuration file](#read-the-configuration-file)
+  - [How to use `Config`](#how-to-use-config)
+  - [Inheritance between configuration files](#inheritance-between-configuration-files)
+    - [Overview of inheritance mechanism](#overview-of-inheritance-mechanism)
+    - [Modify the inherited fields](#modify-the-inherited-fields)
+    - [Delete key in `dict`](#delete-key-in-dict)
+    - [Reference of the inherited file](#reference-of-the-inherited-file)
+  - [Dump the configuration file](#dump-the-configuration-file)
+  - [Advanced usage](#advanced-usage)
+    - [Predefined fields](#predefined-fields)
+    - [Modify the fields in command line](#modify-the-fields-in-command-line)
+    - [Replace fields with environment variables](#replace-fields-with-environment-variables)
+    - [import the custom module](#import-the-custom-module)
+    - [Inherit configuration files across repository](#inherit-configuration-files-across-repository)
+    - [Get configuration files across repository](#get-configuration-files-across-repository)
+  - [A Pure Python style Configuration File (Beta)](#a-pure-python-style-configuration-file-beta)
+    - [Basic Syntax](#basic-syntax)
+      - [Module Construction](#module-construction)
+      - [Inheritance](#inheritance)
+      - [Dump the Configuration File](#dump-the-configuration-file-1)
+    - [What is Lazy Import](#what-is-lazy-import)
+    - [Limitations](#limitations)
+    - [Migration Guide](#migration-guide)
+
+MMEngine implements an abstract configuration class (`Config`) to provide a unified configuration access interface for users. `Config` supports different types of configuration file, including `python`, `json` and `yaml`, and you can choose the type according to your preference. `Config` overrides some magic method, which could help you access the data stored in `Config` just like getting values from `dict`, or getting attributes from instances. Besides, `Config` also provides an inheritance mechanism, which could help you better organize and manage the configuration files.
 
 Before starting the tutorial, let's download the configuration files needed in the tutorial (it is recommended to execute them in a temporary directory to facilitate deleting these files latter.):
 
@@ -23,6 +48,10 @@ wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/c
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/runtime_cfg.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/modify_base_var.py
+```
+
+```{note}
+The `Config` supports two styles of configuration files: text style and pure Python style. Each has its own characteristics while maintaining a unified interface for calling. For users who are not familiar with the basic usage of the `Config`, it is recommended to start reading from the section on [Read the configuration file](#read-the-configuration-file) to understand the functionality of the `Config` and the syntax of text style configuration files. In some cases, the syntax of text style configuration files is more concise and compatible with different formats such as `json` and `yaml`. If you prefer a more flexible syntax for configuration files, it is recommended to use the [Pure Python Style Configuration Files" (beta)](#a-pure-python-style-configuration-file-beta).
 ```
 
 ## Read the configuration file
@@ -370,7 +399,333 @@ a=1
 b=2
 ```
 
-## A Pure Python style Configuration File
+## Advanced usage
+
+In this section, we'll introduce some advanced usage of the `Config`, and some tips that could make it easier for users to develop and use downstream repositories.
+
+```{note}
+If you use pure Python style configuration file. Advanced usage should not be used except for the function described in "Modify the fields in command line"
+```
+
+### Predefined fields
+
+Sometimes we need some fields in the configuration file, which are related to the path to the workspace. For example, we define a working directory in the configuration file that holds the models and logs for this set of experimental configurations. We expect to have different working directories for different configuration files. A common choice is to use the configuration file name directly as part of the working directory name.
+Taking `predefined_var.py` as an example:
+
+```Python
+work_dir = './work_dir/{{fileBasenameNoExtension}}'
+```
+
+Here `{{fileBasenameNoExtension}}` means the filename without suffix `.py` of the config file, and the variable in `{{}}` will be interpreted as `predefined_var`
+
+```python
+cfg = Config.fromfile('./predefined_var.py')
+print(cfg.work_dir)
+```
+
+```shell
+./work_dir/predefined_var
+```
+
+Currently, there are 4 predefined fields referenced from the relevant fields defined in [VS Code](https://code.visualstudio.com/docs/editor/variables-reference).
+
+- `{{fileDirname}}` - the directory name of the current file, e.g. `/home/your-username/your-project/folder`
+- `{{fileBasename}}` - the filename of the current file, e.g. `file.py`
+- `{{fileBasenameNoExtension}}` - the filename of the current file without the extension, e.g. `file`
+- `{{fileExtname}}` - the extension of the current file, e.g. `.py`
+
+### Modify the fields in command line
+
+Sometimes we only want to modify part of the configuration and do not want to modify the configuration file itself. For example, if we want to change the learning rate during the experiment but do not want to write a new configuration file, the common practice is to pass the parameters at the command line to override the relevant configuration.
+
+If we want to modify some internal parameters, such as the learning rate of the optimizer, the number of channels in the convolution layer etc., `Config` provides a standard procedure that allows us to modify the parameters at any level easily from the command line.
+
+**Training script:**
+
+`demo_train.py`
+
+```python
+import argparse
+
+from mmengine.config import Config, DictAction
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Train a model')
+    parser.add_argument('config', help='train config file path')
+    parser.add_argument(
+        '--cfg-options',
+        nargs='+',
+        action=DictAction,
+        help='override some settings in the used config, the key-value pair '
+        'in xxx=yyy format will be merged into config file. If the value to '
+        'be overwritten is a list, it should be like key="[a,b]" or key=a,b '
+        'It also allows nested list/tuple values, e.g. key="[(a,b),(c,d)]" '
+        'Note that the quotation marks are necessary and that no white space '
+        'is allowed.')
+
+    args = parser.parse_args()
+    return args
+
+
+def main():
+    args = parse_args()
+    cfg = Config.fromfile(args.config)
+    if args.cfg_options is not None:
+        cfg.merge_from_dict(args.cfg_options)
+    print(cfg)
+
+
+if __name__ == '__main__':
+    main()
+```
+
+The sample configuration file is as follows.
+
+`example.py`
+
+```python
+model = dict(type='CustomModel', in_channels=[1, 2, 3])
+optimizer = dict(type='SGD', lr=0.01)
+```
+
+We can modify the internal fields from the command line by `.` For example, if we want to modify the learning rate, we only need to execute the script like this:
+
+```bash
+python demo_train.py ./example.py --cfg-options optimizer.lr=0.1
+```
+
+```
+Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1, 2, 3]}, 'optimizer': {'type': 'SGD', 'lr': 0.1}}
+```
+
+We successfully modified the learning rate from 0.01 to 0.1. If we want to change a list or a tuple, such as `in_channels` in the above example. We need to put double quotes around `()`, `[]` when assigning the value on the command line.
+
+```bash
+python demo_train.py ./example.py --cfg-options model.in_channels="[1, 1, 1]"
+```
+
+```
+Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1, 1, 1]}, 'optimizer': {'type': 'SGD', 'lr': 0.01}}
+```
+
+```{note}
+The standard procedure only supports modifying String, Integer, Floating Point, Boolean, None, List, and Tuple fields from the command line. For the elements of list and tuple instance, each of them must be one of the above seven types.
+```
+
+:::{note}
+The behavior of `DictAction` is similar with `"extend"`. It stores a list, and extends each argument value to the list, like:
+
+```bash
+python demo_train.py ./example.py --cfg-options optimizer.type="Adam" --cfg-options model.in_channels="[1, 1, 1]"
+```
+
+```
+Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1, 1, 1]}, 'optimizer': {'type': 'Adam', 'lr': 0.01}}
+```
+
+:::
+
+### Replace fields with environment variables
+
+When a field is deeply nested, we need to add a long prefix at the command line to locate it. To alleviate this problem, MMEngine allows users to substitute fields in configuration with environment variables.
+
+Before parsing the configuration file, the program will search all `{{$ENV_VAR:DEF_VAL}}` fields and substitute those sections with environment variables. Here, `ENV_VAR` is the name of the environment variable used to replace this section, `DEF_VAL` is the default value if `ENV_VAR` is not set.
+
+When we want to modify the dataset path at the command line, we can take `replace_data_root.py` as an example:
+
+```python
+dataset_type = 'CocoDataset'
+data_root = '{{$DATASET:/data/coco/}}'
+dataset=dict(ann_file= data_root + 'train.json')
+```
+
+If we run `demo_train.py` to parse this configuration file.
+
+```bash
+python demo_train.py replace_data_root.py
+```
+
+```
+Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/data/coco/', 'dataset': {'ann_file': '/data/coco/train.json'}}
+```
+
+Here, we don't set the environment variable `DATASET`. Thus, the program directly replaces `{{$DATASET:/data/coco/}}` with the default value `/data/coco/`. If we set `DATASET` at the command line:
+
+```bash
+DATASET=/new/dataset/path/ python demo_train.py replace_data_root.py
+```
+
+```
+Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/new/dataset/path/', 'dataset': {'ann_file': '/new/dataset/path/train.json'}}
+```
+
+The value of `data_root` has been substituted with the value of `DATASET` as `/new/dataset/path`.
+
+It is noteworthy that both `--cfg-options` and `{{$ENV_VAR:DEF_VAL}}` allow users to modify fields in command line. But there is a small difference between those two methods. Environment variable substitution occurs before the configuration parsing. If the replaced field is also involved in other fields assignment, the environment variable substitution will also affect the other fields.
+
+We take `demo_train.py` and `replace_data_root.py` for example. If we replace `data_root` by setting `--cfg-options data_root='/new/dataset/path'`:
+
+```bash
+python demo_train.py replace_data_root.py --cfg-options data_root='/new/dataset/path/'
+```
+
+```
+Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/new/dataset/path/', 'dataset': {'ann_file': '/data/coco/train.json'}}
+```
+
+As we can see, only `data_root` has been modified. `dataset.ann_file` is still the default value.
+
+In contrast, if we replace `data_root` by setting `DATASET=/new/dataset/path`:
+
+```bash
+DATASET=/new/dataset/path/ python demo_train.py replace_data_root.py
+```
+
+```
+Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/new/dataset/path/', 'dataset': {'ann_file': '/new/dataset/path/train.json'}}
+```
+
+Both `data_root` and `dataset.ann_file` have been modified.
+
+Environment variables can also be used to replace other types of fields. We can use `{{'$ENV_VAR:DEF_VAL'}}` or `{{"$ENV_VAR:DEF_VAL"}}` format to ensure the configuration file conforms to python syntax.
+
+We can take `replace_num_classes.py` as an example:
+
+```
+model=dict(
+    bbox_head=dict(
+        num_classes={{'$NUM_CLASSES:80'}}))
+```
+
+If we run `demo_train.py` to parse this configuration file.
+
+```bash
+python demo_train.py replace_num_classes.py
+```
+
+```
+Config (path: replace_num_classes.py): {'model': {'bbox_head': {'num_classes': 80}}}
+```
+
+Let us set the environment variable `NUM_CLASSES`
+
+```bash
+NUM_CLASSES=20 python demo_train.py replace_num_classes.py
+```
+
+```
+Config (path: replace_num_classes.py): {'model': {'bbox_head': {'num_classes': 20}}}
+```
+
+### import the custom module
+
+If we customize a module and register it into the corresponding registry, could we directly build it from the configuration file as the previous [section](#how-to-use-config) does? The answer is "I don't know" since I'm not sure the registration process has been triggered. To solve this "unknown" case, `Config` provides the `custom_imports` function, to make sure your module could be registered as expected.
+
+For example, we customize an optimizer:
+
+```python
+from mmengine.registry import OPTIMIZERS
+
+@OPTIMIZERS.register_module()
+class CustomOptim:
+    pass
+```
+
+A matched config file:
+
+`my_module.py`
+
+```python
+optimizer = dict(type='CustomOptim')
+```
+
+To make sure `CustomOptim` will be registered, we should set the `custom_imports` field like this:
+
+`custom_imports.py`
+
+```python
+custom_imports = dict(imports=['my_module'], allow_failed_imports=False)
+optimizer = dict(type='CustomOptim')
+```
+
+And then, once the `custom_imports` can be loaded successfully, we can build the `CustomOptim` from the `custom_imports.py`.
+
+```python
+cfg = Config.fromfile('custom_imports.py')
+
+from mmengine.registry import OPTIMIZERS
+
+custom_optim = OPTIMIZERS.build(cfg.optimizer)
+print(custom_optim)
+```
+
+```
+<my_module.CustomOptim object at 0x7f6983a87970>
+```
+
+### Inherit configuration files across repository
+
+It is annoying to copy a large number of configuration files when developing a new repository based on some existing repositories. To address this issue, `Config` support inherit configuration files from other repositories. For example, based on MMDetection, we want to develop a repository, we can use the MMDetection configuration file like this:
+
+`cross_repo.py`
+
+```python
+_base_ = [
+    'mmdet::_base_/schedules/schedule_1x.py',
+    'mmdet::_base_/datasets/coco_instance.py',
+    'mmdet::_base_/default_runtime.py',
+    'mmdet::_base_/models/faster_rcnn_r50_fpn.py',
+]
+```
+
+```python
+cfg = Config.fromfile('cross_repo.py')
+print(cfg.train_cfg)
+```
+
+```
+{'type': 'EpochBasedTrainLoop', 'max_epochs': 12, 'val_interval': 1, '_scope_': 'mmdet'}
+```
+
+`Config` will parse `mmdet::` to find mmdet package and inherits the specified configuration file. Actually, as long as the `setup.py` of the repository(package) conforms to [MMEngine Installation specification](todo), `Config` can use `{package_name}::` to inherit the specific configuration file.
+
+### Get configuration files across repository
+
+`Config` also provides `get_config` and `get_model` to get the configuration file and the trained model from the downstream repositories.
+
+The usage of `get_config` and `get_model` are similar to the previous section:
+
+An example of `get_config`:
+
+```python
+from mmengine.hub import get_config
+
+cfg = get_config(
+    'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py', pretrained=True)
+print(cfg.model_path)
+```
+
+```
+https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth
+```
+
+An example of `get_model`:
+
+```python
+from mmengine.hub import get_model
+
+model = get_model(
+    'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py', pretrained=True)
+print(type(model))
+```
+
+```
+http loads checkpoint from path: https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth
+<class 'mmdet.models.detectors.faster_rcnn.FasterRCNN'>
+```
+
+## A Pure Python style Configuration File (Beta)
 
 In the previous tutorial, we introduced how to use configuration files to build modules with registry and how to use `_base_` to inherit configuration files. These pure text style configuration files can satisfy most of our development needs and some module aliases can greatly simplify the configuration files (e.g. `ResNet` can refer to `mmcls.models.ResNet`). However, there are also some disadvantages:
 
@@ -797,329 +1152,3 @@ To migrate from a pure text style configuration file to a pure Python style conf
      </tr>
      </tbody>
    </table>
-
-## Advanced usage
-
-In this section, we'll introduce some advanced usage of the `Config`, and some tips that could make it easier for users to develop and use downstream repositories.
-
-```{note}
-If you use pure Python style configuration file. Advanced usage should not be used except for the function described in "Modify the fields in command line"
-```
-
-### Predefined fields
-
-Sometimes we need some fields in the configuration file, which are related to the path to the workspace. For example, we define a working directory in the configuration file that holds the models and logs for this set of experimental configurations. We expect to have different working directories for different configuration files. A common choice is to use the configuration file name directly as part of the working directory name.
-Taking `predefined_var.py` as an example:
-
-```Python
-work_dir = './work_dir/{{fileBasenameNoExtension}}'
-```
-
-Here `{{fileBasenameNoExtension}}` means the filename without suffix `.py` of the config file, and the variable in `{{}}` will be interpreted as `predefined_var`
-
-```python
-cfg = Config.fromfile('./predefined_var.py')
-print(cfg.work_dir)
-```
-
-```shell
-./work_dir/predefined_var
-```
-
-Currently, there are 4 predefined fields referenced from the relevant fields defined in [VS Code](https://code.visualstudio.com/docs/editor/variables-reference).
-
-- `{{fileDirname}}` - the directory name of the current file, e.g. `/home/your-username/your-project/folder`
-- `{{fileBasename}}` - the filename of the current file, e.g. `file.py`
-- `{{fileBasenameNoExtension}}` - the filename of the current file without the extension, e.g. `file`
-- `{{fileExtname}}` - the extension of the current file, e.g. `.py`
-
-### Modify the fields in command line
-
-Sometimes we only want to modify part of the configuration and do not want to modify the configuration file itself. For example, if we want to change the learning rate during the experiment but do not want to write a new configuration file, the common practice is to pass the parameters at the command line to override the relevant configuration.
-
-If we want to modify some internal parameters, such as the learning rate of the optimizer, the number of channels in the convolution layer etc., `Config` provides a standard procedure that allows us to modify the parameters at any level easily from the command line.
-
-**Training script:**
-
-`demo_train.py`
-
-```python
-import argparse
-
-from mmengine.config import Config, DictAction
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description='Train a model')
-    parser.add_argument('config', help='train config file path')
-    parser.add_argument(
-        '--cfg-options',
-        nargs='+',
-        action=DictAction,
-        help='override some settings in the used config, the key-value pair '
-        'in xxx=yyy format will be merged into config file. If the value to '
-        'be overwritten is a list, it should be like key="[a,b]" or key=a,b '
-        'It also allows nested list/tuple values, e.g. key="[(a,b),(c,d)]" '
-        'Note that the quotation marks are necessary and that no white space '
-        'is allowed.')
-
-    args = parser.parse_args()
-    return args
-
-
-def main():
-    args = parse_args()
-    cfg = Config.fromfile(args.config)
-    if args.cfg_options is not None:
-        cfg.merge_from_dict(args.cfg_options)
-    print(cfg)
-
-
-if __name__ == '__main__':
-    main()
-```
-
-The sample configuration file is as follows.
-
-`example.py`
-
-```python
-model = dict(type='CustomModel', in_channels=[1, 2, 3])
-optimizer = dict(type='SGD', lr=0.01)
-```
-
-We can modify the internal fields from the command line by `.` For example, if we want to modify the learning rate, we only need to execute the script like this:
-
-```bash
-python demo_train.py ./example.py --cfg-options optimizer.lr=0.1
-```
-
-```
-Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1, 2, 3]}, 'optimizer': {'type': 'SGD', 'lr': 0.1}}
-```
-
-We successfully modified the learning rate from 0.01 to 0.1. If we want to change a list or a tuple, such as `in_channels` in the above example. We need to put double quotes around `()`, `[]` when assigning the value on the command line.
-
-```bash
-python demo_train.py ./example.py --cfg-options model.in_channels="[1, 1, 1]"
-```
-
-```
-Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1, 1, 1]}, 'optimizer': {'type': 'SGD', 'lr': 0.01}}
-```
-
-```{note}
-The standard procedure only supports modifying String, Integer, Floating Point, Boolean, None, List, and Tuple fields from the command line. For the elements of list and tuple instance, each of them must be one of the above seven types.
-```
-
-:::{note}
-The behavior of `DictAction` is similar with `"extend"`. It stores a list, and extends each argument value to the list, like:
-
-```bash
-python demo_train.py ./example.py --cfg-options optimizer.type="Adam" --cfg-options model.in_channels="[1, 1, 1]"
-```
-
-```
-Config (path: ./example.py): {'model': {'type': 'CustomModel', 'in_channels': [1, 1, 1]}, 'optimizer': {'type': 'Adam', 'lr': 0.01}}
-```
-
-:::
-
-### Replace fields with environment variables
-
-When a field is deeply nested, we need to add a long prefix at the command line to locate it. To alleviate this problem, MMEngine allows users to substitute fields in configuration with environment variables.
-
-Before parsing the configuration file, the program will search all `{{$ENV_VAR:DEF_VAL}}` fields and substitute those sections with environment variables. Here, `ENV_VAR` is the name of the environment variable used to replace this section, `DEF_VAL` is the default value if `ENV_VAR` is not set.
-
-When we want to modify the dataset path at the command line, we can take `replace_data_root.py` as an example:
-
-```python
-dataset_type = 'CocoDataset'
-data_root = '{{$DATASET:/data/coco/}}'
-dataset=dict(ann_file= data_root + 'train.json')
-```
-
-If we run `demo_train.py` to parse this configuration file.
-
-```bash
-python demo_train.py replace_data_root.py
-```
-
-```
-Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/data/coco/', 'dataset': {'ann_file': '/data/coco/train.json'}}
-```
-
-Here, we don't set the environment variable `DATASET`. Thus, the program directly replaces `{{$DATASET:/data/coco/}}` with the default value `/data/coco/`. If we set `DATASET` at the command line:
-
-```bash
-DATASET=/new/dataset/path/ python demo_train.py replace_data_root.py
-```
-
-```
-Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/new/dataset/path/', 'dataset': {'ann_file': '/new/dataset/path/train.json'}}
-```
-
-The value of `data_root` has been substituted with the value of `DATASET` as `/new/dataset/path`.
-
-It is noteworthy that both `--cfg-options` and `{{$ENV_VAR:DEF_VAL}}` allow users to modify fields in command line. But there is a small difference between those two methods. Environment variable substitution occurs before the configuration parsing. If the replaced field is also involved in other fields assignment, the environment variable substitution will also affect the other fields.
-
-We take `demo_train.py` and `replace_data_root.py` for example. If we replace `data_root` by setting `--cfg-options data_root='/new/dataset/path'`:
-
-```bash
-python demo_train.py replace_data_root.py --cfg-options data_root='/new/dataset/path/'
-```
-
-```
-Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/new/dataset/path/', 'dataset': {'ann_file': '/data/coco/train.json'}}
-```
-
-As we can see, only `data_root` has been modified. `dataset.ann_file` is still the default value.
-
-In contrast, if we replace `data_root` by setting `DATASET=/new/dataset/path`:
-
-```bash
-DATASET=/new/dataset/path/ python demo_train.py replace_data_root.py
-```
-
-```
-Config (path: replace_data_root.py): {'dataset_type': 'CocoDataset', 'data_root': '/new/dataset/path/', 'dataset': {'ann_file': '/new/dataset/path/train.json'}}
-```
-
-Both `data_root` and `dataset.ann_file` have been modified.
-
-Environment variables can also be used to replace other types of fields. We can use `{{'$ENV_VAR:DEF_VAL'}}` or `{{"$ENV_VAR:DEF_VAL"}}` format to ensure the configuration file conforms to python syntax.
-
-We can take `replace_num_classes.py` as an example:
-
-```
-model=dict(
-    bbox_head=dict(
-        num_classes={{'$NUM_CLASSES:80'}}))
-```
-
-If we run `demo_train.py` to parse this configuration file.
-
-```bash
-python demo_train.py replace_num_classes.py
-```
-
-```
-Config (path: replace_num_classes.py): {'model': {'bbox_head': {'num_classes': 80}}}
-```
-
-Let us set the environment variable `NUM_CLASSES`
-
-```bash
-NUM_CLASSES=20 python demo_train.py replace_num_classes.py
-```
-
-```
-Config (path: replace_num_classes.py): {'model': {'bbox_head': {'num_classes': 20}}}
-```
-
-### import the custom module
-
-If we customize a module and register it into the corresponding registry, could we directly build it from the configuration file as the previous [section](#how-to-use-config) does? The answer is "I don't know" since I'm not sure the registration process has been triggered. To solve this "unknown" case, `Config` provides the `custom_imports` function, to make sure your module could be registered as expected.
-
-For example, we customize an optimizer:
-
-```python
-from mmengine.registry import OPTIMIZERS
-
-@OPTIMIZERS.register_module()
-class CustomOptim:
-    pass
-```
-
-A matched config file:
-
-`my_module.py`
-
-```python
-optimizer = dict(type='CustomOptim')
-```
-
-To make sure `CustomOptim` will be registered, we should set the `custom_imports` field like this:
-
-`custom_imports.py`
-
-```python
-custom_imports = dict(imports=['my_module'], allow_failed_imports=False)
-optimizer = dict(type='CustomOptim')
-```
-
-And then, once the `custom_imports` can be loaded successfully, we can build the `CustomOptim` from the `custom_imports.py`.
-
-```python
-cfg = Config.fromfile('custom_imports.py')
-
-from mmengine.registry import OPTIMIZERS
-
-custom_optim = OPTIMIZERS.build(cfg.optimizer)
-print(custom_optim)
-```
-
-```
-<my_module.CustomOptim object at 0x7f6983a87970>
-```
-
-### Inherit configuration files across repository
-
-It is annoying to copy a large number of configuration files when developing a new repository based on some existing repositories. To address this issue, `Config` support inherit configuration files from other repositories. For example, based on MMDetection, we want to develop a repository, we can use the MMDetection configuration file like this:
-
-`cross_repo.py`
-
-```python
-_base_ = [
-    'mmdet::_base_/schedules/schedule_1x.py',
-    'mmdet::_base_/datasets/coco_instance.py',
-    'mmdet::_base_/default_runtime.py',
-    'mmdet::_base_/models/faster_rcnn_r50_fpn.py',
-]
-```
-
-```python
-cfg = Config.fromfile('cross_repo.py')
-print(cfg.train_cfg)
-```
-
-```
-{'type': 'EpochBasedTrainLoop', 'max_epochs': 12, 'val_interval': 1, '_scope_': 'mmdet'}
-```
-
-`Config` will parse `mmdet::` to find mmdet package and inherits the specified configuration file. Actually, as long as the `setup.py` of the repository(package) conforms to [MMEngine Installation specification](todo), `Config` can use `{package_name}::` to inherit the specific configuration file.
-
-### Get configuration files across repository
-
-`Config` also provides `get_config` and `get_model` to get the configuration file and the trained model from the downstream repositories.
-
-The usage of `get_config` and `get_model` are similar to the previous section:
-
-An example of `get_config`:
-
-```python
-from mmengine.hub import get_config
-
-cfg = get_config(
-    'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py', pretrained=True)
-print(cfg.model_path)
-```
-
-```
-https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth
-```
-
-An example of `get_model`:
-
-```python
-from mmengine.hub import get_model
-
-model = get_model(
-    'mmdet::faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py', pretrained=True)
-print(type(model))
-```
-
-```
-http loads checkpoint from path: https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth
-<class 'mmdet.models.detectors.faster_rcnn.FasterRCNN'>
-```
