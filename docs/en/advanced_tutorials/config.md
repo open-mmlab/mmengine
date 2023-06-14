@@ -370,35 +370,35 @@ a=1
 b=2
 ```
 
-## A Pure Python-style Configuration File
+## A Pure Python style Configuration File
 
-In the previous tutorial, we introduced how to use configuration files to build modules with registrars and how to use `_base_` to inherit configuration files. These pure text-style configuration files can satisfy most of our development needs and some module aliases can greatly simplify the configuration files (e.g. `ResNet` can refer to `mmcls.models.ResNet`). However, there are also some disadvantages:
+In the previous tutorial, we introduced how to use configuration files to build modules with registry and how to use `_base_` to inherit configuration files. These pure text style configuration files can satisfy most of our development needs and some module aliases can greatly simplify the configuration files (e.g. `ResNet` can refer to `mmcls.models.ResNet`). However, there are also some disadvantages:
 
 1. In the configuration file, the `type` field is specified by a string, and IDE cannot directly jump to the corresponding class definition, which is not conducive to code reading and jumping.
 2. The inheritance of configuration files is also specified by a string, and IDE cannot directly jump to the inherited file. When the inheritance structure of the configuration file is complex, it is not conducive to reading and jumping of the configuration file.
 3. The inheritance rules are relatively implicit, and beginners find it difficult to understand how the configuration file merges variables with the same fields and derives special syntax such as `_delete_`, resulting in a higher learning cost.
 4. It is easy for users to forget to register the module and cause `module not found` errors.
-5. In the yet-to-be-mentioned cross-database inheritance, the introduction of the scope makes the inheritance rules of the configuration file more complicated, and beginners find it difficult to understand.
+5. In the yet-to-be-mentioned cross-codebase inheritance, the introduction of the scope makes the inheritance rules of the configuration file more complicated, and beginners find it difficult to understand.
 
-In summary, although pure text-style configuration files can provide the same syntax rules for python, json, and yaml format configurations, when the configuration files become complex, pure text-style configuration files will appear inadequate. Therefore, we provide a pure Python-style configuration file, i.e., the `lazy import` mode, which can fully utilize Python's syntax rules to solve the above problems. At the same time, the pure Python-style configuration file also supports exporting to json and yaml formats.
+In summary, although pure text style configuration files can provide the same syntax rules for `python`, `json`, and `yaml` format configurations, when the configuration files become complex, pure text style configuration files will appear inadequate. Therefore, we provide a pure Python style configuration file, i.e., the `lazy import` mode, which can fully utilize Python's syntax rules to solve the above problems. At the same time, the pure Python style configuration file also supports exporting to `json` and `yaml` formats.
 
 ### Basic Syntax
 
-In the previous tutorial, we introduced module construction, inheritance, and export based on pure text-style configuration files. This section will introduce pure Python-style configuration files based on these three aspects.
+In the previous tutorial, we introduced module construction, inheritance, and export based on pure text style configuration files. This section will introduce pure Python style configuration files based on these three aspects.
 
 #### Module Construction
 
-We use a simple example to compare pure Python-style and pure text-style configuration files:
+We use a simple example to compare pure Python style and pure text style configuration files:
 
 ```{eval-rst}
 .. tabs::
     .. tabs::
 
-        .. code-tab:: python Pure Python-style
+        .. code-tab:: python Pure Python style
 
             # No need for registration
 
-        .. code-tab:: python Pure text-style
+        .. code-tab:: python Pure text style
 
             # Registration process
             from torch.optim import SGD
@@ -408,7 +408,7 @@ We use a simple example to compare pure Python-style and pure text-style configu
 
     .. tabs::
 
-        .. code-tab:: python Pure Python-style
+        .. code-tab:: python Pure Python style
 
             # Configuration file writing
             from torch.optim import SGD
@@ -416,14 +416,14 @@ We use a simple example to compare pure Python-style and pure text-style configu
 
             optimizer = dict(type=SGD, lr=0.1)
 
-        .. code-tab:: python Pure text-style
+        .. code-tab:: python Pure text style
 
             # Configuration file writing
             optimizer = dict(type='SGD', lr=0.1)
 
     .. tabs::
 
-        .. code-tab:: python Pure Python-style
+        .. code-tab:: python Pure Python style
 
             # The construction process is exactly the same
             import torch.nn as nn
@@ -435,7 +435,7 @@ We use a simple example to compare pure Python-style and pure text-style configu
             cfg.optimizer.params = model.parameters()
             optimizer = OPTIMIZERS.build(cfg.optimizer)
 
-        .. code-tab:: python Pure text-style
+        .. code-tab:: python Pure text style
 
             # The construction process is exactly the same
             import torch.nn as nn
@@ -448,31 +448,31 @@ We use a simple example to compare pure Python-style and pure text-style configu
             optimizer = OPTIMIZERS.build(cfg.optimizer)
 ```
 
-From the above example, we can see that the difference between pure Python-style and pure text-style configuration files is:
+From the above example, we can see that the difference between pure Python style and pure text style configuration files is:
 
-1. Pure Python-style configuration files do not require module registration.
-2. In pure Python-style configuration files, the `type` field is no longer a string but directly refers to the module. Correspondingly, import syntax needs to be added in the configuration file.
+1. Pure Python style configuration files do not require module registration.
+2. In pure Python style configuration files, the `type` field is no longer a string but directly refers to the module. Correspondingly, import syntax needs to be added in the configuration file.
 
-It should be noted that the OpenMMLab series algorithm library still retains the registration process when adding modules. When users build their own projects based on MMEngine, if they use pure Python-style configuration files, registration is not required. You may wonder that if you are not in an environment with torch installed, you cannot parse the sample configuration file. Can this configuration file still be called a configuration file? Don't worry, we will explain this part later.
+It should be noted that the OpenMMLab series algorithm library still retains the registration process when adding modules. When users build their own projects based on MMEngine, if they use pure Python style configuration files, registration is not required. You may wonder that if you are not in an environment with torch installed, you cannot parse the sample configuration file. Can this configuration file still be called a configuration file? Don't worry, we will explain this part later.
 
 #### Inheritance
 
-The inheritance syntax of pure Python-style configuration files is slightly different:
+The inheritance syntax of pure Python style configuration files is slightly different:
 
 ```{eval-rst}
 .. tabs::
 
-    .. code-tab:: python Pure Python-style Inheritance
+    .. code-tab:: python Pure Python style Inheritance
 
         # _base_ = [./optimizer.py]
 
-    .. code-tab:: python Pure text-style Inheritance
+    .. code-tab:: python Pure text style Inheritance
 
         if '_base_':
             from .optimizer import *
 ```
 
-Pure Python-style configuration files use import syntax to achieve inheritance. The advantage of doing this is that we can directly jump to the inherited configuration file for easy reading and jumping. The variable inheritance rule (add, delete, change, and search) is completely aligned with Python syntax. For example, if I want to modify the learning rate of the optimizer in the base configuration file:
+Pure Python style configuration files use import syntax to achieve inheritance. The advantage of doing this is that we can directly jump to the inherited configuration file for easy reading and jumping. The variable inheritance rule (add, delete, change, and search) is completely aligned with Python syntax. For example, if I want to modify the learning rate of the optimizer in the base configuration file:
 
 ```python
 if '_base_':
@@ -484,7 +484,7 @@ optimizer.update(
 )
 ```
 
-Of course, if you are already accustomed to the inheritance rules of pure text-style configuration files and the variable is of the `dict` type in the `_base_` configuration file, you can also use merge syntax to achieve the same inheritance rule as pure text-style configuration files:
+Of course, if you are already accustomed to the inheritance rules of pure text style configuration files and the variable is of the `dict` type in the `_base_` configuration file, you can also use merge syntax to achieve the same inheritance rule as pure text style configuration files:
 
 ```python
 if '_base_':
@@ -497,7 +497,7 @@ optimizer.merge(
     type='SGD'
 )
 
-# The equivalent Python-style writing is as follows, completely consistent with Python's import rules
+# The equivalent Python style writing is as follows, completely consistent with Python's import rules
 # optimizer = dict(
 #     lr=0.01,
 #     type='SGD'
@@ -505,7 +505,7 @@ optimizer.merge(
 ```
 
 ````{note}
-It should be noted that the `update` method of the dictionary in pure Python-style configuration files is slightly different from `dict.update`. Pure Python-style update will recursively update the content in the dictionary, for example:
+It should be noted that the `update` method of the dictionary in pure Python style configuration files is slightly different from `dict.update`. Pure Python style update will recursively update the content in the dictionary, for example:
 
 ```python
 x = dict(a=1, b=dict(c=2, d=3))
@@ -520,18 +520,18 @@ x.update(dict(b=dict(d=4)))
 It can be seen that using the update method in the configuration file will recursively update the fields, rather than simply covering them.
 ````
 
-Compared with pure text-style configuration files, the inheritance rule of pure Python-style configuration files is completely aligned with the import syntax of Python, which is easier to understand and supports jumping between configuration files. You may wonder since both inheritance and module imports use import syntax, why do we need an `if '_base_'` statement for inheriting configuration files? On the one hand, this can improve the readability of configuration files, making inherited configuration files more prominent. On the other hand, it is also restricted by the rules of lazy_import, which will be explained later.
+Compared with pure text style configuration files, the inheritance rule of pure Python style configuration files is completely aligned with the import syntax of Python, which is easier to understand and supports jumping between configuration files. You may wonder since both inheritance and module imports use import syntax, why do we need an `if '_base_'` statement for inheriting configuration files? On the one hand, this can improve the readability of configuration files, making inherited configuration files more prominent. On the other hand, it is also restricted by the rules of lazy_import, which will be explained later.
 
 #### Dump the Configuration File
 
-The pure python-style configuration files can also be exported via the `dump` interface, and there is no difference in usage. However, the exported contents will be different:
+The pure Python style configuration files can also be exported via the `dump` interface, and there is no difference in usage. However, the exported contents will be different:
 
 ```{eval-rst}
 .. tabs::
 
     .. tabs::
 
-        .. code-tab:: python Export in pure python style
+        .. code-tab:: python Export in pure Python style
 
             optimizer = dict(type='torch.optim.SGD', lr=0.1)
 
@@ -541,7 +541,7 @@ The pure python-style configuration files can also be exported via the `dump` in
 
     .. tabs::
 
-        .. code-tab:: yaml Export in pure python style
+        .. code-tab:: yaml Export in pure Python style
 
             optimizer:
                 type: torch.optim.SGD
@@ -555,7 +555,7 @@ The pure python-style configuration files can also be exported via the `dump` in
 
     .. tabs::
 
-        .. code-tab:: json Export in pure python style
+        .. code-tab:: json Export in pure Python style
 
             {"optimizer": "torch.optim.SGD", "lr": 0.1}
 
@@ -564,15 +564,15 @@ The pure python-style configuration files can also be exported via the `dump` in
             {"optimizer": "SGD", "lr": 0.1}
 ```
 
-As can be seen, the type field exported in pure python style contains the full module information. The exported configuration file can also be directly loaded to construct an instance through the registry.
+As can be seen, the type field exported in pure Python style contains the full module information. The exported configuration file can also be directly loaded to construct an instance through the registry.
 
 ### What is Lazy Import
 
-You may find that pure python-style configuration files seem to organize configuration files using pure python syntax. Then, I do not need configuration classes, and I could just import configuration files using python syntax. If you have such a feeling, then it is worth celebrating because this is exactly the effect we want.
+You may find that pure Python style configuration files seem to organize configuration files using pure Python syntax. Then, I do not need configuration classes, and I could just import configuration files using Python syntax. If you have such a feeling, then it is worth celebrating because this is exactly the effect we want.
 
 As mentioned earlier, parsing configuration files requires dependencies on third-party libraries referenced in the configuration files. This is actually a very unreasonable thing. For example, if I trained a model based on MMagic and wanted to deploy it with the onnxruntime backend of MMDeploy. Due to the lack of torch in the deployment environment, and torch is needed in the configuration file parsing process, this makes it inconvenient for me to directly use the configuration file of MMagic as the deployment configuration. To solve this problem, we introduced the concept of lazy_import.
 
-It is a complex task to discuss the specific implementation of lazy_import, so here we only briefly introduce its function. The core idea of lazy_import is to delay the execution of the import statement in the configuration file until the configuration file is parsed, so that the dependency problem caused by the import statement in the configuration file can be avoided. During the configuration file parsing process, the equivalent code executed by the python interpreter is as follows:
+It is a complex task to discuss the specific implementation of lazy_import, so here we only briefly introduce its function. The core idea of lazy_import is to delay the execution of the import statement in the configuration file until the configuration file is parsed, so that the dependency problem caused by the import statement in the configuration file can be avoided. During the configuration file parsing process, the equivalent code executed by the Python interpreter is as follows:
 
 ```{eval-rst}
 .. tabs::
@@ -607,22 +607,22 @@ However, we cannot adopt the lazy import strategy for the inheritance (import) o
 ### Limitations
 
 1. Functions and classes cannot be defined in the configuration file.
-2. The configuration file name must comply with the naming convention of python modules, which can only contain letters, numbers, and underscores, and cannot start with a number.
-3. When importing variables from the base configuration file, such as `from ._base_.alpha import beta`, the `alpha` here must be the module (module) name, i.e., a python file, rather than the package (package) name containing `__init__.py`.
+2. The configuration file name must comply with the naming convention of Python modules, which can only contain letters, numbers, and underscores, and cannot start with a number.
+3. When importing variables from the base configuration file, such as `from ._base_.alpha import beta`, the `alpha` here must be the module (module) name, i.e., a Python file, rather than the package (package) name containing `__init__.py`.
 4. Importing multiple variables simultaneously in an absolute import statement, such as `import torch, numpy, os`, is not supported. Multiple import statements need to be used instead, such as `import torch; import numpy; import os`.
 
 ### Migration Guide
 
-To migrate from a pure text-style configuration file to a pure python-style configuration file, the following rules must be followed:
+To migrate from a pure text style configuration file to a pure Python style configuration file, the following rules must be followed:
 
 1. Replace the string type with the specific class:
 
    - If the code does not depend on the type field being a string, and no special processing is done on the type field, the string type of the type field can be replaced with the specific class, and the class should be imported at the beginning of the configuration file.
    - If the code depends on the type field being a string, the code needs to be modified, or the original string format of the type should be retained.
 
-2. Rename the configuration file. The configuration file name must comply with the naming convention of python modules, which can only contain letters, numbers, and underscores, and cannot start with a number.
+2. Rename the configuration file. The configuration file name must comply with the naming convention of Python modules, which can only contain letters, numbers, and underscores, and cannot start with a number.
 
-3. Remove scope-related configurations. Pure python-style configuration files no longer need to use scope to call modules across libraries, and modules can be directly imported. For compatibility reasons, we still set the `default_scope` parameter of the Runner to `mmengine`, and users need to manually set it to `None`.
+3. Remove scope-related configurations. Pure Python style configuration files no longer need to use scope to get modules across libraries, and modules can be directly imported. For compatibility reasons, we still set the `default_scope` parameter of the Runner to `mmengine`, and users need to manually set it to `None`.
 
 4. For modules that have aliases in the registry, replace their aliases with their corresponding real modules. The following is a table of commonly used alias replacements:
 
@@ -802,7 +802,7 @@ To migrate from a pure text-style configuration file to a pure python-style conf
 In this section, we'll introduce some advanced usage of the `Config`, and some tips that could make it easier for users to develop and use downstream repositories.
 
 ```{note}
-If you use pure python style configuration file. Advanced usage should not be used except for the function described in "Modify the fields in command line"
+If you use pure Python style configuration file. Advanced usage should not be used except for the function described in "Modify the fields in command line"
 ```
 
 ### Predefined fields

@@ -26,7 +26,7 @@ wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/c
 ```
 
 :::{note}
-如果你已经对配置文件的使用方式有了一定的了解，但是尚且不了解配置文件的 lazy_import 模式，可以跳转到 [纯 python 风格配置文件](#纯-python-风格的配置文件)一节进行阅读
+如果你已经对配置文件的使用方式有了一定的了解，但是尚且不了解配置文件的 lazy_import 模式，可以跳转到[纯 python 风格配置文件](#纯-python-风格的配置文件)一节进行阅读
 :::
 
 ## 配置文件读取
@@ -378,7 +378,7 @@ b=2
 4. 用户忘记注册模块时，容易发生 module not found 的 error
 5. 在尚且没有提到的跨库继承中，scope 的引入导致配置文件的继承规则更加复杂，初学者很难理解
 
-综上所述，尽管纯文本风格的配置文件能够为 python、json、yaml 格式的配置提供相同的语法规则，但是当配置文件变得复杂时，纯文本风格的配置文件会显得力不从心。为此，我们提供了纯 Python 风格的配置文件，即 `lazy import` 模式，它能够充分利用 python 的语法规则，解决上述问题。与此同时，纯 Python 风格的配置文件也支持导出成 json 和 yaml 格式。
+综上所述，尽管纯文本风格的配置文件能够为 `python`、`json`、`yaml` 格式的配置提供相同的语法规则，但是当配置文件变得复杂时，纯文本风格的配置文件会显得力不从心。为此，我们提供了纯 Python 风格的配置文件，即 `lazy import` 模式，它能够充分利用 Python 的语法规则，解决上述问题。与此同时，纯 Python 风格的配置文件也支持导出成 `json` 和 `yaml` 格式。
 
 ### 基本语法
 
@@ -392,7 +392,7 @@ b=2
 .. tabs::
     .. tabs::
 
-        .. code-tab:: python 纯 python 风格
+        .. code-tab:: python 纯 Python 风格
 
             # 无需注册
 
@@ -406,7 +406,7 @@ b=2
 
     .. tabs::
 
-        .. code-tab:: python 纯 python 风格
+        .. code-tab:: python 纯 Python 风格
 
             # 配置文件写法
             from torch.optim import SGD
@@ -421,7 +421,7 @@ b=2
 
     .. tabs::
 
-        .. code-tab:: python 纯 python 风格
+        .. code-tab:: python 纯 Python 风格
 
             # 构建流程完全一致
             import torch.nn as nn
@@ -451,7 +451,7 @@ b=2
 1. 纯 Python 风格的配置文件无需注册模块
 2. 纯 Python 风格的配置文件中，type 字段不再是字符串，而是直接指代模块。相应的配置文件需要多出 import 语法
 
-需要注意的是，OpenMMLab 系列算法库在新增模块时仍会保留注册过程，用户基于 MMEngine 构建自己的项目时，如果使用纯 python 风格的配置文件，则无需注册。看到这你会或许会好奇，这样没有安装 torch 的环境不就没法解析样例配置文件了么，这样的配置文件还叫配置文件么？不要着急，这部分的内容我们会在后面介绍
+需要注意的是，OpenMMLab 系列算法库在新增模块时仍会保留注册过程，用户基于 MMEngine 构建自己的项目时，如果使用纯 Python 风格的配置文件，则无需注册。看到这你会或许会好奇，这样没有安装 PyTorch 的环境不就没法解析样例配置文件了么，这样的配置文件还叫配置文件么？不要着急，这部分的内容我们会在后面介绍。
 
 #### 继承
 
@@ -460,7 +460,7 @@ b=2
 ```{eval-rst}
 .. tabs::
 
-    .. code-tab:: python 纯 python 风格继承
+    .. code-tab:: python 纯 Python 风格继承
 
         # _base_ = [./optimizer.py]
 
@@ -470,7 +470,7 @@ b=2
             from .optimizer import *
 ```
 
-纯 python 风格的配置文件通过 import 语法来实现继承，这样做的好处是，我们可以直接跳转到被继承的配置文件中，方便阅读和跳转。变量的继承规则（增删改查）和 完全对齐 Python 语法，例如我想修改 base 配置文件中 optimizer 的学习率:
+纯 Python 风格的配置文件通过 import 语法来实现继承，这样做的好处是，我们可以直接跳转到被继承的配置文件中，方便阅读和跳转。变量的继承规则（增删改查）完全对齐 Python 语法，例如我想修改 base 配置文件中 optimizer 的学习率：
 
 ```python
 if '_base_':
@@ -503,7 +503,7 @@ optimizer.merge(
 ```
 
 ````{note}
-需要注意的是，纯 python 风格的配置文件中，字典的 `update` 方法与 `dict.update` 稍有不同。纯 Python 风格的 update 会递归地去更新字典中的内容，例如：
+需要注意的是，纯 Python 风格的配置文件中，字典的 `update` 方法与 `dict.update` 稍有不同。纯 Python 风格的 update 会递归地去更新字典中的内容，例如：
 
 ```python
 x = dict(a=1, b=dict(c=2, d=3))
@@ -529,7 +529,7 @@ x.update(dict(b=dict(d=4)))
 
     .. tabs::
 
-        .. code-tab:: python 纯 python 风格导出
+        .. code-tab:: python 纯 Python 风格导出
 
             optimizer = dict(type='torch.optim.SGD', lr=0.1)
 
@@ -539,7 +539,7 @@ x.update(dict(b=dict(d=4)))
 
     .. tabs::
 
-        .. code-tab:: yaml 纯 python 风格导出
+        .. code-tab:: yaml 纯 Python 风格导出
 
             optimizer:
                 type: torch.optim.SGD
@@ -553,7 +553,7 @@ x.update(dict(b=dict(d=4)))
 
     .. tabs::
 
-        .. code-tab:: json 纯 python 风格导出
+        .. code-tab:: json 纯 Python 风格导出
 
             {"optimizer": "torch.optim.SGD", "lr": 0.1}
 
@@ -562,15 +562,15 @@ x.update(dict(b=dict(d=4)))
             {"optimizer": "SGD", "lr": 0.1}
 ```
 
-可以看到，纯 python 风格导出的 type 字段会包含模块的全量信息。导出的配置文件也可以被直接加载，通过注册器来构建实例。
+可以看到，纯 Python 风格导出的 type 字段会包含模块的全量信息。导出的配置文件也可以被直接加载，通过注册器来构建实例。
 
 ### 什么是 lazy import
 
-看到这你可能会吐槽，这纯 python 风格的配置文件感觉就像是用纯 python 语法来组织配置文件嘛。这样我哪还需要配置类，直接用 python 语法来导入配置文件不就好了。如果你有这样的感受，那真是一件值得庆祝的事，因为这正是我们想要的效果。
+看到这你可能会吐槽，这纯 Python 风格的配置文件感觉就像是用纯 Python 语法来组织配置文件嘛。这样我哪还需要配置类，直接用 Python 语法来导入配置文件不就好了。如果你有这样的感受，那真是一件值得庆祝的事，因为这正是我们想要的效果。
 
 正如前面所提到的，解析配置文件需要依赖配置文件中引用的三方库，这其实是一件非常不合理的事。例如我基于 MMagic 训练了一个模型，想使用 MMDeploy 的 onnxruntime 后端部署。由于部署环境中没有 torch，而配置文件解析过程中需要 torch，这就导致了我无法直接使用 MMagic 的配置文件作为部署的配置，这是非常不方便的。为了解决这个问题，我们引入了 lazy_import 的概念。
 
-要聊 lazy_import 的具体实现是一件比较复杂的事，在此我们仅对其功能做简要介绍。lazy_import 的核心思想是，将配置文件中的 import 语句延迟到配置文件被解析时才执行，这样就可以避免配置文件中的 import 语句导致的三方库依赖问题。配置文件解析过程时，python 解释器实际执行的等效代码如下
+要聊 lazy_import 的具体实现是一件比较复杂的事，在此我们仅对其功能做简要介绍。lazy_import 的核心思想是，将配置文件中的 import 语句延迟到配置文件被解析时才执行，这样就可以避免配置文件中的 import 语句导致的三方库依赖问题。配置文件解析过程时，Python 解释器实际执行的等效代码如下
 
 ```{eval-rst}
 .. tabs::
@@ -581,14 +581,14 @@ x.update(dict(b=dict(d=4)))
 
         optimizer = dict(type=SGD)
 
-    .. code-tab:: python 通过配置类，python 解释器实际执行的代码
+    .. code-tab:: python 通过配置类，Python 解释器实际执行的代码
 
         lazy_obj = LazyObject('torch.optim', 'SGD')
 
         optimizer = dict(type=lazy_obj)
 ```
 
-LazyObject 作为 `Config` 模块的內部类型，无法被用户访直接。用户在访问 type 字段时，会经过一系列的转换，将 `LazyObject` 转化成真正的 `torch.optim.SGD` 类型。这样一来，配置文件的解析不会触发三方库的导入，而用户使用配置文件时，又可以正常访问三方库的类型。
+LazyObject 作为 `Config` 模块的內部类型，无法被用户直接访问。用户在访问 type 字段时，会经过一系列的转换，将 `LazyObject` 转化成真正的 `torch.optim.SGD` 类型。这样一来，配置文件的解析不会触发三方库的导入，而用户使用配置文件时，又可以正常访问三方库的类型。
 
 要想访问 `LazyObject` 的内部类型，可以通过 `Config.to_dict` 接口：
 
@@ -598,29 +598,29 @@ print(type(cfg['optimizer']['type']))
 # mmengine.config.lazy.LazyObject
 ```
 
-此时访问得到的 type 就是 LazyObject 类型。
+此时得到的 type 就是 `LazyObject` 类型。
 
 然而对于 base 文件的继承（导入，import），我们不能够采取 lazy import 的策略，这是因为我们希望解析后的配置文件能够包含 base 配置文件定义的字段，需要真正的触发 import。因此我们对 base 文件的导入加了一层限制，即必须在 `if '_base_'` 的代码块中导入。
 
 ### 功能限制
 
 1. 不能在配置文件中定义函数、类等
-2. 配置文件名必须符合 python 模块名的命名规范，即只能包含字母、数字、下划线，且不能以数字开头
-3. 导入 base 配置文件中的变量时候，例如 `from ._base_.alpha import beta`，此处的 `alpha` 必须是模块（module）名，即 python 文件，而能不是含有 `__init__.py` 的包（package）名
-4. 不支持在 absolute import 语句中同时导入多个变量，例如 `import torch, numpy, os`. 需要通过多个 import 语句来实现，例如 `import torch; import numpy; import os`
+2. 配置文件名必须符合 Python 模块名的命名规范，即只能包含字母、数字、下划线，且不能以数字开头
+3. 导入 base 配置文件中的变量时，例如 `from ._base_.alpha import beta`，此处的 `alpha` 必须是模块（module）名，即 Python 文件，而不能是含有 `__init__.py` 的包（package）名
+4. 不支持在 absolute import 语句中同时导入多个变量，例如 `import torch, numpy, os`。需要通过多个 import 语句来实现，例如 `import torch; import numpy; import os`
 
 ### 迁移指南
 
-从纯文本风格的配置文件迁移到纯 python 风格的配置文件，需要遵守以下规则：
+从纯文本风格的配置文件迁移到纯 Python 风格的配置文件，需要遵守以下规则：
 
 1. type 从字符串替换成具体的类：
 
    - 代码不依赖 type 字段是字符串，且没有对 type 字段做特殊处理，则可以将字符串类型的 type 替换成具体的类，并在配置文件的开头导入该类
    - 代码依赖 type 字段是字符串，则需要修改代码，或保持原有的字符串格式的 type
 
-2. rename 配置文件，配置文件命名需要符合 python 模块名的命名规范，即只能包含字母、数字、下划线，且不能以数字开头
+2. 重命名配置文件，配置文件命名需要符合 Python 模块名的命名规范，即只能包含字母、数字、下划线，且不能以数字开头
 
-3. 删除 scope 相关配置。纯 python 风格的配置文件不再需要通过 scope 来跨库调用模块，直接通过 import 导入即可。出于兼容性方面的考虑，我们仍然让 Runner 的 default_scope 参数为 `mmengine`，用户需要将其手动设置为 `None`
+3. 删除 scope 相关配置。纯 Python 风格的配置文件不再需要通过 scope 来跨库调用模块，直接通过 import 导入即可。出于兼容性方面的考虑，我们仍然让 Runner 的 default_scope 参数为 `mmengine`，用户需要将其手动设置为 `None`
 
 4. 对于注册器中存在别名的（alias）的模块，将其别名替换成其对应的真实模块即可，以下是常用的别名替换表：
 
