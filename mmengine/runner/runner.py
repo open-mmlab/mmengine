@@ -35,7 +35,8 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, FUNCTIONS,
                                HOOKS, LOG_PROCESSORS, LOOPS, MODEL_WRAPPERS,
                                MODELS, OPTIM_WRAPPERS, PARAM_SCHEDULERS,
                                RUNNERS, VISUALIZERS, DefaultScope)
-from mmengine.utils import apply_to, digit_version, get_git_hash, is_seq_of
+from mmengine.utils import (apply_to, digit_version, get_git_hash,
+                            is_installed, is_seq_of)
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
                                      set_multi_processing)
 from mmengine.visualization import Visualizer
@@ -1705,6 +1706,19 @@ class Runner:
 
         # initialize the model weights
         self._init_model_weights()
+
+        fast_conv_bn_eval = self.cfg.get('fast_conv_bn_eval', False)
+        if fast_conv_bn_eval:
+            can_use_fast_conv_bn_eval = False
+            if is_installed('mmcv'):
+                import mmcv
+                if digit_version(mmcv.__version__) >= digit_version('2.0.1'):
+                    can_use_fast_conv_bn_eval = True
+            if can_use_fast_conv_bn_eval:
+                from mmengine.model.turn_on_fast_conv_bn_eval import \
+                    turn_on_fast_conv_bn_eval
+                turn_on_fast_conv_bn_eval(self.model)
+
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
 
