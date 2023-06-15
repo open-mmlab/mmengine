@@ -161,6 +161,20 @@ class OptimWrapper:
         # the loss factor will always be the same as `_accumulative_counts`.
         self._remainder_counts = -1
 
+        # The Following code is used to initialize `base_param_settings`.
+        # `base_param_settings` is used to store the parameters that are not
+        # updated by the optimizer.
+        # The `base_param_settings` used for tracking the base learning in the
+        # optimizer. If the optimizer has multiple parameter groups, this
+        # params will not be scaled by the loss factor.
+        if len(optimizer.param_groups) > 1:
+            self.base_param_settings = {
+                'params': torch.tensor([0.0], dtype=torch.float)
+            }
+            self.base_param_settings.update(**self.optimizer.defaults)
+        else:
+            self.base_param_settings = None  # type: ignore
+
     def update_params(self,
                       loss: torch.Tensor,
                       step_kwargs: Optional[Dict] = None,
@@ -251,7 +265,10 @@ class OptimWrapper:
         Returns:
             dict: The state dictionary of :attr:`optimizer`.
         """
-        return self.optimizer.state_dict()
+        state_dict = self.optimizer.state_dict()
+        if self.base_param_settings is not None:
+            state_dict['base_param_settings'] = self.base_param_settings
+        return state_dict
 
     def load_state_dict(self, state_dict: dict) -> None:
         """A wrapper of ``Optimizer.load_state_dict``. load the state dict of
@@ -265,6 +282,12 @@ class OptimWrapper:
         Args:
             state_dict (dict): The state dictionary of :attr:`optimizer`.
         """
+        base_param_settings = state_dict.pop('base_param_settings', None)
+
+        if base_param_settings is not None:
+            self.base_param_settings = base_param_settings
+
+        # load state_dict of optimizer
         self.optimizer.load_state_dict(state_dict)
 
     @property
@@ -276,7 +299,10 @@ class OptimWrapper:
         Returns:
              dict: the ``param_groups`` of :attr:`optimizer`.
         """
-        return self.optimizer.param_groups
+        if self.base_param_settings is not None:
+            return self.optimizer.param_groups + [self.base_param_settings]
+        else:
+            return self.optimizer.param_groups
 
     @property
     def defaults(self) -> dict:
@@ -295,10 +321,16 @@ class OptimWrapper:
         Provide unified interface to get learning rate of optimizer.
 
         Returns:
-            Dict[str, List[float]]: Learning rate of the optimizer.
+            Dict[str, List[float]]:
+            param_groups learning rate of the optimizer.
         """
-        lr = [group['lr'] for group in self.param_groups]
-        return dict(lr=lr)
+        res = {}
+        if self.base_param_settings is not None:
+            res['base_lr'] = [self.base_param_settings['lr']]
+
+        res['lr'] = [group['lr'] for group in self.optimizer.param_groups]
+
+        return res
 
     def get_momentum(self) -> Dict[str, List[float]]:
         """Get the momentum of the optimizer.
@@ -309,7 +341,7 @@ class OptimWrapper:
             Dict[str, List[float]]: Momentum of the optimizer.
         """
         momentum = []
-        for group in self.param_groups:
+        for group in self.optimizer.param_groups:
             # Get momentum of SGD.
             if 'momentum' in group.keys():
                 momentum.append(group['momentum'])

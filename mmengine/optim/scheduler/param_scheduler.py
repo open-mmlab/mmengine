@@ -1409,11 +1409,28 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
             raise ValueError('Factor should be < 1.0.')
         self.factor = factor
 
+        # This code snippet handles compatibility with the optimizer wrapper.
+        # The optimizer wrapper includes an additional parameter to record the
+        # base learning rate (lr) which is not affected by the paramwise_cfg.
+        # By retrieving the base lr, we can obtain the actual base lr that
+        # reflects the learning progress.
+        if isinstance(optimizer, OptimWrapper):
+            raw_optimizer = optimizer.optimizer
+        else:
+            raw_optimizer = optimizer
+
         if isinstance(min_value, (list, tuple)):
-            if len(min_value) != len(optimizer.param_groups):
+            if len(min_value) != len(raw_optimizer.param_groups):
                 raise ValueError('expected {} min_lrs, got {}'.format(
-                    len(optimizer.param_groups), len(min_value)))
+                    len(raw_optimizer.param_groups), len(min_value)))
             self.min_values = list(min_value)
+            # Consider the `min_value` of the last param_groups
+            # as the base setting. And we only add this value when
+            # the optimizer is OptimWrapper.
+            if isinstance(optimizer, OptimWrapper) and \
+                    optimizer.base_param_settings is not None:
+                self.min_values.append(self.min_values[-1])
+
         else:
             self.min_values = [min_value] * len(  # type: ignore
                 optimizer.param_groups)
