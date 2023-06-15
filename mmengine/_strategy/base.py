@@ -13,7 +13,8 @@ from torch.optim import Optimizer
 
 import mmengine
 from mmengine.config import Config, ConfigDict
-from mmengine.dist import broadcast, get_dist_info, is_distributed
+from mmengine.dist import (broadcast, get_dist_info, infer_launcher,
+                           is_distributed)
 from mmengine.logging import MMLogger
 from mmengine.model import revert_sync_batchnorm
 from mmengine.model.wrappers import is_model_wrapper
@@ -65,7 +66,7 @@ class BaseStrategy(metaclass=ABCMeta):
     def __init__(
         self,
         *,
-        work_dir: str = 'work_dir',
+        work_dir: str = 'work_dirs',
         experiment_name: Optional[str] = None,
         compile: Union[dict, bool] = False,
         load_from: Optional[str] = None,
@@ -171,7 +172,7 @@ class BaseStrategy(metaclass=ABCMeta):
     def setup_env(
             self,
             *,
-            launcher: str = 'none',
+            launcher: Optional[str] = None,
             cudnn_benchmark: bool = False,
             mp_cfg: Optional[dict] = None,
             dist_cfg: Optional[dict] = None,
@@ -187,8 +188,11 @@ class BaseStrategy(metaclass=ABCMeta):
         3. set random seed
 
         Keyword Args:
-            launcher (str): Way to launcher multi processes.
-                Defaults to 'none'.
+            launcher (str, optional): Way to launcher multi-process. Supported
+                launchers are 'pytorch', 'mpi', 'slurm' and 'none'. If 'none'
+                is provided, non-distributed environment will be launched.
+                If launcher is None, the launcher will be inferred according
+                some specified environments. Defaults to None.
             cudnn_benchmark (bool): Whether to enable cudnn benchmark.
                 Defaults to False.
             mp_cfg (dict, optional): Multi-processing config. Defaults to None.
@@ -203,6 +207,9 @@ class BaseStrategy(metaclass=ABCMeta):
                 ``True`` in ``randomness``, the value of
                 ``torch.backends.cudnn.benchmark`` will be ``False`` finally.
         """
+        if launcher is None:
+            launcher = infer_launcher()
+
         self._launcher = launcher
         if self._launcher == 'none':
             self._distributed = False
