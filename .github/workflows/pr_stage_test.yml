@@ -88,8 +88,11 @@ jobs:
       - name: Install unit tests dependencies
         run: |
           pip install -r requirements/tests.txt
+      - name: Install mmcv
+        run: |
           pip install openmim
           mim install mmcv
+        if: ${{ matrix.torch > '1.8.0' || matrix.torch == '1.8.0' }
       - name: Run unittests and generate coverage report
         run: |
           coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist
