@@ -1,7 +1,7 @@
 name: merge_stage_test
 
 on:
-  push:
+  pull_request:
     paths-ignore:
       - ".github/**.md"
       - "docker/**"
@@ -12,8 +12,6 @@ on:
       - "CONTRIBUTING_zh-CN.md"
       - ".pre-commit-config.yaml"
       - ".pre-commit-config-zh-cn.yaml"
-    branches:
-      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -99,7 +97,7 @@ jobs:
         run: |
           pip install openmim
           mim install mmcv
-        if: ${{matrix.torch >= '1.8.0'}
+        if: ${{ matrix.torch > '1.8.0' || matrix.torch == '1.8.0' }
       - name: Run unittests and generate coverage report
         run: |
           coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist
@@ -257,7 +255,7 @@ jobs:
         run: |
           pip install openmim
           mim install mmcv
-        if: ${{matrix.torch >= '1.8.0'}
+        if: ${{ matrix.torch > '1.8.0' || matrix.torch == '1.8.0' }
       # Distributed-related unit tests may fail in macOS
       # Skip testing setup_env since it does not work in the current CI environment # TODO
       - name: Run unittests and generate coverage report
