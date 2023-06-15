@@ -54,6 +54,9 @@ def get_installed_path(package: str) -> str:
         if spec is not None:
             if spec.origin is not None:
                 return osp.dirname(spec.origin)
+            # For namespace packages, the origin is None, and the first path
+            # in submodule_search_locations will be returned.
+            # namespace packages: https://packaging.python.org/en/latest/guides/packaging-namespace-packages/  # noqa: E501
             elif spec.submodule_search_locations is not None:
                 return spec.submodule_search_locations[0]
             else:
