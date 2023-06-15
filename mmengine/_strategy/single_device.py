@@ -239,7 +239,7 @@ class SingleDeviceStrategy(BaseStrategy):
 
         if save_param_scheduler:
             state_dict['param_schedulers'] = self.scheduler_state_dict(
-            )  # type: ignore
+            )  # type: ignore  # noqa: E501
 
         # save extra checkpoint passed by users
         if extra_ckpt is None:
