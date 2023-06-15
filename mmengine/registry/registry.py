@@ -446,7 +446,7 @@ class Registry:
         # object by its name in `Registry.get`. However, If we want to build
         # the model using a configuration like
         # `dict(type='mmengine.model.BaseModel')`, which can
-        # be dumped by lazy import config, we need the this code snippet
+        # be dumped by lazy import config, we need this code snippet
         # for `Registry.get` to work.
         try:
             obj_cls = get_object_from_string(key)

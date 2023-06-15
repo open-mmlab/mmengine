@@ -51,7 +51,7 @@ wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/c
 ```
 
 ```{note}
-The `Config` supports two styles of configuration files: text style and pure Python style. Each has its own characteristics while maintaining a unified interface for calling. For users who are not familiar with the basic usage of the `Config`, it is recommended to start reading from the section on [Read the configuration file](#read-the-configuration-file) to understand the functionality of the `Config` and the syntax of text style configuration files. In some cases, the syntax of text style configuration files is more concise and compatible with different formats such as `json` and `yaml`. If you prefer a more flexible syntax for configuration files, it is recommended to use the [Pure Python Style Configuration Files" (beta)](#a-pure-python-style-configuration-file-beta).
+The `Config` supports two styles of configuration files: text style and pure Python style (introduced in v0.8.0). Each has its own characteristics while maintaining a unified interface for calling. For users who are not familiar with the basic usage of the `Config`, it is recommended to start reading from the section on [Read the configuration file](#read-the-configuration-file) to understand the functionality of the `Config` and the syntax of text style configuration files. In some cases, the syntax of text style configuration files is more concise and compatible with different formats such as `json` and `yaml`. If you prefer a more flexible syntax for configuration files, it is recommended to use the [Pure Python Style Configuration Files (beta)](#a-pure-python-style-configuration-file-beta).
 ```
 
 ## Read the configuration file
