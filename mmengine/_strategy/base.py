@@ -50,10 +50,11 @@ class BaseStrategy(metaclass=ABCMeta):
             Requires PyTorch>=2.0.
         load_from (str, optional): The checkpoint file to load from.
             Defaults to None.
-        resume (bool): Whether to resume training. Defaults to False. If
-            ``resume`` is True and ``load_from`` is None, automatically to
+        resume (bool or string): Whether to resume training. Defaults to False.
+            If ``resume`` is True and ``load_from`` is None, automatically to
             find latest checkpoint from ``work_dir``. If not found, resuming
-            does nothing.
+            does nothing. If ``resume`` is a string, it will be treated as the
+            checkpoint file to resume from.
         env_kwargs (dict, optional): Environment config passed in
             :meth:`setup_env`. Defaults to None.
         log_kwargs (dict, optional): Logger config passed in
@@ -79,6 +80,8 @@ class BaseStrategy(metaclass=ABCMeta):
 
         self.compile = compile
 
+        if isinstance(resume, str) and load_from is not None:
+            raise ValueError('If resume is a str, load_from should be None.')
         self._load_from = load_from
         self._resume = resume
 
@@ -789,7 +792,9 @@ class BaseStrategy(metaclass=ABCMeta):
 
         # decide to load from checkpoint or resume from checkpoint
         resume_from = None
-        if self._resume and self._load_from is None:
+        if isinstance(self._resume, str):
+            resume_from = self._resume
+        elif self._resume and self._load_from is None:
             # auto resume from the latest checkpoint
             resume_from = find_latest_checkpoint(self._work_dir)
             self.logger.info(
