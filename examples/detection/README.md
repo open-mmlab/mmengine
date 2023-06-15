@@ -13,15 +13,15 @@ This code implements object detection using the Faster R-CNN (Region-based Convo
 
 ### 1. Prepare your dataset
 
-- Create two directories in the same folder (<b>detection_example</b>): <b>train</b> and <b>valid</b>.
-- Place your training images and annotations in the train directory.
-- Place your validation images and annotations in the valid directory.
-- Make sure the annotations are in COCO format <b>(\_annotations.coco.json file)</b>
+- Download the dataset from this link: [COCO 128 Dataset](https://universe.roboflow.com/ds/CX2WnbQHss?key=XcVwZuSu8R).
+- Extract the downloaded zip folder.
+- Copy the <b>train, test</b> and <b>valid</b> folders from the extracted folder.
+- Paste the folders into the <b>examples/detection/</b> directory.
 
-### 2. Update the code
+### 2. Update the code (Optional)
 
 - Modify the <b>label_dict</b> variable to map your class labels to integer IDs.
-- Adjust the model configuration and hyperparameters in the MMFasterRCNN and Runner classes, if needed.
+- Adjust the model configuration and hyperparameters in the MMFasterRCNN and Runner classes, if needed. You can modify parameters like batch size, learning rate, number of epochs, etc.
 
 ### 3. Run the code
 
