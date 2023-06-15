@@ -222,7 +222,7 @@ class SingleDeviceStrategy(BaseStrategy):
         """
         from mmengine.runner.checkpoint import save_checkpoint
 
-        state_dict = dict()
+        state_dict: dict = dict()
         state_dict['state_dict'] = self.model_state_dict()
 
         # save optimizer state dict
@@ -238,8 +238,7 @@ class SingleDeviceStrategy(BaseStrategy):
             save_param_scheduler = False
 
         if save_param_scheduler:
-            state_dict['param_schedulers'] = self.scheduler_state_dict(
-            )  # type: ignore  # noqa: E501
+            state_dict['param_schedulers'] = self.scheduler_state_dict()
 
         # save extra checkpoint passed by users
         if extra_ckpt is None:
