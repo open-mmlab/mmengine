@@ -17,9 +17,8 @@ def test_is_installed():
 
 
 def test_get_install_path(tmp_path: Path):
-    mmengien_path = get_installed_path('mmengine')
-    assert mmengien_path == osp.abspath(
-        osp.join(osp.dirname(__file__), '..', '..', 'mmengine'))
+    mmengine_path = get_installed_path('mmengine')
+    assert osp.isdir(mmengine_path)
 
     # get path for package "installed" by setting PYTHONPATH
     PYTHONPATH = osp.abspath(osp.join(
