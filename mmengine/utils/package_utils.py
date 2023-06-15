@@ -58,7 +58,14 @@ def get_installed_path(package: str) -> str:
             # in submodule_search_locations will be returned.
             # namespace packages: https://packaging.python.org/en/latest/guides/packaging-namespace-packages/  # noqa: E501
             elif spec.submodule_search_locations is not None:
-                return spec.submodule_search_locations[0]
+                locations = spec.submodule_search_locations
+                if isinstance(locations, list):
+                    return locations[0]
+                else:
+                    # `submodule_search_locations` is not subscriptable in
+                    # python3.7. There for we use `_path` to get the first
+                    # path.
+                    return locations._path[0]  # type: ignore
             else:
                 raise e
         else:
