@@ -36,25 +36,55 @@ class MMFasterRCNN(BaseModel):
             return predictions
 
 
+class COCODataset:
+
+    def __init__(self, root, transforms=None):
+        self.root = root
+        self.transforms = transforms
+        self.files = sorted(os.listdir(self.root))
+        for i in range(len(self.files)):
+            self.files[i] = self.files[i].split('.jpg')[0]
+            self.label_dict = label_dict
+        self.files.remove('_annotations.coco.json')
+
+    def __getitem__(self, i):
+        img = PIL.Image.open(os.path.join(
+            self.root, self.files[i] + '.jpg')).convert(
+                'RGB')  # Load annotation file from the hard disc.
+        ann = json_to_dict(
+            os.path.join(self.root, '_annotations.coco.json/' + self.files[i] +
+                         '.jpg'))  # The target is given as a dict.
+
+        target = {}
+        target['width'] = ann['image_width']
+        target['height'] = ann['image_height']
+        target['boxes'] = torch.as_tensor(ann['boxes'], dtype=torch.float32)
+        target['labels'] = torch.as_tensor(ann['labels'], dtype=torch.int64)
+        target['img_id'] = torch.as_tensor(
+            i)  # Apply any transforms to the data if required.
+        if self.transforms is not None:
+            img, target = self.transforms(img, target)
+        return img, target
+
+    def __len__(self):
+        return len(self.files)
+
+
 class Accuracy(BaseMetric):
 
     def process(self, targets, predictions):
-        label_boxes = []
-        label_labels = []
-        pred_boxes = []
-        pred_scores = []
-        pred_labels = []
-        width = targets[1][0]['width']
-        height = targets[1][0]['height']
+        label_boxes = [target['boxes'] for target in targets[1]]
+        label_labels = [target['labels'] for target in targets[1]]
 
-        for target in targets[1]:
-            label_boxes.append(target['boxes'])
-            label_labels.append(target['labels'])
+        pred_boxes = [prediction['boxes'].cpu() for prediction in predictions]
+        pred_scores = [
+            prediction['scores'].cpu() for prediction in predictions
+        ]
+        pred_labels = [
+            prediction['labels'].cpu() for prediction in predictions
+        ]
 
-        for prediction in predictions:
-            pred_boxes.append(prediction['boxes'].cpu())
-            pred_scores.append(prediction['scores'].cpu())
-            pred_labels.append(prediction['labels'].cpu())
+        width, height = targets[1][0]['width'], targets[1][0]['height']
 
         groundtruth = {
             'bboxes': torch.cat(label_boxes).cpu().numpy(),
@@ -63,7 +93,7 @@ class Accuracy(BaseMetric):
             'height': height
         }
 
-        predictionS = {
+        predictions = {
             'bboxes': torch.cat(pred_boxes).cpu().numpy(),
             'scores': torch.cat(pred_scores).cpu().numpy(),
             'labels': torch.cat(pred_labels).cpu().numpy()
@@ -71,7 +101,7 @@ class Accuracy(BaseMetric):
 
         self.results.append({
             'groundtruth': groundtruth,
-            'predictions': predictionS
+            'predictions': predictions
         })
 
     def compute_metrics(self, results):
@@ -80,8 +110,7 @@ class Accuracy(BaseMetric):
         fake_dataset_metas = {'classes': tuple(map(str, range(73)))}
         coco_det_metric = COCODetection(
             dataset_meta=fake_dataset_metas, metric=['bbox'])
-        r = coco_det_metric.compute_metric(groundtruth)
-        return r
+        return coco_det_metric.compute_metric(groundtruth)
 
 
 def parse_args():
@@ -107,41 +136,6 @@ else:
 # Convert human readable str label to int.
 label_dict = coco_file_to_dict(
     'examples/detection/train/_annotations.coco.json')
-
-
-class COCODataset:
-
-    def __init__(self, root, transforms=None):
-        self.root = root
-        self.transforms = transforms
-        self.files = sorted(os.listdir(self.root))
-        for i in range(len(self.files)):
-            self.files[i] = self.files[i].split('.jpg')[0]
-            self.label_dict = label_dict
-        print(self.files)
-        self.files.remove('_annotations.coco.json')
-
-    def __getitem__(self, i):
-        img = PIL.Image.open(os.path.join(
-            self.root, self.files[i] + '.jpg')).convert(
-                'RGB')  # Load annotation file from the hard disc.
-        ann = json_to_dict(
-            os.path.join(self.root, '_annotations.coco.json/' + self.files[i] +
-                         '.jpg'))  # The target is given as a dict.
-
-        target = {}
-        target['width'] = ann['image_width']
-        target['height'] = ann['image_height']
-        target['boxes'] = torch.as_tensor(ann['boxes'], dtype=torch.float32)
-        target['labels'] = torch.as_tensor(ann['labels'], dtype=torch.int64)
-        target['img_id'] = torch.as_tensor(
-            i)  # Apply any transforms to the data if required.
-        if self.transforms is not None:
-            img, target = self.transforms(img, target)
-        return img, target
-
-    def __len__(self):
-        return len(self.files)
 
 
 # Collate image-target pairs into a tuple.
