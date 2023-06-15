@@ -22,8 +22,13 @@ class DeepSpeedStrategy(BaseStrategy):
     """
 
     Args:
-        zero_optimization (dict, optional):
-        fp16 (dict, optional):
+        zero_optimization (dict, optional): Enabling and configuring ZeRO
+            memory optimizations. Defaults to None.
+        fp16 (dict, optional): Configuration for using mixed precision/FP16
+            training that leverages NVIDIA's Apex package.
+        bf16 (dict, optional): onfiguration for using bfloat16 floating-point
+            format as an alternative to FP16.
+        activation_checkpointing
     """
     dispatch_keys = [
         'train_batch_size', 'num_batches_per_epoch', 'max_epochs', 'max_iters'
@@ -95,7 +100,7 @@ class DeepSpeedStrategy(BaseStrategy):
             model (:obj:`torch.nn.Module` or dict): The model to be run. It
                 can be a dict used for build a model.
 
-        Kwargs:
+        Keyword Args:
             optim_wrapper (OptimWrapper or dict, optional):
                 Computing gradient of model parameters. If specified,
                 :attr:`train_dataloader` should also be specified. If automatic
@@ -160,12 +165,12 @@ class DeepSpeedStrategy(BaseStrategy):
     ) -> dict:
         """Load checkpoint from given ``filename``.
 
+        Warning:
+            `map_localtion` and `callback` parameters are not supported yet.
+
         Args:
             filename (str): Accept local filepath, URL, ``torchvision://xxx``,
                 ``open-mmlab://xxx``.
-            map_location (str or callable): A string or a callable function to
-                specifying how to remap storage locations.
-                Defaults to 'cpu'.
         """
         if hasattr(self, 'extra_ckpt'):
             return self.extra_ckpt
@@ -188,6 +193,12 @@ class DeepSpeedStrategy(BaseStrategy):
         map_location: Union[str, Callable] = 'default',
         callback: Optional[Callable] = None,
     ) -> dict:
+        """Resume training from given ``filename``.
+
+        Warning:
+            `resume_optimizer`, `resume_param_scheduler`, `map_location` and
+            `callback` parameters are not supported yet.
+        """
         if hasattr(self, 'extra_ckpt'):
             return self.extra_ckpt
 

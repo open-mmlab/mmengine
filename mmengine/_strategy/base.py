@@ -38,7 +38,13 @@ class BaseStrategy(metaclass=ABCMeta):
     the state of training components such as models, optimizers, and parameter
     schedulers.
 
-    Args:
+    Keyword Args:
+        work_dir (str): The working directory to save checkpoints. The logs
+            will be saved in the subdirectory of `work_dir` named
+            :attr:`timestamp`. Defaults to 'work_dir'.
+        experiment_name (str, optional): Name of current experiment. If not
+            specified, timestamp will be used as ``experiment_name``.
+            Defaults to None.
         compile (dict or bool): Config to compile model. Defaults to False.
             Requires PyTorch>=2.0.
         load_from (str, optional): The checkpoint file to load from.
@@ -145,13 +151,13 @@ class BaseStrategy(metaclass=ABCMeta):
             model (:obj:`torch.nn.Module` or dict): The model to be run. It
                 can be a dict used for building a model.
 
-        Kwargs:
+        Keyword Args:
             optim_wrapper (OptimWrapper or dict, optional):
                 Computing gradient of model parameters. If specified,
                 :attr:`train_dataloader` should also be specified. If automatic
                 mixed precision or gradient accmulation
                 training is required. The type of ``optim_wrapper`` should be
-                AmpOptimizerWrapper. See :meth:`build_optim_wrapper` for
+                ``AmpOptimizerWrapper``. See :meth:`build_optim_wrapper` for
                 examples. Defaults to None.
             param_scheduler (_ParamScheduler or dict or list, optional):
                 Parameter scheduler for updating optimizer parameters. If
@@ -174,11 +180,13 @@ class BaseStrategy(metaclass=ABCMeta):
     ):
         """Setup environment.
 
+        This method will do the following things:
+
         1. setup multi-processing
         2. setup distributed
         3. set random seed
 
-        Args:
+        Keyword Args:
             launcher (str): Way to launcher multi processes.
                 Defaults to 'none'.
             cudnn_benchmark (bool): Whether to enable cudnn benchmark.
@@ -267,9 +275,9 @@ class BaseStrategy(metaclass=ABCMeta):
     def build_model(self, model: Union[nn.Module, dict]) -> nn.Module:
         """Build model.
 
-        If ``model`` is a dict, it will be used to build a nn.Module object.
-        Otherwise, if ``model`` is a nn.Module object it will be returned
-        directly.
+        If ``model`` is a dict, it will be used to build a ``nn.Module``
+        object. Otherwise, if ``model`` is a ``nn.Module`` object it will be
+        returned directly.
 
         An example of ``model``::
 
@@ -277,8 +285,8 @@ class BaseStrategy(metaclass=ABCMeta):
 
         Args:
             model (nn.Module or dict): A ``nn.Module`` object or a dict to
-                build nn.Module object. If ``model`` is a nn.Module object,
-                just returns itself.
+                build ``nn.Module`` object. If ``model`` is a ``nn.Module``
+                object, just returns itself.
 
         Note:
             The returned model must implement ``train_step``, ``test_step``
@@ -830,6 +838,18 @@ class BaseStrategy(metaclass=ABCMeta):
         Args:
             filename (str): Accept local filepath, URL, ``torchvision://xxx``,
                 ``open-mmlab://xxx``.
+
+        Keyword Args:
+            resume_optimizer (bool): Whether to resume optimizer state.
+                Defaults to True.
+            resume_param_scheduler (bool): Whether to resume param scheduler
+                state. Defaults to True.
+            map_location (str or callable):A string or a callable function to
+                specifying how to remap storage locations.
+                Defaults to 'default'.
+            callback (callable, callable): Callback function to modify the
+                checkpoint before saving the checkpoint.
+                Defaults to None.
         """
 
     @abstractmethod
@@ -846,6 +866,8 @@ class BaseStrategy(metaclass=ABCMeta):
 
         Args:
             filename (str): Filename to save checkpoint.
+
+        Keyword Args:
             save_optimizer (bool): Whether to save the optimizer to
                 the checkpoint. Defaults to True.
             save_param_scheduler (bool): Whether to save the param_scheduler

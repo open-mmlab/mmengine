@@ -74,12 +74,12 @@ def main():
             [transforms.ToTensor(),
              transforms.Normalize(**norm_cfg)]))
     train_dataloader = dict(
-        batch_size=128,
+        batch_size=32,
         dataset=train_set,
         sampler=dict(type='DefaultSampler', shuffle=True),
         collate_fn=dict(type='default_collate'))
     val_dataloader = dict(
-        batch_size=128,
+        batch_size=32,
         dataset=valid_set,
         sampler=dict(type='DefaultSampler', shuffle=False),
         collate_fn=dict(type='default_collate'))
@@ -88,15 +88,11 @@ def main():
         work_dir='./work_dir',
         train_dataloader=train_dataloader,
         optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
-        train_cfg=dict(by_epoch=True, max_epochs=100, val_interval=1),
+        train_cfg=dict(by_epoch=True, max_epochs=2, val_interval=1),
         val_dataloader=val_dataloader,
         val_cfg=dict(),
         val_evaluator=dict(type=Accuracy),
-        default_hooks=dict(
-            checkpoint=dict(
-                type='CheckpointHook', interval=1, save_best='accuracy')),
         launcher=args.launcher,
-        resume=True,
     )
     runner.train()
 

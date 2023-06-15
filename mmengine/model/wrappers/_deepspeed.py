@@ -84,7 +84,15 @@ class MMDeepSpeedEngineWrapper:
                             f'list, tuple or dict, but got {type(data)}')
         return results
 
-    def _cast_inputs_half(self, inputs):
+    def _cast_inputs_half(self, inputs: Union[list, tuple, dict, None]):
+        """Cast inputs to half precision if needed.
+
+        Args:
+            inputs (list or tuple or dict or None): Inputs to be casted.
+
+        Returns:
+            list or tuple or dict or None: Casted inputs.
+        """
         if self._inputs_to_half is None:
             return inputs
 

@@ -33,7 +33,7 @@ class SingleDeviceStrategy(BaseStrategy):
             model (:obj:`torch.nn.Module` or dict): The model to be run. It
                 can be a dict used for build a model.
 
-        Kwargs:
+        Keyword Args:
             optim_wrapper (OptimWrapper or dict, optional):
                 Computing gradient of model parameters. If specified,
                 :attr:`train_dataloader` should also be specified. If automatic
@@ -92,9 +92,14 @@ class SingleDeviceStrategy(BaseStrategy):
         Args:
             filename (str): Accept local filepath, URL, ``torchvision://xxx``,
                 ``open-mmlab://xxx``.
+
+        Keyword Args:
             map_location (str or callable): A string or a callable function to
                 specifying how to remap storage locations.
                 Defaults to 'cpu'.
+            callback (callable, callable): Callback function to modify the
+                checkpoint after loading the checkpoint.
+                Defaults to None.
         """
         from mmengine.runner.checkpoint import _load_checkpoint
 
@@ -141,6 +146,18 @@ class SingleDeviceStrategy(BaseStrategy):
         Args:
             filename (str): Accept local filepath, URL, ``torchvision://xxx``,
                 ``open-mmlab://xxx``.
+
+        Keyword Args:
+            resume_optimizer (bool): Whether to resume optimizer state.
+                Defaults to True.
+            resume_param_scheduler (bool): Whether to resume param scheduler
+                state. Defaults to True.
+            map_location (str or callable):A string or a callable function to
+                specifying how to remap storage locations.
+                Defaults to 'default'.
+            callback (callable, callable): Callback function to modify the
+                checkpoint before saving the checkpoint.
+                Defaults to None.
         """
         if hasattr(self, 'extra_ckpt'):
             return self.extra_ckpt
@@ -191,6 +208,8 @@ class SingleDeviceStrategy(BaseStrategy):
 
         Args:
             filename (str): Filename to save checkpoint.
+
+        Keyword Args:
             save_optimizer (bool): Whether to save the optimizer to
                 the checkpoint. Defaults to True.
             save_param_scheduler (bool): Whether to save the param_scheduler
