@@ -9,6 +9,7 @@ import time
 import warnings
 from collections import OrderedDict
 from functools import partial
+from operator import attrgetter
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
 import torch
@@ -1717,7 +1718,12 @@ class Runner:
             if can_use_fast_conv_bn_eval:
                 from mmengine.model.turn_on_fast_conv_bn_eval import \
                     turn_on_fast_conv_bn_eval
-                turn_on_fast_conv_bn_eval(self.model)
+                modules = self.cfg.get('fast_conv_bn_eval_modules', 'backbone')
+                if isinstance(modules, str):
+                    modules = [modules]
+                for module_name in modules:
+                    module = attrgetter(module_name)(ori_model)
+                    turn_on_fast_conv_bn_eval(module)
 
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
