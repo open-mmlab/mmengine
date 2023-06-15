@@ -171,18 +171,20 @@ class MMLogger(Logger, ManagerMixin):
         log_level (str): The log level of the handler. Defaults to
             'INFO'. If log level is 'DEBUG', distributed logs will be saved
             during distributed training.
-        log_rotating (dict, optional): The cfg dict of file handler that
-            rotate log files at a certain point.If `log_rotating=None`, 
-            a ``FileHandler`` that does not rotate log file to the logger.
-            The dict of log_rotating can only support the type keyword 
-            with the value of `time` or `size`. And the remaining key pairs 
-            are the parameters required by ``logging.handlers.RotatingFileHandler``
+        file_handler_cfg (dict, optional): The cfg dict of file handler that
+            rotate log files at a certain point. If `file_handler_cfg=None`,
+            a ``logging.FileHandler`` that does not rotate log file would
+            be added to the logger. The file_handler_cfg can only
+            support the type keyword with the value of `time` or `size`.
+            And the remaining key pairs are the parameters required by
+            ``logging.handlers.RotatingFileHandler``
             or ``logging.handlers.TimedRotatingFileHandler``. Like:
-            log_rotating = dict(
-                type='time',
-                when='MIDNIGHT',
-                interval=1,
-                backupCount=365)
+            Examples:
+                >>> file_handler_cfg = dict(
+                >>>    type='time',
+                >>>    when='MIDNIGHT',
+                >>>    interval=1,
+                >>>    backupCount=365)
             Defaults to None.
         file_mode (str): The file mode used to open log file. Defaults to 'w'.
         distributed (bool): Whether to save distributed logs, Defaults to
@@ -194,7 +196,7 @@ class MMLogger(Logger, ManagerMixin):
                  logger_name='mmengine',
                  log_file: Optional[str] = None,
                  log_level: Union[int, str] = 'INFO',
-                 log_rotating: Optional[dict] = None,
+                 file_handler_cfg: Optional[dict] = None,
                  file_mode: str = 'w',
                  distributed=False):
         Logger.__init__(self, logger_name)
@@ -238,22 +240,27 @@ class MMLogger(Logger, ManagerMixin):
             # Save multi-ranks logs if distributed is True. The logs of rank0
             # will always be saved.
             if global_rank == 0 or is_distributed:
-                if log_rotating is not None:
-                    assert 'type' in log_rotating, \
-                        'You should specify the `type` of log_rotating.'
-                    log_rotating_type = log_rotating.pop('type')
-                    if log_rotating_type == 'time':
-                        file_handler = TimedRotatingFileHandler(filename=log_file, **log_rotating)
-                    elif log_rotating_type == 'size':
-                        file_handler = RotatingFileHandler(filename=log_file, **log_rotating)
+                if file_handler_cfg is not None:
+                    assert 'type' in file_handler_cfg, \
+                        'You should specify the `type` keyword in '
+                    'file_handler_cfg.'
+                    file_handler_type = file_handler_cfg.pop('type')
+                    if file_handler_type == 'time':
+                        file_handler = TimedRotatingFileHandler(
+                            filename=log_file, **file_handler_cfg)
+                    elif file_handler_type == 'size':
+                        file_handler = RotatingFileHandler(
+                            filename=log_file, **file_handler_cfg)
                     else:
-                        raise ValueError('The type of log_rotating should be `time` or `size`, '
-                                         f'but got {log_rotating_type}.')
+                        raise ValueError('The type of file_handler '
+                                         'should be `time` or `size`, but '
+                                         f'got {file_handler_type}.')
                 else:
-                    # Here, the default behaviour of the official logger is 'a'.
-                    # Thus, we provide an interface to change the file mode to
-                    # the default behaviour. `FileHandler` is not supported to
-                    # have colors, otherwise it will appear garbled.
+                    # Here, the default behaviour of the official
+                    # logger is 'a'. Thus, we provide an interface to
+                    # change the file mode to the default behaviour.
+                    # `FileHandler` is not supported to have colors,
+                    # otherwise it will appear garbled.
                     file_handler = logging.FileHandler(log_file, file_mode)
                     # `StreamHandler` record year, month, day hour, minute,
                     # and second timestamp. file_handler will only record logs
