@@ -1712,8 +1712,8 @@ class Runner:
         if fast_conv_bn_eval:
             can_use_fast_conv_bn_eval = False
             if is_installed('mmcv'):
-                import mmcv
-                if digit_version(mmcv.__version__) >= digit_version('2.0.1'):
+                from mmcv.cnn import ConvModule
+                if hasattr(ConvModule, 'turn_on_fast_conv_bn_eval'):
                     can_use_fast_conv_bn_eval = True
             if can_use_fast_conv_bn_eval:
                 from mmengine.model.turn_on_fast_conv_bn_eval import \

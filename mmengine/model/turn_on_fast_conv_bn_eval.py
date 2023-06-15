@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from functools import partial
 from operator import attrgetter
 from typing import Tuple
 
@@ -7,7 +6,6 @@ import torch
 import torch.fx as fx
 import torch.nn as nn
 from mmcv.cnn import ConvModule
-from mmcv.cnn.bricks.conv_module import fast_conv_bn_eval_forward
 
 
 # Helper function to split a qualname into parent path and last atom.
@@ -32,25 +30,12 @@ def replace_sub_module(model, name, new_module):
     setattr(parent, name, new_module)
 
 
-def turn_on_fast_conv_bn_eval_for_existing_convmodule(self: ConvModule):
-    # fast_conv_bn_eval works for conv + bn
-    # with `track_running_stats` option
-    if self.norm and isinstance(self.norm,
-                                torch.nn.modules.batchnorm._BatchNorm) and \
-                        self.norm.track_running_stats:
-        self.fast_conv_bn_eval_forward = partial(fast_conv_bn_eval_forward,
-                                                 self.norm, self.conv)
-    else:
-        self.fast_conv_bn_eval_forward = None  # type: ignore
-    self.original_conv_forward = self.conv.forward
-
-
 def turn_on_fast_conv_bn_eval(model: torch.nn.Module):
 
     # first, turn on fast_conv_bn_eval feature for existing ConvModule
     for name, module in model.named_modules():
         if isinstance(module, ConvModule):
-            turn_on_fast_conv_bn_eval_for_existing_convmodule(module)
+            module.turn_on_fast_conv_bn_eval()
 
     # second, merge consecutive conv+bn into ConvModule for the given model
 
