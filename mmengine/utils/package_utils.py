@@ -24,7 +24,13 @@ def is_installed(package: str) -> bool:
         get_distribution(package)
         return True
     except pkg_resources.DistributionNotFound:
-        return importlib.util.find_spec(package) is not None
+        spec = importlib.util.find_spec(package)
+        if spec is None:
+            return False
+        elif spec.origin is not None:
+            return True
+        else:
+            return False
 
 
 def get_installed_path(package: str) -> str:
@@ -54,20 +60,12 @@ def get_installed_path(package: str) -> str:
         if spec is not None:
             if spec.origin is not None:
                 return osp.dirname(spec.origin)
-            # For namespace packages, the origin is None, and the first path
-            # in submodule_search_locations will be returned.
-            # namespace packages: https://packaging.python.org/en/latest/guides/packaging-namespace-packages/  # noqa: E501
-            elif spec.submodule_search_locations is not None:
-                locations = spec.submodule_search_locations
-                if isinstance(locations, list):
-                    return locations[0]
-                else:
-                    # `submodule_search_locations` is not subscriptable in
-                    # python3.7. There for we use `_path` to get the first
-                    # path.
-                    return locations._path[0]  # type: ignore
             else:
-                raise e
+                # `get_installed_path` cannot get the installed path of
+                # namespace packages
+                raise RuntimeError(
+                    f'{package} is a namespace package, which is invalid '
+                    'for `get_install_path`')
         else:
             raise e
 
