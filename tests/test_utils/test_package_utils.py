@@ -1,7 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
 import sys
-from pathlib import Path
+
+import pkg_resources
+import pytest
 
 from mmengine.utils import get_installed_path, is_installed
 
@@ -10,35 +12,38 @@ def test_is_installed():
     # TODO: Windows CI may failed in unknown reason. Skip check the value
     is_installed('mmengine')
 
-    # package set by PYTHONPATH
-    assert not is_installed('py_config')
+    # If there is `__init__.py` in the directory which is added into
+    # `sys.path`, the directory will be recognized as a package.
+    PYTHONPATH = osp.abspath(
+        osp.join(osp.dirname(__file__), '..', '..', 'mmengine'))
+    sys.path.append(PYTHONPATH)
+    assert is_installed('optim')
+    sys.path.pop()
+
+    # namespace package (directory without `__init__.py`) will not be
+    # recognized
     sys.path.append(osp.abspath(osp.join(osp.dirname(__file__), '..')))
-    assert is_installed('test_config')
+    assert not is_installed('test_config')
     sys.path.pop()
 
 
-def test_get_install_path(tmp_path: Path):
+def test_get_install_path():
     # TODO: Windows CI may failed in unknown reason. Skip check the value
     get_installed_path('mmengine')
 
     # get path for package "installed" by setting PYTHONPATH
-    PYTHONPATH = osp.abspath(osp.join(
-        osp.dirname(__file__),
-        '..',
-    ))
+    PYTHONPATH = osp.abspath(osp.join(osp.dirname(__file__), '..'))
+    PYTHONPATH = osp.abspath(
+        osp.join(osp.dirname(__file__), '..', '..', 'mmengine'))
     sys.path.append(PYTHONPATH)
-    res_path = get_installed_path('test_config')
-    assert osp.join(PYTHONPATH, 'test_config') == res_path
-
-    # return the first path for namespace package
-    # See more information about namespace package in:
-    # https://packaging.python.org/en/latest/guides/packaging-namespace-packages/  # noqa:E501
-    (tmp_path / 'test_config').mkdir()
-    sys.path.insert(-1, str(tmp_path))
-    res_path = get_installed_path('test_config')
-    assert res_path in [
-        osp.abspath(osp.join(tmp_path, 'test_config')),
-        osp.join(PYTHONPATH, 'test_config')
-    ]
+    assert get_installed_path('optim') == osp.join(PYTHONPATH, 'optim')
     sys.path.pop()
+
+    with pytest.raises(pkg_resources.DistributionNotFound):
+        get_installed_path('unknown')
+
+    sys.path.append(osp.abspath(osp.join(osp.dirname(__file__), '..')))
+    with pytest.raises(RuntimeError):
+        res_path = get_installed_path('test_config')
+        assert osp.join(PYTHONPATH, 'test_config') == res_path
     sys.path.pop()
