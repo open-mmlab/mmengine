@@ -61,8 +61,8 @@ def get_installed_path(package: str) -> str:
             if spec.origin is not None:
                 return osp.dirname(spec.origin)
             else:
-                # `get_install_path` cannot get the install path of namespace
-                # packages
+                # `get_installed_path` cannot get the installed path of
+                # namespace packages
                 raise RuntimeError(
                     f'{package} is a namespace package, which is invalid '
                     'for `get_install_path`')
