@@ -25,7 +25,15 @@ This code implements object detection using the Faster R-CNN (Region-based Convo
 
 ### 3. Run the code
 
-`python detection.py --batch_size 8`
+1. Move into the <b>detection</b> folder
+
+![Alt Text](./assets/1st.png)
+
+2. Run the following command
+
+`python example.py --batch_size 8`
+
+![Alt Text](./assets/2nd.png)
 
 ## Customization
 
