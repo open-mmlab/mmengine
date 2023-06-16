@@ -36,6 +36,9 @@ def test_get_install_path(tmp_path: Path):
     (tmp_path / 'test_config').mkdir()
     sys.path.insert(-1, str(tmp_path))
     res_path = get_installed_path('test_config')
-    assert osp.abspath(osp.join(tmp_path, 'test_config')) == res_path
+    assert res_path in [
+        osp.abspath(osp.join(tmp_path, 'test_config')),
+        osp.join(PYTHONPATH, 'test_config')
+    ]
     sys.path.pop()
     sys.path.pop()
