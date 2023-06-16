@@ -13,7 +13,7 @@ def test_is_installed():
     # package set by PYTHONPATH
     assert not is_installed('py_config')
     sys.path.append(osp.abspath(osp.join(osp.dirname(__file__), '..')))
-    assert is_installed('test_utils')
+    assert is_installed('test_config')
     sys.path.pop()
 
 
@@ -27,15 +27,15 @@ def test_get_install_path(tmp_path: Path):
         '..',
     ))
     sys.path.append(PYTHONPATH)
-    res_path = get_installed_path('test_utils')
-    assert osp.join(PYTHONPATH, 'test_utils') == res_path
+    res_path = get_installed_path('test_config')
+    assert osp.join(PYTHONPATH, 'test_config') == res_path
 
     # return the first path for namespace package
     # See more information about namespace package in:
     # https://packaging.python.org/en/latest/guides/packaging-namespace-packages/  # noqa:E501
-    (tmp_path / 'test_utils').mkdir()
+    (tmp_path / 'test_config').mkdir()
     sys.path.insert(-1, str(tmp_path))
-    res_path = get_installed_path('test_utils')
-    assert osp.abspath(osp.join(tmp_path, 'test_utils')) == res_path
+    res_path = get_installed_path('test_config')
+    assert osp.abspath(osp.join(tmp_path, 'test_config')) == res_path
     sys.path.pop()
     sys.path.pop()
