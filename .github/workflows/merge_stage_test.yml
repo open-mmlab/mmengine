@@ -99,7 +99,7 @@ jobs:
         run: |
           pip install openmim
           mim install mmcv
-        if: ${{ matrix.torch > '1.8.0' || matrix.torch == '1.8.0' }
+        if: ${{ matrix.torch > '1.8.0' || matrix.torch == '1.8.0' }}
       - name: Run unittests and generate coverage report
         run: |
           coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist
@@ -257,7 +257,7 @@ jobs:
         run: |
           pip install openmim
           mim install mmcv
-        if: ${{ matrix.torch > '1.8.0' || matrix.torch == '1.8.0' }
+        if: ${{ matrix.torch > '1.8.0' || matrix.torch == '1.8.0' }}
       # Distributed-related unit tests may fail in macOS
       # Skip testing setup_env since it does not work in the current CI environment # TODO
       - name: Run unittests and generate coverage report
