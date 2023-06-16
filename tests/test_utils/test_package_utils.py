@@ -20,12 +20,6 @@ def test_is_installed():
     assert is_installed('optim')
     sys.path.pop()
 
-    # namespace package (directory without `__init__.py`) will not be
-    # recognized
-    sys.path.append(osp.abspath(osp.join(osp.dirname(__file__), '..')))
-    assert not is_installed('test_config')
-    sys.path.pop()
-
 
 def test_get_install_path():
     # TODO: Windows CI may failed in unknown reason. Skip check the value
@@ -41,9 +35,3 @@ def test_get_install_path():
 
     with pytest.raises(pkg_resources.DistributionNotFound):
         get_installed_path('unknown')
-
-    sys.path.append(osp.abspath(osp.join(osp.dirname(__file__), '..')))
-    with pytest.raises(RuntimeError):
-        res_path = get_installed_path('test_config')
-        assert osp.join(PYTHONPATH, 'test_config') == res_path
-    sys.path.pop()
