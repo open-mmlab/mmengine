@@ -141,8 +141,8 @@ class DeepSpeedStrategy(BaseStrategy):
         return return_items[0] if len(return_items) == 1 else return_items
 
     def wrap_model(self, model: nn.Module) -> nn.Module:
-        self.config['train_batch_size'] = self.dispatch_kwargs[
-            'train_batch_size']
+        self.config['train_micro_batch_size_per_gpu'] = self.dispatch_kwargs[
+            'train_micro_batch_size_per_gpu']
 
         if hasattr(self, 'optim_wrapper'):
             engine, self.optim_wrapper.optimizer, *_ = deepspeed.initialize(
