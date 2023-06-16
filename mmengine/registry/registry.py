@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.table import Table
 
 from mmengine.config.utils import MODULE2PACKAGE
-from mmengine.utils import is_seq_of
+from mmengine.utils import get_object_from_string, is_seq_of
 from .default_scope import DefaultScope
 
 
@@ -384,8 +384,12 @@ class Registry:
     def get(self, key: str) -> Optional[Type]:
         """Get the registry record.
 
-        The method will first parse :attr:`key` and check whether it contains
-        a scope name. The logic to search for :attr:`key`:
+        If `key`` represents the whole object name with its module
+        information, for example, `mmengine.model.BaseModel`, ``get``
+        will directly return the class object :class:`BaseModel`.
+
+        Otherwise, it will first parse ``key`` and check whether it
+        contains a scope name. The logic to search for ``key``:
 
         - ``key`` does not contain a scope name, i.e., it is purely a module
           name like "ResNet": :meth:`get` will search for ``ResNet`` from the
@@ -432,6 +436,24 @@ class Registry:
         """
         # Avoid circular import
         from ..logging import print_log
+
+        if not isinstance(key, str):
+            raise TypeError(
+                'The key argument of `Registry.get` must be a str, '
+                f'got {type(key)}')
+
+        # Actually, it's strange to implement this `try ... except` to get the
+        # object by its name in `Registry.get`. However, If we want to build
+        # the model using a configuration like
+        # `dict(type='mmengine.model.BaseModel')`, which can
+        # be dumped by lazy import config, we need this code snippet
+        # for `Registry.get` to work.
+        try:
+            obj_cls = get_object_from_string(key)
+        except Exception:
+            raise RuntimeError(f'Failed to get {key}')
+        if obj_cls is not None:
+            return obj_cls
 
         scope, real_key = self.split_scope_key(key)
         obj_cls = None

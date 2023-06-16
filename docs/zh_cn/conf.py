@@ -52,6 +52,7 @@ extensions = [
     'myst_parser',
     'sphinx_copybutton',
     'sphinx.ext.autodoc.typehints',
+    'sphinx_tabs.tabs',
 ]  # yapf: disable
 autodoc_typehints = 'description'
 myst_heading_anchors = 4
