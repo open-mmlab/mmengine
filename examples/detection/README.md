@@ -18,22 +18,33 @@ This code implements object detection using the Faster R-CNN (Region-based Convo
 - Copy the <b>train, test</b> and <b>valid</b> folders from the extracted folder.
 - Paste the folders into the <b>examples/detection/</b> directory.
 
+Before Extracting:
+
+![File Structure](./assets/File_Structure-1.png)
+
+After extracting and copying files:
+
+![File Structure](./assets/File_Structure-2.png)
+
 ### 2. Update the code (Optional)
 
 - Modify the <b>label_dict</b> variable to map your class labels to integer IDs.
+
+![Label](./assets/Label.png)
+
 - Adjust the model configuration and hyperparameters in the MMFasterRCNN and Runner classes, if needed. You can modify parameters like batch size, learning rate, number of epochs, etc.
 
 ### 3. Run the code
 
 1. Move into the <b>detection</b> folder
 
-![Alt Text](./assets/1st.png)
+![Terminal](./assets/Terminal-1.png)
 
 2. Run the following command
 
 `python example.py --batch_size 8`
 
-![Alt Text](./assets/2nd.png)
+![Terminal](./assets/Terminal-2.png)
 
 ## Customization
 
