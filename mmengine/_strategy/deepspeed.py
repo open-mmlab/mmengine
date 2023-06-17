@@ -136,8 +136,6 @@ class DeepSpeedStrategy(BaseStrategy):
             self.param_schedulers = self.build_param_scheduler(param_scheduler)
             return_items.append(self.param_schedulers)
 
-        self.load_or_resume()
-
         return return_items[0] if len(return_items) == 1 else return_items
 
     def wrap_model(self, model: nn.Module) -> nn.Module:
@@ -161,6 +159,8 @@ class DeepSpeedStrategy(BaseStrategy):
         filename: str,
         *,
         map_location: Union[str, Callable] = 'cpu',
+        strict: bool = False,
+        revise_keys: list = [(r'^module.', '')],
         callback: Optional[Callable] = None,
     ) -> dict:
         """Load checkpoint from given ``filename``.
@@ -172,17 +172,13 @@ class DeepSpeedStrategy(BaseStrategy):
             filename (str): Accept local filepath, URL, ``torchvision://xxx``,
                 ``open-mmlab://xxx``.
         """
-        if hasattr(self, 'extra_ckpt'):
-            return self.extra_ckpt
-
         self.logger.info(f'Load checkpoint from {filename}')
 
         dirname, basename = osp.split(filename)
-        self.extra_ckpt: dict
-        _, self.extra_ckpt = self.model.load_checkpoint(
+        _, extra_ckpt = self.model.load_checkpoint(
             dirname, tag=basename, load_optimizer_states=False)
 
-        return self.extra_ckpt
+        return extra_ckpt
 
     def resume(
         self,
@@ -199,20 +195,17 @@ class DeepSpeedStrategy(BaseStrategy):
             `resume_optimizer`, `resume_param_scheduler`, `map_location` and
             `callback` parameters are not supported yet.
         """
-        if hasattr(self, 'extra_ckpt'):
-            return self.extra_ckpt
-
         self.logger.info(f'Resume checkpoint from {filename}')
 
         dirname, basename = osp.split(filename)
-        _, self.extra_ckpt = self.model.load_checkpoint(dirname, tag=basename)
+        _, extra_ckpt = self.model.load_checkpoint(dirname, tag=basename)
 
-        if 'param_schedulers' in self.extra_ckpt:
-            param_schedulers = self.extra_ckpt.pop('param_schedulers')
+        if 'param_schedulers' in extra_ckpt:
+            param_schedulers = extra_ckpt.pop('param_schedulers')
             self.load_scheduler_state_dict(param_schedulers)
 
         # resume random seed
-        resumed_seed = self.extra_ckpt['meta'].get('seed', None)
+        resumed_seed = extra_ckpt['meta'].get('seed', None)
         current_seed = self._randomness.get('seed')
         if resumed_seed is not None and resumed_seed != current_seed:
             if current_seed is not None:
@@ -223,7 +216,7 @@ class DeepSpeedStrategy(BaseStrategy):
             self._randomness.update(seed=resumed_seed)
             self._set_randomness(**self._randomness)
 
-        return self.extra_ckpt
+        return extra_ckpt
 
     def save_checkpoint(
         self,

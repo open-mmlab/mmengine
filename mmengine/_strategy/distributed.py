@@ -93,15 +93,8 @@ class DDPStrategy(SingleDeviceStrategy):
             self.param_schedulers = self.build_param_scheduler(param_scheduler)
             return_items.append(self.param_schedulers)
 
-        self.load_or_resume()
-
         if optim_wrapper is not None:
             self._scale_lr()
-
-            # Initiate inner count of `optim_wrapper`.
-            self.optim_wrapper.initialize_count_status(
-                self.model, self.dispatch_kwargs.get('cur_iter', 0),
-                self.dispatch_kwargs['max_iters'])
 
         return return_items[0] if len(return_items) == 1 else return_items
 
@@ -142,7 +135,8 @@ class DDPStrategy(SingleDeviceStrategy):
         assert 'base_batch_size' in self.auto_scale_lr, \
             'Lack of `base_batch_size` in `auto_scale_lr`.'
 
-        real_bs = self.world_size * self.dispatch_kwargs['train_batch_size']
+        real_bs = self.world_size * self.dispatch_kwargs[
+            'train_micro_batch_size_per_gpu']
         base_bs = self.auto_scale_lr['base_batch_size']
         ratio = float(real_bs) / float(base_bs)
         self.logger.info(f'LR is set based on batch size of {base_bs} '

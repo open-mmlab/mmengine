@@ -48,13 +48,6 @@ class BaseStrategy(metaclass=ABCMeta):
             Defaults to None.
         compile (dict or bool): Config to compile model. Defaults to False.
             Requires PyTorch>=2.0.
-        load_from (str, optional): The checkpoint file to load from.
-            Defaults to None.
-        resume (bool or string): Whether to resume training. Defaults to False.
-            If ``resume`` is True and ``load_from`` is None, automatically to
-            find latest checkpoint from ``work_dir``. If not found, resuming
-            does nothing. If ``resume`` is a string, it will be treated as the
-            checkpoint file to resume from.
         env_kwargs (dict, optional): Environment config passed in
             :meth:`setup_env`. Defaults to None.
         log_kwargs (dict, optional): Logger config passed in
@@ -70,8 +63,6 @@ class BaseStrategy(metaclass=ABCMeta):
         work_dir: str = 'work_dirs',
         experiment_name: Optional[str] = None,
         compile: Union[dict, bool] = False,
-        load_from: Optional[str] = None,
-        resume: bool = False,
         env_kwargs: Optional[dict] = None,
         log_kwargs: Optional[dict] = None,
     ):
@@ -79,11 +70,6 @@ class BaseStrategy(metaclass=ABCMeta):
         mmengine.mkdir_or_exist(self._work_dir)
 
         self.compile = compile
-
-        if isinstance(resume, str) and load_from is not None:
-            raise ValueError('If resume is a str, load_from should be None.')
-        self._load_from = load_from
-        self._resume = resume
 
         self._env_kwargs = env_kwargs or {}
         self.setup_env(**self._env_kwargs)
@@ -783,30 +769,44 @@ class BaseStrategy(metaclass=ABCMeta):
                     state_dict):
                 scheduler.load_state_dict(ckpt_scheduler)
 
-    def load_or_resume(self) -> Optional[dict]:
-        """Load checkpoint or resume from checkpoint."""
+    def load_or_resume(
+        self,
+        *,
+        load_from: Optional[str] = None,
+        resume: Union[bool, str] = False,
+    ) -> Optional[dict]:
+        """Load checkpoint or resume from checkpoint.
+
+        Keyword Args:     load_from (str, optional): The checkpoint file to
+        load from.         Defaults to None.     resume (bool or str): Whether
+        to resume training.         Defaults to False. If ``resume`` is True
+        and ``load_from`` is         None, automatically to find latest
+        checkpoint from         ``work_dir``. If not found, resuming does
+        nothing.         If ``resume`` is a string, it will be treated as the
+        checkpoint         file to resume from.
+        """
         from mmengine.runner import find_latest_checkpoint
 
-        if not self._resume and self._load_from is None:
+        if not resume and load_from is None:
             return None
 
         # decide to load from checkpoint or resume from checkpoint
         resume_from = None
-        if isinstance(self._resume, str):
-            resume_from = self._resume
-        elif self._resume and self._load_from is None:
+        if isinstance(resume, str):
+            resume_from = resume
+        elif resume and load_from is None:
             # auto resume from the latest checkpoint
             resume_from = find_latest_checkpoint(self._work_dir)
             self.logger.info(
                 f'Auto resumed from the latest checkpoint {resume_from}.')
-        elif self._resume and self._load_from is not None:
+        elif resume and load_from is not None:
             # resume from the specified checkpoint
-            resume_from = self._load_from
+            resume_from = load_from
 
         if resume_from is not None:
             return self.resume(resume_from)
-        elif self._load_from is not None:
-            return self.load_checkpoint(self._load_from)
+        elif load_from is not None:
+            return self.load_checkpoint(load_from)
 
         return None
 
@@ -816,6 +816,8 @@ class BaseStrategy(metaclass=ABCMeta):
         filename: str,
         *,
         map_location: Union[str, Callable] = 'cpu',
+        strict: bool = False,
+        revise_keys: list = [(r'^module.', '')],
         callback: Optional[Callable] = None,
     ) -> dict:
         """Load checkpoint from given ``filename``.
@@ -823,9 +825,20 @@ class BaseStrategy(metaclass=ABCMeta):
         Args:
             filename (str): Accept local filepath, URL, ``torchvision://xxx``,
                 ``open-mmlab://xxx``.
+
+        Keyword Args:
             map_location (str or callable): A string or a callable function to
                 specifying how to remap storage locations.
                 Defaults to 'cpu'.
+            strict (bool): strict (bool): Whether to allow different params for
+                the model and checkpoint.
+            revise_keys (list): A list of customized keywords to modify the
+                state_dict in checkpoint. Each item is a (pattern, replacement)
+                pair of the regular expression operations. Defaults to strip
+                the prefix 'module.' by [(r'^module\\.', '')].
+            callback (callable, callable): Callback function to modify the
+                checkpoint after loading the checkpoint.
+                Defaults to None.
         """
 
     @abstractmethod

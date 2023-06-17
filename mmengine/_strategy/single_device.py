@@ -65,14 +65,6 @@ class SingleDeviceStrategy(BaseStrategy):
             self.param_schedulers = self.build_param_scheduler(param_scheduler)
             return_items.append(self.param_schedulers)
 
-        self.load_or_resume()
-
-        if optim_wrapper is not None:
-            # Initiate inner count of `optim_wrapper`.
-            self.optim_wrapper.initialize_count_status(
-                self.model, self.dispatch_kwargs.get('cur_iter', 0),
-                self.dispatch_kwargs['max_iters'])
-
         return return_items[0] if len(return_items) == 1 else return_items
 
     def wrap_model(self, model: nn.Module) -> nn.Module:
@@ -85,6 +77,8 @@ class SingleDeviceStrategy(BaseStrategy):
         filename: str,
         *,
         map_location: Union[str, Callable] = 'cpu',
+        strict: bool = False,
+        revise_keys: list = [(r'^module.', '')],
         callback: Optional[Callable] = None,
     ) -> dict:
         """Load checkpoint from given ``filename``.
@@ -97,33 +91,35 @@ class SingleDeviceStrategy(BaseStrategy):
             map_location (str or callable): A string or a callable function to
                 specifying how to remap storage locations.
                 Defaults to 'cpu'.
+            strict (bool): strict (bool): Whether to allow different params for
+                the model and checkpoint.
+            revise_keys (list): A list of customized keywords to modify the
+                state_dict in checkpoint. Each item is a (pattern, replacement)
+                pair of the regular expression operations. Defaults to strip
+                the prefix 'module.' by [(r'^module\\.', '')].
             callback (callable, callable): Callback function to modify the
                 checkpoint after loading the checkpoint.
                 Defaults to None.
         """
         from mmengine.runner.checkpoint import _load_checkpoint
 
-        if hasattr(self, 'extra_ckpt'):
-            return self.extra_ckpt
-
         self.logger.info(f'Load checkpoint from {filename}')
 
-        self.extra_ckpt: dict
         if map_location == 'default':
             device = get_device()
-            self.extra_ckpt = _load_checkpoint(filename, map_location=device)
+            checkpoint = _load_checkpoint(filename, map_location=device)
         else:
-            self.extra_ckpt = _load_checkpoint(
-                filename, map_location=map_location)
+            checkpoint = _load_checkpoint(filename, map_location=map_location)
 
         # users can do some modification after loading checkpoint
         if callback is not None:
-            callback(self.extra_ckpt)
+            callback(checkpoint)
 
-        state_dict = self.extra_ckpt.pop('state_dict')
-        self.load_model_state_dict(state_dict)
+        state_dict = checkpoint.pop('state_dict')
+        self.load_model_state_dict(
+            state_dict, strict=strict, revise_keys=revise_keys)
 
-        return self.extra_ckpt
+        return checkpoint
 
     def resume(
         self,
@@ -159,27 +155,23 @@ class SingleDeviceStrategy(BaseStrategy):
                 checkpoint before saving the checkpoint.
                 Defaults to None.
         """
-        if hasattr(self, 'extra_ckpt'):
-            return self.extra_ckpt
-
         self.logger.info(f'Resume checkpoint from {filename}')
 
-        self.extra_ckpt = self.load_checkpoint(
+        checkpoint = self.load_checkpoint(
             filename, map_location=map_location, callback=callback)
 
         if not resume_optimizer:
-            self.extra_ckpt.pop('optimizer', None)
+            checkpoint.pop('optimizer', None)
         else:
-            self.load_optim_state_dict(self.extra_ckpt.pop('optimizer'))
+            self.load_optim_state_dict(checkpoint.pop('optimizer'))
 
         if not resume_param_scheduler:
-            self.extra_ckpt.pop('param_schedulers', None)
+            checkpoint.pop('param_schedulers', None)
         else:
-            self.load_scheduler_state_dict(
-                self.extra_ckpt.pop('param_schedulers'))
+            self.load_scheduler_state_dict(checkpoint.pop('param_schedulers'))
 
         # resume random seed
-        resumed_seed = self.extra_ckpt['meta'].get('seed', None)
+        resumed_seed = checkpoint['meta'].get('seed', None)
         current_seed = self._randomness.get('seed')
         if resumed_seed is not None and resumed_seed != current_seed:
             if current_seed is not None:
@@ -191,9 +183,14 @@ class SingleDeviceStrategy(BaseStrategy):
             self._set_randomness(**self._randomness)
 
         # resume iter
-        self.dispatch_kwargs['cur_iter'] = self.extra_ckpt['meta']['iter']
+        cur_iter = checkpoint['meta']['iter']
 
-        return self.extra_ckpt
+        if hasattr(self, 'optim_wrapper'):
+            # Initiate inner count of `optim_wrapper`.
+            self.optim_wrapper.initialize_count_status(
+                self.model, cur_iter, self.dispatch_kwargs['max_iters'])
+
+        return checkpoint
 
     def save_checkpoint(
         self,
