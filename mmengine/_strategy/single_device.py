@@ -53,7 +53,7 @@ class SingleDeviceStrategy(BaseStrategy):
         return_items = []
         model = self.build_model(model)
         model = self._init_model_weights(model)
-        model = self.wrap_model(model)
+        model = self._wrap_model(model)
         self.model = self.compile_model(model)
         return_items.append(self.model)
 
@@ -67,7 +67,7 @@ class SingleDeviceStrategy(BaseStrategy):
 
         return return_items[0] if len(return_items) == 1 else return_items
 
-    def wrap_model(self, model: nn.Module) -> nn.Module:
+    def _wrap_model(self, model: nn.Module) -> nn.Module:
         model = self.convert_model(model)
         current_device = get_device()
         return model.to(current_device)

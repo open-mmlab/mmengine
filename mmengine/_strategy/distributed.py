@@ -81,7 +81,7 @@ class DDPStrategy(SingleDeviceStrategy):
 
         model = self.build_model(model)
         model = self._init_model_weights(model)
-        model = self.wrap_model(model)
+        model = self._wrap_model(model)
         self.model = self.compile_model(model)
         return_items.append(self.model)
 
@@ -184,7 +184,7 @@ class DDPStrategy(SingleDeviceStrategy):
 
         return model
 
-    def wrap_model(self, model: nn.Module) -> DistributedDataParallel:
+    def _wrap_model(self, model: nn.Module) -> DistributedDataParallel:
         """Wrap the model to :obj:``MMDistributedDataParallel`` or other custom
         distributed data-parallel module wrappers.
 

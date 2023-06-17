@@ -125,11 +125,11 @@ class DeepSpeedStrategy(BaseStrategy):
         if optim_wrapper is not None:
             self.model = model
             self.optim_wrapper = self.build_optim_wrapper(optim_wrapper)
-            self.model = self.wrap_model(self.model)
+            self.model = self._wrap_model(self.model)
             return_items.append(self.model)
             return_items.append(self.optim_wrapper)
         else:
-            self.model = self.wrap_model(model)
+            self.model = self._wrap_model(model)
             return_items.append(self.model)
 
         if param_scheduler is not None:
@@ -138,7 +138,7 @@ class DeepSpeedStrategy(BaseStrategy):
 
         return return_items[0] if len(return_items) == 1 else return_items
 
-    def wrap_model(self, model: nn.Module) -> nn.Module:
+    def _wrap_model(self, model: nn.Module) -> nn.Module:
         self.config['train_micro_batch_size_per_gpu'] = self.dispatch_kwargs[
             'train_micro_batch_size_per_gpu']
 
