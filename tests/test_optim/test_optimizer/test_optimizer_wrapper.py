@@ -14,7 +14,8 @@ from torch.optim import SGD, Adam, Optimizer
 
 from mmengine.dist import all_gather
 from mmengine.logging import MessageHub, MMLogger
-from mmengine.optim import AmpOptimWrapper, ApexOptimWrapper, OptimWrapper
+from mmengine.optim import (AmpOptimWrapper, ApexOptimWrapper,
+                            DefaultOptimWrapperConstructor, OptimWrapper)
 from mmengine.testing import assert_allclose
 from mmengine.testing._internal import MultiProcessTestCase
 from mmengine.utils.dl_utils import TORCH_VERSION
@@ -174,6 +175,15 @@ class TestOptimWrapper(MultiProcessTestCase):
         optim = SGD(model.parameters(), lr=0.1)
         optim_wrapper = OptimWrapper(optim)
         self.assertEqual(optim_wrapper.get_lr(), dict(lr=[0.1]))
+        model = ToyModel()
+        optimizer_cfg = dict(
+            type='OptimWrapper', optimizer=dict(type='SGD', lr=0.1))
+        paramwise_cfg = dict(custom_keys={'conv1.weight': dict(lr_mult=0.1)})
+        optim_constructor = DefaultOptimWrapperConstructor(
+            optimizer_cfg, paramwise_cfg)
+        optim_wrapper = optim_constructor(model)
+        self.assertEqual(optim_wrapper.get_lr(),
+                         dict(base_lr=[0.1], lr=[0.1 * 0.1] + [0.1] * 5))
 
     def test_get_momentum(self):
         # Get momentum from SGD
@@ -194,12 +204,18 @@ class TestOptimWrapper(MultiProcessTestCase):
 
     def test_zero_grad(self):
         optimizer = MagicMock(spec=Optimizer)
+        optimizer.defaults = {
+        }  # adjust this line according to what OptimWrapper expects
+        optimizer.param_groups = [{}]
         optim_wrapper = OptimWrapper(optimizer)
         optim_wrapper.zero_grad()
         optimizer.zero_grad.assert_called()
 
     def test_step(self):
         optimizer = MagicMock(spec=Optimizer)
+        optimizer.defaults = {
+        }  # adjust this line according to what OptimWrapper expects
+        optimizer.param_groups = [{}]
         optim_wrapper = OptimWrapper(optimizer)
         optim_wrapper.step()
         optimizer.step.assert_called()
@@ -237,7 +253,6 @@ class TestOptimWrapper(MultiProcessTestCase):
         model = ToyModel()
         optimizer = SGD(model.parameters(), lr=0.1)
         optim_wrapper.load_state_dict(optimizer.state_dict())
-
         self.assertEqual(optim_wrapper.state_dict(), optimizer.state_dict())
 
     def test_param_groups(self):
@@ -447,6 +462,9 @@ class TestAmpOptimWrapper(TestCase):
         if dtype == 'bfloat16' and not bf16_supported():
             raise unittest.SkipTest('bfloat16 not supported by device')
         optimizer = MagicMock(spec=Optimizer)
+        optimizer.defaults = {
+        }  # adjust this line according to what OptimWrapper expects
+        optimizer.param_groups = [{}]
         amp_optim_wrapper = AmpOptimWrapper(optimizer=optimizer, dtype=dtype)
         amp_optim_wrapper.loss_scaler = MagicMock()
         amp_optim_wrapper.step()
@@ -504,7 +522,6 @@ class TestAmpOptimWrapper(TestCase):
         # Test load from optimizer
         optimizer = SGD(self.model.parameters(), lr=0.1)
         amp_optim_wrapper.load_state_dict(optimizer.state_dict())
-
         self.assertDictEqual(optimizer.state_dict(),
                              amp_optim_wrapper.optimizer.state_dict())
         # Test load from optim_wrapper

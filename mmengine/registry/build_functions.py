@@ -186,7 +186,7 @@ def build_runner_from_cfg(cfg: Union[dict, ConfigDict, Config],
     # temporarily.
     scope = args.pop('_scope_', None)
     with registry.switch_scope_and_registry(scope) as registry:
-        obj_type = args.get('runner_type', 'mmengine.Runner')
+        obj_type = args.get('runner_type', 'Runner')
         if isinstance(obj_type, str):
             runner_cls = registry.get(obj_type)
             if runner_cls is None:

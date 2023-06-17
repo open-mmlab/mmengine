@@ -367,8 +367,12 @@ class Runner:
         mmengine.mkdir_or_exist(self._log_dir)
         # Used to reset registries location. See :meth:`Registry.build` for
         # more details.
-        self.default_scope = DefaultScope.get_instance(
-            self._experiment_name, scope_name=default_scope)
+        if default_scope is not None:
+            default_scope = DefaultScope.get_instance(  # type: ignore
+                self._experiment_name,
+                scope_name=default_scope)
+        self.default_scope = default_scope
+
         # Build log processor to format message.
         log_processor = dict() if log_processor is None else log_processor
         self.log_processor = self.build_log_processor(log_processor)
@@ -878,6 +882,7 @@ class Runner:
                 broadcast_buffers=False,
                 find_unused_parameters=find_unused_parameters)
         else:
+            model_wrapper_cfg.setdefault('type', 'MMDistributedDataParallel')
             model_wrapper_type = MODEL_WRAPPERS.get(
                 model_wrapper_cfg.get('type'))  # type: ignore
             default_args: dict = dict()
@@ -1384,7 +1389,14 @@ class Runner:
         if 'worker_init_fn' in dataloader_cfg:
             worker_init_fn_cfg = dataloader_cfg.pop('worker_init_fn')
             worker_init_fn_type = worker_init_fn_cfg.pop('type')
-            worker_init_fn = FUNCTIONS.get(worker_init_fn_type)
+            if isinstance(worker_init_fn_type, str):
+                worker_init_fn = FUNCTIONS.get(worker_init_fn_type)
+            elif callable(worker_init_fn_type):
+                worker_init_fn = worker_init_fn_type
+            else:
+                raise TypeError(
+                    'type of worker_init_fn should be string or callable '
+                    f'object, but got {type(worker_init_fn)}')
             assert callable(worker_init_fn)
             init_fn = partial(worker_init_fn,
                               **worker_init_fn_cfg)  # type: ignore
@@ -1423,7 +1435,10 @@ class Runner:
                                             dict(type='pseudo_collate'))
         if isinstance(collate_fn_cfg, dict):
             collate_fn_type = collate_fn_cfg.pop('type')
-            collate_fn = FUNCTIONS.get(collate_fn_type)
+            if isinstance(collate_fn_type, str):
+                collate_fn = FUNCTIONS.get(collate_fn_type)
+            else:
+                collate_fn = collate_fn_type
             collate_fn = partial(collate_fn, **collate_fn_cfg)  # type: ignore
         elif callable(collate_fn_cfg):
             collate_fn = collate_fn_cfg
@@ -1431,7 +1446,6 @@ class Runner:
             raise TypeError(
                 'collate_fn should be a dict or callable object, but got '
                 f'{collate_fn_cfg}')
-
         data_loader = DataLoader(
             dataset=dataset,
             sampler=sampler if batch_sampler is None else None,
@@ -1975,16 +1989,21 @@ class Runner:
             if (previous_gpu_ids is not None and len(previous_gpu_ids) > 0
                     and len(previous_gpu_ids) != self._world_size):
                 # TODO, should we modify the iteration?
-                self.logger.info(
-                    'Number of GPU used for current experiment is not '
-                    'consistent with resuming from checkpoint')
                 if (self.auto_scale_lr is None
                         or not self.auto_scale_lr.get('enable', False)):
                     raise RuntimeError(
-                        'Cannot automatically rescale lr in resuming. Please '
-                        'make sure the number of GPU is consistent with the '
-                        'previous training state resuming from the checkpoint '
-                        'or set `enable` in `auto_scale_lr to False.')
+                        'Number of GPUs used for current experiment is not '
+                        'consistent with the checkpoint being resumed from. '
+                        'This will result in poor performance due to the '
+                        'learning rate. You must set the '
+                        '`auto_scale_lr` parameter for Runner and make '
+                        '`auto_scale_lr["enable"]=True`.')
+                else:
+                    self.logger.info(
+                        'Number of GPU used for current experiment is not '
+                        'consistent with resuming from checkpoint but the '
+                        'leaning rate will be adjusted according to the '
+                        f'setting in auto_scale_lr={self.auto_scale_lr}')
 
         # resume random seed
         resumed_seed = checkpoint['meta'].get('seed', None)

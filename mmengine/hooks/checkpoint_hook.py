@@ -518,15 +518,19 @@ class CheckpointHook(Hook):
             runner.message_hub.update_info(best_score_key, best_score)
 
             if best_ckpt_path and is_main_process():
+                is_removed = False
                 if self.file_backend.isfile(best_ckpt_path):
                     self.file_backend.remove(best_ckpt_path)
-                else:
+                    is_removed = True
+                elif self.file_backend.isdir(best_ckpt_path):
                     # checkpoints saved by deepspeed are directories
                     self.file_backend.rmtree(best_ckpt_path)
+                    is_removed = True
 
-                runner.logger.info(
-                    f'The previous best checkpoint {best_ckpt_path} '
-                    'is removed')
+                if is_removed:
+                    runner.logger.info(
+                        f'The previous best checkpoint {best_ckpt_path} '
+                        'is removed')
 
             best_ckpt_name = f'best_{key_indicator}_{ckpt_filename}'
             # Replace illegal characters for filename with `_`
