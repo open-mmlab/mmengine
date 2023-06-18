@@ -11,7 +11,7 @@ import torch.nn as nn
 
 import mmengine
 from mmengine.model.wrappers._deepspeed import MMDeepSpeedEngineWrapper
-from mmengine.optim import OptimWrapper, _ParamScheduler
+from mmengine.optim import BaseOptimWrapper, _ParamScheduler
 from mmengine.registry import STRATEGIES
 from mmengine.utils import get_git_hash
 from .base import BaseStrategy
@@ -90,8 +90,9 @@ class DeepSpeedStrategy(BaseStrategy):
         self,
         model: Union[nn.Module, dict],
         *,
-        optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
-        param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
+        optim_wrapper: Union[BaseOptimWrapper, dict, None] = None,
+        param_scheduler: Union[_ParamScheduler, Dict, List, None] = None,
+        compile: Union[dict, bool] = False,
         dispatch_kwargs: Optional[dict] = None,
     ):
         """Prepare model and some components.
@@ -101,7 +102,7 @@ class DeepSpeedStrategy(BaseStrategy):
                 can be a dict used for build a model.
 
         Keyword Args:
-            optim_wrapper (OptimWrapper or dict, optional):
+            optim_wrapper (BaseOptimWrapper or dict, optional):
                 Computing gradient of model parameters. If specified,
                 :attr:`train_dataloader` should also be specified. If automatic
                 mixed precision or gradient accmulation
@@ -113,6 +114,10 @@ class DeepSpeedStrategy(BaseStrategy):
                 specified, :attr:`optimizer` should also be specified.
                 Defaults to None.
                 See :meth:`build_param_scheduler` for examples.
+            compile (dict, optional): Config to compile model.
+                Defaults to False. Requires PyTorch>=2.0.
+            dispatch_kwargs (dict, optional): Kwargs to be passed to other
+                methods of Strategy. Defaults to None.
         """
         assert dispatch_kwargs is not None
         self.dispatch_kwargs.update(dispatch_kwargs)

@@ -18,8 +18,8 @@ from mmengine.dist import (broadcast, get_dist_info, infer_launcher,
 from mmengine.logging import MMLogger
 from mmengine.model import revert_sync_batchnorm
 from mmengine.model.wrappers import is_model_wrapper
-from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
-                            build_optim_wrapper)
+from mmengine.optim import (BaseOptimWrapper, OptimWrapperDict,
+                            _ParamScheduler, build_optim_wrapper)
 from mmengine.registry import MODELS, OPTIM_WRAPPERS, PARAM_SCHEDULERS
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
@@ -46,15 +46,13 @@ class BaseStrategy(metaclass=ABCMeta):
         experiment_name (str, optional): Name of current experiment. If not
             specified, timestamp will be used as ``experiment_name``.
             Defaults to None.
-        compile (dict or bool): Config to compile model. Defaults to False.
-            Requires PyTorch>=2.0.
         env_kwargs (dict, optional): Environment config passed in
             :meth:`setup_env`. Defaults to None.
         log_kwargs (dict, optional): Logger config passed in
             :meth:`build_logger`. Defaults to None.
     """
     model: nn.Module
-    optim_wrapper: Union[OptimWrapper, OptimWrapperDict]
+    optim_wrapper: BaseOptimWrapper
     param_schedulers: ParamSchedulerType
 
     def __init__(
@@ -62,14 +60,11 @@ class BaseStrategy(metaclass=ABCMeta):
         *,
         work_dir: str = 'work_dirs',
         experiment_name: Optional[str] = None,
-        compile: Union[dict, bool] = False,
         env_kwargs: Optional[dict] = None,
         log_kwargs: Optional[dict] = None,
     ):
         self._work_dir = osp.abspath(work_dir)
         mmengine.mkdir_or_exist(self._work_dir)
-
-        self.compile = compile
 
         self._env_kwargs = env_kwargs or {}
         self.setup_env(**self._env_kwargs)
@@ -131,8 +126,9 @@ class BaseStrategy(metaclass=ABCMeta):
         self,
         model: Union[nn.Module, dict],
         *,
-        optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
-        param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
+        optim_wrapper: Union[BaseOptimWrapper, dict, None] = None,
+        param_scheduler: Union[_ParamScheduler, Dict, List, None] = None,
+        compile: Union[dict, bool] = False,
         dispatch_kwargs: Optional[dict] = None,
     ):
         """Prepare model and some components.
@@ -142,7 +138,7 @@ class BaseStrategy(metaclass=ABCMeta):
                 can be a dict used for building a model.
 
         Keyword Args:
-            optim_wrapper (OptimWrapper or dict, optional):
+            optim_wrapper (BaseOptimWrapper or dict, optional):
                 Computing gradient of model parameters. If specified,
                 :attr:`train_dataloader` should also be specified. If automatic
                 mixed precision or gradient accmulation
@@ -154,6 +150,8 @@ class BaseStrategy(metaclass=ABCMeta):
                 specified, :attr:`optimizer` should also be specified.
                 Defaults to None.
                 See :meth:`build_param_scheduler` for examples.
+            compile (dict, optional): Config to compile model.
+                Defaults to False. Requires PyTorch>=2.0.
             dispatch_kwargs (dict, optional): Kwargs to be passed to other
                 methods of Strategy. Defaults to None.
         """
@@ -319,7 +317,9 @@ class BaseStrategy(metaclass=ABCMeta):
         model = revert_sync_batchnorm(model)
         return model
 
-    def compile_model(self, model: nn.Module) -> nn.Module:
+    def compile_model(self,
+                      model: nn.Module,
+                      compile: Union[dict, bool] = False) -> nn.Module:
         """Compile model.
 
         Args:
@@ -328,15 +328,16 @@ class BaseStrategy(metaclass=ABCMeta):
         Returns:
             nn.Module: Compiled model.
         """
-        if not self.compile:
+        if isinstance(compile, bool) and not compile:
             return model
 
         assert digit_version(TORCH_VERSION) >= digit_version('2.0.0'), (
             'PyTorch >= 2.0.0 is required to enable torch.compile')
 
-        compile = dict() if isinstance(self.compile, bool) else self.compile
-        target = compile.pop(
-            'target', self.dispatch_kwargs.get('compile_target', 'forward'))
+        if isinstance(compile, bool):
+            compile = dict()
+
+        target = compile.pop('target', 'forward')
         func = getattr(model, target)
         compiled_func = torch.compile(func, **compile)
         setattr(model, target, compiled_func)
@@ -358,8 +359,8 @@ class BaseStrategy(metaclass=ABCMeta):
 
     def build_optim_wrapper(
         self,
-        optim_wrapper: Union[Optimizer, OptimWrapper, dict],
-    ) -> Union[OptimWrapper, OptimWrapperDict]:
+        optim_wrapper: Union[Optimizer, BaseOptimWrapper, dict],
+    ) -> BaseOptimWrapper:
         """Build optimizer wrapper.
 
         If ``optim_wrapper`` is a config dict for only one optimizer,
@@ -378,7 +379,7 @@ class BaseStrategy(metaclass=ABCMeta):
         :obj:`OptimWrapperDict` instance from ``optim_wrapper``.
 
         Args:
-            optim_wrapper (OptimWrapper or dict): An OptimWrapper object or a
+            optim_wrapper (BaseOptimWrapper or dict): An OptimWrapper object or a
                 dict to build OptimWrapper objects. If ``optim_wrapper`` is an
                 OptimWrapper, just return an ``OptimizeWrapper`` instance.
 
@@ -466,9 +467,9 @@ class BaseStrategy(metaclass=ABCMeta):
             found at `optimizer-docs`_.
 
         Returns:
-            OptimWrapper: Optimizer wrapper build from ``optimizer_cfg``.
+            BaseOptimWrapper: Optimizer wrapper build from ``optimizer_cfg``.
         """  # noqa: E501
-        if isinstance(optim_wrapper, OptimWrapper):
+        if isinstance(optim_wrapper, BaseOptimWrapper):
             return optim_wrapper
         if isinstance(optim_wrapper, (dict, ConfigDict, Config)):
             # optimizer must be defined for single optimizer training.
@@ -495,7 +496,7 @@ class BaseStrategy(metaclass=ABCMeta):
                 # `OptimWrapperDict` instance from `optim_wrapper.`
                 optim_wrappers = OrderedDict()
                 for name, optim in optim_wrapper.items():
-                    if not isinstance(optim, OptimWrapper):
+                    if not isinstance(optim, BaseOptimWrapper):
                         raise ValueError(
                             'each item mush be an optimizer object when '
                             '"type" and "constructor" are not in '
@@ -509,7 +510,7 @@ class BaseStrategy(metaclass=ABCMeta):
     def _build_param_scheduler(
         self,
         scheduler: Union[_ParamScheduler, Dict, List],
-        optim_wrapper: OptimWrapper,
+        optim_wrapper: BaseOptimWrapper,
         default_args: dict,
     ) -> List[_ParamScheduler]:
         """Build parameter schedulers for a single optimizer.
@@ -517,7 +518,7 @@ class BaseStrategy(metaclass=ABCMeta):
         Args:
             scheduler (_ParamScheduler or dict or list): A Param Scheduler
                 object or a dict or list of dict to build parameter schedulers.
-            optim_wrapper (OptimWrapper): An optimizer wrapper object is
+            optim_wrapper (BaseOptimWrapper): An optimizer wrapper object is
                 passed to construct ParamScheduler object.
 
         Returns:
@@ -652,7 +653,7 @@ class BaseStrategy(metaclass=ABCMeta):
             # `OptimWrapperDict` instance. Therefore, here we simply check
             # self.optim_wrapper is not an `OptimWrapperDict` instance and
             # then assert it is an OptimWrapper instance.
-            assert isinstance(self.optim_wrapper, OptimWrapper), (
+            assert isinstance(self.optim_wrapper, BaseOptimWrapper), (
                 '`build_optimizer` should be called before'
                 '`build_param_scheduler` because the latter depends '
                 'on the former')
@@ -712,7 +713,7 @@ class BaseStrategy(metaclass=ABCMeta):
 
     def optim_state_dict(self) -> dict:
         """Get optimizer state dict."""
-        if isinstance(self.optim_wrapper, OptimWrapper):
+        if isinstance(self.optim_wrapper, BaseOptimWrapper):
             return self.optim_wrapper.state_dict()
         else:
             raise TypeError('self.optim_wrapper should be an `OptimWrapper` '

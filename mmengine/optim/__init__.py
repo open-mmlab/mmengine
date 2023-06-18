@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .optimizer import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
-                        AmpOptimWrapper, ApexOptimWrapper,
+                        AmpOptimWrapper, ApexOptimWrapper, BaseOptimWrapper,
                         DefaultOptimWrapperConstructor, OptimWrapper,
                         OptimWrapperDict, ZeroRedundancyOptimizer,
                         build_optim_wrapper)
@@ -31,5 +31,5 @@ __all__ = [
     'OptimWrapperDict', 'OneCycleParamScheduler', 'OneCycleLR', 'PolyLR',
     'PolyMomentum', 'PolyParamScheduler', 'ReduceOnPlateauLR',
     'ReduceOnPlateauMomentum', 'ReduceOnPlateauParamScheduler',
-    'ZeroRedundancyOptimizer'
+    'ZeroRedundancyOptimizer', 'BaseOptimWrapper'
 ]

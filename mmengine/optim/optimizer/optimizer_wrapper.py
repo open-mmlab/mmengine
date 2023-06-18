@@ -10,10 +10,11 @@ from torch.optim import Optimizer
 from mmengine.logging import MessageHub, print_log
 from mmengine.registry import OPTIM_WRAPPERS
 from mmengine.utils.dl_utils import has_batch_norm
+from .base import BaseOptimWrapper
 
 
 @OPTIM_WRAPPERS.register_module()
-class OptimWrapper:
+class OptimWrapper(BaseOptimWrapper):
     """Optimizer wrapper provides a common interface for updating parameters.
 
     Optimizer wrapper provides a unified interface for single precision
@@ -175,10 +176,11 @@ class OptimWrapper:
         else:
             self.base_param_settings = None  # type: ignore
 
-    def update_params(self,
-                      loss: torch.Tensor,
-                      step_kwargs: Optional[Dict] = None,
-                      zero_kwargs: Optional[Dict] = None) -> None:
+    def update_params(  # type: ignore
+            self,
+            loss: torch.Tensor,
+            step_kwargs: Optional[Dict] = None,
+            zero_kwargs: Optional[Dict] = None) -> None:
         """Update parameters in :attr:`optimizer`.
 
         Args:

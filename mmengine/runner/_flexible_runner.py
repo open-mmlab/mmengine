@@ -638,7 +638,6 @@ class FlexibleRunner:
             assert isinstance(strategy, dict)
 
             strategy.setdefault('work_dir', self._work_dir)
-            strategy.setdefault('compile', self._compile)
             strategy.setdefault('experiment_name', experiment_name)
 
             env_kwargs = dict(
@@ -1137,21 +1136,30 @@ class FlexibleRunner:
             self._val_loop = self.build_val_loop(
                 self._val_loop)  # type: ignore
 
+        compile: Union[dict, bool] = False
+        if isinstance(self._compile, bool):
+            if self._compile:
+                compile = dict(target='train_step')
+        else:
+            compile = copy.copy(self._compile)
+            compile.setdefault('target', 'train_step')
+
         if self.train_dataloader.batch_size is not None:
             micro_batch_size = self.train_dataloader.batch_size
         else:
             micro_batch_size = self.train_dataloader.batch_sampler.batch_size
         dispatch_kwargs = dict(
-            compile_target='train_step',
             train_micro_batch_size_per_gpu=micro_batch_size,
             num_batches_per_epoch=len(self.train_dataloader),
             max_epochs=self.max_epochs,
             max_iters=self.max_iters,
         )
+
         result = self.strategy.prepare(
             self.model,
             optim_wrapper=self.optim_wrapper,
             param_scheduler=self.param_schedulers,
+            compile=compile,
             dispatch_kwargs=dispatch_kwargs,
         )
 
