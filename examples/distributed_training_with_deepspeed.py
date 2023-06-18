@@ -114,9 +114,7 @@ def main():
         val_dataloader=val_dataloader,
         val_cfg=dict(),
         val_evaluator=dict(type=Accuracy),
-        launcher=args.launcher,
-        resume=True,
-        load_from='./work_dir/epoch_3.pth')
+        launcher=args.launcher)
     runner.train()
 
 

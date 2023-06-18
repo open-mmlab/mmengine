@@ -258,5 +258,6 @@ class MomentumAnnealingEMA(ExponentialMovingAverage):
             steps (int): The number of times the parameters have been
                 updated.
         """
-        momentum = max(self.momentum, self.gamma / (self.gamma + self.steps))
+        momentum = max(self.momentum,
+                       self.gamma / (self.gamma + self.steps.item()))
         averaged_param.lerp_(source_param, momentum)

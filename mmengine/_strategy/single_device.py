@@ -6,7 +6,7 @@ import torch.nn as nn
 
 import mmengine
 from mmengine.device import get_device
-from mmengine.optim import OptimWrapper, _ParamScheduler
+from mmengine.optim import BaseOptimWrapper, _ParamScheduler
 from mmengine.registry import STRATEGIES
 from mmengine.utils import get_git_hash
 from .base import BaseStrategy
@@ -23,8 +23,9 @@ class SingleDeviceStrategy(BaseStrategy):
         self,
         model: Union[nn.Module, dict],
         *,
-        optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
-        param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
+        optim_wrapper: Union[BaseOptimWrapper, dict, None] = None,
+        param_scheduler: Union[_ParamScheduler, Dict, List, None] = None,
+        compile: Union[dict, bool] = False,
         dispatch_kwargs: Optional[dict] = None,
     ):
         """Prepare model and some components.
@@ -33,8 +34,8 @@ class SingleDeviceStrategy(BaseStrategy):
             model (:obj:`torch.nn.Module` or dict): The model to be run. It
                 can be a dict used for build a model.
 
-        Kwargs:
-            optim_wrapper (OptimWrapper or dict, optional):
+        Keyword Args:
+            optim_wrapper (BaseOptimWrapper or dict, optional):
                 Computing gradient of model parameters. If specified,
                 :attr:`train_dataloader` should also be specified. If automatic
                 mixed precision or gradient accmulation
@@ -46,6 +47,10 @@ class SingleDeviceStrategy(BaseStrategy):
                 specified, :attr:`optimizer` should also be specified.
                 Defaults to None.
                 See :meth:`build_param_scheduler` for examples.
+            compile (dict, optional): Config to compile model.
+                Defaults to False. Requires PyTorch>=2.0.
+            dispatch_kwargs (dict, optional): Kwargs to be passed to other
+                methods of Strategy. Defaults to None.
         """
         if dispatch_kwargs is not None:
             self.dispatch_kwargs.update(dispatch_kwargs)
@@ -53,8 +58,8 @@ class SingleDeviceStrategy(BaseStrategy):
         return_items = []
         model = self.build_model(model)
         model = self._init_model_weights(model)
-        model = self.wrap_model(model)
-        self.model = self.compile_model(model)
+        model = self._wrap_model(model)
+        self.model = self.compile_model(model, compile=compile)
         return_items.append(self.model)
 
         if optim_wrapper is not None:
@@ -65,17 +70,9 @@ class SingleDeviceStrategy(BaseStrategy):
             self.param_schedulers = self.build_param_scheduler(param_scheduler)
             return_items.append(self.param_schedulers)
 
-        self.load_or_resume()
-
-        if optim_wrapper is not None:
-            # Initiate inner count of `optim_wrapper`.
-            self.optim_wrapper.initialize_count_status(
-                self.model, self.dispatch_kwargs.get('cur_iter', 0),
-                self.dispatch_kwargs['max_iters'])
-
         return return_items[0] if len(return_items) == 1 else return_items
 
-    def wrap_model(self, model: nn.Module) -> nn.Module:
+    def _wrap_model(self, model: nn.Module) -> nn.Module:
         model = self.convert_model(model)
         current_device = get_device()
         return model.to(current_device)
@@ -85,6 +82,8 @@ class SingleDeviceStrategy(BaseStrategy):
         filename: str,
         *,
         map_location: Union[str, Callable] = 'cpu',
+        strict: bool = False,
+        revise_keys: list = [(r'^module.', '')],
         callback: Optional[Callable] = None,
     ) -> dict:
         """Load checkpoint from given ``filename``.
@@ -92,33 +91,40 @@ class SingleDeviceStrategy(BaseStrategy):
         Args:
             filename (str): Accept local filepath, URL, ``torchvision://xxx``,
                 ``open-mmlab://xxx``.
+
+        Keyword Args:
             map_location (str or callable): A string or a callable function to
                 specifying how to remap storage locations.
                 Defaults to 'cpu'.
+            strict (bool): strict (bool): Whether to allow different params for
+                the model and checkpoint.
+            revise_keys (list): A list of customized keywords to modify the
+                state_dict in checkpoint. Each item is a (pattern, replacement)
+                pair of the regular expression operations. Defaults to strip
+                the prefix 'module.' by [(r'^module\\.', '')].
+            callback (callable, callable): Callback function to modify the
+                checkpoint after loading the checkpoint.
+                Defaults to None.
         """
         from mmengine.runner.checkpoint import _load_checkpoint
 
-        if hasattr(self, 'extra_ckpt'):
-            return self.extra_ckpt
-
         self.logger.info(f'Load checkpoint from {filename}')
 
-        self.extra_ckpt: dict
         if map_location == 'default':
             device = get_device()
-            self.extra_ckpt = _load_checkpoint(filename, map_location=device)
+            checkpoint = _load_checkpoint(filename, map_location=device)
         else:
-            self.extra_ckpt = _load_checkpoint(
-                filename, map_location=map_location)
+            checkpoint = _load_checkpoint(filename, map_location=map_location)
 
         # users can do some modification after loading checkpoint
         if callback is not None:
-            callback(self.extra_ckpt)
+            callback(checkpoint)
 
-        state_dict = self.extra_ckpt.pop('state_dict')
-        self.load_model_state_dict(state_dict)
+        state_dict = checkpoint.pop('state_dict')
+        self.load_model_state_dict(
+            state_dict, strict=strict, revise_keys=revise_keys)
 
-        return self.extra_ckpt
+        return checkpoint
 
     def resume(
         self,
@@ -141,28 +147,36 @@ class SingleDeviceStrategy(BaseStrategy):
         Args:
             filename (str): Accept local filepath, URL, ``torchvision://xxx``,
                 ``open-mmlab://xxx``.
-        """
-        if hasattr(self, 'extra_ckpt'):
-            return self.extra_ckpt
 
+        Keyword Args:
+            resume_optimizer (bool): Whether to resume optimizer state.
+                Defaults to True.
+            resume_param_scheduler (bool): Whether to resume param scheduler
+                state. Defaults to True.
+            map_location (str or callable):A string or a callable function to
+                specifying how to remap storage locations.
+                Defaults to 'default'.
+            callback (callable, callable): Callback function to modify the
+                checkpoint before saving the checkpoint.
+                Defaults to None.
+        """
         self.logger.info(f'Resume checkpoint from {filename}')
 
-        self.extra_ckpt = self.load_checkpoint(
+        checkpoint = self.load_checkpoint(
             filename, map_location=map_location, callback=callback)
 
         if not resume_optimizer:
-            self.extra_ckpt.pop('optimizer', None)
+            checkpoint.pop('optimizer', None)
         else:
-            self.load_optim_state_dict(self.extra_ckpt.pop('optimizer'))
+            self.load_optim_state_dict(checkpoint.pop('optimizer'))
 
         if not resume_param_scheduler:
-            self.extra_ckpt.pop('param_schedulers', None)
+            checkpoint.pop('param_schedulers', None)
         else:
-            self.load_scheduler_state_dict(
-                self.extra_ckpt.pop('param_schedulers'))
+            self.load_scheduler_state_dict(checkpoint.pop('param_schedulers'))
 
         # resume random seed
-        resumed_seed = self.extra_ckpt['meta'].get('seed', None)
+        resumed_seed = checkpoint['meta'].get('seed', None)
         current_seed = self._randomness.get('seed')
         if resumed_seed is not None and resumed_seed != current_seed:
             if current_seed is not None:
@@ -174,9 +188,14 @@ class SingleDeviceStrategy(BaseStrategy):
             self._set_randomness(**self._randomness)
 
         # resume iter
-        self.dispatch_kwargs['cur_iter'] = self.extra_ckpt['meta']['iter']
+        cur_iter = checkpoint['meta']['iter']
 
-        return self.extra_ckpt
+        if hasattr(self, 'optim_wrapper'):
+            # Initiate inner count of `optim_wrapper`.
+            self.optim_wrapper.initialize_count_status(  # type: ignore
+                self.model, cur_iter, self.dispatch_kwargs['max_iters'])
+
+        return checkpoint
 
     def save_checkpoint(
         self,
@@ -191,6 +210,8 @@ class SingleDeviceStrategy(BaseStrategy):
 
         Args:
             filename (str): Filename to save checkpoint.
+
+        Keyword Args:
             save_optimizer (bool): Whether to save the optimizer to
                 the checkpoint. Defaults to True.
             save_param_scheduler (bool): Whether to save the param_scheduler
@@ -203,7 +224,7 @@ class SingleDeviceStrategy(BaseStrategy):
         """
         from mmengine.runner.checkpoint import save_checkpoint
 
-        state_dict = dict()
+        state_dict: dict = dict()
         state_dict['state_dict'] = self.model_state_dict()
 
         # save optimizer state dict
@@ -219,8 +240,7 @@ class SingleDeviceStrategy(BaseStrategy):
             save_param_scheduler = False
 
         if save_param_scheduler:
-            state_dict['param_schedulers'] = self.scheduler_state_dict(
-            )  # type: ignore
+            state_dict['param_schedulers'] = self.scheduler_state_dict()
 
         # save extra checkpoint passed by users
         if extra_ckpt is None:

@@ -11,7 +11,7 @@ import torch.nn as nn
 
 import mmengine
 from mmengine.model.wrappers._deepspeed import MMDeepSpeedEngineWrapper
-from mmengine.optim import OptimWrapper, _ParamScheduler
+from mmengine.optim import BaseOptimWrapper, _ParamScheduler
 from mmengine.registry import STRATEGIES
 from mmengine.utils import get_git_hash
 from .base import BaseStrategy
@@ -22,8 +22,13 @@ class DeepSpeedStrategy(BaseStrategy):
     """
 
     Args:
-        zero_optimization (dict, optional):
-        fp16 (dict, optional):
+        zero_optimization (dict, optional): Enabling and configuring ZeRO
+            memory optimizations. Defaults to None.
+        fp16 (dict, optional): Configuration for using mixed precision/FP16
+            training that leverages NVIDIA's Apex package.
+        bf16 (dict, optional): onfiguration for using bfloat16 floating-point
+            format as an alternative to FP16.
+        activation_checkpointing
     """
     dispatch_keys = [
         'train_batch_size', 'num_batches_per_epoch', 'max_epochs', 'max_iters'
@@ -85,8 +90,9 @@ class DeepSpeedStrategy(BaseStrategy):
         self,
         model: Union[nn.Module, dict],
         *,
-        optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
-        param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
+        optim_wrapper: Union[BaseOptimWrapper, dict, None] = None,
+        param_scheduler: Union[_ParamScheduler, Dict, List, None] = None,
+        compile: Union[dict, bool] = False,
         dispatch_kwargs: Optional[dict] = None,
     ):
         """Prepare model and some components.
@@ -95,8 +101,8 @@ class DeepSpeedStrategy(BaseStrategy):
             model (:obj:`torch.nn.Module` or dict): The model to be run. It
                 can be a dict used for build a model.
 
-        Kwargs:
-            optim_wrapper (OptimWrapper or dict, optional):
+        Keyword Args:
+            optim_wrapper (BaseOptimWrapper or dict, optional):
                 Computing gradient of model parameters. If specified,
                 :attr:`train_dataloader` should also be specified. If automatic
                 mixed precision or gradient accmulation
@@ -108,6 +114,10 @@ class DeepSpeedStrategy(BaseStrategy):
                 specified, :attr:`optimizer` should also be specified.
                 Defaults to None.
                 See :meth:`build_param_scheduler` for examples.
+            compile (dict, optional): Config to compile model.
+                Defaults to False. Requires PyTorch>=2.0.
+            dispatch_kwargs (dict, optional): Kwargs to be passed to other
+                methods of Strategy. Defaults to None.
         """
         assert dispatch_kwargs is not None
         self.dispatch_kwargs.update(dispatch_kwargs)
@@ -120,24 +130,22 @@ class DeepSpeedStrategy(BaseStrategy):
         if optim_wrapper is not None:
             self.model = model
             self.optim_wrapper = self.build_optim_wrapper(optim_wrapper)
-            self.model = self.wrap_model(self.model)
+            self.model = self._wrap_model(self.model)
             return_items.append(self.model)
             return_items.append(self.optim_wrapper)
         else:
-            self.model = self.wrap_model(model)
+            self.model = self._wrap_model(model)
             return_items.append(self.model)
 
         if param_scheduler is not None:
             self.param_schedulers = self.build_param_scheduler(param_scheduler)
             return_items.append(self.param_schedulers)
 
-        self.load_or_resume()
-
         return return_items[0] if len(return_items) == 1 else return_items
 
-    def wrap_model(self, model: nn.Module) -> nn.Module:
-        self.config['train_batch_size'] = self.dispatch_kwargs[
-            'train_batch_size']
+    def _wrap_model(self, model: nn.Module) -> nn.Module:
+        self.config['train_micro_batch_size_per_gpu'] = self.dispatch_kwargs[
+            'train_micro_batch_size_per_gpu']
 
         if hasattr(self, 'optim_wrapper'):
             engine, self.optim_wrapper.optimizer, *_ = deepspeed.initialize(
@@ -156,28 +164,26 @@ class DeepSpeedStrategy(BaseStrategy):
         filename: str,
         *,
         map_location: Union[str, Callable] = 'cpu',
+        strict: bool = False,
+        revise_keys: list = [(r'^module.', '')],
         callback: Optional[Callable] = None,
     ) -> dict:
         """Load checkpoint from given ``filename``.
 
+        Warning:
+            `map_localtion` and `callback` parameters are not supported yet.
+
         Args:
             filename (str): Accept local filepath, URL, ``torchvision://xxx``,
                 ``open-mmlab://xxx``.
-            map_location (str or callable): A string or a callable function to
-                specifying how to remap storage locations.
-                Defaults to 'cpu'.
         """
-        if hasattr(self, 'extra_ckpt'):
-            return self.extra_ckpt
-
         self.logger.info(f'Load checkpoint from {filename}')
 
         dirname, basename = osp.split(filename)
-        self.extra_ckpt: dict
-        _, self.extra_ckpt = self.model.load_checkpoint(
+        _, extra_ckpt = self.model.load_checkpoint(
             dirname, tag=basename, load_optimizer_states=False)
 
-        return self.extra_ckpt
+        return extra_ckpt
 
     def resume(
         self,
@@ -188,20 +194,23 @@ class DeepSpeedStrategy(BaseStrategy):
         map_location: Union[str, Callable] = 'default',
         callback: Optional[Callable] = None,
     ) -> dict:
-        if hasattr(self, 'extra_ckpt'):
-            return self.extra_ckpt
+        """Resume training from given ``filename``.
 
+        Warning:
+            `resume_optimizer`, `resume_param_scheduler`, `map_location` and
+            `callback` parameters are not supported yet.
+        """
         self.logger.info(f'Resume checkpoint from {filename}')
 
         dirname, basename = osp.split(filename)
-        _, self.extra_ckpt = self.model.load_checkpoint(dirname, tag=basename)
+        _, extra_ckpt = self.model.load_checkpoint(dirname, tag=basename)
 
-        if 'param_schedulers' in self.extra_ckpt:
-            param_schedulers = self.extra_ckpt.pop('param_schedulers')
+        if 'param_schedulers' in extra_ckpt:
+            param_schedulers = extra_ckpt.pop('param_schedulers')
             self.load_scheduler_state_dict(param_schedulers)
 
         # resume random seed
-        resumed_seed = self.extra_ckpt['meta'].get('seed', None)
+        resumed_seed = extra_ckpt['meta'].get('seed', None)
         current_seed = self._randomness.get('seed')
         if resumed_seed is not None and resumed_seed != current_seed:
             if current_seed is not None:
@@ -212,7 +221,7 @@ class DeepSpeedStrategy(BaseStrategy):
             self._randomness.update(seed=resumed_seed)
             self._set_randomness(**self._randomness)
 
-        return self.extra_ckpt
+        return extra_ckpt
 
     def save_checkpoint(
         self,

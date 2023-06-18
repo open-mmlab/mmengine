@@ -13,12 +13,13 @@ from torch.optim import Optimizer
 
 import mmengine
 from mmengine.config import Config, ConfigDict
-from mmengine.dist import broadcast, get_dist_info, is_distributed
+from mmengine.dist import (broadcast, get_dist_info, infer_launcher,
+                           is_distributed)
 from mmengine.logging import MMLogger
 from mmengine.model import revert_sync_batchnorm
 from mmengine.model.wrappers import is_model_wrapper
-from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
-                            build_optim_wrapper)
+from mmengine.optim import (BaseOptimWrapper, OptimWrapperDict,
+                            _ParamScheduler, build_optim_wrapper)
 from mmengine.registry import MODELS, OPTIM_WRAPPERS, PARAM_SCHEDULERS
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
@@ -38,44 +39,35 @@ class BaseStrategy(metaclass=ABCMeta):
     the state of training components such as models, optimizers, and parameter
     schedulers.
 
-    Args:
-        compile (dict or bool): Config to compile model. Defaults to False.
-            Requires PyTorch>=2.0.
-        load_from (str, optional): The checkpoint file to load from.
+    Keyword Args:
+        work_dir (str): The working directory to save checkpoints. The logs
+            will be saved in the subdirectory of `work_dir` named
+            :attr:`timestamp`. Defaults to 'work_dir'.
+        experiment_name (str, optional): Name of current experiment. If not
+            specified, timestamp will be used as ``experiment_name``.
             Defaults to None.
-        resume (bool): Whether to resume training. Defaults to False. If
-            ``resume`` is True and ``load_from`` is None, automatically to
-            find latest checkpoint from ``work_dir``. If not found, resuming
-            does nothing.
         env_kwargs (dict, optional): Environment config passed in
             :meth:`setup_env`. Defaults to None.
         log_kwargs (dict, optional): Logger config passed in
             :meth:`build_logger`. Defaults to None.
     """
     model: nn.Module
-    optim_wrapper: Union[OptimWrapper, OptimWrapperDict]
+    optim_wrapper: BaseOptimWrapper
     param_schedulers: ParamSchedulerType
 
     def __init__(
         self,
         *,
-        work_dir: str = 'work_dir',
+        work_dir: str = 'work_dirs',
         experiment_name: Optional[str] = None,
-        compile: Union[dict, bool] = False,
-        load_from: Optional[str] = None,
-        resume: bool = False,
         env_kwargs: Optional[dict] = None,
         log_kwargs: Optional[dict] = None,
     ):
         self._work_dir = osp.abspath(work_dir)
         mmengine.mkdir_or_exist(self._work_dir)
 
-        self.compile = compile
-
-        self._load_from = load_from
-        self._resume = resume
-
-        self.setup_env(**env_kwargs or {})
+        self._env_kwargs = env_kwargs or {}
+        self.setup_env(**self._env_kwargs)
 
         if experiment_name is not None:
             self._experiment_name = f'{experiment_name}_{self.timestamp}'
@@ -134,8 +126,9 @@ class BaseStrategy(metaclass=ABCMeta):
         self,
         model: Union[nn.Module, dict],
         *,
-        optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
-        param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
+        optim_wrapper: Union[BaseOptimWrapper, dict, None] = None,
+        param_scheduler: Union[_ParamScheduler, Dict, List, None] = None,
+        compile: Union[dict, bool] = False,
         dispatch_kwargs: Optional[dict] = None,
     ):
         """Prepare model and some components.
@@ -144,19 +137,21 @@ class BaseStrategy(metaclass=ABCMeta):
             model (:obj:`torch.nn.Module` or dict): The model to be run. It
                 can be a dict used for building a model.
 
-        Kwargs:
-            optim_wrapper (OptimWrapper or dict, optional):
+        Keyword Args:
+            optim_wrapper (BaseOptimWrapper or dict, optional):
                 Computing gradient of model parameters. If specified,
                 :attr:`train_dataloader` should also be specified. If automatic
                 mixed precision or gradient accmulation
                 training is required. The type of ``optim_wrapper`` should be
-                AmpOptimizerWrapper. See :meth:`build_optim_wrapper` for
+                ``AmpOptimizerWrapper``. See :meth:`build_optim_wrapper` for
                 examples. Defaults to None.
             param_scheduler (_ParamScheduler or dict or list, optional):
                 Parameter scheduler for updating optimizer parameters. If
                 specified, :attr:`optimizer` should also be specified.
                 Defaults to None.
                 See :meth:`build_param_scheduler` for examples.
+            compile (dict, optional): Config to compile model.
+                Defaults to False. Requires PyTorch>=2.0.
             dispatch_kwargs (dict, optional): Kwargs to be passed to other
                 methods of Strategy. Defaults to None.
         """
@@ -164,7 +159,7 @@ class BaseStrategy(metaclass=ABCMeta):
     def setup_env(
             self,
             *,
-            launcher: str = 'none',
+            launcher: Optional[str] = None,
             cudnn_benchmark: bool = False,
             mp_cfg: Optional[dict] = None,
             dist_cfg: Optional[dict] = None,
@@ -173,13 +168,18 @@ class BaseStrategy(metaclass=ABCMeta):
     ):
         """Setup environment.
 
+        This method will do the following things:
+
         1. setup multi-processing
         2. setup distributed
         3. set random seed
 
-        Args:
-            launcher (str): Way to launcher multi processes.
-                Defaults to 'none'.
+        Keyword Args:
+            launcher (str, optional): Way to launcher multi-process. Supported
+                launchers are 'pytorch', 'mpi', 'slurm' and 'none'. If 'none'
+                is provided, non-distributed environment will be launched.
+                If launcher is None, the launcher will be inferred according
+                some specified environments. Defaults to None.
             cudnn_benchmark (bool): Whether to enable cudnn benchmark.
                 Defaults to False.
             mp_cfg (dict, optional): Multi-processing config. Defaults to None.
@@ -194,6 +194,9 @@ class BaseStrategy(metaclass=ABCMeta):
                 ``True`` in ``randomness``, the value of
                 ``torch.backends.cudnn.benchmark`` will be ``False`` finally.
         """
+        if launcher is None:
+            launcher = infer_launcher()
+
         self._launcher = launcher
         if self._launcher == 'none':
             self._distributed = False
@@ -266,9 +269,9 @@ class BaseStrategy(metaclass=ABCMeta):
     def build_model(self, model: Union[nn.Module, dict]) -> nn.Module:
         """Build model.
 
-        If ``model`` is a dict, it will be used to build a nn.Module object.
-        Otherwise, if ``model`` is a nn.Module object it will be returned
-        directly.
+        If ``model`` is a dict, it will be used to build a ``nn.Module``
+        object. Otherwise, if ``model`` is a ``nn.Module`` object it will be
+        returned directly.
 
         An example of ``model``::
 
@@ -276,8 +279,8 @@ class BaseStrategy(metaclass=ABCMeta):
 
         Args:
             model (nn.Module or dict): A ``nn.Module`` object or a dict to
-                build nn.Module object. If ``model`` is a nn.Module object,
-                just returns itself.
+                build ``nn.Module`` object. If ``model`` is a ``nn.Module``
+                object, just returns itself.
 
         Note:
             The returned model must implement ``train_step``, ``test_step``
@@ -314,10 +317,9 @@ class BaseStrategy(metaclass=ABCMeta):
         model = revert_sync_batchnorm(model)
         return model
 
-    def compile_model(
-        self,
-        model: nn.Module,
-    ) -> nn.Module:
+    def compile_model(self,
+                      model: nn.Module,
+                      compile: Union[dict, bool] = False) -> nn.Module:
         """Compile model.
 
         Args:
@@ -326,32 +328,22 @@ class BaseStrategy(metaclass=ABCMeta):
         Returns:
             nn.Module: Compiled model.
         """
-        if not self.compile:
+        if isinstance(compile, bool) and not compile:
             return model
 
         assert digit_version(TORCH_VERSION) >= digit_version('2.0.0'), (
             'PyTorch >= 2.0.0 is required to enable torch.compile')
 
-        compile = dict() if isinstance(self.compile, bool) else self.compile
-        target = compile.pop(
-            'target', self.dispatch_kwargs.get('compile_target', 'forward'))
+        if isinstance(compile, bool):
+            compile = dict()
+
+        target = compile.pop('target', 'forward')
         func = getattr(model, target)
         compiled_func = torch.compile(func, **compile)
         setattr(model, target, compiled_func)
         self.logger.info('Model has been "compiled". The first few iterations '
                          'will be slow, please be patient.')
 
-        return model
-
-    def wrap_model(self, model: nn.Module) -> nn.Module:
-        """Wrap model.
-
-        Args:
-            model (nn.Module): Model to wrap.
-
-        Returns:
-            nn.Module: Wrapped model.
-        """
         return model
 
     def _init_model_weights(self, model: nn.Module) -> nn.Module:
@@ -367,8 +359,8 @@ class BaseStrategy(metaclass=ABCMeta):
 
     def build_optim_wrapper(
         self,
-        optim_wrapper: Union[Optimizer, OptimWrapper, dict],
-    ) -> Union[OptimWrapper, OptimWrapperDict]:
+        optim_wrapper: Union[Optimizer, BaseOptimWrapper, dict],
+    ) -> BaseOptimWrapper:
         """Build optimizer wrapper.
 
         If ``optim_wrapper`` is a config dict for only one optimizer,
@@ -387,7 +379,7 @@ class BaseStrategy(metaclass=ABCMeta):
         :obj:`OptimWrapperDict` instance from ``optim_wrapper``.
 
         Args:
-            optim_wrapper (OptimWrapper or dict): An OptimWrapper object or a
+            optim_wrapper (BaseOptimWrapper or dict): An OptimWrapper object or a
                 dict to build OptimWrapper objects. If ``optim_wrapper`` is an
                 OptimWrapper, just return an ``OptimizeWrapper`` instance.
 
@@ -475,9 +467,9 @@ class BaseStrategy(metaclass=ABCMeta):
             found at `optimizer-docs`_.
 
         Returns:
-            OptimWrapper: Optimizer wrapper build from ``optimizer_cfg``.
+            BaseOptimWrapper: Optimizer wrapper build from ``optimizer_cfg``.
         """  # noqa: E501
-        if isinstance(optim_wrapper, OptimWrapper):
+        if isinstance(optim_wrapper, BaseOptimWrapper):
             return optim_wrapper
         if isinstance(optim_wrapper, (dict, ConfigDict, Config)):
             # optimizer must be defined for single optimizer training.
@@ -504,7 +496,7 @@ class BaseStrategy(metaclass=ABCMeta):
                 # `OptimWrapperDict` instance from `optim_wrapper.`
                 optim_wrappers = OrderedDict()
                 for name, optim in optim_wrapper.items():
-                    if not isinstance(optim, OptimWrapper):
+                    if not isinstance(optim, BaseOptimWrapper):
                         raise ValueError(
                             'each item mush be an optimizer object when '
                             '"type" and "constructor" are not in '
@@ -518,7 +510,7 @@ class BaseStrategy(metaclass=ABCMeta):
     def _build_param_scheduler(
         self,
         scheduler: Union[_ParamScheduler, Dict, List],
-        optim_wrapper: OptimWrapper,
+        optim_wrapper: BaseOptimWrapper,
         default_args: dict,
     ) -> List[_ParamScheduler]:
         """Build parameter schedulers for a single optimizer.
@@ -526,7 +518,7 @@ class BaseStrategy(metaclass=ABCMeta):
         Args:
             scheduler (_ParamScheduler or dict or list): A Param Scheduler
                 object or a dict or list of dict to build parameter schedulers.
-            optim_wrapper (OptimWrapper): An optimizer wrapper object is
+            optim_wrapper (BaseOptimWrapper): An optimizer wrapper object is
                 passed to construct ParamScheduler object.
 
         Returns:
@@ -661,7 +653,7 @@ class BaseStrategy(metaclass=ABCMeta):
             # `OptimWrapperDict` instance. Therefore, here we simply check
             # self.optim_wrapper is not an `OptimWrapperDict` instance and
             # then assert it is an OptimWrapper instance.
-            assert isinstance(self.optim_wrapper, OptimWrapper), (
+            assert isinstance(self.optim_wrapper, BaseOptimWrapper), (
                 '`build_optimizer` should be called before'
                 '`build_param_scheduler` because the latter depends '
                 'on the former')
@@ -721,7 +713,7 @@ class BaseStrategy(metaclass=ABCMeta):
 
     def optim_state_dict(self) -> dict:
         """Get optimizer state dict."""
-        if isinstance(self.optim_wrapper, OptimWrapper):
+        if isinstance(self.optim_wrapper, BaseOptimWrapper):
             return self.optim_wrapper.state_dict()
         else:
             raise TypeError('self.optim_wrapper should be an `OptimWrapper` '
@@ -764,9 +756,10 @@ class BaseStrategy(metaclass=ABCMeta):
         """Load optimizer state from dict."""
         self.optim_wrapper.load_state_dict(state_dict)
 
-    def load_scheduler_state_dict(self, state_dict: dict) -> None:
+    def load_scheduler_state_dict(self, state_dict: Union[dict, list]) -> None:
         """Load scheduler state from dict."""
         if isinstance(self.param_schedulers, dict):
+            assert isinstance(state_dict, dict)
             for name, schedulers in self.param_schedulers.items():
                 for scheduler, ckpt_scheduler in zip(schedulers,
                                                      state_dict[name]):
@@ -777,28 +770,44 @@ class BaseStrategy(metaclass=ABCMeta):
                     state_dict):
                 scheduler.load_state_dict(ckpt_scheduler)
 
-    def load_or_resume(self) -> Optional[dict]:
-        """Load checkpoint or resume from checkpoint."""
+    def load_or_resume(
+        self,
+        *,
+        load_from: Optional[str] = None,
+        resume: Union[bool, str] = False,
+    ) -> Optional[dict]:
+        """Load checkpoint or resume from checkpoint.
+
+        Keyword Args:     load_from (str, optional): The checkpoint file to
+        load from.         Defaults to None.     resume (bool or str): Whether
+        to resume training.         Defaults to False. If ``resume`` is True
+        and ``load_from`` is         None, automatically to find latest
+        checkpoint from         ``work_dir``. If not found, resuming does
+        nothing.         If ``resume`` is a string, it will be treated as the
+        checkpoint         file to resume from.
+        """
         from mmengine.runner import find_latest_checkpoint
 
-        if not self._resume and self._load_from is None:
+        if not resume and load_from is None:
             return None
 
         # decide to load from checkpoint or resume from checkpoint
         resume_from = None
-        if self._resume and self._load_from is None:
+        if isinstance(resume, str):
+            resume_from = resume
+        elif resume and load_from is None:
             # auto resume from the latest checkpoint
             resume_from = find_latest_checkpoint(self._work_dir)
             self.logger.info(
                 f'Auto resumed from the latest checkpoint {resume_from}.')
-        elif self._resume and self._load_from is not None:
+        elif resume and load_from is not None:
             # resume from the specified checkpoint
-            resume_from = self._load_from
+            resume_from = load_from
 
         if resume_from is not None:
             return self.resume(resume_from)
-        elif self._load_from is not None:
-            return self.load_checkpoint(self._load_from)
+        elif load_from is not None:
+            return self.load_checkpoint(load_from)
 
         return None
 
@@ -808,6 +817,8 @@ class BaseStrategy(metaclass=ABCMeta):
         filename: str,
         *,
         map_location: Union[str, Callable] = 'cpu',
+        strict: bool = False,
+        revise_keys: list = [(r'^module.', '')],
         callback: Optional[Callable] = None,
     ) -> dict:
         """Load checkpoint from given ``filename``.
@@ -815,9 +826,20 @@ class BaseStrategy(metaclass=ABCMeta):
         Args:
             filename (str): Accept local filepath, URL, ``torchvision://xxx``,
                 ``open-mmlab://xxx``.
+
+        Keyword Args:
             map_location (str or callable): A string or a callable function to
                 specifying how to remap storage locations.
                 Defaults to 'cpu'.
+            strict (bool): strict (bool): Whether to allow different params for
+                the model and checkpoint.
+            revise_keys (list): A list of customized keywords to modify the
+                state_dict in checkpoint. Each item is a (pattern, replacement)
+                pair of the regular expression operations. Defaults to strip
+                the prefix 'module.' by [(r'^module\\.', '')].
+            callback (callable, callable): Callback function to modify the
+                checkpoint after loading the checkpoint.
+                Defaults to None.
         """
 
     @abstractmethod
@@ -842,6 +864,18 @@ class BaseStrategy(metaclass=ABCMeta):
         Args:
             filename (str): Accept local filepath, URL, ``torchvision://xxx``,
                 ``open-mmlab://xxx``.
+
+        Keyword Args:
+            resume_optimizer (bool): Whether to resume optimizer state.
+                Defaults to True.
+            resume_param_scheduler (bool): Whether to resume param scheduler
+                state. Defaults to True.
+            map_location (str or callable):A string or a callable function to
+                specifying how to remap storage locations.
+                Defaults to 'default'.
+            callback (callable, callable): Callback function to modify the
+                checkpoint before saving the checkpoint.
+                Defaults to None.
         """
 
     @abstractmethod
@@ -858,6 +892,8 @@ class BaseStrategy(metaclass=ABCMeta):
 
         Args:
             filename (str): Filename to save checkpoint.
+
+        Keyword Args:
             save_optimizer (bool): Whether to save the optimizer to
                 the checkpoint. Defaults to True.
             save_param_scheduler (bool): Whether to save the param_scheduler
@@ -872,8 +908,8 @@ class BaseStrategy(metaclass=ABCMeta):
     def collect_env(self) -> Tuple[dict, dict]:
         """Collect the information of the running environments."""
         system_env = collect_env()
-        runtime_env = OrderedDict()
-        # TODO: need to add env_cfg
+        runtime_env: OrderedDict = OrderedDict()
+        runtime_env.update(self._env_kwargs)
         runtime_env.update(self.randomness)
         runtime_env['Distributed launcher'] = self.launcher
         runtime_env['Distributed training'] = self.distributed

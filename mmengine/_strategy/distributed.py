@@ -8,7 +8,7 @@ from torch.nn.parallel import DistributedDataParallel
 from mmengine.device import get_device
 from mmengine.dist import init_dist, is_distributed, master_only
 from mmengine.model import convert_sync_batchnorm, is_model_wrapper
-from mmengine.optim import OptimWrapper, OptimWrapperDict, _ParamScheduler
+from mmengine.optim import BaseOptimWrapper, OptimWrapperDict, _ParamScheduler
 from mmengine.registry import MODEL_WRAPPERS, STRATEGIES
 from .single_device import SingleDeviceStrategy
 
@@ -50,8 +50,9 @@ class DDPStrategy(SingleDeviceStrategy):
         self,
         model: Union[nn.Module, dict],
         *,
-        optim_wrapper: Optional[Union[OptimWrapper, dict]] = None,
-        param_scheduler: Optional[Union[_ParamScheduler, Dict, List]] = None,
+        optim_wrapper: Union[BaseOptimWrapper, dict, None] = None,
+        param_scheduler: Union[_ParamScheduler, Dict, List, None] = None,
+        compile: Union[dict, bool] = False,
         dispatch_kwargs: Optional[dict] = None,
     ):
         """Prepare model and some components.
@@ -61,7 +62,7 @@ class DDPStrategy(SingleDeviceStrategy):
                 can be a dict used for building a model.
 
         Kwargs:
-            optim_wrapper (OptimWrapper or dict, optional):
+            optim_wrapper (BaseOptimWrapper or dict, optional):
                 Computing gradient of model parameters. If specified,
                 :attr:`train_dataloader` should also be specified. If automatic
                 mixed precision or gradient accmulation
@@ -73,6 +74,10 @@ class DDPStrategy(SingleDeviceStrategy):
                 specified, :attr:`optimizer` should also be specified.
                 Defaults to None.
                 See :meth:`build_param_scheduler` for examples.
+            compile (dict, optional): Config to compile model.
+                Defaults to False. Requires PyTorch>=2.0.
+            dispatch_kwargs (dict, optional): Kwargs to be passed to other
+                methods of Strategy. Defaults to None.
         """
         if dispatch_kwargs is not None:
             self.dispatch_kwargs.update(dispatch_kwargs)
@@ -81,8 +86,8 @@ class DDPStrategy(SingleDeviceStrategy):
 
         model = self.build_model(model)
         model = self._init_model_weights(model)
-        model = self.wrap_model(model)
-        self.model = self.compile_model(model)
+        model = self._wrap_model(model)
+        self.model = self.compile_model(model, compile=compile)
         return_items.append(self.model)
 
         if optim_wrapper is not None:
@@ -93,16 +98,8 @@ class DDPStrategy(SingleDeviceStrategy):
             self.param_schedulers = self.build_param_scheduler(param_scheduler)
             return_items.append(self.param_schedulers)
 
-        self.load_or_resume()
-
         if optim_wrapper is not None:
             self._scale_lr()
-
-            # Initiate inner count of `optim_wrapper`.
-            if 'max_iters' in self.dispatch_kwargs:
-                self.optim_wrapper.initialize_count_status(
-                    self.model, self.dispatch_kwargs.get('cur_iter', 0),
-                    self.dispatch_kwargs['max_iters'])
 
         return return_items[0] if len(return_items) == 1 else return_items
 
@@ -143,7 +140,8 @@ class DDPStrategy(SingleDeviceStrategy):
         assert 'base_batch_size' in self.auto_scale_lr, \
             'Lack of `base_batch_size` in `auto_scale_lr`.'
 
-        real_bs = self.world_size * self.dispatch_kwargs['train_batch_size']
+        real_bs = self.world_size * self.dispatch_kwargs[
+            'train_micro_batch_size_per_gpu']
         base_bs = self.auto_scale_lr['base_batch_size']
         ratio = float(real_bs) / float(base_bs)
         self.logger.info(f'LR is set based on batch size of {base_bs} '
@@ -163,10 +161,14 @@ class DDPStrategy(SingleDeviceStrategy):
                                'ParamScheduler because ParamScheduler will '
                                'store initial lr from optimizer wrappers')
 
-        assert isinstance(self.optim_wrapper, OptimWrapper), \
+        assert isinstance(self.optim_wrapper, BaseOptimWrapper), \
             '`scale_lr should be called after building OptimWrapper'
-        wrappers = list(self.optim_wrapper.values()) if isinstance(
-            self.optim_wrapper, OptimWrapperDict) else [self.optim_wrapper]
+
+        if isinstance(self.optim_wrapper, OptimWrapperDict):
+            wrappers = list(self.optim_wrapper.values())
+        else:
+            wrappers = [self.optim_wrapper]  # type: ignore
+
         for wrapper in wrappers:
             for group in wrapper.optimizer.param_groups:
                 group['lr'] = group['lr'] * ratio
@@ -191,7 +193,7 @@ class DDPStrategy(SingleDeviceStrategy):
 
         return model
 
-    def wrap_model(self, model: nn.Module) -> DistributedDataParallel:
+    def _wrap_model(self, model: nn.Module) -> DistributedDataParallel:
         """Wrap the model to :obj:``MMDistributedDataParallel`` or other custom
         distributed data-parallel module wrappers.
 
