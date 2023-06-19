@@ -37,7 +37,7 @@ class PetrelBackend(BaseStorageBackend):
         >>> backend.get(filepath1)  # get data from default cluster
         >>> client.get(filepath2)  # get data from 'cluster-name' cluster
     """
-    prefixes = ['petrel', 's3']
+    prefixes = ('petrel', 's3')
 
     def __init__(self,
                  path_mapping: Optional[dict] = None,

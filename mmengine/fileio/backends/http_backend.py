@@ -12,7 +12,7 @@ from .base import BaseStorageBackend
 class HTTPBackend(BaseStorageBackend):
     """HTTP and HTTPS storage bachend."""
 
-    prefixes = ['http', 'https']
+    prefixes = ('http', 'https')
 
     def get(self, filepath: str) -> bytes:
         """Read bytes from a given ``filepath``.
