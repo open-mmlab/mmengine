@@ -19,16 +19,35 @@ from .base import BaseStrategy
 
 @STRATEGIES.register_module()
 class DeepSpeedStrategy(BaseStrategy):
-    """
+    """Support training models with DeepSpeed.
+
+    Note:
+        The detailed usage of parameters can be found at
+        https://www.deepspeed.ai/docs/config-json/.
 
     Args:
         zero_optimization (dict, optional): Enabling and configuring ZeRO
             memory optimizations. Defaults to None.
+        gradient_clipping (float): Enable gradient clipping with value.
+            Defaults to 1.0.
         fp16 (dict, optional): Configuration for using mixed precision/FP16
             training that leverages NVIDIA's Apex package.
-        bf16 (dict, optional): onfiguration for using bfloat16 floating-point
-            format as an alternative to FP16.
-        activation_checkpointing
+        inputs_to_half (list[int or str], optional): Which inputs are to
+            converted to half precision. Defaults to None.
+            If ``fp16`` is enabled, it also should be set.
+        bf16 (dict, optional): Configuration for using bfloat16 floating-point
+            format as an alternative to FP16. Defaults to None.
+        amp (dict, optional): Configuration for using automatic mixed
+            precision (AMP) training that leverages NVIDIA's Apex AMP package.
+            Defaults to None.
+        activation_checkpointing (dict, optional): Reduce memory usage by
+            clearing activations of certain layers and recomputing them
+            during a backward pass.
+            Defaults to None.
+        aio (dict, optional): Configuring the asynchronous I/O module for
+            offloading parameter and optimizer states to persistent (NVMe)
+            storage. This module uses Linux native asynchronous I/O (libaio).
+            Defaults to None.
     """
     dispatch_keys = [
         'train_batch_size', 'num_batches_per_epoch', 'max_epochs', 'max_iters'
