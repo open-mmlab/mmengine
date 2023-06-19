@@ -950,7 +950,12 @@ class TestConfig:
         lazy_import_cfg_path = osp.join(
             self.data_path, 'config/lazy_module_config/toy_model.py')
         cfg = Config.fromfile(lazy_import_cfg_path)
-        # Dumpe config
+        cfg_dict = cfg.to_dict()
+        assert (cfg_dict['train_dataloader']['dataset']['type'] ==
+                'mmengine.testing.runner_test_case.ToyDataset')
+        assert (
+            cfg_dict['custom_hooks'][0]['type'] == 'mmengine.hooks.EMAHook')
+        # Dumped config
         dumped_cfg_path = tmp_path / 'test_dump_lazy.py'
         cfg.dump(dumped_cfg_path)
         dumped_cfg = Config.fromfile(dumped_cfg_path)
@@ -965,12 +970,11 @@ class TestConfig:
                 for item_a, item_b in zip(a, b):
                     _compare_dict(item_a, item_b)
             else:
-                if isinstance(a, str) and a != '_module_':
-                    assert a == b
-                elif isinstance(a, LazyObject):
-                    assert str(a) == str(b)
+                assert str(a) == str(b)
 
         _compare_dict(cfg, dumped_cfg)
+
+        #
 
         # TODO reimplement this part of unit test when mmdetection adds the
         # new config.
@@ -1012,7 +1016,7 @@ error_attr = mmengine.error_attr
 
         # lazy-import and non-lazy-import should not be used mixed.
         # current text config, base lazy-import config
-        with pytest.raises(RuntimeError, match='if "_base_"'):
+        with pytest.raises(RuntimeError, match='with read_base()'):
             Config.fromfile(
                 osp.join(self.data_path,
                          'config/lazy_module_config/error_mix_using1.py'))

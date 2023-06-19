@@ -11,7 +11,8 @@ import types
 import uuid
 import warnings
 from argparse import Action, ArgumentParser, Namespace
-from collections import abc
+from collections import OrderedDict, abc
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple, Union
 
@@ -23,7 +24,7 @@ from mmengine.logging import print_log
 from mmengine.utils import (check_file_exist, get_installed_path,
                             import_modules_from_strings, is_installed)
 from .lazy import LazyAttr, LazyObject
-from .utils import (ImportTransformer, RemoveAssignFromAST,
+from .utils import (ConfigParsingError, ImportTransformer, RemoveAssignFromAST,
                     _gather_abs_import_lazyobj, _get_external_cfg_base_path,
                     _get_external_cfg_path, _get_package_and_cfg_path,
                     _is_builtin_module)
@@ -96,6 +97,14 @@ class ConfigDict(Dict):
             raise e
         else:
             return value
+
+    @classmethod
+    def _hook(cls, item):
+        if type(item) in (dict, OrderedDict):
+            return cls(item)
+        elif isinstance(item, (list, tuple)):
+            return type(item)(cls._hook(elem) for elem in item)
+        return item
 
     def __setattr__(self, name, value):
         value = self._hook(value)
@@ -181,8 +190,10 @@ class ConfigDict(Dict):
         If class attribute ``lazy`` is False, the value of ``LazyObject`` or
         ``LazyAttr`` will be built and returned.
         """
+        values = []
         for value in super().values():
-            yield self.build_lazy(value)
+            values.append(self.build_lazy(value))
+        return values
 
     def items(self):
         """Yield the keys and values of the dictionary.
@@ -190,8 +201,10 @@ class ConfigDict(Dict):
         If class attribute ``lazy`` is False, the value of ``LazyObject`` or
         ``LazyAttr`` will be built and returned.
         """
+        items = []
         for key, value in super().items():
-            yield key, self.build_lazy(value)
+            items.append((key, self.build_lazy(value)))
+        return items
 
     def merge(self, other: dict):
         """Merge another dictionary into current dictionary.
@@ -464,17 +477,17 @@ class Config:
             list: Name of base modules.
         """
 
-        def _get_base_module_from_if(if_nodes: list) -> list:
+        def _get_base_module_from_with(with_nodes: list) -> list:
             """Get base module name from if statement in python file.
 
             Args:
-                if_nodes (list): List of if statement.
+                with_nodes (list): List of if statement.
 
             Returns:
                 list: Name of base modules.
             """
             base_modules = []
-            for node in if_nodes:
+            for node in with_nodes:
                 assert isinstance(node, ast.ImportFrom), (
                     'Illegal syntax in config file! Only '
                     '`from ... import ...` could be implemented` in '
@@ -489,23 +502,32 @@ class Config:
             if (isinstance(node, ast.Assign)
                     and isinstance(node.targets[0], ast.Name)
                     and node.targets[0].id == BASE_KEY):
-                raise RuntimeError(
+                raise ConfigParsingError(
                     'The configuration file type in the inheritance chain '
                     'must match the current configuration file type, either '
                     '"lazy_import" or non-"lazy_import". You got this error '
                     f'since you use the syntax like `_base_ = "{node.targets[0].id}"` '  # noqa: E501
-                    'in your config. You should use `if "_base_": ... to` '
+                    'in your config. You should use `with read_base(): ... to` '  # noqa: E501
                     'mark the inherited config file. See more information '
                     'in https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html'  # noqa: E501
                 )
 
-            if not isinstance(node, ast.If):
+            if not isinstance(node, ast.With):
                 continue
-            value = node.test
-            if isinstance(value, ast.Constant) and not value.value == BASE_KEY:
-                continue
-            if isinstance(value, ast.Str) and not value.s == BASE_KEY:
-                continue
+
+            if len(node.items) > 1:
+                # `read_base` statement should not be used with other context
+                # managers
+                raise ConfigParsingError(
+                    '`read_base` context manager should not be used with '
+                    'other context managers')
+
+            expr = node.items[0].context_expr
+            if (not isinstance(expr, ast.Call)
+                    or not expr.func.id == 'read_base'):  # type: ignore
+                raise ConfigParsingError(
+                    'Only `read_base` context manager can be used in the '
+                    'config')
 
             # The original code:
             # ```
@@ -521,7 +543,7 @@ class Config:
             for nested_idx, nested_node in enumerate(node.body):
                 nodes.insert(idx + nested_idx + 1, nested_node)
             nodes.pop(idx)
-            return _get_base_module_from_if(node.body)
+            return _get_base_module_from_with(node.body)
         return []
 
     @staticmethod
@@ -744,14 +766,14 @@ class Config:
                 predefined variables. Defaults to True.
 
         Returns:
-            Tuple[dict, str]: Variables dictionary and text of Config.
+            Tuple[dict, str]: Variables dictionary and text of Config.i
         """
         if Config._is_lazy_import(filename):
             raise RuntimeError(
                 'The configuration file type in the inheritance chain '
                 'must match the current configuration file type, either '
                 '"lazy_import" or non-"lazy_import". You got this error '
-                'since you use the syntax like `if "_base_": ...` '
+                'since you use the syntax like `with read_base(): ...` '
                 f'or import non-builtin module in {filename}. See more '
                 'information in https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html'  # noqa: E501
             )
@@ -962,21 +984,21 @@ class Config:
                     # Absolute import
                     module_list = base_module.split('.')
                     if len(module_list) == 1:
-                        raise RuntimeError(
+                        raise ConfigParsingError(
                             'The imported configuration file should not be '
                             f'an independent package {module_list[0]}. Here '
                             'is an example: '
-                            '"_base_ = mmdet.configs.retinanet_r50_fpn_1x_coco"'  # noqa: E501
+                            '`with read_base(): from mmdet.configs.retinanet_r50_fpn_1x_coco import *`'  # noqa: E501
                         )
                     else:
                         package = module_list[0]
                         root_path = get_installed_path(package)
                         module_path = f'{osp.join(root_path, *module_list[1:])}.py'  # noqa: E501
                 if not osp.isfile(module_path):
-                    raise FileNotFoundError(
+                    raise ConfigParsingError(
                         f'{module_path} not found! It means that incorrect '
                         'module is defined in '
-                        f"_base_ = ['{base_module}', ...], please "
+                        f'`with read_base(): = from {base_module} import ...`, please '  # noqa: E501
                         'make sure the base config module is valid '
                         'and is consistent with the prior import '
                         'logic')
@@ -1037,9 +1059,6 @@ class Config:
         """
         # Only the outer dict with key `type` should have the key `_scope_`.
         if isinstance(cfg, dict):
-            if isinstance(cfg, ConfigDict):
-                # Use to_dict to avoid build lazy object.
-                cfg = cfg.to_dict()
             cfg_dict = ConfigDict()
             for key, value in cfg.items():
                 cfg_dict[key] = Config._dict_to_config_dict_lazy(value)
@@ -1379,7 +1398,7 @@ class Config:
                 r += '}'
             return r
 
-        cfg_dict = self.to_dict(keep_imported=False)
+        cfg_dict = self._to_lazy_dict(keep_imported=False)
         text = _format_dict(cfg_dict, outest_level=True)
         # copied from setup.cfg
         yapf_style = dict(
@@ -1533,9 +1552,14 @@ class Config:
                     and isinstance(node.targets[0], ast.Name)
                     and node.targets[0].id == BASE_KEY):
                 return False
-            if (isinstance(node, ast.If)
-                    and isinstance(node.test, ast.Constant)
-                    and node.test.value == BASE_KEY):
+
+            if isinstance(node, ast.With):
+                expr = node.items[0].context_expr
+                if (not isinstance(expr, ast.Call)
+                        or not expr.func.id == 'read_base'):  # type: ignore
+                    raise ConfigParsingError(
+                        'Only `read_base` context manager can be used in the '
+                        'config')
                 return True
             if isinstance(node, ast.ImportFrom):
                 # relative import -> lazy_import
@@ -1556,7 +1580,7 @@ class Config:
                         return True
         return False
 
-    def to_dict(self, keep_imported: bool = True) -> dict:
+    def _to_lazy_dict(self, keep_imported: bool = True) -> dict:
         """Convert config object to dictionary and filter the imported
         object."""
         res = self._cfg_dict.to_dict()
@@ -1567,6 +1591,28 @@ class Config:
                 if key not in self._imported_names
             }
         return res
+
+    def to_dict(self):
+        """Convert all data in the config to a builtin ``dict``.
+
+        If you import third-party objects in the config file, all imported
+        objects will be converted to a string like ``torch.optim.SGD``
+        """
+        _cfg_dict = self._cfg_dict.to_dict()
+
+        def lazy2string(cfg_dict):
+            if isinstance(cfg_dict, dict):
+                return type(cfg_dict)(
+                    {k: lazy2string(v)
+                     for k, v in cfg_dict.items()})
+            elif isinstance(cfg_dict, (tuple, list)):
+                return type(cfg_dict)(lazy2string(v) for v in cfg_dict)
+            elif isinstance(cfg_dict, (LazyAttr, LazyObject)):
+                return f'{cfg_dict.module}.{str(cfg_dict)}'
+            else:
+                return cfg_dict
+
+        return lazy2string(_cfg_dict)
 
 
 class DictAction(Action):
@@ -1682,3 +1728,9 @@ class DictAction(Action):
                 key, val = kv.split('=', maxsplit=1)
                 options[key] = self._parse_iterable(val)
         setattr(namespace, self.dest, options)
+
+
+@contextmanager
+def read_base():
+    """Context manager to mark the base config."""
+    yield

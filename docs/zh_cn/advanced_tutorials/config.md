@@ -829,8 +829,10 @@ https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_
 .. tabs::
 
     .. code-tab:: python 纯 Python 风格继承
+        from mmengine.config import read_base
 
-        if '_base_':
+
+        with read_base():
             from .optimizer import *
 
     .. code-tab:: python 纯文本风格继承
@@ -842,7 +844,10 @@ https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_
 纯 Python 风格的配置文件通过 import 语法来实现继承，这样做的好处是，我们可以直接跳转到被继承的配置文件中，方便阅读和跳转。变量的继承规则（增删改查）完全对齐 Python 语法，例如我想修改 base 配置文件中 optimizer 的学习率：
 
 ```python
-if '_base_':
+from mmengine.config import read_base
+
+
+with read_base():
     from .optimizer import *
 
 # optimizer 为 base 配置文件定义的变量
@@ -854,7 +859,10 @@ optimizer.update(
 当然了，如果你已经习惯了纯文本风格的继承规则，且该变量在 _base_ 配置文件中为 `dict` 类型，也可以通过 merge 语法来实现和纯文本风格配置文件一致的继承规则：
 
 ```python
-if '_base_':
+from mmengine.config import read_base
+
+
+with read_base():
     from .optimizer import *
 
 # optimizer 为 base 配置文件定义的变量
@@ -887,7 +895,7 @@ x.update(dict(b=dict(d=4)))
 可见在配置文件中使用 update 方法会递归地去更新字段，而不是简单的覆盖。
 ````
 
-与纯文本风格的配置文件相比，纯 Python 风格的配置文件的继承规则完全对齐 import 语法，更容易理解，且支持配置文件之间的跳转。你或许会好奇既然继承和模块的导入都使用了 import 语法，为什么继承配置文件还需要额外的 `if '_base_'` 语句呢？一方面这样可以提升配置文件的可读性，可以让继承的配置文件更加突出，另一方面也是受限于 lazy_import 的规则，这个会在后面讲到。
+与纯文本风格的配置文件相比，纯 Python 风格的配置文件的继承规则完全对齐 import 语法，更容易理解，且支持配置文件之间的跳转。你或许会好奇既然继承和模块的导入都使用了 import 语法，为什么继承配置文件还需要额外的 `with read_base():`  这个上下文管理器呢？一方面这样可以提升配置文件的可读性，可以让继承的配置文件更加突出，另一方面也是受限于 lazy_import 的规则，这个会在后面讲到。
 
 #### 配置文件的导出
 
@@ -969,7 +977,7 @@ print(type(cfg['optimizer']['type']))
 
 此时得到的 type 就是 `LazyObject` 类型。
 
-然而对于 base 文件的继承（导入，import），我们不能够采取 lazy import 的策略，这是因为我们希望解析后的配置文件能够包含 base 配置文件定义的字段，需要真正的触发 import。因此我们对 base 文件的导入加了一层限制，即必须在 `if '_base_'` 的代码块中导入。
+然而对于 base 文件的继承（导入，import），我们不能够采取 lazy import 的策略，这是因为我们希望解析后的配置文件能够包含 base 配置文件定义的字段，需要真正的触发 import。因此我们对 base 文件的导入加了一层限制，即必须在 `with read_base()'` 的上下文中导入。
 
 ### 功能限制
 

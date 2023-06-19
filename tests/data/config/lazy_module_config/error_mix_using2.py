@@ -1,3 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-if '_base_':
+from mmengine.config import read_base
+
+with read_base():
     from ...config.py_config.test_base_variables import *

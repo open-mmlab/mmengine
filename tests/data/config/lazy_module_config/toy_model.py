@@ -1,10 +1,11 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from mmengine.config import read_base
 from mmengine.dataset import DefaultSampler
 from mmengine.hooks import EMAHook
 from mmengine.model import MomentumAnnealingEMA
 from mmengine.testing.runner_test_case import ToyDataset, ToyMetric
 
-if '_base_':
+with read_base():
     from ._base_.base_model import *
     from ._base_.default_runtime import *
     from ._base_.scheduler import *
