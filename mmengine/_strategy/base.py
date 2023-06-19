@@ -77,7 +77,7 @@ class BaseStrategy(metaclass=ABCMeta):
         self._log_dir = osp.join(self.work_dir, self.timestamp)
         mmengine.mkdir_or_exist(self._log_dir)
 
-        self.build_logger(**log_kwargs or {})
+        self.logger = self.build_logger(**log_kwargs or {})
 
         self.dispatch_kwargs: dict = {}
 
@@ -702,9 +702,8 @@ class BaseStrategy(metaclass=ABCMeta):
         # termination of the FileHandler and ensure that the log file could
         # be continuously updated during the lifespan of the runner.
         log_cfg.setdefault('file_mode', 'a')
-        self.logger = MMLogger.get_instance(**log_cfg)  # type: ignore
 
-        return self.logger
+        return MMLogger.get_instance(**log_cfg)  # type: ignore
 
     def model_state_dict(self) -> dict:
         """Get model state dict."""
