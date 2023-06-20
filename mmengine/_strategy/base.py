@@ -44,7 +44,7 @@ class BaseStrategy(metaclass=ABCMeta):
             will be saved in the subdirectory of `work_dir` named
             :attr:`timestamp`. Defaults to 'work_dirs'.
         experiment_name (str, optional): Name of current experiment. If not
-            specified, timestamp will be used as ``experiment_name``.
+            specified, timestamp will be used as :attr:`experiment_name`.
             Defaults to None.
         env_kwargs (dict, optional): Environment config passed in
             :meth:`setup_env`. Defaults to None.
@@ -77,7 +77,8 @@ class BaseStrategy(metaclass=ABCMeta):
         self._log_dir = osp.join(self.work_dir, self.timestamp)
         mmengine.mkdir_or_exist(self._log_dir)
 
-        self.logger = self.build_logger(**log_kwargs or {})
+        log_kwargs = log_kwargs or {}
+        self.logger = self.build_logger(**log_kwargs)
 
         self.dispatch_kwargs: dict = {}
 
@@ -359,6 +360,7 @@ class BaseStrategy(metaclass=ABCMeta):
     def build_optim_wrapper(
         self,
         optim_wrapper: Union[Optimizer, BaseOptimWrapper, dict],
+        model: Optional[nn.Module] = None,
     ) -> BaseOptimWrapper:
         """Build optimizer wrapper.
 
@@ -484,7 +486,8 @@ class BaseStrategy(metaclass=ABCMeta):
             # optimizer wrapper will be built by optimizer wrapper
             # constructor. Therefore, `build_optim_wrapper` should be called.
             if optimizer is not None or 'constructor' in optim_wrapper:
-                return build_optim_wrapper(self.model, optim_wrapper)
+                assert model is not None
+                return build_optim_wrapper(model, optim_wrapper)
             else:
                 # if `optimizer` is not defined, it should be the case of
                 # training with multiple optimizers. If `constructor` is not
@@ -575,6 +578,8 @@ class BaseStrategy(metaclass=ABCMeta):
     def build_param_scheduler(
         self,
         scheduler: Union[_ParamScheduler, Dict, List],
+        optim_wrapper: BaseOptimWrapper,
+        default_args: Optional[dict] = None,
     ) -> ParamSchedulerType:
         """Build parameter schedulers.
 
@@ -633,35 +638,34 @@ class BaseStrategy(metaclass=ABCMeta):
         .. _optimizer-docs:
            https://mmengine.readthedocs.io/en/latest/tutorials/optim_wrapper.html
         """
-        default_args = {}
-        if 'num_batches_per_epoch' in self.dispatch_kwargs:
-            default_args['epoch_length'] = self.dispatch_kwargs[
-                'num_batches_per_epoch']
-        if 'max_epochs' in self.dispatch_kwargs:
-            default_args['max_epochs'] = self.dispatch_kwargs['max_epochs']
-        if 'max_iters' in self.dispatch_kwargs:
-            default_args['max_iters'] = self.dispatch_kwargs['max_iters']
+        if default_args is None:
+            default_args = {}
+            if 'num_batches_per_epoch' in self.dispatch_kwargs:
+                default_args['epoch_length'] = self.dispatch_kwargs[
+                    'num_batches_per_epoch']
+            if 'max_epochs' in self.dispatch_kwargs:
+                default_args['max_epochs'] = self.dispatch_kwargs['max_epochs']
+            if 'max_iters' in self.dispatch_kwargs:
+                default_args['max_iters'] = self.dispatch_kwargs['max_iters']
 
         param_schedulers: ParamSchedulerType
-        assert hasattr(self, 'optim_wrapper')
-
-        if not isinstance(self.optim_wrapper, OptimWrapperDict):
+        if not isinstance(optim_wrapper, OptimWrapperDict):
             # Since `OptimWrapperDict` inherits from `OptimWrapper`,
             # `isinstance(self.optim_wrapper, OptimWrapper)` cannot tell
             # whether `self.optim_wrapper` is an `OptimizerWrapper` or
             # `OptimWrapperDict` instance. Therefore, here we simply check
             # self.optim_wrapper is not an `OptimWrapperDict` instance and
             # then assert it is an OptimWrapper instance.
-            assert isinstance(self.optim_wrapper, BaseOptimWrapper), (
+            assert isinstance(optim_wrapper, BaseOptimWrapper), (
                 '`build_optimizer` should be called before'
                 '`build_param_scheduler` because the latter depends '
                 'on the former')
             param_schedulers = self._build_param_scheduler(
-                scheduler, self.optim_wrapper, default_args)  # type: ignore
+                scheduler, optim_wrapper, default_args)  # type: ignore
             return param_schedulers
         else:
             param_schedulers = dict()
-            for name, optimizer in self.optim_wrapper.items():
+            for name, optimizer in optim_wrapper.items():
                 if isinstance(scheduler, dict) and 'type' not in scheduler:
                     # scheduler is a dict and each item is a ParamScheduler
                     # object or a config to build ParamScheduler objects

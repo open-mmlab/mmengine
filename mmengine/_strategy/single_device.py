@@ -56,15 +56,18 @@ class SingleDeviceStrategy(BaseStrategy):
         model = self.build_model(model)
         model = self._init_model_weights(model)
         model = self._wrap_model(model)
-        self.model = self.compile_model(model, compile=compile)
-        return_items.append(self.model)
+        model = self.compile_model(model, compile=compile)
+        return_items.append(model)
+
+        self.model = model
 
         if optim_wrapper is not None:
-            self.optim_wrapper = self.build_optim_wrapper(optim_wrapper)
+            self.optim_wrapper = self.build_optim_wrapper(optim_wrapper, model)
             return_items.append(self.optim_wrapper)
 
         if param_scheduler is not None:
-            self.param_schedulers = self.build_param_scheduler(param_scheduler)
+            self.param_schedulers = self.build_param_scheduler(
+                param_scheduler, self.optim_wrapper)
             return_items.append(self.param_schedulers)
 
         return return_items[0] if len(return_items) == 1 else return_items
@@ -162,14 +165,10 @@ class SingleDeviceStrategy(BaseStrategy):
         checkpoint = self.load_checkpoint(
             filename, map_location=map_location, callback=callback)
 
-        if not resume_optimizer:
-            checkpoint.pop('optimizer', None)
-        else:
+        if resume_optimizer:
             self.load_optim_state_dict(checkpoint.pop('optimizer'))
 
-        if not resume_param_scheduler:
-            checkpoint.pop('param_schedulers', None)
-        else:
+        if resume_param_scheduler:
             self.load_scheduler_state_dict(checkpoint.pop('param_schedulers'))
 
         # resume random seed

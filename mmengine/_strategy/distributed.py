@@ -84,15 +84,18 @@ class DDPStrategy(SingleDeviceStrategy):
         model = self.build_model(model)
         model = self._init_model_weights(model)
         model = self._wrap_model(model)
-        self.model = self.compile_model(model, compile=compile)
-        return_items.append(self.model)
+        model = self.compile_model(model, compile=compile)
+        return_items.append(model)
+
+        self.model = model
 
         if optim_wrapper is not None:
-            self.optim_wrapper = self.build_optim_wrapper(optim_wrapper)
+            self.optim_wrapper = self.build_optim_wrapper(optim_wrapper, model)
             return_items.append(self.optim_wrapper)
 
         if param_scheduler is not None:
-            self.param_schedulers = self.build_param_scheduler(param_scheduler)
+            self.param_schedulers = self.build_param_scheduler(
+                param_scheduler, self.optim_wrapper)
             return_items.append(self.param_schedulers)
 
         if optim_wrapper is not None:
@@ -171,8 +174,8 @@ class DDPStrategy(SingleDeviceStrategy):
                 group['lr'] = group['lr'] * ratio
 
     def convert_model(self, model: nn.Module) -> nn.Module:
-        """convert all `BatchNorm` layers in the model to `SyncBatchNorm`
-        (SyncBN) or `mmcv.ops.sync_bn.SyncBatchNorm` (MMSyncBN) layers.
+        """convert all ``BatchNorm`` layers in the model to ``SyncBatchNorm``
+        (SyncBN) or ``mmcv.ops.sync_bn.SyncBatchNorm`` (MMSyncBN) layers.
 
         Args:
             model (nn.Module): Model to be converted.
