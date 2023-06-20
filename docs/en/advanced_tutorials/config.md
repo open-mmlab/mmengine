@@ -820,6 +820,8 @@ The inheritance syntax of pure Python style configuration files is slightly diff
     .. code-tab:: python Pure Python style Inheritance
 
         from mmengine.config import read_base
+
+
         with read_base():
             from .optimizer import *
 

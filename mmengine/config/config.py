@@ -100,6 +100,7 @@ class ConfigDict(Dict):
 
     @classmethod
     def _hook(cls, item):
+        # avoid to convert user defined dict to ConfigDict.
         if type(item) in (dict, OrderedDict):
             return cls(item)
         elif isinstance(item, (list, tuple)):
@@ -515,16 +516,10 @@ class Config:
             if not isinstance(node, ast.With):
                 continue
 
-            if len(node.items) > 1:
-                # `read_base` statement should not be used with other context
-                # managers
-                raise ConfigParsingError(
-                    '`read_base` context manager should not be used with '
-                    'other context managers')
-
             expr = node.items[0].context_expr
             if (not isinstance(expr, ast.Call)
-                    or not expr.func.id == 'read_base'):  # type: ignore
+                    or not expr.func.id == 'read_base' or  # type: ignore
+                    len(node.items) > 1):
                 raise ConfigParsingError(
                     'Only `read_base` context manager can be used in the '
                     'config')
@@ -1398,7 +1393,7 @@ class Config:
                 r += '}'
             return r
 
-        cfg_dict = self._to_lazy_dict(keep_imported=False)
+        cfg_dict = self._to_lazy_dict()
         text = _format_dict(cfg_dict, outest_level=True)
         # copied from setup.cfg
         yapf_style = dict(
@@ -1580,7 +1575,7 @@ class Config:
                         return True
         return False
 
-    def _to_lazy_dict(self, keep_imported: bool = True) -> dict:
+    def _to_lazy_dict(self, keep_imported: bool = False) -> dict:
         """Convert config object to dictionary and filter the imported
         object."""
         res = self._cfg_dict.to_dict()
@@ -1592,13 +1587,17 @@ class Config:
             }
         return res
 
-    def to_dict(self):
+    def to_dict(self, keep_imported: bool = False):
         """Convert all data in the config to a builtin ``dict``.
+
+        Args:
+            keep_imported (bool): Whether to keep the imported field.
+                Defaults to False
 
         If you import third-party objects in the config file, all imported
         objects will be converted to a string like ``torch.optim.SGD``
         """
-        _cfg_dict = self._cfg_dict.to_dict()
+        _cfg_dict = self._to_lazy_dict(keep_imported)
 
         def lazy2string(cfg_dict):
             if isinstance(cfg_dict, dict):

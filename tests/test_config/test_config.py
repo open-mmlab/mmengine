@@ -972,9 +972,7 @@ class TestConfig:
             else:
                 assert str(a) == str(b)
 
-        _compare_dict(cfg, dumped_cfg)
-
-        #
+        _compare_dict(cfg.to_dict(), dumped_cfg.to_dict())
 
         # TODO reimplement this part of unit test when mmdetection adds the
         # new config.
@@ -1030,6 +1028,17 @@ error_attr = mmengine.error_attr
 
 class TestConfigDict(TestCase):
 
+    def test_keep_custom_dict(self):
+
+        class CustomDict(dict):
+            ...
+
+        cfg_dict = ConfigDict(dict(a=CustomDict(b=1)))
+        self.assertIsInstance(cfg_dict.a, CustomDict)
+        self.assertIsInstance(cfg_dict['a'], CustomDict)
+        self.assertIsInstance(cfg_dict.values()[0], CustomDict)
+        self.assertIsInstance(cfg_dict.items()[0][1], CustomDict)
+
     def test_build_lazy(self):
         # This unit test are divide into two parts:
         # I. ConfigDict will never return a `LazyObject` instance. Only the
@@ -1045,6 +1054,12 @@ class TestConfigDict(TestCase):
         # Keep key-value the same
         raw = dict(a=1, b=dict(c=2, e=[dict(f=(2, ))]))
         cfg_dict = ConfigDict(raw)
+
+        assert len(cfg_dict) == 2
+        assert len(cfg_dict.items()) == 2
+        assert len(cfg_dict.keys()) == 2
+        assert len(cfg_dict.values()) == 2
+
         self.assertDictEqual(cfg_dict, raw)
 
         # Check `items` and `values` will only return the build object
