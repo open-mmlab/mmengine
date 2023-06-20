@@ -300,9 +300,9 @@ class BaseStrategy(metaclass=ABCMeta):
     def convert_model(self, model: nn.Module) -> nn.Module:
         """Convert layers of model.
 
-        convert all `SyncBatchNorm` (SyncBN) and
-        `mmcv.ops.sync_bn.SyncBatchNorm`(MMSyncBN) layers in the model to
-        `BatchNormXd` layers.
+        convert all ``SyncBatchNorm`` (SyncBN) and
+        ``mmcv.ops.sync_bn.SyncBatchNorm`` (MMSyncBN) layers in the model to
+        ``BatchNormXd`` layers.
 
         Args:
             model (nn.Module): Model to convert.
@@ -314,9 +314,11 @@ class BaseStrategy(metaclass=ABCMeta):
         model = revert_sync_batchnorm(model)
         return model
 
-    def compile_model(self,
-                      model: nn.Module,
-                      compile: Union[dict, bool] = False) -> nn.Module:
+    def compile_model(
+        self,
+        model: nn.Module,
+        compile: Union[dict, bool] = False,
+    ) -> nn.Module:
         """Compile model.
 
         Args:
