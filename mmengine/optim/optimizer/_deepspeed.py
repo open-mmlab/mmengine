@@ -7,7 +7,7 @@ from .base import BaseOptimWrapper
 
 
 @OPTIM_WRAPPERS.register_module()
-class DSOptimWrapper(BaseOptimWrapper):
+class DeepSpeedOptimWrapper(BaseOptimWrapper):
 
     def __init__(self, optimizer):
         self.optimizer = optimizer

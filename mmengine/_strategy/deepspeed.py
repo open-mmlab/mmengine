@@ -26,6 +26,8 @@ class DeepSpeedStrategy(BaseStrategy):
         https://www.deepspeed.ai/docs/config-json/.
 
     Args:
+        config (str or dict, optional): If it is a string, it is a path to load
+            config for deepspeed. Defaults to None.
         zero_optimization (dict, optional): Enabling and configuring ZeRO
             memory optimizations. Defaults to None.
         gradient_clipping (float): Enable gradient clipping with value.

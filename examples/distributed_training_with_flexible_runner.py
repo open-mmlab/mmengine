@@ -103,7 +103,7 @@ def main():
                 contiguous_gradients=True,
                 cpu_offload=False))
         optim_wrapper = dict(
-            type='DSOptimWrapper',
+            type='DeepSpeedOptimWrapper',
             optimizer=dict(type=SGD, lr=0.001, momentum=0.9))
     else:
         strategy = None
