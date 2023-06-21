@@ -1,14 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import inspect
 import logging
 import os
 import os.path as osp
 import sys
 import warnings
 from getpass import getuser
-from logging import Logger, LogRecord
-from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
+from logging import Logger, LogRecord, handlers
 from socket import gethostname
-from typing import Optional, Union
+from typing import Dict, Optional, Union
 
 from termcolor import colored
 
@@ -174,14 +174,18 @@ class MMLogger(Logger, ManagerMixin):
         file_handler_cfg (dict, optional): The cfg dict of file handler that
             rotate log files at a certain point. If `file_handler_cfg=None`,
             a ``logging.FileHandler`` that does not rotate log file would
-            be added to the logger. The file_handler_cfg can only
-            support the type keyword with the value of `time` or `size`.
+            be added to the logger. The file_handler_cfg can support the
+            type keyword with the value of
+            `BaseRotatingHandler`、`RotatingFileHandler`、
+            `TimedRotatingFileHandler` or `WatchedFileHandler`.
             And the remaining key pairs are the parameters required by
-            ``logging.handlers.RotatingFileHandler``
-            or ``logging.handlers.TimedRotatingFileHandler``. Like:
+            ``logging.handlers.BaseRotatingHandler``、
+            ``logging.handlers.RotatingFileHandler``、
+            ``logging.handlers.TimedRotatingFileHandler``、
+            or ``logging.handlers.WatchedFileHandler``. Like:
             Examples:
                 >>> file_handler_cfg = dict(
-                >>>    type='time',
+                >>>    type='TimedRotatingFileHandler',
                 >>>    when='MIDNIGHT',
                 >>>    interval=1,
                 >>>    backupCount=365)
@@ -242,19 +246,19 @@ class MMLogger(Logger, ManagerMixin):
             if global_rank == 0 or is_distributed:
                 if file_handler_cfg is not None:
                     assert 'type' in file_handler_cfg, \
-                        'You should specify the `type` keyword in '
-                    'file_handler_cfg.'
+                        'You should specify `type` keyword '
+                    'in file_handler_cfg.'
                     file_handler_type = file_handler_cfg.pop('type')
-                    if file_handler_type == 'time':
-                        file_handler = TimedRotatingFileHandler(
-                            filename=log_file, **file_handler_cfg)
-                    elif file_handler_type == 'size':
-                        file_handler = RotatingFileHandler(
-                            filename=log_file, **file_handler_cfg)
+                    logging_file_handlers_map = \
+                        self._get_logging_file_handlers()
+                    if logging_file_handlers_map.get(file_handler_type,
+                                                     None) is not None:
+                        file_handler = logging_file_handlers_map[
+                            file_handler_type](
+                                filename=log_file, **file_handler_cfg)
                     else:
-                        raise ValueError('The type of file_handler '
-                                         'should be `time` or `size`, but '
-                                         f'got {file_handler_type}.')
+                        raise ValueError('`logging.handlers` does not '
+                                         f'exist {file_handler_type}')
                 else:
                     # Here, the default behaviour of the official
                     # logger is 'a'. Thus, we provide an interface to
@@ -271,6 +275,21 @@ class MMLogger(Logger, ManagerMixin):
                 file_handler.addFilter(FilterDuplicateWarning(logger_name))
                 self.handlers.append(file_handler)
         self._log_file = log_file
+
+    def _get_logging_file_handlers(self) -> Dict:
+        """Get additional file_handlers in ``logging.handlers``.
+
+        Returns:
+            Dict: A map of file_handlers.
+        """
+        file_handlers_map = {}
+        for module_name in dir(handlers):
+            if module_name.startswith('__'):
+                continue
+            _fh = getattr(handlers, module_name)
+            if inspect.isclass(_fh) and issubclass(_fh, logging.FileHandler):
+                file_handlers_map[module_name] = _fh
+        return file_handlers_map
 
     @property
     def log_file(self):

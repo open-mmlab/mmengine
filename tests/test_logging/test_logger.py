@@ -205,6 +205,37 @@ class TestLogger:
         out, _ = capsys.readouterr()
         assert 'WARNING' in out
 
+    def test_file_handlers(self, tmp_path):
+        tmp_file = tmp_path / 'tmp_file.log'
+        fh = None
+        logger = MMLogger(
+            name='test_file_handlers', log_file=tmp_file, file_handler_cfg=fh)
+        assert isinstance(logger.handlers[-1], logging.FileHandler)
+        fh = dict(type='BaseRotatingHandler', mode='a')
+        logger = MMLogger(
+            name='test_file_handlers', log_file=tmp_file, file_handler_cfg=fh)
+        assert isinstance(logger.handlers[-1],
+                          logging.handlers.BaseRotatingHandler)
+        fh = dict(type='RotatingFileHandler', maxBytes=1024)
+        logger = MMLogger(
+            name='test_file_handlers', log_file=tmp_file, file_handler_cfg=fh)
+        assert isinstance(logger.handlers[-1],
+                          logging.handlers.RotatingFileHandler)
+        fh = dict(type='TimedRotatingFileHandler', when='MIDNIGHT')
+        logger = MMLogger(
+            name='test_file_handlers', log_file=tmp_file, file_handler_cfg=fh)
+        assert isinstance(logger.handlers[-1],
+                          logging.handlers.TimedRotatingFileHandler)
+        fh = dict(type='WatchedFileHandler')
+        logger = MMLogger(
+            name='test_file_handlers', log_file=tmp_file, file_handler_cfg=fh)
+        assert isinstance(logger.handlers[-1],
+                          logging.handlers.WatchedFileHandler)
+        # `FileHandler` should be closed in Windows, otherwise we cannot
+        # delete the temporary directory
+        logging.shutdown()
+        MMLogger._instance_dict.clear()
+
 
 @patch('torch.cuda.device_count', lambda: 4)
 def test_get_device_id():
