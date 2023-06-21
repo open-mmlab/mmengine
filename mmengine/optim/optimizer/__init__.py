@@ -18,5 +18,5 @@ __all__ = [
 ]
 
 if is_installed('deepspeed'):
-    from ._deepspeed import DSOptimWrapper  # noqa:F401
-    __all__.append('DSOptimWrapper')
+    from ._deepspeed import DeepSpeedOptimWrapper  # noqa:F401
+    __all__.append('DeepSpeedOptimWrapper')

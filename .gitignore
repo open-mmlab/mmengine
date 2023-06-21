@@ -116,6 +116,8 @@ venv.bak/
 *.log.json
 docs/modelzoo_statistics.md
 work_dirs/
+data
+data/
 
 # Pytorch
 *.pth

@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Union
 import torch
 from deepspeed.runtime.engine import DeepSpeedEngine
 
-from mmengine.optim.optimizer._deepspeed import DSOptimWrapper
+from mmengine.optim.optimizer._deepspeed import DeepSpeedOptimWrapper
 from mmengine.registry import MODEL_WRAPPERS
 
 
@@ -29,12 +29,12 @@ class MMDeepSpeedEngineWrapper:
     def train_step(
         self,
         data: Union[dict, tuple, list],
-        optim_wrapper: DSOptimWrapper,
+        optim_wrapper: DeepSpeedOptimWrapper,
     ) -> Dict[str, torch.Tensor]:
         data = self.model.module.data_preprocessor(data, training=True)
         data = self._cast_inputs_half(data)
         losses = self._run_forward(data, mode='loss')
-        parsed_loss, log_vars = self.module.parse_losses(losses)
+        parsed_loss, log_vars = self.model.module.parse_losses(losses)
         optim_wrapper.update_params(parsed_loss, model=self.model)
 
         return log_vars

@@ -42,11 +42,8 @@ class Accuracy(BaseMetric):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Distributed Training')
-    parser.add_argument(
-        '--launcher',
-        choices=['none', 'pytorch', 'slurm', 'mpi'],
-        help='job launcher')
     parser.add_argument('--local_rank', '--local-rank', type=int, default=0)
+    parser.add_argument('--use-deepspeed', action='store_true')
 
     args = parser.parse_args()
     return args
@@ -56,7 +53,7 @@ def main():
     args = parse_args()
     norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
     train_set = torchvision.datasets.CIFAR10(
-        '/nvme/data/zhouzaida/codebases/data/cifar10',
+        'data/cifar10',
         train=True,
         download=True,
         transform=transforms.Compose([
@@ -66,7 +63,7 @@ def main():
             transforms.Normalize(**norm_cfg)
         ]))
     valid_set = torchvision.datasets.CIFAR10(
-        '/nvme/data/zhouzaida/codebases/data/cifar10',
+        'data/cifar10',
         train=False,
         download=True,
         transform=transforms.Compose(
@@ -82,19 +79,47 @@ def main():
         dataset=valid_set,
         sampler=dict(type='DefaultSampler', shuffle=False),
         collate_fn=dict(type='default_collate'))
+
+    if args.use_deepspeed:
+        strategy = dict(
+            type='DeepSpeedStrategy',
+            fp16=dict(
+                enabled=True,
+                fp16_master_weights_and_grads=False,
+                loss_scale=0,
+                loss_scale_window=500,
+                hysteresis=2,
+                min_loss_scale=1,
+                initial_scale_power=15,
+            ),
+            inputs_to_half=[0],
+            zero_optimization=dict(
+                stage=0,
+                allgather_partitions=True,
+                reduce_scatter=True,
+                allgather_bucket_size=50000000,
+                reduce_bucket_size=50000000,
+                overlap_comm=True,
+                contiguous_gradients=True,
+                cpu_offload=False))
+        optim_wrapper = dict(
+            type='DeepSpeedOptimWrapper',
+            optimizer=dict(type=SGD, lr=0.001, momentum=0.9))
+    else:
+        strategy = None
+        optim_wrapper = dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9))
+
     runner = FlexibleRunner(
         model=MMResNet50(),
-        work_dir='./work_dir',
+        work_dir='./work_dirs',
+        strategy=strategy,
         train_dataloader=train_dataloader,
-        optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+        optim_wrapper=optim_wrapper,
         param_scheduler=dict(type='LinearLR'),
         train_cfg=dict(by_epoch=True, max_epochs=10, val_interval=1),
         val_dataloader=val_dataloader,
         val_cfg=dict(),
-        val_evaluator=dict(type=Accuracy),
-        launcher=args.launcher,
-        resume=True,
-        load_from='./work_dir/epoch_3.pth')
+        val_evaluator=dict(type=Accuracy))
     runner.train()
 
 

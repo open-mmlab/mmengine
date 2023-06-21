@@ -42,9 +42,9 @@ class BaseStrategy(metaclass=ABCMeta):
     Keyword Args:
         work_dir (str): The working directory to save checkpoints. The logs
             will be saved in the subdirectory of `work_dir` named
-            :attr:`timestamp`. Defaults to 'work_dir'.
+            :attr:`timestamp`. Defaults to 'work_dirs'.
         experiment_name (str, optional): Name of current experiment. If not
-            specified, timestamp will be used as ``experiment_name``.
+            specified, timestamp will be used as :attr:`experiment_name`.
             Defaults to None.
         env_kwargs (dict, optional): Environment config passed in
             :meth:`setup_env`. Defaults to None.
@@ -77,7 +77,8 @@ class BaseStrategy(metaclass=ABCMeta):
         self._log_dir = osp.join(self.work_dir, self.timestamp)
         mmengine.mkdir_or_exist(self._log_dir)
 
-        self.build_logger(**log_kwargs or {})
+        log_kwargs = log_kwargs or {}
+        self.logger = self.build_logger(**log_kwargs)
 
         self.dispatch_kwargs: dict = {}
 
@@ -138,16 +139,13 @@ class BaseStrategy(metaclass=ABCMeta):
                 can be a dict used for building a model.
 
         Keyword Args:
-            optim_wrapper (BaseOptimWrapper or dict, optional):
-                Computing gradient of model parameters. If specified,
-                :attr:`train_dataloader` should also be specified. If automatic
-                mixed precision or gradient accmulation
-                training is required. The type of ``optim_wrapper`` should be
-                ``AmpOptimizerWrapper``. See :meth:`build_optim_wrapper` for
-                examples. Defaults to None.
+            optim_wrapper (BaseOptimWrapper or dict, optional): Computing the
+                gradient of model parameters and updating them.
+                Defaults to None.
+                See :meth:`build_optim_wrapper` for examples.
             param_scheduler (_ParamScheduler or dict or list, optional):
                 Parameter scheduler for updating optimizer parameters. If
-                specified, :attr:`optimizer` should also be specified.
+                specified, :attr:`optim_wrapper` should also be specified.
                 Defaults to None.
                 See :meth:`build_param_scheduler` for examples.
             compile (dict, optional): Config to compile model.
@@ -303,9 +301,9 @@ class BaseStrategy(metaclass=ABCMeta):
     def convert_model(self, model: nn.Module) -> nn.Module:
         """Convert layers of model.
 
-        convert all `SyncBatchNorm` (SyncBN) and
-        `mmcv.ops.sync_bn.SyncBatchNorm`(MMSyncBN) layers in the model to
-        `BatchNormXd` layers.
+        convert all ``SyncBatchNorm`` (SyncBN) and
+        ``mmcv.ops.sync_bn.SyncBatchNorm`` (MMSyncBN) layers in the model to
+        ``BatchNormXd`` layers.
 
         Args:
             model (nn.Module): Model to convert.
@@ -317,9 +315,11 @@ class BaseStrategy(metaclass=ABCMeta):
         model = revert_sync_batchnorm(model)
         return model
 
-    def compile_model(self,
-                      model: nn.Module,
-                      compile: Union[dict, bool] = False) -> nn.Module:
+    def compile_model(
+        self,
+        model: nn.Module,
+        compile: Union[dict, bool] = False,
+    ) -> nn.Module:
         """Compile model.
 
         Args:
@@ -360,6 +360,7 @@ class BaseStrategy(metaclass=ABCMeta):
     def build_optim_wrapper(
         self,
         optim_wrapper: Union[Optimizer, BaseOptimWrapper, dict],
+        model: Optional[nn.Module] = None,
     ) -> BaseOptimWrapper:
         """Build optimizer wrapper.
 
@@ -485,7 +486,8 @@ class BaseStrategy(metaclass=ABCMeta):
             # optimizer wrapper will be built by optimizer wrapper
             # constructor. Therefore, `build_optim_wrapper` should be called.
             if optimizer is not None or 'constructor' in optim_wrapper:
-                return build_optim_wrapper(self.model, optim_wrapper)
+                assert model is not None
+                return build_optim_wrapper(model, optim_wrapper)
             else:
                 # if `optimizer` is not defined, it should be the case of
                 # training with multiple optimizers. If `constructor` is not
@@ -576,6 +578,8 @@ class BaseStrategy(metaclass=ABCMeta):
     def build_param_scheduler(
         self,
         scheduler: Union[_ParamScheduler, Dict, List],
+        optim_wrapper: BaseOptimWrapper,
+        default_args: Optional[dict] = None,
     ) -> ParamSchedulerType:
         """Build parameter schedulers.
 
@@ -634,35 +638,34 @@ class BaseStrategy(metaclass=ABCMeta):
         .. _optimizer-docs:
            https://mmengine.readthedocs.io/en/latest/tutorials/optim_wrapper.html
         """
-        default_args = {}
-        if 'num_batches_per_epoch' in self.dispatch_kwargs:
-            default_args['epoch_length'] = self.dispatch_kwargs[
-                'num_batches_per_epoch']
-        if 'max_epochs' in self.dispatch_kwargs:
-            default_args['max_epochs'] = self.dispatch_kwargs['max_epochs']
-        if 'max_iters' in self.dispatch_kwargs:
-            default_args['max_iters'] = self.dispatch_kwargs['max_iters']
+        if default_args is None:
+            default_args = {}
+            if 'num_batches_per_epoch' in self.dispatch_kwargs:
+                default_args['epoch_length'] = self.dispatch_kwargs[
+                    'num_batches_per_epoch']
+            if 'max_epochs' in self.dispatch_kwargs:
+                default_args['max_epochs'] = self.dispatch_kwargs['max_epochs']
+            if 'max_iters' in self.dispatch_kwargs:
+                default_args['max_iters'] = self.dispatch_kwargs['max_iters']
 
         param_schedulers: ParamSchedulerType
-        assert hasattr(self, 'optim_wrapper')
-
-        if not isinstance(self.optim_wrapper, OptimWrapperDict):
+        if not isinstance(optim_wrapper, OptimWrapperDict):
             # Since `OptimWrapperDict` inherits from `OptimWrapper`,
             # `isinstance(self.optim_wrapper, OptimWrapper)` cannot tell
             # whether `self.optim_wrapper` is an `OptimizerWrapper` or
             # `OptimWrapperDict` instance. Therefore, here we simply check
             # self.optim_wrapper is not an `OptimWrapperDict` instance and
             # then assert it is an OptimWrapper instance.
-            assert isinstance(self.optim_wrapper, BaseOptimWrapper), (
+            assert isinstance(optim_wrapper, BaseOptimWrapper), (
                 '`build_optimizer` should be called before'
                 '`build_param_scheduler` because the latter depends '
                 'on the former')
             param_schedulers = self._build_param_scheduler(
-                scheduler, self.optim_wrapper, default_args)  # type: ignore
+                scheduler, optim_wrapper, default_args)  # type: ignore
             return param_schedulers
         else:
             param_schedulers = dict()
-            for name, optimizer in self.optim_wrapper.items():
+            for name, optimizer in optim_wrapper.items():
                 if isinstance(scheduler, dict) and 'type' not in scheduler:
                     # scheduler is a dict and each item is a ParamScheduler
                     # object or a config to build ParamScheduler objects
@@ -702,9 +705,8 @@ class BaseStrategy(metaclass=ABCMeta):
         # termination of the FileHandler and ensure that the log file could
         # be continuously updated during the lifespan of the runner.
         log_cfg.setdefault('file_mode', 'a')
-        self.logger = MMLogger.get_instance(**log_cfg)  # type: ignore
 
-        return self.logger
+        return MMLogger.get_instance(**log_cfg)  # type: ignore
 
     def model_state_dict(self) -> dict:
         """Get model state dict."""
