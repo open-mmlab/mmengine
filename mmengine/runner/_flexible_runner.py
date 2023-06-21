@@ -237,7 +237,7 @@ class FlexibleRunner:
         self,
         model: Union[nn.Module, Dict],
         *,
-        work_dir: str = 'work_dir',
+        work_dir: str = 'work_dirs',
         experiment_name: Optional[str] = None,
         train_dataloader: Optional[Union[DataLoader, Dict]] = None,
         optim_wrapper: Optional[Union[OptimWrapper, Dict]] = None,
