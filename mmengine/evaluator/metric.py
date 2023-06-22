@@ -125,7 +125,7 @@ class BaseMetric(metaclass=ABCMeta):
                 self.collect_device,
                 tmpdir=self.collect_dir)
         else:
-            collect_results(self.results, size, self.collect_device)
+            results = collect_results(self.results, size, self.collect_device)
 
         if is_main_process():
             # cast all tensors in results list to cpu
