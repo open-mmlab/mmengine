@@ -729,7 +729,18 @@ class MLflowVisBackend(BaseVisBackend):
             config (Config): The Config object
         """
         self.cfg = config
-        self._mlflow.log_params(self._flatten(self.cfg))
+        
+        cfg_flatten = self._flatten(self.cfg)
+        for k, v in cfg_flatten.items():
+            if isinstance(v, str) and len(v) >= 490:
+                print('catch')
+                print(k, v)
+                cfg_flatten[k] = f'{v[:490]}...'
+                print()
+                print(cfg_flatten[k])
+                print('------------------')
+        
+        # self._mlflow.log_params(cfg_flatten)
         self._mlflow.log_text(self.cfg.pretty_text, 'config.py')
 
     @force_init_env
