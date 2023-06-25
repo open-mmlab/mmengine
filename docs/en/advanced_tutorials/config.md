@@ -819,7 +819,10 @@ The inheritance syntax of pure Python style configuration files is slightly diff
 
     .. code-tab:: python Pure Python style Inheritance
 
-        if '_base_':
+        from mmengine.config import read_base
+
+
+        with read_base():
             from .optimizer import *
 
     .. code-tab:: python Pure text style Inheritance
@@ -831,7 +834,10 @@ The inheritance syntax of pure Python style configuration files is slightly diff
 Pure Python style configuration files use import syntax to achieve inheritance. The advantage of doing this is that we can directly jump to the inherited configuration file for easy reading and jumping. The variable inheritance rule (add, delete, change, and search) is completely aligned with Python syntax. For example, if I want to modify the learning rate of the optimizer in the base configuration file:
 
 ```python
-if '_base_':
+from mmengine.config import read_base
+
+
+with read_base():
     from .optimizer import *
 
 # optimizer is a variable defined in the base configuration file
@@ -840,10 +846,13 @@ optimizer.update(
 )
 ```
 
-Of course, if you are already accustomed to the inheritance rules of pure text style configuration files and the variable is of the `dict` type in the `_base_` configuration file, you can also use merge syntax to achieve the same inheritance rule as pure text style configuration files:
+Of course, if you are already accustomed to the inheritance rules of pure text style configuration files, you can also use merge syntax to achieve the same inheritance rule as pure text style configuration files:
 
 ```python
-if '_base_':
+from mmengine.config import read_base
+
+
+with read_base():
     from .optimizer import *
 
 # optimizer is a variable defined in the base configuration file
@@ -876,7 +885,7 @@ x.update(dict(b=dict(d=4)))
 It can be seen that using the update method in the configuration file will recursively update the fields, rather than simply covering them.
 ````
 
-Compared with pure text style configuration files, the inheritance rule of pure Python style configuration files is completely aligned with the import syntax of Python, which is easier to understand and supports jumping between configuration files. You may wonder since both inheritance and module imports use import syntax, why do we need an `if '_base_'` statement for inheriting configuration files? On the one hand, this can improve the readability of configuration files, making inherited configuration files more prominent. On the other hand, it is also restricted by the rules of lazy_import, which will be explained later.
+Compared with pure text style configuration files, the inheritance rule of pure Python style configuration files is completely aligned with the import syntax of Python, which is easier to understand and supports jumping between configuration files. You may wonder since both inheritance and module imports use import syntax, why do we need an `with read_base()'` statement for inheriting configuration files? On the one hand, this can improve the readability of configuration files, making inherited configuration files more prominent. On the other hand, it is also restricted by the rules of lazy_import, which will be explained later.
 
 #### Dump the Configuration File
 
@@ -958,7 +967,7 @@ print(type(cfg['optimizer']['type']))
 
 At this point, the type accessed is the `LazyObject` type.
 
-However, we cannot adopt the lazy import strategy for the inheritance (import) of base files since we need the configuration file parsed to include the fields defined in the base configuration file, and we need to trigger the import really. Therefore, we have added a restriction on importing base files, which must be imported in the `if '_base_'` code block.
+However, we cannot adopt the lazy import strategy for the inheritance (import) of base files since we need the configuration file parsed to include the fields defined in the base configuration file, and we need to trigger the import really. Therefore, we have added a restriction on importing base files, which must be imported in the `with read_base'` context manager.
 
 ### Limitations
 

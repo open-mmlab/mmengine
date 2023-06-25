@@ -950,7 +950,12 @@ class TestConfig:
         lazy_import_cfg_path = osp.join(
             self.data_path, 'config/lazy_module_config/toy_model.py')
         cfg = Config.fromfile(lazy_import_cfg_path)
-        # Dumpe config
+        cfg_dict = cfg.to_dict()
+        assert (cfg_dict['train_dataloader']['dataset']['type'] ==
+                'mmengine.testing.runner_test_case.ToyDataset')
+        assert (
+            cfg_dict['custom_hooks'][0]['type'] == 'mmengine.hooks.EMAHook')
+        # Dumped config
         dumped_cfg_path = tmp_path / 'test_dump_lazy.py'
         cfg.dump(dumped_cfg_path)
         dumped_cfg = Config.fromfile(dumped_cfg_path)
@@ -965,12 +970,9 @@ class TestConfig:
                 for item_a, item_b in zip(a, b):
                     _compare_dict(item_a, item_b)
             else:
-                if isinstance(a, str) and a != '_module_':
-                    assert a == b
-                elif isinstance(a, LazyObject):
-                    assert str(a) == str(b)
+                assert str(a) == str(b)
 
-        _compare_dict(cfg, dumped_cfg)
+        _compare_dict(cfg.to_dict(), dumped_cfg.to_dict())
 
         # TODO reimplement this part of unit test when mmdetection adds the
         # new config.
@@ -1012,7 +1014,7 @@ error_attr = mmengine.error_attr
 
         # lazy-import and non-lazy-import should not be used mixed.
         # current text config, base lazy-import config
-        with pytest.raises(RuntimeError, match='if "_base_"'):
+        with pytest.raises(RuntimeError, match='with read_base()'):
             Config.fromfile(
                 osp.join(self.data_path,
                          'config/lazy_module_config/error_mix_using1.py'))
@@ -1025,6 +1027,17 @@ error_attr = mmengine.error_attr
 
 
 class TestConfigDict(TestCase):
+
+    def test_keep_custom_dict(self):
+
+        class CustomDict(dict):
+            ...
+
+        cfg_dict = ConfigDict(dict(a=CustomDict(b=1)))
+        self.assertIsInstance(cfg_dict.a, CustomDict)
+        self.assertIsInstance(cfg_dict['a'], CustomDict)
+        self.assertIsInstance(cfg_dict.values()[0], CustomDict)
+        self.assertIsInstance(cfg_dict.items()[0][1], CustomDict)
 
     def test_build_lazy(self):
         # This unit test are divide into two parts:
@@ -1041,6 +1054,12 @@ class TestConfigDict(TestCase):
         # Keep key-value the same
         raw = dict(a=1, b=dict(c=2, e=[dict(f=(2, ))]))
         cfg_dict = ConfigDict(raw)
+
+        assert len(cfg_dict) == 2
+        assert len(cfg_dict.items()) == 2
+        assert len(cfg_dict.keys()) == 2
+        assert len(cfg_dict.values()) == 2
+
         self.assertDictEqual(cfg_dict, raw)
 
         # Check `items` and `values` will only return the build object

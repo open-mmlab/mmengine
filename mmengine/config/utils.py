@@ -42,6 +42,10 @@ MODULE2PACKAGE = {
 PKG2PROJECT = MODULE2PACKAGE
 
 
+class ConfigParsingError(RuntimeError):
+    """Raise error when failed to parse pure Python style config files."""
+
+
 def _get_cfg_metainfo(package_path: str, cfg_path: str) -> dict:
     """Get target meta information from all 'metafile.yml' defined in `mode-
     index.yml` of external package.
@@ -236,7 +240,10 @@ class ImportTransformer(ast.NodeTransformer):
         base_dict (dict): All variables defined in base files.
 
             Examples:
-                >>> if '_base_':
+                >>> from mmengine.config import read_base
+                >>>
+                >>>
+                >>> with read_base():
                 >>>     from .._base_.default_runtime import *
                 >>>     from .._base_.datasets.coco_detection import dataset
 
@@ -334,7 +341,7 @@ class ImportTransformer(ast.NodeTransformer):
                 # fallback to import the real module and raise a warning to
                 # remind users the real module will be imported which will slow
                 # down the parsing speed.
-                raise RuntimeError(
+                raise ConfigParsingError(
                     'Illegal syntax in config! `from xxx import *` is not '
                     'allowed to appear outside the `if base:` statement')
             elif alias_node.asname is not None:
@@ -352,13 +359,12 @@ class ImportTransformer(ast.NodeTransformer):
             try:
                 nodes.append(ast.parse(code).body[0])  # type: ignore
             except Exception as e:
-                raise ImportError(
-                    f'Cannot import {alias_node} from {module}',
+                raise ConfigParsingError(
+                    f'Cannot import {alias_node} from {module}'
                     '1. Cannot import * from 3rd party lib in the config '
                     'file\n'
                     '2. Please check if the module is a base config which '
-                    'should be added to `_base_`\n',
-                ) from e
+                    'should be added to `_base_`\n') from e
         return nodes
 
     def visit_Import(self, node) -> Union[ast.Assign, ast.Import]:
