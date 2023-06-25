@@ -16,9 +16,6 @@ from .base import BaseStrategy
 class SingleDeviceStrategy(BaseStrategy):
     """Strategy for single device training."""
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def prepare(
         self,
         model: Union[nn.Module, dict],

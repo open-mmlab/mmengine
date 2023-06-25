@@ -21,10 +21,7 @@ class MMDeepSpeedEngineWrapper:
         self._inputs_to_half = inputs_to_half
 
     def __getattr__(self, name):
-        try:
-            return super().__getattr__(name)
-        except AttributeError:
-            return getattr(self.model, name)
+        return getattr(self.model, name)
 
     def train_step(
         self,
