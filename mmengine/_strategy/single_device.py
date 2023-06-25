@@ -121,6 +121,11 @@ class SingleDeviceStrategy(BaseStrategy):
         self.load_model_state_dict(
             state_dict, strict=strict, revise_keys=revise_keys)
 
+        if hasattr(self, 'optim_wrapper'):
+            # Initiate inner count of `optim_wrapper`.
+            self.optim_wrapper.initialize_count_status(  # type: ignore
+                self.model, 0, self.dispatch_kwargs['max_iters'])
+
         return checkpoint
 
     def resume(
