@@ -43,8 +43,7 @@ PKG2PROJECT = MODULE2PACKAGE
 
 
 class ConfigParsingError(RuntimeError):
-    """Raised when there is an error when parsing pure Python style config
-    files."""
+    """Raise error when failed to parse pure Python style config files."""
 
 
 def _get_cfg_metainfo(package_path: str, cfg_path: str) -> dict:
