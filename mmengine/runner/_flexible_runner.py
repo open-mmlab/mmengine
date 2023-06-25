@@ -56,6 +56,10 @@ class FlexibleRunner:
     when calling ``runner.train()``, ``runner.val()``, and ``runner.test()``,
     respectively.
 
+    Warning:
+        This is an experimental feature, and its interface is subject to
+        change.
+
     Args:
         model (:obj:`torch.nn.Module` or dict): The model to be run. It can be
             a dict used for build a model.

@@ -2,6 +2,8 @@
 from abc import ABCMeta, abstractmethod
 from typing import List
 
+import torch
+
 
 class BaseOptimWrapper(metaclass=ABCMeta):
 
@@ -11,6 +13,10 @@ class BaseOptimWrapper(metaclass=ABCMeta):
     @abstractmethod
     def update_params(self, *args, **kwargs):
         """Update parameters in :attr:`optimizer`."""
+
+    @abstractmethod
+    def backward(self, loss: torch.Tensor, **kwargs) -> None:
+        """Perform gradient back propagation."""
 
     @abstractmethod
     def step(self, **kwargs):

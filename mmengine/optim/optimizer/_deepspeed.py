@@ -2,6 +2,8 @@
 
 from typing import Dict, List
 
+import torch
+
 from mmengine.registry import OPTIM_WRAPPERS
 from .base import BaseOptimWrapper
 
@@ -11,13 +13,29 @@ class DeepSpeedOptimWrapper(BaseOptimWrapper):
 
     def __init__(self, optimizer):
         self.optimizer = optimizer
+        self._model = None
 
-    def update_params(self, loss, model) -> None:  # type: ignore
-        model.backward(loss)
-        self.step(model)
+    @property
+    def model(self):
+        if self._model is None:
+            raise ValueError('model attribute should be set before accessing.')
+        return self._model
 
-    def step(self, model):
-        model.step()
+    @model.setter
+    def model(self, value):
+        self._model = value
+
+    def update_params(self, loss) -> None:  # type: ignore
+        """Update parameters in :attr:`optimizer`."""
+        self.backward(loss)
+        self.step()
+
+    def backward(self, loss: torch.Tensor, **kwargs) -> None:
+        """"Perform gradient back propagation."""
+        self.model.backward(loss)
+
+    def step(self, **kwargs):
+        self.model.step()
 
     def get_lr(self) -> Dict[str, List[float]]:
         """Get the learning rate of the optimizer.

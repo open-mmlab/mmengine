@@ -35,7 +35,7 @@ class MMDeepSpeedEngineWrapper:
         data = self._cast_inputs_half(data)
         losses = self._run_forward(data, mode='loss')
         parsed_loss, log_vars = self.model.module.parse_losses(losses)
-        optim_wrapper.update_params(parsed_loss, model=self.model)
+        optim_wrapper.update_params(parsed_loss)
 
         return log_vars
 

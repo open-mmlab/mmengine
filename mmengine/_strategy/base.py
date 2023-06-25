@@ -39,6 +39,10 @@ class BaseStrategy(metaclass=ABCMeta):
     the state of training components such as models, optimizers, and parameter
     schedulers.
 
+    Warning:
+        This is an experimental feature, and its interface is subject to
+        change.
+
     Keyword Args:
         work_dir (str): The working directory to save checkpoints. The logs
             will be saved in the subdirectory of `work_dir` named
