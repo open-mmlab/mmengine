@@ -846,7 +846,7 @@ optimizer.update(
 )
 ```
 
-Of course, if you are already accustomed to the inheritance rules of pure text style configuration files and the variable is of the `dict` type in the `_base_` configuration file, you can also use merge syntax to achieve the same inheritance rule as pure text style configuration files:
+Of course, if you are already accustomed to the inheritance rules of pure text style configuration files, you can also use merge syntax to achieve the same inheritance rule as pure text style configuration files:
 
 ```python
 from mmengine.config import read_base

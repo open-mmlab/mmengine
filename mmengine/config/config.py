@@ -492,10 +492,10 @@ class Config:
                 assert isinstance(node, ast.ImportFrom), (
                     'Illegal syntax in config file! Only '
                     '`from ... import ...` could be implemented` in '
-                    '`if _base_`')
+                    'with read_base()`')
                 assert node.module is not None, (
                     'Illegal syntax in config file! Syntax like '
-                    '`from . import xxx` is not allowed in `if _base_` ')
+                    '`from . import xxx` is not allowed in `with read_base()`')
                 base_modules.append(node.level * '.' + node.module)
             return base_modules
 
@@ -526,7 +526,7 @@ class Config:
 
             # The original code:
             # ```
-            # if _base_:
+            # with read_base():
             #     from .._base_.default_runtime import *
             # ```
             # The processed code:
@@ -761,7 +761,7 @@ class Config:
                 predefined variables. Defaults to True.
 
         Returns:
-            Tuple[dict, str]: Variables dictionary and text of Config.i
+            Tuple[dict, str]: Variables dictionary and text of Config.
         """
         if Config._is_lazy_import(filename):
             raise RuntimeError(
@@ -959,7 +959,7 @@ class Config:
 
             parsed_codes = ast.parse(f.read())
             # get the names of base modules, and remove the
-            # `if '_base_:'` statement
+            # `with read_base():'` statement
             base_modules = Config._get_base_modules(parsed_codes.body)
             base_imported_names = set()
             for base_module in base_modules:
