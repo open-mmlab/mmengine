@@ -1,7 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from typing import Dict, List
-
 import torch
 
 from mmengine.registry import OPTIM_WRAPPERS
@@ -12,7 +10,7 @@ from .base import BaseOptimWrapper
 class DeepSpeedOptimWrapper(BaseOptimWrapper):
 
     def __init__(self, optimizer):
-        self.optimizer = optimizer
+        super().__init__(optimizer)
         self._model = None
 
     @property
@@ -34,45 +32,23 @@ class DeepSpeedOptimWrapper(BaseOptimWrapper):
         """"Perform gradient back propagation."""
         self.model.backward(loss)
 
+    def zero_grad(self, **kwargs) -> None:
+        raise NotImplementedError(
+            'DeepSpeedOptimWrapper does not support zero_grad method '
+            'currently.')
+
     def step(self, **kwargs):
         self.model.step()
 
-    def get_lr(self) -> Dict[str, List[float]]:
-        """Get the learning rate of the optimizer.
-
-        Provide unified interface to get learning rate of optimizer.
-
-        Returns:
-            Dict[str, List[float]]:
-            param_groups learning rate of the optimizer.
-        """
-        res = {}
-        res['lr'] = [group['lr'] for group in self.optimizer.param_groups]
-
-        return res
-
-    def get_momentum(self) -> Dict[str, List[float]]:
-        """Get the momentum of the optimizer.
-
-        Provide unified interface to get momentum of optimizer.
-
-        Returns:
-            Dict[str, List[float]]: Momentum of the optimizer.
-        """
-        momentum = []
-        for group in self.optimizer.param_groups:
-            # Get momentum of SGD.
-            if 'momentum' in group.keys():
-                momentum.append(group['momentum'])
-            # Get momentum of Adam.
-            elif 'betas' in group.keys():
-                momentum.append(group['betas'][0])
-            else:
-                momentum.append(0)
-        return dict(momentum=momentum)
-
     def state_dict(self) -> dict:
-        raise NotImplementedError()
+        state_dict = {}
+        if self.base_param_settings is not None:
+            state_dict['base_param_settings'] = self.base_param_settings
+
+        return state_dict
 
     def load_state_dict(self, state_dict: dict) -> None:
-        raise NotImplementedError()
+        base_param_settings = state_dict.pop('base_param_settings', None)
+
+        if base_param_settings is not None:
+            self.base_param_settings = base_param_settings

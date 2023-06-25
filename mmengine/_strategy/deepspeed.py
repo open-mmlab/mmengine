@@ -246,6 +246,9 @@ class DeepSpeedStrategy(BaseStrategy):
         _, extra_ckpt = self.model.load_checkpoint(
             dirname, tag=basename, load_optimizer_states=resume_optimizer)
 
+        if resume_optimizer:
+            self.load_optim_state_dict(extra_ckpt.pop('optim_wrapper'))
+
         if resume_param_scheduler:
             param_schedulers = extra_ckpt.pop('param_schedulers')
             self.load_scheduler_state_dict(param_schedulers)
@@ -296,6 +299,11 @@ class DeepSpeedStrategy(BaseStrategy):
             time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
             mmengine=mmengine.__version__ + get_git_hash(),
         )
+
+        if save_optimizer:
+            # The key can not be 'optimizer', otherwise error will be thrown
+            # when loading or resuming checkpoint.
+            extra_ckpt['optim_wrapper'] = self.optim_state_dict()
 
         if save_param_scheduler:
             extra_ckpt['param_schedulers'] = self.scheduler_state_dict()
