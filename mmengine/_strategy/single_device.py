@@ -6,7 +6,7 @@ import torch.nn as nn
 
 import mmengine
 from mmengine.device import get_device
-from mmengine.optim import BaseOptimWrapper, _ParamScheduler
+from mmengine.optim import BaseOptimWrapper, OptimWrapperDict, _ParamScheduler
 from mmengine.registry import STRATEGIES
 from mmengine.utils import get_git_hash
 from .base import BaseStrategy
@@ -14,7 +14,23 @@ from .base import BaseStrategy
 
 @STRATEGIES.register_module()
 class SingleDeviceStrategy(BaseStrategy):
-    """Strategy for single device training."""
+    """Strategy for single device training.
+
+    Args:
+        auto_scale_lr (dict, Optional): Config to scale the learning rate
+            automatically. It includes ``base_batch_size`` and ``enable``.
+            ``base_batch_size`` is the batch size that the optimizer lr is
+            based on. ``enable`` is the switch to turn on and off the feature.
+    """
+
+    def __init__(
+        self,
+        *,
+        auto_scale_lr: Optional[dict] = None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.auto_scale_lr = auto_scale_lr
 
     def prepare(
         self,
@@ -67,12 +83,67 @@ class SingleDeviceStrategy(BaseStrategy):
                 param_scheduler, self.optim_wrapper)
             return_items.append(self.param_schedulers)
 
+        if optim_wrapper is not None:
+            self._scale_lr()
+
         return return_items[0] if len(return_items) == 1 else return_items
 
     def _wrap_model(self, model: nn.Module) -> nn.Module:
         model = self.convert_model(model)
         current_device = get_device()
         return model.to(current_device)
+
+    def _scale_lr(self) -> None:
+        """Automatically scaling learning rate in training according to the
+        ratio of ``base_batch_size`` in ``autoscalelr_cfg`` and real batch
+        size.
+
+        It scales the learning rate linearly according to the
+        `paper <https://arxiv.org/abs/1706.02677>`_.
+
+        Note:
+            ``scale_lr`` must be called after building optimizer wrappers
+            and before building parameter schedulers.
+        """
+        if (self.auto_scale_lr is None
+                or not self.auto_scale_lr.get('enable', False)):
+            return None
+
+        assert 'base_batch_size' in self.auto_scale_lr, \
+            'Lack of `base_batch_size` in `auto_scale_lr`.'
+
+        real_bs = self.world_size * self.dispatch_kwargs[
+            'train_micro_batch_size_per_gpu']
+        base_bs = self.auto_scale_lr['base_batch_size']
+        ratio = float(real_bs) / float(base_bs)
+        self.logger.info(f'LR is set based on batch size of {base_bs} '
+                         f'and the current batch size is {real_bs}. '
+                         f'Scaling the original LR by {ratio}.')
+
+        def _is_built(schedulers):
+            if isinstance(schedulers, dict):
+                return False if 'type' in schedulers else any(
+                    _is_built(s) for s in schedulers.values())
+            if isinstance(schedulers, list):
+                return any(_is_built(s) for s in schedulers)
+            return isinstance(schedulers, _ParamScheduler)
+
+        if _is_built(self.param_schedulers):
+            raise RuntimeError('`scale_lr` should be called before building '
+                               'ParamScheduler because ParamScheduler will '
+                               'store initial lr from optimizer wrappers')
+
+        assert isinstance(self.optim_wrapper, BaseOptimWrapper), \
+            '`scale_lr should be called after building OptimWrapper'
+
+        if isinstance(self.optim_wrapper, OptimWrapperDict):
+            wrappers = list(self.optim_wrapper.values())
+        else:
+            wrappers = [self.optim_wrapper]  # type: ignore
+
+        for wrapper in wrappers:
+            for group in wrapper.optimizer.param_groups:
+                group['lr'] = group['lr'] * ratio
 
     def load_checkpoint(
         self,
