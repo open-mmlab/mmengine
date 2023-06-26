@@ -71,7 +71,7 @@ class BaseStrategy(metaclass=ABCMeta):
         mmengine.mkdir_or_exist(self._work_dir)
 
         self._env_kwargs = env_kwargs or {}
-        self.setup_env(**self._env_kwargs)
+        self._setup_env(**self._env_kwargs)
 
         if experiment_name is not None:
             self._experiment_name = f'{experiment_name}_{self.timestamp}'
@@ -158,7 +158,7 @@ class BaseStrategy(metaclass=ABCMeta):
                 methods of Strategy. Defaults to None.
         """
 
-    def setup_env(
+    def _setup_env(
             self,
             *,
             launcher: Optional[str] = None,
@@ -214,7 +214,7 @@ class BaseStrategy(metaclass=ABCMeta):
         # init distributed env first, since logger depends on the dist info.
         if self._distributed and not is_distributed():
             dist_cfg = dist_cfg if dist_cfg is not None else {}
-            self.setup_distributed(launcher, **dist_cfg)
+            self._setup_distributed(launcher, **dist_cfg)
 
         self._rank, self._world_size = get_dist_info()
 
@@ -238,7 +238,7 @@ class BaseStrategy(metaclass=ABCMeta):
         self._randomness = randomness
         self._set_randomness(**randomness)
 
-    def setup_distributed(self, *args, **kwargs):
+    def _setup_distributed(self, *args, **kwargs):
         """Setup distributed environment."""
         pass
 

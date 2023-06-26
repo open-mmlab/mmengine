@@ -39,7 +39,7 @@ class DDPStrategy(SingleDeviceStrategy):
         self.model_wrapper = model_wrapper
         self.sync_bn = sync_bn
 
-    def setup_distributed(  # type: ignore
+    def _setup_distributed(  # type: ignore
         self,
         launcher: str = 'pytorch',
         backend: str = 'nccl',

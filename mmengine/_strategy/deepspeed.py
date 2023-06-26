@@ -99,7 +99,7 @@ class DeepSpeedStrategy(BaseStrategy):
                 config = json.load(f)
         return config
 
-    def setup_distributed(  # type: ignore
+    def _setup_distributed(  # type: ignore
         self,
         launcher: Optional[str] = None,
         backend: str = 'nccl',
