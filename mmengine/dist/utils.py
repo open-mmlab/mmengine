@@ -346,7 +346,7 @@ def get_local_rank() -> int:
     if _LOCAL_PROCESS_GROUP is not None:
         return torch_dist.get_rank(_LOCAL_PROCESS_GROUP)
     elif 'LOCAL_RANK' in os.environ:
-        return int(os.getenv('LOCAL_RANK'))
+        return int(os.getenv('LOCAL_RANK'))  # type: ignore
     else:
         raise RuntimeError(
             'Local process group is not created and "LOCAL_RANK" is not '

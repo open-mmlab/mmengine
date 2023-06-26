@@ -7,6 +7,7 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 from torch.distributed import ProcessGroup
+# yapf: disable
 from torch.distributed.fsdp.api import (FullStateDictConfig,
                                         LocalOptimStateDictConfig,
                                         LocalStateDictConfig,
@@ -17,12 +18,11 @@ from torch.distributed.fsdp.api import (FullStateDictConfig,
                                         StateDictSettings, StateDictType)
 from torch.distributed.fsdp.fully_sharded_data_parallel import (
     BackwardPrefetch, CPUOffload, FullOptimStateDictConfig,
-    FullyShardedDataParallel, LocalOptimStateDictConfig, MixedPrecision,
-    ShardedOptimStateDictConfig)
+    FullyShardedDataParallel, MixedPrecision)
 
+# yapf: enable
 from mmengine.optim import OptimWrapper
 from mmengine.registry import FUNCTIONS, MODEL_WRAPPERS
-from mmengine.registry.root import FUNCTIONS
 from mmengine.structures import BaseDataElement
 from mmengine.utils import digit_version, is_seq_of
 
@@ -156,7 +156,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             ori_func = FUNCTIONS.get(  # type: ignore
                 auto_wrap_policy.pop('type'))
             auto_wrap_policy = partial(ori_func, **auto_wrap_policy)
-        if not (isinstance(auto_wrap_policy, Callable)
+        if (not callable(auto_wrap_policy)
                 or auto_wrap_policy is None):  # type: ignore
             raise TypeError('Registered `fsdp_auto_wrap_policy` needs to be '
                             '`Callable`, but has type '
@@ -174,7 +174,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         if isinstance(param_init_fn, dict):
             param_init_fn = FUNCTIONS.get(param_init_fn.pop('type'))
             param_init_fn = partial(param_init_fn, **param_init_fn)
-        if not (isinstance(param_init_fn, Callable) or param_init_fn is None):
+        if not (callable(param_init_fn) or param_init_fn is None):
             raise TypeError(
                 f'param_init_fn must be callable, but got {param_init_fn}')
 
@@ -400,13 +400,13 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             if optim_state_dict_config is None:
                 optim_state_dict_config = optim_state_dict_config_type()
             if state_dict_config_type != type(state_dict_config):
-                raise RuntimeError(
-                    f'Expected state_dict_config of type {state_dict_config_type} '
-                    f'but got {type(state_dict_config)}')
+                raise RuntimeError('Expected state_dict_config of type '
+                                   f'{state_dict_config_type} '
+                                   f'but got {type(state_dict_config)}')
             if optim_state_dict_config_type != type(optim_state_dict_config):
-                raise RuntimeError(
-                    f'Expected optim_state_dict_config of type {optim_state_dict_config_type} '
-                    f'but got {type(optim_state_dict_config)}')
+                raise RuntimeError('Expected optim_state_dict_config of type '
+                                   f'{optim_state_dict_config_type} '
+                                   f'but got {type(optim_state_dict_config)}')
 
             # Set the state_dict type and configurations.
             prev_state_dict_type = None
@@ -424,15 +424,18 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                 else:
                     assert isinstance(
                         submodule._state_dict_config,
-                        type(prev_state_dict_config)
-                    ), 'All FSDP modules must have the same type of state_dict_config.'
+                        type(prev_state_dict_config)), (
+                            'All FSDP modules must have the same type of '
+                            'state_dict_config.')
                 if prev_optim_state_dict_config is None:
-                    prev_optim_state_dict_config = submodule._optim_state_dict_config
+                    prev_optim_state_dict_config = \
+                        submodule._optim_state_dict_config
                 else:
                     assert isinstance(
                         submodule._optim_state_dict_config,
                         type(prev_optim_state_dict_config),
-                    ), 'All FSDP modules must have the same type of optim_state_dict_config.'
+                    ), ('All FSDP modules must have the same type of '
+                        'optim_state_dict_config.')
 
                 submodule._state_dict_type = state_dict_type
                 submodule._state_dict_config = state_dict_config

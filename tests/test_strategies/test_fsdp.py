@@ -15,7 +15,8 @@ from torch.multiprocessing.spawn import start_processes
 from torch.optim import SGD
 
 from mmengine._strategy import FSDPStrategy
-from mmengine.dist import broadcast_object_list, is_main_process
+from mmengine.dist import (all_gather_object, broadcast_object_list,
+                           is_main_process)
 from mmengine.optim import LinearLR, OptimWrapper
 from mmengine.testing.runner_test_case import ToyModel
 from mmengine.utils import digit_version
@@ -119,6 +120,7 @@ class TestStrategy(TestCase):
                 ))
 
     def run_strategy(self):
+        # Strategy can run with the built model, optimizer and schedulers.
         for skip_init_weights, state_dict_cfg in [(True, 'local'),
                                                   (False, 'full')]:
             strategy = FSDPStrategy(
@@ -128,7 +130,6 @@ class TestStrategy(TestCase):
             model = ToyModel()
             optim = OptimWrapper(SGD(model.parameters(), lr=0.1, momentum=0.9))
             lr_scheduler = LinearLR(optimizer=optim)
-            strategy.setup_env(launcher='pytorch')
             model, optim, lr_scheduler = strategy.prepare(
                 model=model, optim_wrapper=optim, param_scheduler=lr_scheduler)
             self.assertIsInstance(model, FullyShardedDataParallel)
@@ -158,6 +159,26 @@ class TestStrategy(TestCase):
             loss.backward()
             optim.step()
             [scheduler.step() for scheduler in lr_scheduler]
+
+        # optimizer with multiple param_groups can be reconstructed.
+        model = ToyModel()
+        strategy = FSDPStrategy(
+            model_wrapper=dict(auto_wrap_policy=linear_wrap_policy))
+        param_groups = []
+        for param in model.parameters():
+            param_groups.append(dict(params=[param], lr=0.1))
+        optim = SGD(param_groups, lr=0.1, momentum=0.9)
+        lr_scheduler = LinearLR(optimizer=optim)
+        model, optim, lr_scheduler = strategy.prepare(
+            model=model, optim_wrapper=optim, param_scheduler=lr_scheduler)
+        data = torch.ones(2, 2).cuda()
+        data_samples = torch.zeros(2, 2).cuda()
+        loss = model(data, data_samples=data_samples, mode='loss')['loss']
+        loss.backward()
+        optim.step()
+        [scheduler.step() for scheduler in lr_scheduler]
+        optim_state = optim.state_dict()['state']
+        optim_state = all_gather_object(optim_state)
 
     @classmethod
     def _worker(cls, rank, func):
