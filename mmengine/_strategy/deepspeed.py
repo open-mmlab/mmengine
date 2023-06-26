@@ -1,15 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import json
-import os
 import os.path as osp
 import time
 from typing import Callable, Dict, List, Optional, Union
 
 import deepspeed
-import torch
 import torch.nn as nn
 
 import mmengine
+from mmengine.dist import init_dist
 from mmengine.model.wrappers._deepspeed import MMDeepSpeedEngineWrapper
 from mmengine.optim import BaseOptimWrapper, _ParamScheduler
 from mmengine.registry import STRATEGIES
@@ -114,9 +113,7 @@ class DeepSpeedStrategy(BaseStrategy):
                 'nccl', 'gloo' and 'mpi'. Defaults to 'nccl'.
             **kwargs: Other arguments for :func:`deepspeed.init_distributed`.
         """
-        local_rank = int(os.environ['LOCAL_RANK'])
-        torch.cuda.set_device(local_rank)
-        deepspeed.init_distributed(dist_backend=backend)
+        init_dist(launcher, backend, init_backend='deepspeed', **kwargs)
 
     def prepare(
         self,
