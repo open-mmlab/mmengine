@@ -6,6 +6,7 @@ import torch.nn as nn
 
 import mmengine
 from mmengine.device import get_device
+from mmengine.model import revert_sync_batchnorm
 from mmengine.optim import BaseOptimWrapper, OptimWrapperDict, _ParamScheduler
 from mmengine.registry import STRATEGIES
 from mmengine.utils import get_git_hash
@@ -92,6 +93,23 @@ class SingleDeviceStrategy(BaseStrategy):
         model = self.convert_model(model)
         current_device = get_device()
         return model.to(current_device)
+
+    def convert_model(self, model: nn.Module) -> nn.Module:
+        """Convert layers of model.
+
+        convert all ``SyncBatchNorm`` (SyncBN) and
+        ``mmcv.ops.sync_bn.SyncBatchNorm`` (MMSyncBN) layers in the model to
+        ``BatchNormXd`` layers.
+
+        Args:
+            model (nn.Module): Model to convert.
+        """
+        self.logger.info(
+            'Distributed training is not used, all SyncBatchNorm (SyncBN) '
+            'layers in the model will be automatically reverted to '
+            'BatchNormXd layers if they are used.')
+        model = revert_sync_batchnorm(model)
+        return model
 
     def _scale_lr(self) -> None:
         """Automatically scaling learning rate in training according to the
