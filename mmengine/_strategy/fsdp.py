@@ -48,7 +48,59 @@ class ReconstructOptimizerException(Exception):
 
 @STRATEGIES.register_module()
 class FSDPStrategy(DDPStrategy):
+    """Support training model with FullyShardedDataParallel (FSDP).
 
+    Keyword Args::
+        model_wrapper (dict, optional): Config dict for model wrapper. The
+            default configuration is:
+
+            Examples:
+                >>> model_wrapper = dict(
+                >>>    type='MMFullyShardedDataParallel',
+                >>>    use_orig_params=True,
+                >>> )
+            
+            See more configurable arguments in
+            :class:`MMFullyShardedDataParallel`. Defaults to None
+        skip_init_weights (bool, optional): Whether to skip initialization of
+            weights. Defaults to False. This is useful when the parameters of
+            the large model are loaded from a checkpoint, since skiping the
+            initialization of weights can save a lot of time.
+        state_dict_cfg (Union[str, dict, None], optional): Configuration for
+            how to save and load the state dict of the model, optimizer, and
+            scheduler.
+
+            - "local": save and load the sharded state dict in all ranks.
+            - "full": save and load the full state dict in rank 0.
+            - `dict` object: save and load the state dict more flexibly. For
+              example, you can first offload the state dict to the 'cpu' and
+              then save it to the disk. This can help you to load the
+              checkpoint in a non-gpu environment:
+
+              Examples:
+                >>> state_dict_cfg=dict(
+                >>>     state_dict_type='FULL_STATE_DICT',
+                >>>     state_dict_config=dict(type='FullStateDictConfig', offload_to_cpu=True),
+                >>>     optim_state_dict_config=dict(type='FullOptimStateDictConfig', offload_to_cpu=True),
+              
+              See more configurable arguments for ``state_dict_cfg``,
+              ``state_dict_config``, and ``optim_state_dict_config``in
+              `FSDP official api documents`_
+        kwargs (dict): Additional arguments passed to :class:`DDPStrategy`:
+
+            - work_dir (str): The working directory to save checkpoints.
+              The logs will be saved in the subdirectory of `work_dir` named
+              :attr:`timestamp`. Defaults to 'work_dirs'.
+            - experiment_name (str, optional): Name of current experiment. If not
+              specified, timestamp will be used as :attr:`experiment_name`.
+              Defaults to None.
+            - env_kwargs (dict, optional): Environment config passed in
+              :meth:`setup_env`. Defaults to None.
+            - log_kwargs (dict, optional): Logger config passed in
+              :meth:`build_logger`. Defaults to None.
+
+    .. _FSDP official api documents: https://pytorch.org/docs/stable/fsdp.html#torch.distributed.fsdp.FullyShardedDataParallel.set_state_dict_type
+    """
     def __init__(self,
                  *,
                  model_wrapper: Optional[dict] = None,
@@ -57,7 +109,7 @@ class FSDPStrategy(DDPStrategy):
                  **kwargs):
         self._init_state_dict_cfg(state_dict_cfg)
         model_wrapper = model_wrapper or dict()
-        if model_wrapper.get('use_orig_params', False):
+        if model_wrapper.get('use_orig_params', True):
             assert self.state_dict_type == StateDictType.FULL_STATE_DICT, (
                 'use_orig_params only works with `FULL_STATE_DICT`, please '
                 'check your state_dict_cfg')
@@ -69,8 +121,17 @@ class FSDPStrategy(DDPStrategy):
         super().__init__(model_wrapper=model_wrapper, **kwargs)
         self.last_checkpoint = None
 
-    def _wrap_model(self, model) -> None:
-        # model has been wrapped, do not re-wrap
+    def _wrap_model(self, model: nn.Module) -> None:
+        """Wrap the model to :obj:``MMFullyShardedDataParallel`` or other
+        custom fully sharded data parallel module wrappers.
+
+        Args:
+            model (nn.Module): Model to be wrapped.
+
+        Returns:
+            FullyShardedDataParallel: ``MMFullyShardedDataParallel``
+            or subclass of ``FullyShardedDataParallel``.
+        """
         if is_model_wrapper(model):
             return
 
@@ -86,9 +147,24 @@ class FSDPStrategy(DDPStrategy):
         return model
 
     def _is_full_state_dict(self):
+        """Whether to save and load the full state_dict in rank 0."""
         return self.state_dict_type == StateDictType.FULL_STATE_DICT
 
     def build_model(self, model: Union[nn.Module, dict]) -> nn.Module:
+        """Build model.
+
+        If skip_init_weights is True, the model will be built with an empty
+        weights. It means that :meth:`load_checkpoint` must be called to fill
+        the weights before training.
+
+        Args:
+            model (nn.Module or dict): A ``nn.Module`` object or a dict to
+                build ``nn.Module`` object. If ``model`` is a ``nn.Module``
+                object, just returns itself.
+
+        Returns:
+            nn.Module: Model build from ``model``.
+        """
         if self.skip_init_weights:
             # Accelerate initialization by skipping init weights
             with MetaTensorContext():
@@ -96,10 +172,10 @@ class FSDPStrategy(DDPStrategy):
         else:
             model = super().build_model(model)
 
-        # `id_to_name` is used to convert the `optim_state_dict` of the
-        # unsharded optimizer to the `optim_state_dict` of the sharded
-        # optimizer which it returned by `FSDP.optim_state_dict` in
-        # `StateDictType.FULL_STATE_DICT`
+        # `id_to_name` will be used to convert the `optim_state_dict` of the
+        # raw optimizer to the `optim_state_dict`
+        #  returned by `FSDP.optim_state_dict` in
+        # `StateDictType.FULL_STATE_DICT` mode.
         self.id_to_name = dict()
         for name, param in model.named_parameters():
             self.id_to_name[id(param)] = name
@@ -112,6 +188,38 @@ class FSDPStrategy(DDPStrategy):
                         save_param_scheduler: bool = True,
                         extra_ckpt: Optional[dict] = None,
                         callback: Optional[Callable] = None) -> None:
+        """Save checkpoint to given ``filename``.
+
+        If ``state_dict_type`` is `full`, the checkpoint will only be saved in
+        rank0. The structure of the saved checkpoint is the same as the one
+        saved by ``DDPStrategy``
+
+        If ``state_dict_type`` is `local`, each rank will save the sharded
+        state dict to a directory, which means the saved structure will look
+        like this: 
+
+        .. code-block:: bash
+
+            ── epoch_0.pth
+                ├── rank0.pth
+                ├── rank1.pth
+                ├── ...
+                └── rank8.pth
+
+        Args:
+            filename (str): Filename to save checkpoint.
+
+        Keyword Args:
+            save_optimizer (bool): Whether to save the optimizer to
+                the checkpoint. Defaults to True.
+            save_param_scheduler (bool): Whether to save the param_scheduler
+                to the checkpoint. Defaults to True.
+            extra_ckpt (dict, optional): Extra checkpoint to save.
+                Defaults to None.
+            callback (callable, callable): Callback function to modify the
+                checkpoint before saving the checkpoint.
+                Defaults to None.
+        """
         from mmengine.runner.checkpoint import save_checkpoint
 
         state_dict: dict = dict()
@@ -162,15 +270,74 @@ class FSDPStrategy(DDPStrategy):
             save_checkpoint(state_dict, filename)
 
     def model_state_dict(self) -> dict:
+        """Get model state dict based on the ``state_dict_type``.
+        
+        If ``state_dict_type`` is `full`, the model state dict will be the
+        same as the one of original unsharded model.
+
+        If ``state_dict_type`` is ``local``, and ``use_orig_params`` is ``True``
+        in ``model_wrapper``. The key of the state dict will be the same as
+        the one of original unsharded model, but its value will be the sharded
+        one
+
+        If ``state_dict_type`` is `local`, and ```use_orig_params``` is
+        ``False`` in ``model_wrapper``, the flatten and sharded state dict will
+        be returned.
+
+        See more details in the `official api documents`_
+
+        .. _official api documents: https://pytorch.org/docs/stable/fsdp.html#torch.distributed.fsdp.FullyShardedDataParallel.optim_state_dict
+        """  # noqa: E501
         # We've set state_dict by `FSDP.set_state_dict_type`, therefore we
         # should get model state dict by `FSDP.state_dict`
         return self.model.state_dict()
 
     def optim_state_dict(self) -> dict:
+        """Get model state dict based on the ``state_dict_type``.
+
+        If ``state_dict_type`` is ``full``, the optimizer state dict can be
+        loaded by the original unsharded optimizer.
+
+        Otherwise, the optimizer state dict could only be loaded by the
+        optimizer with sharded parameters.
+
+        Note:
+            The optimizer state dict is not the same as the one of original
+            optimizer even if in ``full`` mode, although they can be loaded
+            correctly.
+        
+        See more details in the `official api documents`_
+
+        .. _official api documents: https://pytorch.org/docs/stable/fsdp.html#torch.distributed.fsdp.FullyShardedDataParallel.optim_state_dict
+        """  # noqa: E501
         return FSDP.optim_state_dict(self.model, self.optim_wrapper)
 
-    def load_checkpoint(self, filename, **kwargs) -> dict:
-        # Avoid to call DDPStrategy.load_checkpoint
+    def load_checkpoint(self, filename: str, **kwargs) -> dict:
+        """Load checkpoint from given ``filename``.
+
+        Note:
+            If ``state_dict_type`` is `local`, the filename should be a
+            directory contains ``rank{i}.pth``.
+
+        Args:
+            filename (str): Accept local filepath, URL, ``torchvision://xxx``,
+                ``open-mmlab://xxx``.
+
+        Keyword Args:
+            map_location (str or callable): A string or a callable function to
+                specifying how to remap storage locations.
+                Defaults to 'cpu'.
+            strict (bool): strict (bool): Whether to allow different params for
+                the model and checkpoint.
+            revise_keys (list): A list of customized keywords to modify the
+                state_dict in checkpoint. Each item is a (pattern, replacement)
+                pair of the regular expression operations. Defaults to strip
+                the prefix 'module.' by [(r'^module\\.', '')].
+            callback (callable, callable): Callback function to modify the
+                checkpoint after loading the checkpoint.
+                Defaults to None.
+
+        """
         if self._is_full_state_dict():
             return super(DDPStrategy, self).load_checkpoint(filename, **kwargs)
         else:
@@ -181,21 +348,37 @@ class FSDPStrategy(DDPStrategy):
     def load_model_state_dict(self,
                               state_dict: dict,
                               *,
-                              strict: bool = False,
-                              **kwargs) -> None:
-
+                              strict: bool = False) -> None:  # type: ignore
+        """Load model state from dict.
+        
+        Args:
+            state_dict (dict): Model state dict returned by
+                :meth:`FSDPStrategy.model_state_dict`. If ``state_dict_type``
+                is ``full``. ``state_dict`` could be the result of
+                ``model.state_dict()``
+            
+        Keyword Args:
+            strict (bool): strict (bool, optional): whether to strictly. Defaults to False
+        """
         # We should load state dict by `FSDP.load_state_dict`
-        if kwargs:
-            self.logger.warn(f'{kwargs} will not be used when loading '
-                             '`state_dict` in `FSDPStrategy`')
         self.model.load_state_dict(state_dict, strict=strict)
 
-    def load_optim_state_dict(self, state_dict):
+    def load_optim_state_dict(self, state_dict: dict) -> None:
+        """Load optimizer state from dict.
+        
+        Args:
+            state_dict (dict): The optimizer state dict. If ``state_dict_type``
+                is ``full``. ``state_dict`` could be the result of
+                ``optimizer.state_dict()``
+        """
         optim_state_dict = FSDP.optim_state_dict_to_load(
             state_dict, self.model, self.optim_wrapper.optimizer)
         self.optim_wrapper.load_state_dict(optim_state_dict)
 
-    def _init_state_dict_cfg(self, state_dict_cfg):
+    def _init_state_dict_cfg(self, state_dict_cfg: dict) -> None:
+        """Make ``state_dict_type`` and ``state_dict_config`` can be configured
+        with string.
+        """
         if isinstance(state_dict_cfg, str):
             if state_dict_cfg == 'full':
                 self.state_dict_type = StateDictType.FULL_STATE_DICT
@@ -261,7 +444,11 @@ class FSDPStrategy(DDPStrategy):
         optim_wrapper: Union[Optimizer, OptimWrapper, dict],
         model: Optional[nn.Module] = None,
     ) -> BaseOptimWrapper:
-        """Shard the optimizer state_dict for the built optim_wrapper."""
+        """Support sharding the optimizer state dict given a built
+        optimizer or optim_wrapper.
+        
+        See specific usage in :meth:`BaseStrategy.build_optim_wrapper`.
+        """
         if isinstance(optim_wrapper, Optimizer):
             optim_wrapper = OptimWrapper(optim_wrapper)
         if isinstance(optim_wrapper, BaseOptimWrapper):
@@ -371,8 +558,8 @@ class FSDPStrategy(DDPStrategy):
         optim_wrapper: BaseOptimWrapper,
         default_args: dict,
     ) -> List[_ParamScheduler]:
-        """Override this method to Update the scheduler with the unsharded
-        optimzer."""
+        """Override this method to Update the scheduler with the reconstructed
+        sharded optimzer."""
         if not isinstance(scheduler, Sequence):
             schedulers = [scheduler]
         else:
@@ -383,7 +570,7 @@ class FSDPStrategy(DDPStrategy):
 
         param_schedulers = []
         for scheduler in schedulers:
-            # NOTE: Update the built scheduler with the sharded optimizer
+            # Update the built scheduler with the sharded optimizer
             if isinstance(scheduler, (_ParamScheduler, LRScheduler)):
                 parameter_keys = inspect.signature(
                     scheduler.__class__).parameters.keys()
