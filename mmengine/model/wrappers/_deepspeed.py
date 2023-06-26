@@ -21,10 +21,7 @@ class MMDeepSpeedEngineWrapper:
         self._inputs_to_half = inputs_to_half
 
     def __getattr__(self, name):
-        try:
-            return super().__getattr__(name)
-        except AttributeError:
-            return getattr(self.model, name)
+        return getattr(self.model, name)
 
     def train_step(
         self,
@@ -35,7 +32,7 @@ class MMDeepSpeedEngineWrapper:
         data = self._cast_inputs_half(data)
         losses = self._run_forward(data, mode='loss')
         parsed_loss, log_vars = self.model.module.parse_losses(losses)
-        optim_wrapper.update_params(parsed_loss, model=self.model)
+        optim_wrapper.update_params(parsed_loss)
 
         return log_vars
 

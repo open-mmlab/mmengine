@@ -16,7 +16,6 @@ from mmengine.config import Config, ConfigDict
 from mmengine.dist import (broadcast, get_dist_info, infer_launcher,
                            is_distributed)
 from mmengine.logging import MMLogger
-from mmengine.model import revert_sync_batchnorm
 from mmengine.model.wrappers import is_model_wrapper
 from mmengine.optim import (BaseOptimWrapper, OptimWrapperDict,
                             _ParamScheduler, build_optim_wrapper)
@@ -38,6 +37,10 @@ class BaseStrategy(metaclass=ABCMeta):
     which is responsible for constructing, initializing, and saving/loading
     the state of training components such as models, optimizers, and parameter
     schedulers.
+
+    Warning:
+        This is an experimental feature, and its interface is subject to
+        change.
 
     Keyword Args:
         work_dir (str): The working directory to save checkpoints. The logs
@@ -67,7 +70,7 @@ class BaseStrategy(metaclass=ABCMeta):
         mmengine.mkdir_or_exist(self._work_dir)
 
         self._env_kwargs = env_kwargs or {}
-        self.setup_env(**self._env_kwargs)
+        self._setup_env(**self._env_kwargs)
 
         if experiment_name is not None:
             self._experiment_name = f'{experiment_name}_{self.timestamp}'
@@ -154,7 +157,7 @@ class BaseStrategy(metaclass=ABCMeta):
                 methods of Strategy. Defaults to None.
         """
 
-    def setup_env(
+    def _setup_env(
             self,
             *,
             launcher: Optional[str] = None,
@@ -210,7 +213,7 @@ class BaseStrategy(metaclass=ABCMeta):
         # init distributed env first, since logger depends on the dist info.
         if self._distributed and not is_distributed():
             dist_cfg = dist_cfg if dist_cfg is not None else {}
-            self.setup_distributed(launcher, **dist_cfg)
+            self._setup_distributed(launcher, **dist_cfg)
 
         self._rank, self._world_size = get_dist_info()
 
@@ -234,7 +237,7 @@ class BaseStrategy(metaclass=ABCMeta):
         self._randomness = randomness
         self._set_randomness(**randomness)
 
-    def setup_distributed(self, *args, **kwargs):
+    def _setup_distributed(self, *args, **kwargs):
         """Setup distributed environment."""
         pass
 
@@ -297,23 +300,6 @@ class BaseStrategy(metaclass=ABCMeta):
         else:
             raise TypeError('model should be a nn.Module object or dict, '
                             f'but got {model}')
-
-    def convert_model(self, model: nn.Module) -> nn.Module:
-        """Convert layers of model.
-
-        convert all ``SyncBatchNorm`` (SyncBN) and
-        ``mmcv.ops.sync_bn.SyncBatchNorm`` (MMSyncBN) layers in the model to
-        ``BatchNormXd`` layers.
-
-        Args:
-            model (nn.Module): Model to convert.
-        """
-        self.logger.info(
-            'Distributed training is not used, all SyncBatchNorm (SyncBN) '
-            'layers in the model will be automatically reverted to '
-            'BatchNormXd layers if they are used.')
-        model = revert_sync_batchnorm(model)
-        return model
 
     def compile_model(
         self,

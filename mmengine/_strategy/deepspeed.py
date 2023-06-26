@@ -1,15 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import json
-import os
 import os.path as osp
 import time
 from typing import Callable, Dict, List, Optional, Union
 
 import deepspeed
-import torch
 import torch.nn as nn
 
 import mmengine
+from mmengine.dist import init_dist
 from mmengine.model.wrappers._deepspeed import MMDeepSpeedEngineWrapper
 from mmengine.optim import BaseOptimWrapper, _ParamScheduler
 from mmengine.registry import STRATEGIES
@@ -99,7 +98,7 @@ class DeepSpeedStrategy(BaseStrategy):
                 config = json.load(f)
         return config
 
-    def setup_distributed(  # type: ignore
+    def _setup_distributed(  # type: ignore
         self,
         launcher: Optional[str] = None,
         backend: str = 'nccl',
@@ -114,9 +113,7 @@ class DeepSpeedStrategy(BaseStrategy):
                 'nccl', 'gloo' and 'mpi'. Defaults to 'nccl'.
             **kwargs: Other arguments for :func:`deepspeed.init_distributed`.
         """
-        local_rank = int(os.environ['LOCAL_RANK'])
-        torch.cuda.set_device(local_rank)
-        deepspeed.init_distributed(dist_backend=backend)
+        init_dist(launcher, backend, init_backend='deepspeed', **kwargs)
 
     def prepare(
         self,
@@ -159,6 +156,9 @@ class DeepSpeedStrategy(BaseStrategy):
         if optim_wrapper is not None:
             self.optim_wrapper = self.build_optim_wrapper(optim_wrapper, model)
             self.model = self._wrap_model(model)
+
+            self.optim_wrapper.model = self.model  # type: ignore
+
             return_items.append(self.model)
             return_items.append(self.optim_wrapper)
         else:
@@ -243,6 +243,9 @@ class DeepSpeedStrategy(BaseStrategy):
         _, extra_ckpt = self.model.load_checkpoint(
             dirname, tag=basename, load_optimizer_states=resume_optimizer)
 
+        if resume_optimizer:
+            self.load_optim_state_dict(extra_ckpt.pop('optim_wrapper'))
+
         if resume_param_scheduler:
             param_schedulers = extra_ckpt.pop('param_schedulers')
             self.load_scheduler_state_dict(param_schedulers)
@@ -293,6 +296,11 @@ class DeepSpeedStrategy(BaseStrategy):
             time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
             mmengine=mmengine.__version__ + get_git_hash(),
         )
+
+        if save_optimizer:
+            # The key can not be 'optimizer', otherwise error will be thrown
+            # when loading or resuming checkpoint.
+            extra_ckpt['optim_wrapper'] = self.optim_state_dict()
 
         if save_param_scheduler:
             extra_ckpt['param_schedulers'] = self.scheduler_state_dict()
