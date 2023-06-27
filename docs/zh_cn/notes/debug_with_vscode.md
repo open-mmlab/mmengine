@@ -68,3 +68,5 @@ torchrun --nproc_per_node=2 examples/distributed_training.py --launcher pytorch
 ![image](https://github.com/open-mmlab/mmengine/assets/58739961/7c18dce9-80dd-4f69-b2ac-09634d8c04b5)
 
 点击 F11 可跳入 `runner.train()` 查看它的实现。
+
+![cn](https://github.com/open-mmlab/mmengine/assets/58739961/398537c7-8f16-45b1-beab-612595f1e17a)
