@@ -41,7 +41,21 @@ def get_default_group() -> Optional[ProcessGroup]:
     return torch_dist.distributed_c10d._get_default_group()
 
 
-def init_dist(launcher, backend='nccl', **kwargs) -> None:
+def infer_launcher():
+    if 'WORLD_SIZE' in os.environ:
+        return 'pytorch'
+    elif 'SLURM_NTASKS' in os.environ:
+        return 'slurm'
+    elif 'OMPI_COMM_WORLD_LOCAL_RANK' in os.environ:
+        return 'mpi'
+    else:
+        return 'none'
+
+
+def init_dist(launcher,
+              backend='nccl',
+              init_backend='torch',
+              **kwargs) -> None:
     """Initialize distributed environment.
 
     Args:
@@ -67,16 +81,16 @@ def init_dist(launcher, backend='nccl', **kwargs) -> None:
     if mp.get_start_method(allow_none=True) is None:
         mp.set_start_method('spawn')
     if launcher == 'pytorch':
-        _init_dist_pytorch(backend, **kwargs)
+        _init_dist_pytorch(backend, init_backend=init_backend, **kwargs)
     elif launcher == 'mpi':
         _init_dist_mpi(backend, **kwargs)
     elif launcher == 'slurm':
-        _init_dist_slurm(backend, **kwargs)
+        _init_dist_slurm(backend, init_backend=init_backend, **kwargs)
     else:
         raise ValueError(f'Invalid launcher type: {launcher}')
 
 
-def _init_dist_pytorch(backend, **kwargs) -> None:
+def _init_dist_pytorch(backend, init_backend='torch', **kwargs) -> None:
     """Initialize distributed environment with PyTorch launcher.
 
     Args:
@@ -105,7 +119,16 @@ def _init_dist_pytorch(backend, **kwargs) -> None:
         # LOCAL_RANK is set by `torch.distributed.launch` since PyTorch 1.1
         local_rank = int(os.environ['LOCAL_RANK'])
         torch.cuda.set_device(local_rank)
-        torch_dist.init_process_group(backend=backend, **kwargs)
+
+        if init_backend == 'torch':
+            torch_dist.init_process_group(backend=backend, **kwargs)
+        elif init_backend == 'deepspeed':
+            import deepspeed
+            deepspeed.init_distributed(dist_backend=backend, **kwargs)
+        else:
+            raise ValueError(
+                'supported "init_backend" is "torch" or "deepspeed", '
+                f'but got {init_backend}')
 
 
 def _init_dist_mpi(backend, **kwargs) -> None:
@@ -137,7 +160,10 @@ def _init_dist_mpi(backend, **kwargs) -> None:
     torch_dist.init_process_group(backend=backend, **kwargs)
 
 
-def _init_dist_slurm(backend, port=None) -> None:
+def _init_dist_slurm(backend,
+                     port=None,
+                     init_backend='torch',
+                     **kwargs) -> None:
     """Initialize slurm distributed training environment.
 
     If argument ``port`` is not specified, then the master port will be system
@@ -175,7 +201,15 @@ def _init_dist_slurm(backend, port=None) -> None:
     os.environ['WORLD_SIZE'] = str(ntasks)
     os.environ['LOCAL_RANK'] = str(local_rank)
     os.environ['RANK'] = str(proc_id)
-    torch_dist.init_process_group(backend=backend)
+
+    if init_backend == 'torch':
+        torch_dist.init_process_group(backend=backend, **kwargs)
+    elif init_backend == 'deepspeed':
+        import deepspeed
+        deepspeed.init_distributed(dist_backend=backend, **kwargs)
+    else:
+        raise ValueError('supported "init_backend" is "torch" or "deepspeed", '
+                         f'but got {init_backend}')
 
 
 def init_local_group(node_rank: int, num_gpus_per_node: int):

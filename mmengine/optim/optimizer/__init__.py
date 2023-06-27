@@ -1,6 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from mmengine.utils import is_installed
 from .amp_optimizer_wrapper import AmpOptimWrapper
 from .apex_optimizer_wrapper import ApexOptimWrapper
+from .base import BaseOptimWrapper
 from .builder import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                       build_optim_wrapper)
 from .default_constructor import DefaultOptimWrapperConstructor
@@ -12,5 +14,9 @@ __all__ = [
     'OPTIM_WRAPPER_CONSTRUCTORS', 'OPTIMIZERS',
     'DefaultOptimWrapperConstructor', 'build_optim_wrapper', 'OptimWrapper',
     'AmpOptimWrapper', 'ApexOptimWrapper', 'OptimWrapperDict',
-    'ZeroRedundancyOptimizer'
+    'ZeroRedundancyOptimizer', 'BaseOptimWrapper'
 ]
+
+if is_installed('deepspeed'):
+    from ._deepspeed import DeepSpeedOptimWrapper  # noqa:F401
+    __all__.append('DeepSpeedOptimWrapper')
