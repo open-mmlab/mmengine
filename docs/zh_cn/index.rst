@@ -115,6 +115,7 @@
    notes/changelog.md
    notes/contributing.md
    notes/code_style.md
+   notes/debug_with_vscode.md
 
 .. toctree::
    :caption: 语言切换
