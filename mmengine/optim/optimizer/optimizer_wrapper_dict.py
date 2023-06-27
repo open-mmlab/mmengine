@@ -46,10 +46,11 @@ class OptimWrapperDict(OptimWrapper):
                 f'but got {key}: {type(value)}')
         self.optim_wrappers = optim_wrapper_dict
 
-    def update_params(self,
-                      loss: torch.Tensor,
-                      step_kwargs: Optional[Dict] = None,
-                      zero_kwargs: Optional[Dict] = None) -> None:
+    def update_params(  # type: ignore
+            self,
+            loss: torch.Tensor,
+            step_kwargs: Optional[Dict] = None,
+            zero_kwargs: Optional[Dict] = None) -> None:
         """Update all optimizer wrappers would lead to a duplicate backward
         errors, and OptimWrapperDict does not know which optimizer wrapper
         should be updated.

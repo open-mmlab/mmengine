@@ -7,7 +7,7 @@ from .utils import (get_dist_info, init_dist, init_local_group, get_backend,
                     get_world_size, get_rank, get_local_size, get_local_rank,
                     is_main_process, master_only, barrier, get_local_group,
                     is_distributed, get_default_group, get_data_device,
-                    get_comm_device, cast_data_device)
+                    get_comm_device, cast_data_device, infer_launcher)
 
 __all__ = [
     'all_gather_object', 'all_reduce', 'all_gather', 'all_reduce_dict',
@@ -17,5 +17,5 @@ __all__ = [
     'get_world_size', 'get_rank', 'get_local_size', 'get_local_group',
     'get_local_rank', 'is_main_process', 'master_only', 'barrier',
     'is_distributed', 'get_default_group', 'all_reduce_params',
-    'get_data_device', 'get_comm_device', 'cast_data_device'
+    'get_data_device', 'get_comm_device', 'cast_data_device', 'infer_launcher'
 ]

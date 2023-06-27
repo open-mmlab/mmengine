@@ -92,6 +92,7 @@
    mmengine.registry <api/registry>
    mmengine.config <api/config>
    mmengine.runner <api/runner>
+   mmengine._strategy <api/strategy>
    mmengine.hooks <api/hooks>
    mmengine.model <api/model>
    mmengine.optim <api/optim>
