@@ -1151,7 +1151,7 @@ class FlexibleRunner:
             max_iters=self.max_iters,
         )
 
-        result = self.strategy.prepare(
+        self.strategy.prepare(
             self.model,
             optim_wrapper=self.optim_wrapper,
             param_scheduler=self.param_schedulers,
@@ -1159,10 +1159,10 @@ class FlexibleRunner:
             dispatch_kwargs=dispatch_kwargs,
         )
 
+        self.model = self.strategy.model
+        self.optim_wrapper = self.strategy.optim_wrapper  # type: ignore
         if self.param_schedulers is not None:
-            self.model, self.optim_wrapper, self.param_schedulers, *_ = result
-        else:
-            self.model, self.optim_wrapper, *_ = result
+            self.param_schedulers = self.strategy.param_schedulers
 
         self.load_or_resume()
 
@@ -1187,7 +1187,11 @@ class FlexibleRunner:
 
         self._val_loop = self.build_val_loop(self._val_loop)  # type: ignore
 
-        self.model = self.strategy.prepare(self.model)
+        dispatch_kwargs = dict(
+            init_weights_for_test_or_val=self.cfg.get(
+                'init_weights_for_test_or_val', True))
+        self.strategy.prepare(self.model, dispatch_kwargs=dispatch_kwargs)
+        self.model = self.strategy.model
 
         self.load_or_resume()
 
@@ -1210,8 +1214,11 @@ class FlexibleRunner:
                 '`test_evaluator` arguments when initializing runner.')
 
         self._test_loop = self.build_test_loop(self._test_loop)  # type: ignore
-
-        self.model = self.strategy.prepare(self.model)
+        dispatch_kwargs = dict(
+            init_weights_for_test_or_val=self.cfg.get(
+                'init_weights_for_test_or_val', True))
+        self.strategy.prepare(self.model, dispatch_kwargs=dispatch_kwargs)
+        self.model = self.strategy.model
 
         self.load_or_resume()
 

@@ -49,6 +49,8 @@ class SingleDeviceStrategy(BaseStrategy):
                 If ``accumulative_counts`` is set in ``optim_wrapper``, you
                 need to provide ``max_iters`` in ``dispatch_kwargs``.
         """
+        if self._prepared:
+            return self._return_prepared()
         if dispatch_kwargs is not None:
             self.dispatch_kwargs.update(dispatch_kwargs)
 
@@ -84,8 +86,8 @@ class SingleDeviceStrategy(BaseStrategy):
 
                 self.optim_wrapper.initialize_count_status(  # type: ignore
                     self.model, 0, self.dispatch_kwargs['max_iters'])
-
-        return return_items[0] if len(return_items) == 1 else return_items
+        self._prepared = True
+        return self._return_prepared()
 
     def _wrap_model(self, model: nn.Module) -> nn.Module:
         model = self.convert_model(model)

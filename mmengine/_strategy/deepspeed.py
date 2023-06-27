@@ -145,6 +145,8 @@ class DeepSpeedStrategy(BaseStrategy):
             dispatch_kwargs (dict, optional): Kwargs to be passed to other
                 methods of Strategy. Defaults to None.
         """
+        if self._prepared:
+            return self._return_prepared()
         assert dispatch_kwargs is not None
         self.dispatch_kwargs.update(dispatch_kwargs)
 
@@ -170,7 +172,7 @@ class DeepSpeedStrategy(BaseStrategy):
                 param_scheduler, self.optim_wrapper)
             return_items.append(self.param_schedulers)
 
-        return return_items[0] if len(return_items) == 1 else return_items
+        return self._return_prepared()
 
     def _wrap_model(self, model: nn.Module) -> nn.Module:
         self.config['train_micro_batch_size_per_gpu'] = self.dispatch_kwargs[

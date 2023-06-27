@@ -43,8 +43,8 @@ class Accuracy(BaseMetric):
 def parse_args():
     parser = argparse.ArgumentParser(description='Distributed Training')
     parser.add_argument('--local_rank', '--local-rank', type=int, default=0)
-    parser.add_argument('--use-deepspeed', action='store_true')
-
+    parser.add_argument(
+        '--strategy', choices=['deepspeed', 'fsdp', 'none'], default='none')
     args = parser.parse_args()
     return args
 
@@ -80,19 +80,9 @@ def main():
         sampler=dict(type='DefaultSampler', shuffle=False),
         collate_fn=dict(type='default_collate'))
 
-    if args.use_deepspeed:
+    if args.strategy == 'deepspeed':
         strategy = dict(
             type='DeepSpeedStrategy',
-            fp16=dict(
-                enabled=True,
-                fp16_master_weights_and_grads=False,
-                loss_scale=0,
-                loss_scale_window=500,
-                hysteresis=2,
-                min_loss_scale=1,
-                initial_scale_power=15,
-            ),
-            inputs_to_half=[0],
             zero_optimization=dict(
                 stage=0,
                 allgather_partitions=True,
@@ -105,6 +95,16 @@ def main():
         optim_wrapper = dict(
             type='DeepSpeedOptimWrapper',
             optimizer=dict(type=SGD, lr=0.001, momentum=0.9))
+    elif args.strategy == 'fsdp':
+        from functools import partial
+
+        from torch.distributed.fsdp.wrap import size_based_auto_wrap_policy
+        size_based_auto_wrap_policy = partial(
+            size_based_auto_wrap_policy, min_num_params=1e7)
+        strategy = dict(
+            type='FSDPStrategy',
+            model_wrapper=dict(auto_wrap_policy=size_based_auto_wrap_policy))
+        optim_wrapper = dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9))
     else:
         strategy = None
         optim_wrapper = dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9))
