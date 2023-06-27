@@ -27,6 +27,8 @@ torchrun --nproc_per_node=2 examples/distributed_training.py --launcher pytorch
 
 ![image](https://github.com/open-mmlab/mmengine/assets/58739961/90b77e1c-06a8-47d6-9e3e-6edd685d4cf2)
 
+脚本正常运行后，可以停掉程序。
+
 ### 调试多卡程序
 
 使用 VS Code 调试需先配置 `~/.vscode/launch.json`。
