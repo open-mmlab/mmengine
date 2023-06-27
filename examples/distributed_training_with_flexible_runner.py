@@ -100,7 +100,8 @@ def main():
                 reduce_bucket_size=50000000,
                 overlap_comm=True,
                 contiguous_gradients=True,
-                cpu_offload=False))
+                cpu_offload=False),
+        )
         optim_wrapper = dict(
             type='DeepSpeedOptimWrapper',
             optimizer=dict(type='AdamW', lr=1e-3))

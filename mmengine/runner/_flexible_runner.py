@@ -632,6 +632,18 @@ class FlexibleRunner:
 
             assert isinstance(strategy, dict)
 
+            # train_micro_batch_size_per_gpu is required by DeepSpeed
+            if isinstance(strategy['type'], str):
+                strategy_name = strategy['type']
+            else:
+                strategy_name = strategy['type'].__name__
+            if strategy_name == 'DeepSpeedStrategy':
+                if self._train_dataloader is None:
+                    strategy['train_micro_batch_size_per_gpu'] = 1
+                else:
+                    strategy['train_micro_batch_size_per_gpu'] = \
+                        _get_batch_size(self._train_dataloader)
+
             strategy.setdefault('work_dir', self._work_dir)
             strategy.setdefault('experiment_name', experiment_name)
             strategy.setdefault('auto_scale_lr', self._auto_scale_lr)
@@ -1140,13 +1152,8 @@ class FlexibleRunner:
             compile = copy.copy(self._compile)
             compile.setdefault('target', 'train_step')
 
-        if self.train_dataloader.batch_size is not None:
-            micro_batch_size = self.train_dataloader.batch_size
-        else:
-            micro_batch_size = self.train_dataloader.batch_sampler.batch_size
         dispatch_kwargs = dict(
-            train_micro_batch_size_per_gpu=micro_batch_size,
-            num_batches_per_epoch=len(self.train_dataloader),
+            epoch_length=len(self.train_dataloader),
             max_epochs=self.max_epochs,
             max_iters=self.max_iters,
         )
@@ -1620,3 +1627,16 @@ class FlexibleRunner:
 
         if self.cfg._cfg_dict:
             self.logger.info(f'Config:\n{self.cfg.pretty_text}')
+
+
+def _get_batch_size(dataloader):
+    if isinstance(dataloader, dict):
+        if 'batch_size' in dataloader:
+            return dataloader['batch_size']
+        else:
+            return dataloader['batch_sampler']['batch_size']
+    elif isinstance(dataloader, DataLoader):
+        return dataloader.batch_sampler.batch_size
+    else:
+        raise ValueError('dataloader should be a dict or a Dataloader '
+                         f'instance, but got {type(dataloader)}')

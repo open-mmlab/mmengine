@@ -65,8 +65,10 @@ class DeepSpeedStrategy(BaseStrategy):
         activation_checkpointing: Optional[dict] = None,
         aio: Optional[dict] = None,
         # disable the log printed by deepseed
-        steps_per_print: int = 10000000000000,
         # the following args are for BaseStrategy
+        train_micro_batch_size_per_gpu: Optional[int] = None,
+        gradient_accumulation_steps: int = 1,
+        steps_per_print: int = 10000000000000,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -86,8 +88,19 @@ class DeepSpeedStrategy(BaseStrategy):
         if aio is not None:
             self.config['aio'] = aio
 
-        self.config['steps_per_print'] = steps_per_print
+        if ('train_micro_batch_size_per_gpu' not in self.config
+                and 'train_batch_size' not in self.config):
+            assert train_micro_batch_size_per_gpu is not None
+            self.config['train_micro_batch_size_per_gpu'] = \
+                train_micro_batch_size_per_gpu
 
+        if train_micro_batch_size_per_gpu is not None:
+            self.config['train_micro_batch_size_per_gpu'] = \
+                train_micro_batch_size_per_gpu
+
+        self.config['gradient_accumulation_steps'] = \
+            gradient_accumulation_steps
+        self.config['steps_per_print'] = steps_per_print
         self._inputs_to_half = inputs_to_half
 
     def _parse_config(self, config):
@@ -175,9 +188,6 @@ class DeepSpeedStrategy(BaseStrategy):
         return self._return_prepared()
 
     def _wrap_model(self, model: nn.Module) -> nn.Module:
-        self.config['train_micro_batch_size_per_gpu'] = \
-            self.dispatch_kwargs.get('train_micro_batch_size_per_gpu', 1)
-
         if hasattr(self, 'optim_wrapper'):
             engine, self.optim_wrapper.optimizer, *_ = deepspeed.initialize(
                 model=model,

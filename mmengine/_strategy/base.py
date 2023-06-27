@@ -635,9 +635,9 @@ class BaseStrategy(metaclass=ABCMeta):
         """
         if default_args is None:
             default_args = {}
-            if 'num_batches_per_epoch' in self.dispatch_kwargs:
+            if 'epoch_length' in self.dispatch_kwargs:
                 default_args['epoch_length'] = self.dispatch_kwargs[
-                    'num_batches_per_epoch']
+                    'epoch_length']
             if 'max_epochs' in self.dispatch_kwargs:
                 default_args['max_epochs'] = self.dispatch_kwargs['max_epochs']
             if 'max_iters' in self.dispatch_kwargs:
