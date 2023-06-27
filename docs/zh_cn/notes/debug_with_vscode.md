@@ -6,7 +6,7 @@
 
 本文将基于 MMEngine 中的 [example](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training.py) 脚本来介绍如何使用 VS Code 调试多卡程序。
 
-## 安装 MMEngine
+### 安装 MMEngine
 
 因为需要使用 MMEngine 中的 example 脚本，为了方便，可以源码安装 MMEngine。
 
@@ -17,7 +17,7 @@ cd mmengine
 pip install -e . -v
 ```
 
-## 运行多卡程序
+### 运行多卡程序
 
 ```bash
 torchrun --nproc_per_node=2 examples/distributed_training.py --launcher pytorch
@@ -27,7 +27,7 @@ torchrun --nproc_per_node=2 examples/distributed_training.py --launcher pytorch
 
 ![image](https://github.com/open-mmlab/mmengine/assets/58739961/90b77e1c-06a8-47d6-9e3e-6edd685d4cf2)
 
-## 调试多卡程序
+### 调试多卡程序
 
 使用 VS Code 调试需先配置 `~/.vscode/launch.json`。
 
@@ -69,4 +69,4 @@ torchrun --nproc_per_node=2 examples/distributed_training.py --launcher pytorch
 
 点击 F11 可跳入 `runner.train()` 查看它的实现。
 
-![cn](https://github.com/open-mmlab/mmengine/assets/58739961/398537c7-8f16-45b1-beab-612595f1e17a)
+![gif](https://github.com/open-mmlab/mmengine/assets/58739961/398537c7-8f16-45b1-beab-612595f1e17a)
