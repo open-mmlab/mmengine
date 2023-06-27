@@ -171,12 +171,12 @@ class DeepSpeedStrategy(BaseStrategy):
             self.param_schedulers = self.build_param_scheduler(
                 param_scheduler, self.optim_wrapper)
             return_items.append(self.param_schedulers)
-
+        self._prepared = True
         return self._return_prepared()
 
     def _wrap_model(self, model: nn.Module) -> nn.Module:
-        self.config['train_micro_batch_size_per_gpu'] = self.dispatch_kwargs[
-            'train_micro_batch_size_per_gpu']
+        self.config['train_micro_batch_size_per_gpu'] = \
+            self.dispatch_kwargs.get('train_micro_batch_size_per_gpu', 1)
 
         if hasattr(self, 'optim_wrapper'):
             engine, self.optim_wrapper.optimizer, *_ = deepspeed.initialize(
