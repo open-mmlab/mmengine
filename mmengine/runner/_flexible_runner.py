@@ -1633,8 +1633,12 @@ def _get_batch_size(dataloader):
     if isinstance(dataloader, dict):
         if 'batch_size' in dataloader:
             return dataloader['batch_size']
-        else:
+        elif ('batch_sampler' in dataloader
+              and 'batch_size' in dataloader['batch_sampler']):
             return dataloader['batch_sampler']['batch_size']
+        else:
+            raise ValueError('Please set batch_size in `Dataloader` or '
+                             '`batch_sampler`')
     elif isinstance(dataloader, DataLoader):
         return dataloader.batch_sampler.batch_size
     else:

@@ -90,7 +90,9 @@ class DeepSpeedStrategy(BaseStrategy):
 
         if ('train_micro_batch_size_per_gpu' not in self.config
                 and 'train_batch_size' not in self.config):
-            assert train_micro_batch_size_per_gpu is not None
+            assert train_micro_batch_size_per_gpu is not None, (
+                'train_micro_batch_size_per_gpu or train_batch_size should be '
+                'set!')
             self.config['train_micro_batch_size_per_gpu'] = \
                 train_micro_batch_size_per_gpu
 
