@@ -965,7 +965,7 @@ class BaseStrategy(metaclass=ABCMeta):
 
         return system_env, runtime_env
 
-    def _return_prepared(self):
+    def _prepared_components(self):
         return_items = [self.model]
         if hasattr(self, 'optim_wrapper'):
             return_items.append(self.optim_wrapper)

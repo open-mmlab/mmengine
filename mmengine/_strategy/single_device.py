@@ -50,27 +50,23 @@ class SingleDeviceStrategy(BaseStrategy):
                 need to provide ``max_iters`` in ``dispatch_kwargs``.
         """
         if self._prepared:
-            return self._return_prepared()
+            return self._prepared_components()
         if dispatch_kwargs is not None:
             self.dispatch_kwargs.update(dispatch_kwargs)
 
-        return_items = []
         model = self.build_model(model)
         model = self._init_model_weights(model)
         model = self._wrap_model(model)
         model = self.compile_model(model, compile=compile)
-        return_items.append(model)
 
         self.model = model
 
         if optim_wrapper is not None:
             self.optim_wrapper = self.build_optim_wrapper(optim_wrapper, model)
-            return_items.append(self.optim_wrapper)
 
         if param_scheduler is not None:
             self.param_schedulers = self.build_param_scheduler(
                 param_scheduler, self.optim_wrapper)
-            return_items.append(self.param_schedulers)
 
         if optim_wrapper is not None:
             self._scale_lr()
@@ -87,7 +83,7 @@ class SingleDeviceStrategy(BaseStrategy):
                 self.optim_wrapper.initialize_count_status(  # type: ignore
                     self.model, 0, self.dispatch_kwargs['max_iters'])
         self._prepared = True
-        return self._return_prepared()
+        return self._prepared_components()
 
     def _wrap_model(self, model: nn.Module) -> nn.Module:
         model = self.convert_model(model)

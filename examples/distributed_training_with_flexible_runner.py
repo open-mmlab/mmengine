@@ -43,7 +43,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Distributed Training')
     parser.add_argument('--local_rank', '--local-rank', type=int, default=0)
     parser.add_argument(
-        '--strategy', choices=['deepspeed', 'fsdp', 'ddp'], default='ddp')
+        '--strategy', choices=['deepspeed', 'fsdp', 'none'], default='none')
     args = parser.parse_args()
     return args
 

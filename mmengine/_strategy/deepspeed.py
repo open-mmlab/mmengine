@@ -64,11 +64,11 @@ class DeepSpeedStrategy(BaseStrategy):
         amp: Optional[dict] = None,
         activation_checkpointing: Optional[dict] = None,
         aio: Optional[dict] = None,
-        # disable the log printed by deepseed
-        # the following args are for BaseStrategy
         train_micro_batch_size_per_gpu: Optional[int] = None,
         gradient_accumulation_steps: int = 1,
+        # disable the log printed by deepseed
         steps_per_print: int = 10000000000000,
+        # the following args are for BaseStrategy
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -159,11 +159,9 @@ class DeepSpeedStrategy(BaseStrategy):
                 methods of Strategy. Defaults to None.
         """
         if self._prepared:
-            return self._return_prepared()
+            return self._prepared_components()
         assert dispatch_kwargs is not None
         self.dispatch_kwargs.update(dispatch_kwargs)
-
-        return_items = []
 
         model = self.build_model(model)
         model = self._init_model_weights(model)
@@ -174,18 +172,14 @@ class DeepSpeedStrategy(BaseStrategy):
 
             self.optim_wrapper.model = self.model  # type: ignore
 
-            return_items.append(self.model)
-            return_items.append(self.optim_wrapper)
         else:
             self.model = self._wrap_model(model)
-            return_items.append(self.model)
 
         if param_scheduler is not None:
             self.param_schedulers = self.build_param_scheduler(
                 param_scheduler, self.optim_wrapper)
-            return_items.append(self.param_schedulers)
         self._prepared = True
-        return self._return_prepared()
+        return self._prepared_components()
 
     def _wrap_model(self, model: nn.Module) -> nn.Module:
         if hasattr(self, 'optim_wrapper'):
