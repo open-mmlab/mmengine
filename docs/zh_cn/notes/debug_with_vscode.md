@@ -47,6 +47,7 @@ torchrun --nproc_per_node=2 examples/distributed_training.py --launcher pytorch
             // 设置 torchrun 命令的参数
             "args":[
                 "--nproc_per_node=2",
+                // examples/distributed_training.py 的绝对路径
                 "/home/username/codebases/mmengine/examples/distributed_training.py",
                 "--launcher=pytorch"
             ],
