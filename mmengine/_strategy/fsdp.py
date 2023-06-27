@@ -59,12 +59,12 @@ class FSDPStrategy(DDPStrategy):
                 >>>    type='MMFullyShardedDataParallel',
                 >>>    use_orig_params=True,
                 >>> )
-            
+
             See more configurable arguments in
             :class:`MMFullyShardedDataParallel`. Defaults to None
         skip_init_weights (bool, optional): Whether to skip initialization of
             weights. Defaults to False. This is useful when the parameters of
-            the large model are loaded from a checkpoint, since skiping the
+            the large model are loaded from a checkpoint, since skipping the
             initialization of weights can save a lot of time.
         state_dict_cfg (Union[str, dict, None], optional): Configuration for
             how to save and load the state dict of the model, optimizer, and
@@ -82,7 +82,7 @@ class FSDPStrategy(DDPStrategy):
                 >>>     state_dict_type='FULL_STATE_DICT',
                 >>>     state_dict_config=dict(type='FullStateDictConfig', offload_to_cpu=True),
                 >>>     optim_state_dict_config=dict(type='FullOptimStateDictConfig', offload_to_cpu=True),
-              
+
               See more configurable arguments for ``state_dict_cfg``,
               ``state_dict_config``, and ``optim_state_dict_config``in
               `FSDP official api documents`_
@@ -91,8 +91,8 @@ class FSDPStrategy(DDPStrategy):
             - work_dir (str): The working directory to save checkpoints.
               The logs will be saved in the subdirectory of `work_dir` named
               :attr:`timestamp`. Defaults to 'work_dirs'.
-            - experiment_name (str, optional): Name of current experiment. If not
-              specified, timestamp will be used as :attr:`experiment_name`.
+            - experiment_name (str, optional): Name of current experiment. If
+              not specified, timestamp will be used as :attr:`experiment_name`.
               Defaults to None.
             - env_kwargs (dict, optional): Environment config passed in
               :meth:`setup_env`. Defaults to None.
@@ -100,19 +100,16 @@ class FSDPStrategy(DDPStrategy):
               :meth:`build_logger`. Defaults to None.
 
     .. _FSDP official api documents: https://pytorch.org/docs/stable/fsdp.html#torch.distributed.fsdp.FullyShardedDataParallel.set_state_dict_type
-    """
+    """  # noqa: E501
+
     def __init__(self,
                  *,
                  model_wrapper: Optional[dict] = None,
                  skip_init_weights=False,
-                 state_dict_cfg: Union[str, dict, None] = 'local',
+                 state_dict_cfg: Union[str, dict] = 'local',
                  **kwargs):
         self._init_state_dict_cfg(state_dict_cfg)
         model_wrapper = model_wrapper or dict()
-        if model_wrapper.get('use_orig_params', True):
-            assert self.state_dict_type == StateDictType.FULL_STATE_DICT, (
-                'use_orig_params only works with `FULL_STATE_DICT`, please '
-                'check your state_dict_cfg')
         if not isinstance(skip_init_weights, bool):
             raise TypeError('skip_init_weights must be a boolean, but got '
                             f'{type(skip_init_weights)}')
@@ -196,7 +193,7 @@ class FSDPStrategy(DDPStrategy):
 
         If ``state_dict_type`` is `local`, each rank will save the sharded
         state dict to a directory, which means the saved structure will look
-        like this: 
+        like this:
 
         .. code-block:: bash
 
@@ -271,7 +268,7 @@ class FSDPStrategy(DDPStrategy):
 
     def model_state_dict(self) -> dict:
         """Get model state dict based on the ``state_dict_type``.
-        
+
         If ``state_dict_type`` is `full`, the model state dict will be the
         same as the one of original unsharded model.
 
@@ -305,7 +302,7 @@ class FSDPStrategy(DDPStrategy):
             The optimizer state dict is not the same as the one of original
             optimizer even if in ``full`` mode, although they can be loaded
             correctly.
-        
+
         See more details in the `official api documents`_
 
         .. _official api documents: https://pytorch.org/docs/stable/fsdp.html#torch.distributed.fsdp.FullyShardedDataParallel.optim_state_dict
@@ -336,7 +333,6 @@ class FSDPStrategy(DDPStrategy):
             callback (callable, callable): Callback function to modify the
                 checkpoint after loading the checkpoint.
                 Defaults to None.
-
         """
         if self._is_full_state_dict():
             return super(DDPStrategy, self).load_checkpoint(filename, **kwargs)
@@ -345,27 +341,32 @@ class FSDPStrategy(DDPStrategy):
             filename = osp.join(filename, f'rank{rank}.pth')
             return super(DDPStrategy, self).load_checkpoint(filename, **kwargs)
 
-    def load_model_state_dict(self,
-                              state_dict: dict,
-                              *,
-                              strict: bool = False) -> None:  # type: ignore
+    def load_model_state_dict(
+        self,
+        state_dict: dict,
+        *,
+        strict: bool = False,
+        revise_keys: list = [(r'^module.', '')],
+    ) -> None:  # type: ignore
         """Load model state from dict.
-        
+
+        Warning:
+            `revise_keys` is not supported yet.
+
         Args:
             state_dict (dict): Model state dict returned by
                 :meth:`FSDPStrategy.model_state_dict`. If ``state_dict_type``
                 is ``full``. ``state_dict`` could be the result of
                 ``model.state_dict()``
-            
-        Keyword Args:
-            strict (bool): strict (bool, optional): whether to strictly. Defaults to False
+            strict (bool): Whether to load model state dict strictly.
+                Defaults to False.
         """
         # We should load state dict by `FSDP.load_state_dict`
         self.model.load_state_dict(state_dict, strict=strict)
 
     def load_optim_state_dict(self, state_dict: dict) -> None:
         """Load optimizer state from dict.
-        
+
         Args:
             state_dict (dict): The optimizer state dict. If ``state_dict_type``
                 is ``full``. ``state_dict`` could be the result of
@@ -375,10 +376,9 @@ class FSDPStrategy(DDPStrategy):
             state_dict, self.model, self.optim_wrapper.optimizer)
         self.optim_wrapper.load_state_dict(optim_state_dict)
 
-    def _init_state_dict_cfg(self, state_dict_cfg: dict) -> None:
+    def _init_state_dict_cfg(self, state_dict_cfg: Union[str, dict]) -> None:
         """Make ``state_dict_type`` and ``state_dict_config`` can be configured
-        with string.
-        """
+        with string."""
         if isinstance(state_dict_cfg, str):
             if state_dict_cfg == 'full':
                 self.state_dict_type = StateDictType.FULL_STATE_DICT
@@ -444,9 +444,9 @@ class FSDPStrategy(DDPStrategy):
         optim_wrapper: Union[Optimizer, OptimWrapper, dict],
         model: Optional[nn.Module] = None,
     ) -> BaseOptimWrapper:
-        """Support sharding the optimizer state dict given a built
-        optimizer or optim_wrapper.
-        
+        """Support sharding the optimizer state dict given a built optimizer or
+        optim_wrapper.
+
         See specific usage in :meth:`BaseStrategy.build_optim_wrapper`.
         """
         if isinstance(optim_wrapper, Optimizer):
