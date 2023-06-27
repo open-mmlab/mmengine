@@ -166,6 +166,7 @@ class FSDPStrategy(DDPStrategy):
             # Accelerate initialization by skipping init weights
             with MetaTensorContext():
                 model = super().build_model(model)
+            model.to_empty()
         else:
             model = super().build_model(model)
 

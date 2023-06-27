@@ -1,9 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import warnings
-from itertools import chain
-
 import torch
-import torch.nn as nn
 from torch._ops import OpOverload
 from torch.utils._python_dispatch import TorchDispatchMode
 
@@ -70,39 +66,3 @@ class MetaTensorContext(TorchDispatchMode):
             return func(*args, **kwargs)
         else:
             return func(*args, **kwargs)
-
-
-def _load_state_dict_meta(model, state_dict):
-    unexpected_keys = set(state_dict.keys())
-    missing_keys = set()
-
-    def load(module: nn.Module, prefix: str = ''):
-        if type(module).load_state_dict != nn.Module.state_dict:
-            warnings.warn(f'{type(module)}.load_state_dict will not take '
-                          'effect since skip_init_weights=True')
-        for name, tensor in chain(
-                module.named_parameters(recurse=False),
-                module.named_buffers(recurse=False)):
-            tensor_name = f'{prefix}.{name}' if prefix else name
-            if tensor_name not in state_dict:
-                missing_keys.add(tensor_name)
-            elif tensor.device.type != 'meta':
-                # If MetaTensorContext does not initiate tensor with
-                # meta device, just load the tensor inplace
-                tensor.copy_(state_dict[tensor_name])
-            else:
-                module._parameters[tensor_name] = state_dict[tensor_name]
-                unexpected_keys.remove(tensor_name)
-        for name, module in module.named_children():
-            load(module, f'{prefix}.{name}.')
-
-    # TODO: Use torchdistX to accelerate loading checkpoint
-    load(module=model)
-    if unexpected_keys:
-        warnings.warn(f'Unexpected key(s) {", ".join(unexpected_keys)} '
-                      f'will not be loaded into model')
-    if missing_keys:
-        raise KeyError(
-            f'Missing key(s) {", ".join(missing_keys)}. Each parameter'
-            'and buffer must be loaded from checkpoint when '
-            'skip_init_weights=True')
