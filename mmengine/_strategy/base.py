@@ -53,6 +53,10 @@ class BaseStrategy(metaclass=ABCMeta):
             :meth:`setup_env`. Defaults to None.
         log_kwargs (dict, optional): Logger config passed in
             :meth:`build_logger`. Defaults to None.
+        auto_scale_lr (dict, Optional): Config to scale the learning rate
+            automatically. It includes ``base_batch_size`` and ``enable``.
+            ``base_batch_size`` is the batch size that the optimizer lr is
+            based on. ``enable`` is the switch to turn on and off the feature.
     """
     model: nn.Module
     optim_wrapper: BaseOptimWrapper
@@ -65,6 +69,7 @@ class BaseStrategy(metaclass=ABCMeta):
         experiment_name: Optional[str] = None,
         env_kwargs: Optional[dict] = None,
         log_kwargs: Optional[dict] = None,
+        auto_scale_lr: Optional[dict] = None,
     ):
         self._work_dir = osp.abspath(work_dir)
         mmengine.mkdir_or_exist(self._work_dir)
@@ -82,6 +87,8 @@ class BaseStrategy(metaclass=ABCMeta):
 
         log_kwargs = log_kwargs or {}
         self.logger = self.build_logger(**log_kwargs)
+
+        self._auto_scale_lr = auto_scale_lr
 
         self.dispatch_kwargs: dict = {}
 
@@ -663,6 +670,58 @@ class BaseStrategy(metaclass=ABCMeta):
 
             return param_schedulers
 
+    def _scale_lr(self) -> None:
+        """Automatically scaling learning rate in training according to the
+        ratio of ``base_batch_size`` in ``autoscalelr_cfg`` and real batch
+        size.
+
+        It scales the learning rate linearly according to the
+        `paper <https://arxiv.org/abs/1706.02677>`_.
+
+        Note:
+            ``scale_lr`` must be called after building optimizer wrappers
+            and before building parameter schedulers.
+        """
+        if (self._auto_scale_lr is None
+                or not self._auto_scale_lr.get('enable', False)):
+            return None
+
+        assert 'base_batch_size' in self._auto_scale_lr, \
+            'Lack of `base_batch_size` in `auto_scale_lr`.'
+
+        real_bs = self.world_size * self.dispatch_kwargs[
+            'train_micro_batch_size_per_gpu']
+        base_bs = self._auto_scale_lr['base_batch_size']
+        ratio = float(real_bs) / float(base_bs)
+        self.logger.info(f'LR is set based on batch size of {base_bs} '
+                         f'and the current batch size is {real_bs}. '
+                         f'Scaling the original LR by {ratio}.')
+
+        def _is_built(schedulers):
+            if isinstance(schedulers, dict):
+                return False if 'type' in schedulers else any(
+                    _is_built(s) for s in schedulers.values())
+            if isinstance(schedulers, list):
+                return any(_is_built(s) for s in schedulers)
+            return isinstance(schedulers, _ParamScheduler)
+
+        if _is_built(self.param_schedulers):
+            raise RuntimeError('`scale_lr` should be called before building '
+                               'ParamScheduler because ParamScheduler will '
+                               'store initial lr from optimizer wrappers')
+
+        assert isinstance(self.optim_wrapper, BaseOptimWrapper), \
+            '`scale_lr should be called after building OptimWrapper'
+
+        if isinstance(self.optim_wrapper, OptimWrapperDict):
+            wrappers = list(self.optim_wrapper.values())
+        else:
+            wrappers = [self.optim_wrapper]  # type: ignore
+
+        for wrapper in wrappers:
+            for group in wrapper.optimizer.param_groups:
+                group['lr'] = group['lr'] * ratio
+
     def build_logger(
         self,
         log_level: Union[int, str] = 'INFO',
@@ -696,17 +755,16 @@ class BaseStrategy(metaclass=ABCMeta):
 
     def model_state_dict(self) -> dict:
         """Get model state dict."""
-        from mmengine.runner import get_state_dict, weights_to_cpu
-        return weights_to_cpu(get_state_dict(self.model))
+        from mmengine.runner import weights_to_cpu
+        return weights_to_cpu(self.model.state_dict())
 
     def optim_state_dict(self) -> dict:
         """Get optimizer state dict."""
         if isinstance(self.optim_wrapper, BaseOptimWrapper):
             return self.optim_wrapper.state_dict()
         else:
-            raise TypeError('self.optim_wrapper should be an `OptimWrapper` '
-                            'or `OptimWrapperDict` instance, but got '
-                            f'{self.optim_wrapper}')
+            raise TypeError('self.optim_wrapper should be a `BaseOptimWrapper`'
+                            f' instance, but got {self.optim_wrapper}')
 
     def scheduler_state_dict(self) -> Union[dict, list]:
         """Get parameter scheduler state dict."""
