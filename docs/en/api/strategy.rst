@@ -15,3 +15,4 @@ mmengine._strategy
    SingleDeviceStrategy
    DDPStrategy
    DeepSpeedStrategy
+   FSDPStrategy
