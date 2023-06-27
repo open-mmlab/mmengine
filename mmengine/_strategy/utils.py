@@ -1,11 +1,11 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
+from itertools import chain
 
 import torch
 import torch.nn as nn
 from torch._ops import OpOverload
 from torch.utils._python_dispatch import TorchDispatchMode
-from itertools import chain
 
 aten = torch._ops.ops.aten
 tensor_like_constructor = (
@@ -52,15 +52,16 @@ def _is_tensor_constructor(func: OpOverload):
     if any(contains_tensor_types(arg.type) for arg in schema.arguments):
         return False
     # TODO: no real reason to restrict multiple outputs
-    return (
-        len(schema.returns) == 1 and schema.returns[0].type is torch._C.TensorType.get()
-    )
+    return (len(schema.returns) == 1
+            and schema.returns[0].type is torch._C.TensorType.get())
 
 
 class MetaTensorContext(TorchDispatchMode):
+
     def __torch_dispatch__(self, func, types, args=(), kwargs=None):
         if _is_tensor_constructor(func):
-            device_idx = [arg.name for arg in func._schema.arguments].index('device')
+            device_idx = [arg.name
+                          for arg in func._schema.arguments].index('device')
             if len(args) > device_idx:
                 args = list(args)
                 args[device_idx] = 'meta'
@@ -77,13 +78,11 @@ def _load_state_dict_meta(model, state_dict):
 
     def load(module: nn.Module, prefix: str = ''):
         if type(module).load_state_dict != nn.Module.state_dict:
-            warnings.warn(
-                f'{type(module)}.load_state_dict will not take '
-                'effect since skip_init_weights=True')
+            warnings.warn(f'{type(module)}.load_state_dict will not take '
+                          'effect since skip_init_weights=True')
         for name, tensor in chain(
-            module.named_parameters(recurse=False),
-            module.named_buffers(recurse=False)
-        ):
+                module.named_parameters(recurse=False),
+                module.named_buffers(recurse=False)):
             tensor_name = f'{prefix}.{name}' if prefix else name
             if tensor_name not in state_dict:
                 missing_keys.add(tensor_name)
@@ -100,9 +99,8 @@ def _load_state_dict_meta(model, state_dict):
     # TODO: Use torchdistX to accelerate loading checkpoint
     load(module=model)
     if unexpected_keys:
-        warnings.warn(
-            f'Unexpected key(s) {", ".join(unexpected_keys)} '
-            f'will not be loaded into model')
+        warnings.warn(f'Unexpected key(s) {", ".join(unexpected_keys)} '
+                      f'will not be loaded into model')
     if missing_keys:
         raise KeyError(
             f'Missing key(s) {", ".join(missing_keys)}. Each parameter'
