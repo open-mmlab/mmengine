@@ -6,11 +6,15 @@ from unittest import TestCase, skipIf
 
 import torch
 import torch.nn as nn
-from torch.distributed.fsdp import (FullStateDictConfig,
-                                    FullyShardedDataParallel,
-                                    LocalStateDictConfig, StateDictType)
-from torch.distributed.fsdp.fully_sharded_data_parallel import (
-    FullOptimStateDictConfig, LocalOptimStateDictConfig)
+
+try:
+    from torch.distributed.fsdp import (FullStateDictConfig,
+                                        FullyShardedDataParallel,
+                                        LocalStateDictConfig, StateDictType)
+    from torch.distributed.fsdp.fully_sharded_data_parallel import (
+        FullOptimStateDictConfig, LocalOptimStateDictConfig)
+except:  # noqa: E722
+    pass
 from torch.multiprocessing.spawn import start_processes
 from torch.optim import SGD
 
