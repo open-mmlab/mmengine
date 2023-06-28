@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import inspect
+import os
 import os.path as osp
 import time
 from collections import OrderedDict
@@ -19,7 +20,7 @@ from torch.optim.lr_scheduler import LRScheduler
 
 import mmengine
 from mmengine.config import Config, ConfigDict
-from mmengine.dist import get_local_rank, get_rank, is_main_process
+from mmengine.dist import get_rank, is_main_process
 from mmengine.model import is_model_wrapper
 from mmengine.optim import (AmpOptimWrapper, BaseOptimWrapper, OptimWrapper,
                             OptimWrapperDict, _ParamScheduler,
@@ -132,7 +133,7 @@ class FSDPStrategy(DDPStrategy):
 
         self.model_wrapper.setdefault('type', 'MMFullyShardedDataParallel')
         self.model_wrapper.setdefault('module', model)
-        self.model_wrapper.setdefault('device_id', get_local_rank())
+        self.model_wrapper.setdefault('device_id', os.getenv('LOCAL_RANK'))
         model = MODEL_WRAPPERS.build(self.model_wrapper)
         model.set_state_dict_type(model, self.state_dict_type,
                                   self.state_dict_config,
