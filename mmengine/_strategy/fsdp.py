@@ -121,8 +121,6 @@ class FSDPStrategy(DDPStrategy):
         if is_model_wrapper(model):
             return
 
-        assert model is not None, ('Model should have been built before wrap')
-
         if self.model_wrapper is None:
             self.model_wrapper = dict(type='MMFullyShardedDataParallel')
 
