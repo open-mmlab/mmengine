@@ -7,7 +7,6 @@ import torch.nn as nn
 
 from mmengine.device import (is_cuda_available, is_mlu_available,
                              is_npu_available)
-from mmengine.logging import print_log
 from mmengine.registry import OPTIM_WRAPPERS
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
@@ -50,7 +49,7 @@ class AmpOptimWrapper(OptimWrapper):
             Defaults to None.
             `New in version 0.6.1.`
         use_fsdp (bool): Using ``ShardedGradScaler`` when it is True. It should
-            be enabled when using ``FullyShardedDataParallel``
+            be enabled when using ``FullyShardedDataParallel``.
             Defaults to False.
             `New in version 0.8.0.`
         **kwargs: Keyword arguments passed to OptimWrapper.
@@ -80,16 +79,16 @@ class AmpOptimWrapper(OptimWrapper):
         super().__init__(**kwargs)
         self._scale_update_param = None
 
-        if use_fsdp and digit_version(
-                torch.__version__) >= digit_version('2.0.0'):
-            from torch.distributed.fsdp.sharded_grad_scaler import \
-                ShardedGradScaler
-            scaler_type = ShardedGradScaler
+        if use_fsdp:
+            if digit_version(torch.__version__) >= digit_version('2.0.0'):
+                from torch.distributed.fsdp.sharded_grad_scaler import \
+                    ShardedGradScaler
+                scaler_type = ShardedGradScaler
+            else:
+                raise RuntimeError(
+                    'PyTorch>=2.0.0 is required when sets `use_fsdp=True`')
         else:
             scaler_type = GradScaler
-            if use_fsdp:
-                print_log('Please use PyTorch > 2.0.0 when enable '
-                          '`use_fsdp=True`')
 
         if loss_scale == 'dynamic':
             #  If loss_scale is a string, it must be 'dynamic', then dynamic

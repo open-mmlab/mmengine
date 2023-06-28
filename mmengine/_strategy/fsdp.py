@@ -10,11 +10,10 @@ from typing import Callable, Dict, List, Optional, Sequence, Union
 import torch.nn as nn
 from torch.distributed.fsdp import (FullStateDictConfig,
                                     FullyShardedDataParallel,
-                                    LocalStateDictConfig,
-                                    ShardedStateDictConfig, StateDictType)
+                                    LocalStateDictConfig, StateDictType)
 from torch.distributed.fsdp.fully_sharded_data_parallel import (
     FullOptimStateDictConfig, LocalOptimStateDictConfig, OptimStateDictConfig,
-    ShardedOptimStateDictConfig, StateDictConfig)
+    StateDictConfig)
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 
@@ -37,10 +36,6 @@ FSDP_CONFIGS.register_module(module=FullOptimStateDictConfig)
 FSDP_CONFIGS.register_module(module=LocalOptimStateDictConfig)
 FSDP_CONFIGS.register_module(module=FullStateDictConfig)
 FSDP_CONFIGS.register_module(module=LocalStateDictConfig)
-# Currently, SharededStateDictConfig and ShardedOptimStateDictConfig
-# should not be used in FSDPStrategy
-FSDP_CONFIGS.register_module(module=ShardedStateDictConfig)
-FSDP_CONFIGS.register_module(module=ShardedOptimStateDictConfig)
 
 
 @STRATEGIES.register_module()
@@ -63,7 +58,7 @@ class FSDPStrategy(DDPStrategy):
             weights. Defaults to False. This is useful when the parameters of
             the large model are loaded from a checkpoint, since skipping the
             initialization of weights can save a lot of time.
-        state_dict_cfg (Union[str, dict, None], optional): Configuration for
+        state_dict_cfg (str or dict): Configuration for
             how to save and load the state dict of the model, optimizer, and
             scheduler.
 
