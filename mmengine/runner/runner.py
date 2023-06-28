@@ -1396,7 +1396,7 @@ class Runner:
             else:
                 raise TypeError(
                     'type of worker_init_fn should be string or callable '
-                    f'object, but got {type(worker_init_fn)}')
+                    f'object, but got {type(worker_init_fn_type)}')
             assert callable(worker_init_fn)
             init_fn = partial(worker_init_fn,
                               **worker_init_fn_cfg)  # type: ignore
