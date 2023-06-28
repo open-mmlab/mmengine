@@ -38,7 +38,8 @@ def linear_wrap_policy(
 
 
 @skipIf(not torch.cuda.is_available
-        or digit_version(torch.__version__) < digit_version('2.0.0'),
+        or digit_version(torch.__version__) < digit_version('2.0.0')
+        or not torch.cuda.is_available(),
         'Only test FSDP with CUDA and PyTorch >= 2.0.0')
 class TestStrategy(TestCase):
 
