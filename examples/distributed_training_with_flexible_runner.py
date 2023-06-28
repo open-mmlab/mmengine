@@ -42,8 +42,8 @@ class Accuracy(BaseMetric):
 def parse_args():
     parser = argparse.ArgumentParser(description='Distributed Training')
     parser.add_argument('--local_rank', '--local-rank', type=int, default=0)
-    parser.add_argument(
-        '--strategy', choices=['deepspeed', 'fsdp', 'none'], default='none')
+    parser.add_argument('--use-fsdp', action='store_true')
+    parser.add_argument('--use-deepspeed', action='store_true')
     args = parser.parse_args()
     return args
 
@@ -79,7 +79,7 @@ def main():
         sampler=dict(type='DefaultSampler', shuffle=False),
         collate_fn=dict(type='default_collate'))
 
-    if args.strategy == 'deepspeed':
+    if args.use_deepspeed:
         strategy = dict(
             type='DeepSpeedStrategy',
             fp16=dict(
@@ -105,7 +105,7 @@ def main():
         optim_wrapper = dict(
             type='DeepSpeedOptimWrapper',
             optimizer=dict(type='AdamW', lr=1e-3))
-    elif args.strategy == 'fsdp':
+    elif args.use_fsdp:
         from functools import partial
 
         from torch.distributed.fsdp.wrap import size_based_auto_wrap_policy
@@ -136,7 +136,8 @@ def main():
 
 
 if __name__ == '__main__':
-    # torchrun --nproc-per-node 2 distributed_training_with_flexible_runner.py --strategy fsdp  # noqa: 501
-    # torchrun --nproc-per-node 2 distributed_training_with_flexible_runner.py --strategy deepspeed  # noqa: 501
+    # torchrun --nproc-per-node 2 distributed_training_with_flexible_runner.py --use-fsdp  # noqa: 501
+    # torchrun --nproc-per-node 2 distributed_training_with_flexible_runner.py --use-deepspeed  # noqa: 501
     # torchrun --nproc-per-node 2 distributed_training_with_flexible_runner.py
+    # python distributed_training_with_flexible_runner.py
     main()
