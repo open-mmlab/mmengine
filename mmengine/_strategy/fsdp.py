@@ -42,10 +42,6 @@ FSDP_CONFIGS.register_module(module=ShardedStateDictConfig)
 FSDP_CONFIGS.register_module(module=ShardedOptimStateDictConfig)
 
 
-class ReconstructOptimizerException(Exception):
-    ...
-
-
 @STRATEGIES.register_module()
 class FSDPStrategy(DDPStrategy):
     """Support training model with FullyShardedDataParallel (FSDP).

@@ -13,12 +13,13 @@ try:
                                         LocalStateDictConfig, StateDictType)
     from torch.distributed.fsdp.fully_sharded_data_parallel import (
         FullOptimStateDictConfig, LocalOptimStateDictConfig)
+
+    from mmengine._strategy import FSDPStrategy
 except:  # noqa: E722
     pass
 from torch.multiprocessing.spawn import start_processes
 from torch.optim import SGD
 
-from mmengine._strategy import FSDPStrategy
 from mmengine.dist import (all_gather_object, broadcast_object_list,
                            is_main_process)
 from mmengine.optim import LinearLR, OptimWrapper
