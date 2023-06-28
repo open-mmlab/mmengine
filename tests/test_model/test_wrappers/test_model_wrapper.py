@@ -261,7 +261,7 @@ class TestMMFullyShardedDataParallel(MultiProcessTestCase):
         model.conv1.requires_grad_(False)
         ori_weight = model.conv1.weight.clone()
         fsdp_model = MMFullyShardedDataParallel(module=model.cuda())
-        optimizer = SGD(fsdp_model.parameters(), lr=0)
+        optimizer = SGD(fsdp_model.parameters(), lr=0.1)
         optim_wrapper = OptimWrapper(optimizer, accumulative_counts=1)
         inputs = torch.randn(1, 3, 1, 1) * self.rank * 255
         data = dict(inputs=inputs, data_sample=MagicMock())

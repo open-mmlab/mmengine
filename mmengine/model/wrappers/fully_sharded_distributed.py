@@ -269,12 +269,6 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                                 f'list tuple or dict, but got {type(data)}')
         parsed_loss, log_vars = self.module.parse_losses(losses)
         optim_wrapper.update_params(parsed_loss)
-
-        # manually zero_grad fixed parameters,
-        # since they are not in any optimizer
-        # if optim_wrapper.should_update():
-        #     for m in self._fixed_modules:
-        #         m.zero_grad(set_to_none=True)
         return log_vars
 
     def val_step(self, data: dict) -> List[BaseDataElement]:
@@ -352,13 +346,6 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             return fixed_modules
 
         fixed_modules = find_fixed_modules_recursively(module)
-        # Set `requires_grad=True` to avoid FSDP AssertionError.
-        # See https://github.com/pytorch/pytorch/issues/75943
-        # We make sure these params are untrained by some tricky methods
-
-        for m in fixed_modules:
-            m.requires_grad_(True)
-
         return fixed_modules
 
     if digit_version(torch.__version__) <= digit_version('2.0.0'):
