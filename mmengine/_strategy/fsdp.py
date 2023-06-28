@@ -125,8 +125,9 @@ class FSDPStrategy(DDPStrategy):
             self.model_wrapper = dict(type='MMFullyShardedDataParallel')
 
         default_args = dict(
-            module=model, device_id=int(os.environ['LOCAL_RANK']))
-        default_args['type'] = 'MMFullyShardedDataParallel'
+            module=model,
+            device_id=int(os.environ['LOCAL_RANK']),
+            type='MMFullyShardedDataParallel')
         model = MODEL_WRAPPERS.build(
             self.model_wrapper, default_args=default_args)
         model.set_state_dict_type(model, self.state_dict_type,
@@ -164,7 +165,7 @@ class FSDPStrategy(DDPStrategy):
 
         # `id_to_name` will be used to convert the `optim_state_dict` of the
         # raw optimizer to the `optim_state_dict`
-        #  returned by `FSDP.optim_state_dict` in
+        # returned by `FSDP.optim_state_dict` in
         # `StateDictType.FULL_STATE_DICT` mode.
         self.id_to_name = dict()
         for name, param in model.named_parameters():
@@ -422,9 +423,6 @@ class FSDPStrategy(DDPStrategy):
                             'OptimStateDictConfig, but got '
                             f'{type(self.optim_state_dict_config)}')
 
-    def convert_model(self, model: nn.Module) -> nn.Module:
-        return model
-
     def build_optim_wrapper(
         self,
         optim_wrapper: Union[Optimizer, OptimWrapper, dict],
@@ -544,7 +542,7 @@ class FSDPStrategy(DDPStrategy):
         optim_wrapper: BaseOptimWrapper,
         default_args: dict,
     ) -> List[_ParamScheduler]:
-        """Override this method to Update the scheduler with the reconstructed
+        """Override this method to update the scheduler with the reconstructed
         sharded optimzer."""
         if not isinstance(scheduler, Sequence):
             schedulers = [scheduler]

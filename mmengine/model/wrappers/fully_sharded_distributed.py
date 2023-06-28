@@ -348,7 +348,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         fixed_modules = find_fixed_modules_recursively(module)
         return fixed_modules
 
-    if digit_version(torch.__version__) <= digit_version('2.0.0'):
+    if digit_version(torch.__version__) < digit_version('2.0.1'):
 
         @staticmethod
         def optim_state_dict(
