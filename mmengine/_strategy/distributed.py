@@ -97,7 +97,9 @@ class DDPStrategy(SingleDeviceStrategy):
                 type='MMDistributedDataParallel', broadcast_buffers=False)
 
         default_args = dict(
-            module=model, device_ids=[int(os.environ['LOCAL_RANK'])])
+            type='MMDistributedDataParallel',
+            module=model,
+            device_ids=[int(os.environ['LOCAL_RANK'])])
         model = MODEL_WRAPPERS.build(
             self.model_wrapper, default_args=default_args)
         return model

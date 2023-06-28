@@ -198,7 +198,7 @@ class SingleDeviceStrategy(BaseStrategy):
         if resume_optimizer:
             self.load_optim_state_dict(checkpoint.pop('optimizer'))
 
-        if resume_param_scheduler:
+        if resume_param_scheduler and hasattr(self, 'param_schedulers'):
             self.load_scheduler_state_dict(checkpoint.pop('param_schedulers'))
 
         # resume random seed
@@ -265,15 +265,7 @@ class SingleDeviceStrategy(BaseStrategy):
         if save_optimizer and hasattr(self, 'optim_wrapper'):
             state_dict['optimizer'] = self.optim_state_dict()
 
-        # save param scheduler state dict
-        if save_param_scheduler and not hasattr(self, 'param_schedulers'):
-            self.logger.warning(
-                '`save_param_scheduler` is True but strategy has no '
-                'param_schedulers attribute, so skip saving parameter '
-                'schedulers')
-            save_param_scheduler = False
-
-        if save_param_scheduler:
+        if save_param_scheduler and hasattr(self, 'param_schedulers'):
             state_dict['param_schedulers'] = self.scheduler_state_dict()
 
         # save extra checkpoint passed by users

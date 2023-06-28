@@ -126,7 +126,9 @@ class FSDPStrategy(DDPStrategy):
         if self.model_wrapper is None:
             self.model_wrapper = dict(type='MMFullyShardedDataParallel')
 
-        default_args = dict(module=model, device_ids=os.getenv('LOCAL_RANK'))
+        default_args = dict(
+            module=model, device_id=int(os.environ['LOCAL_RANK']))
+        default_args['type'] = 'MMFullyShardedDataParallel'
         model = MODEL_WRAPPERS.build(
             self.model_wrapper, default_args=default_args)
         model.set_state_dict_type(model, self.state_dict_type,
@@ -220,14 +222,7 @@ class FSDPStrategy(DDPStrategy):
             state_dict['optimizer'] = self.optim_state_dict()
 
         # save param scheduler state dict
-        if save_param_scheduler and not hasattr(self, 'param_schedulers'):
-            self.logger.warning(
-                '`save_param_scheduler` is True but strategy has no '
-                'param_schedulers attribute, so skip saving parameter '
-                'schedulers')
-            save_param_scheduler = False
-
-        if save_param_scheduler:
+        if save_param_scheduler and hasattr(self, 'param_schedulers'):
             state_dict['param_schedulers'] = self.scheduler_state_dict()
 
         # save extra checkpoint passed by users
