@@ -632,6 +632,18 @@ class FlexibleRunner:
 
             assert isinstance(strategy, dict)
 
+            # train_micro_batch_size_per_gpu is required by DeepSpeed
+            if isinstance(strategy['type'], str):
+                strategy_name = strategy['type']
+            else:
+                strategy_name = strategy['type'].__name__
+            if strategy_name == 'DeepSpeedStrategy':
+                if self._train_dataloader is None:
+                    strategy['train_micro_batch_size_per_gpu'] = 1
+                else:
+                    strategy['train_micro_batch_size_per_gpu'] = \
+                        _get_batch_size(self._train_dataloader)
+
             strategy.setdefault('work_dir', self._work_dir)
             strategy.setdefault('experiment_name', experiment_name)
             strategy.setdefault('auto_scale_lr', self._auto_scale_lr)
@@ -1140,18 +1152,13 @@ class FlexibleRunner:
             compile = copy.copy(self._compile)
             compile.setdefault('target', 'train_step')
 
-        if self.train_dataloader.batch_size is not None:
-            micro_batch_size = self.train_dataloader.batch_size
-        else:
-            micro_batch_size = self.train_dataloader.batch_sampler.batch_size
         dispatch_kwargs = dict(
-            train_micro_batch_size_per_gpu=micro_batch_size,
-            num_batches_per_epoch=len(self.train_dataloader),
+            epoch_length=len(self.train_dataloader),
             max_epochs=self.max_epochs,
             max_iters=self.max_iters,
         )
 
-        result = self.strategy.prepare(
+        self.strategy.prepare(
             self.model,
             optim_wrapper=self.optim_wrapper,
             param_scheduler=self.param_schedulers,
@@ -1159,10 +1166,10 @@ class FlexibleRunner:
             dispatch_kwargs=dispatch_kwargs,
         )
 
+        self.model = self.strategy.model
+        self.optim_wrapper = self.strategy.optim_wrapper  # type: ignore
         if self.param_schedulers is not None:
-            self.model, self.optim_wrapper, self.param_schedulers, *_ = result
-        else:
-            self.model, self.optim_wrapper, *_ = result
+            self.param_schedulers = self.strategy.param_schedulers
 
         self.load_or_resume()
 
@@ -1187,7 +1194,11 @@ class FlexibleRunner:
 
         self._val_loop = self.build_val_loop(self._val_loop)  # type: ignore
 
-        self.model = self.strategy.prepare(self.model)
+        dispatch_kwargs = dict(
+            init_weights_for_test_or_val=self.cfg.get(
+                'init_weights_for_test_or_val', True))
+        self.strategy.prepare(self.model, dispatch_kwargs=dispatch_kwargs)
+        self.model = self.strategy.model
 
         self.load_or_resume()
 
@@ -1210,8 +1221,11 @@ class FlexibleRunner:
                 '`test_evaluator` arguments when initializing runner.')
 
         self._test_loop = self.build_test_loop(self._test_loop)  # type: ignore
-
-        self.model = self.strategy.prepare(self.model)
+        dispatch_kwargs = dict(
+            init_weights_for_test_or_val=self.cfg.get(
+                'init_weights_for_test_or_val', True))
+        self.strategy.prepare(self.model, dispatch_kwargs=dispatch_kwargs)
+        self.model = self.strategy.model
 
         self.load_or_resume()
 
@@ -1613,3 +1627,20 @@ class FlexibleRunner:
 
         if self.cfg._cfg_dict:
             self.logger.info(f'Config:\n{self.cfg.pretty_text}')
+
+
+def _get_batch_size(dataloader):
+    if isinstance(dataloader, dict):
+        if 'batch_size' in dataloader:
+            return dataloader['batch_size']
+        elif ('batch_sampler' in dataloader
+              and 'batch_size' in dataloader['batch_sampler']):
+            return dataloader['batch_sampler']['batch_size']
+        else:
+            raise ValueError('Please set batch_size in `Dataloader` or '
+                             '`batch_sampler`')
+    elif isinstance(dataloader, DataLoader):
+        return dataloader.batch_sampler.batch_size
+    else:
+        raise ValueError('dataloader should be a dict or a Dataloader '
+                         f'instance, but got {type(dataloader)}')

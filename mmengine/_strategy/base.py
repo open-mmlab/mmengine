@@ -91,6 +91,7 @@ class BaseStrategy(metaclass=ABCMeta):
         self._auto_scale_lr = auto_scale_lr
 
         self.dispatch_kwargs: dict = {}
+        self._prepared = False
 
     @property
     def work_dir(self):
@@ -342,7 +343,8 @@ class BaseStrategy(metaclass=ABCMeta):
     def _init_model_weights(self, model: nn.Module) -> nn.Module:
         """Initialize the model weights if the model has
         :meth:`init_weights`"""
-        if hasattr(model, 'init_weights'):
+        if (hasattr(model, 'init_weights') and self.dispatch_kwargs.get(
+                'init_weights_for_test_or_val', True)):
             model.init_weights()
             # sync params and buffers
             for _, params in model.state_dict().items():
@@ -633,9 +635,9 @@ class BaseStrategy(metaclass=ABCMeta):
         """
         if default_args is None:
             default_args = {}
-            if 'num_batches_per_epoch' in self.dispatch_kwargs:
+            if 'epoch_length' in self.dispatch_kwargs:
                 default_args['epoch_length'] = self.dispatch_kwargs[
-                    'num_batches_per_epoch']
+                    'epoch_length']
             if 'max_epochs' in self.dispatch_kwargs:
                 default_args['max_epochs'] = self.dispatch_kwargs['max_epochs']
             if 'max_iters' in self.dispatch_kwargs:
@@ -962,3 +964,13 @@ class BaseStrategy(metaclass=ABCMeta):
         runtime_env['GPU number'] = self.world_size
 
         return system_env, runtime_env
+
+    def _prepared_components(self):
+        return_items = [self.model]
+        if hasattr(self, 'optim_wrapper'):
+            return_items.append(self.optim_wrapper)
+
+        if hasattr(self, 'param_schedulers'):
+            return_items.append(self.param_schedulers)
+
+        return return_items[0] if len(return_items) == 1 else return_items

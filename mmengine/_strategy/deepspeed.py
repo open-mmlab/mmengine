@@ -64,6 +64,8 @@ class DeepSpeedStrategy(BaseStrategy):
         amp: Optional[dict] = None,
         activation_checkpointing: Optional[dict] = None,
         aio: Optional[dict] = None,
+        train_micro_batch_size_per_gpu: Optional[int] = None,
+        gradient_accumulation_steps: int = 1,
         # disable the log printed by deepseed
         steps_per_print: int = 10000000000000,
         # the following args are for BaseStrategy
@@ -86,8 +88,21 @@ class DeepSpeedStrategy(BaseStrategy):
         if aio is not None:
             self.config['aio'] = aio
 
-        self.config['steps_per_print'] = steps_per_print
+        if ('train_micro_batch_size_per_gpu' not in self.config
+                and 'train_batch_size' not in self.config):
+            assert train_micro_batch_size_per_gpu is not None, (
+                '`train_micro_batch_size_per_gpu` or `train_batch_size` '
+                'should be set!')
+            self.config['train_micro_batch_size_per_gpu'] = \
+                train_micro_batch_size_per_gpu
 
+        if train_micro_batch_size_per_gpu is not None:
+            self.config['train_micro_batch_size_per_gpu'] = \
+                train_micro_batch_size_per_gpu
+
+        self.config['gradient_accumulation_steps'] = \
+            gradient_accumulation_steps
+        self.config['steps_per_print'] = steps_per_print
         self._inputs_to_half = inputs_to_half
 
     def _parse_config(self, config):
@@ -145,10 +160,10 @@ class DeepSpeedStrategy(BaseStrategy):
             dispatch_kwargs (dict, optional): Kwargs to be passed to other
                 methods of Strategy. Defaults to None.
         """
+        if self._prepared:
+            return self._prepared_components()
         assert dispatch_kwargs is not None
         self.dispatch_kwargs.update(dispatch_kwargs)
-
-        return_items = []
 
         model = self.build_model(model)
         model = self._init_model_weights(model)
@@ -159,23 +174,16 @@ class DeepSpeedStrategy(BaseStrategy):
 
             self.optim_wrapper.model = self.model  # type: ignore
 
-            return_items.append(self.model)
-            return_items.append(self.optim_wrapper)
         else:
             self.model = self._wrap_model(model)
-            return_items.append(self.model)
 
         if param_scheduler is not None:
             self.param_schedulers = self.build_param_scheduler(
                 param_scheduler, self.optim_wrapper)
-            return_items.append(self.param_schedulers)
-
-        return return_items[0] if len(return_items) == 1 else return_items
+        self._prepared = True
+        return self._prepared_components()
 
     def _wrap_model(self, model: nn.Module) -> nn.Module:
-        self.config['train_micro_batch_size_per_gpu'] = self.dispatch_kwargs[
-            'train_micro_batch_size_per_gpu']
-
         if hasattr(self, 'optim_wrapper'):
             engine, self.optim_wrapper.optimizer, *_ = deepspeed.initialize(
                 model=model,
@@ -246,7 +254,7 @@ class DeepSpeedStrategy(BaseStrategy):
         if resume_optimizer:
             self.load_optim_state_dict(extra_ckpt.pop('optim_wrapper'))
 
-        if resume_param_scheduler:
+        if resume_param_scheduler and hasattr(self, 'param_schedulers'):
             param_schedulers = extra_ckpt.pop('param_schedulers')
             self.load_scheduler_state_dict(param_schedulers)
 
@@ -297,12 +305,12 @@ class DeepSpeedStrategy(BaseStrategy):
             mmengine=mmengine.__version__ + get_git_hash(),
         )
 
-        if save_optimizer:
+        if save_optimizer and hasattr(self, 'optim_wrapper'):
             # The key can not be 'optimizer', otherwise error will be thrown
             # when loading or resuming checkpoint.
             extra_ckpt['optim_wrapper'] = self.optim_state_dict()
 
-        if save_param_scheduler:
+        if save_param_scheduler and hasattr(self, 'param_schedulers'):
             extra_ckpt['param_schedulers'] = self.scheduler_state_dict()
 
         dirname, basename = osp.split(filename)
