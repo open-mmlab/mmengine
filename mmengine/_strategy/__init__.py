@@ -12,5 +12,8 @@ if is_installed('deepspeed'):
     __all__.append('DeepSpeedStrategy')
 
 if digit_version(TORCH_VERSION) >= digit_version('2.0.0'):
-    from .fsdp import FSDPStrategy  # noqa:F401
-    __all__.append('FSDPStrategy')
+    try:
+        from .fsdp import FSDPStrategy  # noqa:F401
+        __all__.append('FSDPStrategy')
+    except:  # noqa: E722
+        pass

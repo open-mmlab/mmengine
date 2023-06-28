@@ -163,10 +163,11 @@ class FSDPStrategy(DDPStrategy):
             nn.Module: Model build from ``model``.
         """
         if self.skip_init_weights:
-            # Accelerate initialization by skipping init weights
-            with MetaTensorContext():
-                model = super().build_model(model)
-            model.to_empty()
+            if isinstance(model, dict):
+                # Accelerate initialization by skipping init weights
+                with MetaTensorContext():
+                    model = super().build_model(model)
+                model.to_empty(device='cpu')
         else:
             model = super().build_model(model)
 

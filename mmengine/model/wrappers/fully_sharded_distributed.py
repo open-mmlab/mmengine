@@ -156,7 +156,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             ori_func = FUNCTIONS.get(  # type: ignore
                 auto_wrap_policy.pop('type'))
             auto_wrap_policy = partial(ori_func, **auto_wrap_policy)
-        if (not callable(auto_wrap_policy)
+        if not (callable(auto_wrap_policy)
                 or auto_wrap_policy is None):  # type: ignore
             raise TypeError('Registered `fsdp_auto_wrap_policy` needs to be '
                             '`Callable`, but has type '
