@@ -31,11 +31,6 @@ class DDPStrategy(SingleDeviceStrategy):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        if model_wrapper is None:
-            # set broadcast_buffers as False to keep compatibility with
-            # OpenMMLab repos
-            model_wrapper = dict(
-                type='MMDistributedDataParallel', broadcast_buffers=False)
         self.model_wrapper = model_wrapper
         self.sync_bn = sync_bn
 
@@ -95,8 +90,16 @@ class DDPStrategy(SingleDeviceStrategy):
 
         model = self.convert_model(model)
 
-        default_args = dict(module=model)
-        default_args.setdefault('device_ids', [int(os.environ['LOCAL_RANK'])])
+        if self.model_wrapper is None:
+            # set broadcast_buffers as False to keep compatibility with
+            # OpenMMLab repos
+            self.model_wrapper = dict(
+                type='MMDistributedDataParallel', broadcast_buffers=False)
+
+        default_args = dict(
+            type='MMDistributedDataParallel',
+            module=model,
+            device_ids=[int(os.environ['LOCAL_RANK'])])
         model = MODEL_WRAPPERS.build(
             self.model_wrapper, default_args=default_args)
         return model

@@ -1,18 +1,30 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Callable, Dict, List, Optional, Union
+from functools import partial
+from itertools import chain
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 import torch
+import torch.distributed as dist
 import torch.nn as nn
 from torch.distributed import ProcessGroup
+# yapf: disable
+from torch.distributed.fsdp.api import (FullStateDictConfig,
+                                        LocalOptimStateDictConfig,
+                                        LocalStateDictConfig,
+                                        OptimStateDictConfig,
+                                        ShardedOptimStateDictConfig,
+                                        ShardedStateDictConfig,
+                                        ShardingStrategy, StateDictConfig,
+                                        StateDictSettings, StateDictType)
 from torch.distributed.fsdp.fully_sharded_data_parallel import (
-    BackwardPrefetch, CPUOffload, FullyShardedDataParallel)
+    BackwardPrefetch, CPUOffload, FullOptimStateDictConfig,
+    FullyShardedDataParallel, MixedPrecision)
 
+# yapf: enable
 from mmengine.optim import OptimWrapper
-from mmengine.registry import MODEL_WRAPPERS, Registry
+from mmengine.registry import FUNCTIONS, MODEL_WRAPPERS
 from mmengine.structures import BaseDataElement
-
-# support customize fsdp policy
-FSDP_WRAP_POLICIES = Registry('fsdp wrap policy')
+from mmengine.utils import digit_version, is_seq_of
 
 
 @MODEL_WRAPPERS.register_module()
@@ -40,8 +52,8 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
 
     Args:
         module (nn.Module): module to be wrapped with FSDP.
-        process_group (Optional[ProcessGroup]): process group for sharding.
-        cpu_offload (Optional[Union[bool,CPUOffload]]):
+        process_group (ProcessGroup, optional): process group for sharding.
+        cpu_offload (bool, CPUOffload, optional):
             CPU offloading config.
             Different from FullyShardedDataParallel,Since it can be set by
             users' pre-defined config in MMEngine,its type is expected to be
@@ -54,7 +66,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             for params and grads to be on same device to work with optimizer.
             This API is subject to change. Default is ``None`` in which case
             there will be no offloading.
-        fsdp_auto_wrap_policy: (Optional[Union[str,Callable]]):
+        auto_wrap_policy (str or Callable, optional):
             Specifying a policy to recursively wrap layers with FSDP.
             Different from FullyShardedDataParallel, Since it can be set by
             users' pre-defined config in MMEngine, its type is expected to be
@@ -68,12 +80,12 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             the returned FSDP root instance.
             ``default_auto_wrap_policy`` written in
             ``torch.distributed.fsdp.wrap`` is an example of
-            ``fsdp_auto_wrap_policy`` callable, this policy wraps layers with
+            ``auto_wrap_policy`` callable, this policy wraps layers with
             parameter sizes larger than 100M. Users can supply the customized
-            ``fsdp_auto_wrap_policy`` callable that should accept following
+            ``auto_wrap_policy`` callable that should accept following
             arguments: ``module: nn.Module``, ``recurse: bool``,
             ``unwrapped_params: int``, extra customized arguments could be
-            added to the customized ``fsdp_auto_wrap_policy`` callable as well.
+            added to the customized ``auto_wrap_policy`` callable as well.
 
             Example::
 
@@ -86,18 +98,23 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                 >>> ) -> bool:
                 >>>     return unwrapped_params >= min_num_params
 
-        backward_prefetch: (Optional[Union[str,BackwardPrefetch]]):
-            Different from FullyShardedDataParallel, Since it will be set by
-            users' pre-defined config in MMEngine,its type is expected to be
-            `None`, `str` or `BackwardPrefetch`.
+        backward_prefetch (str or BackwardPrefetch, optional):
+            Different from FullyShardedDataParallel, this argument could be a
+            string or a BackwardPrefetch instance. If it's a string, then
+            it should be ``BACKWARD_PRE`` or ``BACKWARD_POST``
+        mixed_precision  (dict or MixedPrecision, optional):
+            This configures native mixed precision for FSDP. If this is set to
+            ``None``. Different from the native FSDP, this argument can a dict
+            like this:
 
-            This is an experimental feature that is subject to change in the
-            the near future. It allows users to enable two different
-            backward_prefetch algorithms to help backward communication and
-            computation overlapping.
-            Pros and cons of each algorithm is explained in class
-            ``BackwardPrefetch``.
+            Examples:
+                >>> mixed_precision=dict(param_dtype='float16',
+                >>>                      buffer_dtype='float32',
+                >>>                      reduce_dtype='float32')
 
+            Defaults to None.
+        use_orig_params (bool): Different from native
+            ``FullyShardedDataParallel``, it defaults to True.
         **kwargs: Keyword arguments passed to
             :class:`FullyShardedDataParallel`.
     """
@@ -105,61 +122,117 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
     def __init__(
         self,
         module: nn.Module,
-        process_group: Optional[ProcessGroup] = None,
-        cpu_offload: Optional[Union[bool, CPUOffload]] = None,
-        fsdp_auto_wrap_policy: Optional[Union[str, Callable]] = None,
-        backward_prefetch: Optional[Union[str, BackwardPrefetch]] = None,
+        process_group: Union[dict, ProcessGroup, None] = None,
+        sharding_strategy: Union[str, ShardingStrategy] = None,
+        cpu_offload: Union[bool, CPUOffload, None] = None,
+        auto_wrap_policy: Union[str, Callable, None] = None,
+        backward_prefetch: Union[str, BackwardPrefetch, None] = None,
+        mixed_precision: Union[dict, MixedPrecision, None] = None,
+        ignored_modules: Union[Iterable[str], Iterable[nn.Module],
+                               None] = None,
+        param_init_fn: Union[str, Callable[[nn.Module], None]] = None,
+        use_orig_params: bool = True,
         **kwargs,
     ):
+        if isinstance(sharding_strategy, str):
+            sharding_strategy = ShardingStrategy[sharding_strategy]
+        if not (isinstance(sharding_strategy, ShardingStrategy)
+                or sharding_strategy is None):
+            raise TypeError(
+                'sharding_strategy must be str or enum of `ShardingStrategy` '
+                f', but got {sharding_strategy}')
 
-        if cpu_offload is not None:
-            if isinstance(cpu_offload, bool):
-                cpu_offload = CPUOffload(offload_params=cpu_offload)
-            elif not isinstance(cpu_offload, CPUOffload):
+        if isinstance(cpu_offload, bool):
+            cpu_offload = CPUOffload(offload_params=cpu_offload)
+        if not (isinstance(cpu_offload, CPUOffload) or cpu_offload is None):
+            raise TypeError(
+                '`cpu_offload` should be `None`, `bool`'
+                f'or `CPUOffload`, but has type {type(cpu_offload)}')
+
+        if isinstance(auto_wrap_policy, str):
+            auto_wrap_policy = FUNCTIONS.get(  # type: ignore
+                auto_wrap_policy)
+            if auto_wrap_policy is None:
+                raise ValueError('`auto_wrap_policy` is not registered!')
+        elif isinstance(auto_wrap_policy, dict):
+            ori_func = FUNCTIONS.get(  # type: ignore
+                auto_wrap_policy.pop('type'))
+            if auto_wrap_policy is None:
+                raise ValueError('`auto_wrap_policy` is not registered!')
+            auto_wrap_policy = partial(ori_func, **auto_wrap_policy)
+
+        if not (auto_wrap_policy is None
+                or callable(auto_wrap_policy)):  # type: ignore
+            raise TypeError('`auto_wrap_policy` should be a str, a '
+                            'callable, a dict or None, but has type '
+                            f'{type(auto_wrap_policy)}')
+
+        if isinstance(backward_prefetch, str):
+            backward_prefetch = BackwardPrefetch[backward_prefetch]
+        if not (isinstance(backward_prefetch, BackwardPrefetch)
+                or backward_prefetch is None):
+            raise TypeError(
+                '`backward_prefetch` should be `None`, string of '
+                '"BACKWARD_PRE" and "BACKWARD_POST", or '
+                f'`BackwardPrefetch`, but has type {type(backward_prefetch)}')
+
+        if isinstance(param_init_fn, str):
+            param_init_fn = FUNCTIONS.get(  # type: ignore
+                param_init_fn)
+            if param_init_fn is None:
+                raise ValueError('`param_init_fn` is not registered!')
+        elif isinstance(param_init_fn, dict):
+            param_init_fn = FUNCTIONS.get(param_init_fn.pop('type'))
+            if param_init_fn is None:
+                raise ValueError('`param_init_fn` is not registered!')
+            param_init_fn = partial(param_init_fn, **param_init_fn)
+
+        if not (callable(param_init_fn) or param_init_fn is None):
+            raise TypeError('`param_init_fn` should be a str, a '
+                            'callable, a dict or None, but has type '
+                            f'{type(param_init_fn)}')
+
+        def parse_dtype(dtype):
+            if dtype is None:
+                return None
+            elif isinstance(dtype, str):
+                return getattr(torch, dtype)
+            elif isinstance(dtype, torch.dtype):
+                return dtype
+            else:
                 raise TypeError(
-                    '`cpu_offload` should be `None`, `bool`'
-                    f'or `CPUOffload`, but has type {type(cpu_offload)}')
+                    '`dtype` should be `None`, `str` or `torch.dtype`, '
+                    f'but has type {type(dtype)}')
 
-        if fsdp_auto_wrap_policy is not None:
-            if isinstance(fsdp_auto_wrap_policy, str):
-                assert fsdp_auto_wrap_policy in FSDP_WRAP_POLICIES, \
-                    '`FSDP_WRAP_POLICIES` has no ' \
-                    f'function {fsdp_auto_wrap_policy}'
-                fsdp_auto_wrap_policy = FSDP_WRAP_POLICIES.get(  # type: ignore
-                    fsdp_auto_wrap_policy)
-                if not isinstance(fsdp_auto_wrap_policy,
-                                  Callable):  # type: ignore
-                    raise TypeError(
-                        'Registered `fsdp_auto_wrap_policy` needs to be '
-                        '`Callable`, but has type '
-                        f'{type(fsdp_auto_wrap_policy)}')
-            elif not isinstance(fsdp_auto_wrap_policy,
-                                Callable):  # type: ignore
-                raise TypeError(
-                    '`fsdp_auto_wrap_policy` should be `None`, `str` '
-                    'or `Callable`, but has type '
-                    f'{type(fsdp_auto_wrap_policy)}')
+        if isinstance(mixed_precision, dict):
+            mixed_precision['param_dtype'] = parse_dtype(
+                mixed_precision.get('param_dtype', None))
+            mixed_precision['reduce_dtype'] = parse_dtype(
+                mixed_precision.get('reduce_dtype', None))
+            mixed_precision['buffer_dtype'] = parse_dtype(
+                mixed_precision.get('buffer_dtype', None))
+            mixed_precision = MixedPrecision(**mixed_precision)
+        elif isinstance(mixed_precision, MixedPrecision):
+            mixed_precision = mixed_precision
+        elif mixed_precision is not None:
+            raise TypeError(
+                '`mixed_precision` should be `None`, `dict` or '
+                f'`MixedPrecision`, but has type {type(mixed_precision)}')
 
-        if backward_prefetch is not None:
-            if isinstance(backward_prefetch, str):
-                assert backward_prefetch in ['pre', 'post'], \
-                    '`backward_prefetch` should be either `pre` or `post`,' \
-                    f' but get {backward_prefetch}'
-                if backward_prefetch == 'pre':
-                    backward_prefetch = BackwardPrefetch.BACKWARD_PRE
-                else:
-                    backward_prefetch = BackwardPrefetch.BACKWARD_POST
-            elif not isinstance(backward_prefetch, BackwardPrefetch):
-                raise TypeError('`backward_prefetch` should be `None`, `str` '
-                                'or `BackwardPrefetch`, but has type '
-                                f'{type(backward_prefetch)}')
-
+        self._fixed_modules = self._get_fixed_module(module, ignored_modules)
+        ignored_modules = [] if ignored_modules is None else ignored_modules
+        ignored_modules = chain(ignored_modules, self._fixed_modules)
         super().__init__(
             module=module,
             process_group=process_group,
-            auto_wrap_policy=fsdp_auto_wrap_policy,
+            sharding_strategy=sharding_strategy,
+            auto_wrap_policy=auto_wrap_policy,
             cpu_offload=cpu_offload,
             backward_prefetch=backward_prefetch,
+            mixed_precision=mixed_precision,
+            ignored_modules=ignored_modules,
+            param_init_fn=param_init_fn,
+            use_orig_params=use_orig_params,
             **kwargs)
 
     def train_step(self, data: dict,
@@ -207,8 +280,8 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         Returns:
             List[BaseDataElement] or dict: The predictions of given data.
         """
-        inputs, data_sample = self.module.data_preprocessor(data, False)
-        return self(inputs, data_sample, mode='predict')
+        data = self.module.data_preprocessor(data, False)
+        return self._run_forward(data, mode='predict')  # type: ignore
 
     def test_step(self, data: dict) -> List[BaseDataElement]:
         """Gets the predictions of module during testing process.
@@ -219,5 +292,156 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         Returns:
             List[BaseDataElement]: The predictions of given data.
         """
-        inputs, data_sample = self.module.data_preprocessor(data, False)
-        return self(inputs, data_sample, mode='predict')
+        data = self.module.data_preprocessor(data, False)
+        return self._run_forward(data, mode='predict')  # type: ignore
+
+    def _run_forward(self, data: Union[dict, tuple, list],
+                     mode: str) -> Union[Dict[str, torch.Tensor], list]:
+        """Unpacks data for :meth:`forward`
+        Args:
+            data (dict or tuple or list): Data sampled from dataset.
+            mode (str): Mode of forward.
+        Returns:
+            dict or list: Results of training or testing mode.
+        """
+        if isinstance(data, dict):
+            results = self(**data, mode=mode)
+        elif isinstance(data, (list, tuple)):
+            results = self(*data, mode=mode)
+        else:
+            raise TypeError('Output of `data_preprocessor` should be '
+                            f'list, tuple or dict, but got {type(data)}')
+        return results
+
+    def _get_fixed_module(self, module, ignored_modules):
+        module_dict = dict(module.named_modules())
+        if is_seq_of(ignored_modules, str):
+            ignored_modules = [module_dict[name] for name in ignored_modules]
+        if not is_seq_of(ignored_modules,
+                         nn.Module) and ignored_modules is not None:
+            raise TypeError(
+                '`ignored_modules` should be `None`, `Iterable[str]` or '
+                f'`Iterable[nn.Module]`, but has type {type(ignored_modules)}')
+
+        def find_fixed_modules_recursively(
+                root_module: nn.Module) -> List[nn.Module]:
+            """Helper function to find fixed modules whose parameters are all
+            untrainable, i.e. `requires_grad=False`.
+
+            This function performs
+            recursively.
+            Args:
+                root_module (nn.Module): root module for recursion
+            Returns:
+                List[nn.Module]: fixed modules in root_module
+            """
+            if all(p.requires_grad for p in root_module.parameters()):
+                return []
+            if all(not p.requires_grad for p in root_module.parameters()):
+                return [root_module]
+            fixed_modules = []
+            for sub_module in root_module.children():
+                fixed_modules.extend(
+                    find_fixed_modules_recursively(sub_module))
+            return fixed_modules
+
+        fixed_modules = find_fixed_modules_recursively(module)
+        return fixed_modules
+
+    if digit_version(torch.__version__) < digit_version('2.0.1'):
+
+        @staticmethod
+        def optim_state_dict(
+            model: torch.nn.Module,
+            optim: torch.optim.Optimizer,
+            group: Optional[dist.ProcessGroup] = None,
+        ) -> Dict[str, Any]:
+            """copied from pytorch 2.0.1 which has fixed some bugs."""
+            state_dict_settings = FullyShardedDataParallel.get_state_dict_type(
+                model)
+            return FullyShardedDataParallel._optim_state_dict_impl(
+                model=model,
+                optim=optim,
+                optim_state_dict=optim.state_dict(),
+                optim_input=None,
+                rank0_only=getattr(state_dict_settings.optim_state_dict_config,
+                                   'rank0_only', False),
+                full_state_dict=state_dict_settings.state_dict_type ==
+                StateDictType.FULL_STATE_DICT,
+                group=group,
+            )
+
+        @staticmethod
+        def set_state_dict_type(
+            module: nn.Module,
+            state_dict_type: StateDictType,
+            state_dict_config: Optional[StateDictConfig] = None,
+            optim_state_dict_config: Optional[OptimStateDictConfig] = None,
+        ) -> StateDictSettings:
+            """copied from pytorch 2.0.1 which has fixed some bugs."""
+            import torch.distributed.fsdp._traversal_utils as traversal_utils
+            _state_dict_type_to_config = {
+                StateDictType.FULL_STATE_DICT: FullStateDictConfig,
+                StateDictType.LOCAL_STATE_DICT: LocalStateDictConfig,
+                StateDictType.SHARDED_STATE_DICT: ShardedStateDictConfig,
+            }
+            _optim_state_dict_type_to_config = {
+                StateDictType.FULL_STATE_DICT: FullOptimStateDictConfig,
+                StateDictType.LOCAL_STATE_DICT: LocalOptimStateDictConfig,
+                StateDictType.SHARDED_STATE_DICT: ShardedOptimStateDictConfig,
+            }
+
+            # Use the default config if a state_dict config is not set.
+            state_dict_config_type = _state_dict_type_to_config[
+                state_dict_type]
+            optim_state_dict_config_type = _optim_state_dict_type_to_config[
+                state_dict_type]
+            if state_dict_config is None:
+                state_dict_config = state_dict_config_type()
+            if optim_state_dict_config is None:
+                optim_state_dict_config = optim_state_dict_config_type()
+            if state_dict_config_type != type(state_dict_config):
+                raise RuntimeError('Expected state_dict_config of type '
+                                   f'{state_dict_config_type} '
+                                   f'but got {type(state_dict_config)}')
+            if optim_state_dict_config_type != type(optim_state_dict_config):
+                raise RuntimeError('Expected optim_state_dict_config of type '
+                                   f'{optim_state_dict_config_type} '
+                                   f'but got {type(optim_state_dict_config)}')
+
+            # Set the state_dict type and configurations.
+            prev_state_dict_type = None
+            prev_state_dict_config = None
+            prev_optim_state_dict_config = None
+            for submodule in traversal_utils._get_fsdp_states(module):
+                if prev_state_dict_type is None:
+                    prev_state_dict_type = submodule._state_dict_type
+                else:
+                    assert (
+                        prev_state_dict_type == submodule._state_dict_type
+                    ), 'All FSDP modules should have the same state_dict_type.'
+                if prev_state_dict_config is None:
+                    prev_state_dict_config = submodule._state_dict_config
+                else:
+                    assert isinstance(
+                        submodule._state_dict_config,
+                        type(prev_state_dict_config)), (
+                            'All FSDP modules must have the same type of '
+                            'state_dict_config.')
+                if prev_optim_state_dict_config is None:
+                    prev_optim_state_dict_config = \
+                        submodule._optim_state_dict_config
+                else:
+                    assert isinstance(
+                        submodule._optim_state_dict_config,
+                        type(prev_optim_state_dict_config),
+                    ), ('All FSDP modules must have the same type of '
+                        'optim_state_dict_config.')
+
+                submodule._state_dict_type = state_dict_type
+                submodule._state_dict_config = state_dict_config
+                submodule._optim_state_dict_config = optim_state_dict_config
+
+            return StateDictSettings(prev_state_dict_type,
+                                     prev_state_dict_config,
+                                     prev_optim_state_dict_config)

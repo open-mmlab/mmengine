@@ -4,7 +4,6 @@ import argparse
 import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
-from torch.optim import SGD
 
 from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
@@ -43,8 +42,8 @@ class Accuracy(BaseMetric):
 def parse_args():
     parser = argparse.ArgumentParser(description='Distributed Training')
     parser.add_argument('--local_rank', '--local-rank', type=int, default=0)
+    parser.add_argument('--use-fsdp', action='store_true')
     parser.add_argument('--use-deepspeed', action='store_true')
-
     args = parser.parse_args()
     return args
 
@@ -94,20 +93,33 @@ def main():
             ),
             inputs_to_half=[0],
             zero_optimization=dict(
-                stage=0,
+                stage=3,
                 allgather_partitions=True,
                 reduce_scatter=True,
                 allgather_bucket_size=50000000,
                 reduce_bucket_size=50000000,
                 overlap_comm=True,
                 contiguous_gradients=True,
-                cpu_offload=False))
+                cpu_offload=False),
+        )
         optim_wrapper = dict(
             type='DeepSpeedOptimWrapper',
-            optimizer=dict(type=SGD, lr=0.001, momentum=0.9))
+            optimizer=dict(type='AdamW', lr=1e-3))
+    elif args.use_fsdp:
+        from functools import partial
+
+        from torch.distributed.fsdp.wrap import size_based_auto_wrap_policy
+        size_based_auto_wrap_policy = partial(
+            size_based_auto_wrap_policy, min_num_params=1e7)
+        strategy = dict(
+            type='FSDPStrategy',
+            model_wrapper=dict(auto_wrap_policy=size_based_auto_wrap_policy))
+        optim_wrapper = dict(
+            type='AmpOptimWrapper', optimizer=dict(type='AdamW', lr=1e-3))
     else:
         strategy = None
-        optim_wrapper = dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9))
+        optim_wrapper = dict(
+            type='AmpOptimWrapper', optimizer=dict(type='AdamW', lr=1e-3))
 
     runner = FlexibleRunner(
         model=MMResNet50(),
@@ -124,4 +136,8 @@ def main():
 
 
 if __name__ == '__main__':
+    # torchrun --nproc-per-node 2 distributed_training_with_flexible_runner.py --use-fsdp  # noqa: 501
+    # torchrun --nproc-per-node 2 distributed_training_with_flexible_runner.py --use-deepspeed  # noqa: 501
+    # torchrun --nproc-per-node 2 distributed_training_with_flexible_runner.py
+    # python distributed_training_with_flexible_runner.py
     main()

@@ -36,14 +36,14 @@ class ToyModel(BaseModel):
         if isinstance(inputs, list):
             inputs = torch.stack(inputs)
         if isinstance(data_samples, list):
-            data_sample = torch.stack(data_samples)
+            data_samples = torch.stack(data_samples)
         outputs = self.linear1(inputs)
         outputs = self.linear2(outputs)
 
         if mode == 'tensor':
             return outputs
         elif mode == 'loss':
-            loss = (data_sample - outputs).sum()
+            loss = (data_samples - outputs).sum()
             outputs = dict(loss=loss)
             return outputs
         elif mode == 'predict':
