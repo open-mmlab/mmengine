@@ -14,6 +14,4 @@ class MetaTensorContext(TorchDispatchMode):
                 args[device_idx] = 'meta'
             else:
                 kwargs['device'] = 'meta'
-            return func(*args, **kwargs)
-        else:
-            return func(*args, **kwargs)
+        return func(*args, **kwargs)
