@@ -37,10 +37,10 @@ def linear_wrap_policy(
     return isinstance(module, nn.Linear)
 
 
-@skipIf(not torch.cuda.is_available
-        or digit_version(torch.__version__) < digit_version('2.0.0')
-        or not torch.cuda.is_available(),
-        'Only test FSDP with CUDA and PyTorch >= 2.0.0')
+@skipIf(
+    digit_version(torch.__version__) < digit_version('2.0.0')
+    or not torch.cuda.is_available(),
+    'Only test FSDP with CUDA and PyTorch >= 2.0.0')
 class TestStrategy(TestCase):
 
     def setUp(self):
@@ -61,7 +61,7 @@ class TestStrategy(TestCase):
 
         strategy = FSDPStrategy(
             state_dict_cfg=dict(
-                state_dict_type=StateDictType.LOCAL_STATE_DICT, ))
+                state_dict_type=StateDictType.LOCAL_STATE_DICT))
         self._assert_local(strategy)
 
         strategy = FSDPStrategy(

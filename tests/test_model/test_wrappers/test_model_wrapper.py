@@ -229,7 +229,7 @@ class TestMMFullyShardedDataParallel(MultiProcessTestCase):
     def _init_dist_env(self, rank, world_size):
         """Initialize the distributed environment."""
         os.environ['MASTER_ADDR'] = '127.0.0.1'
-        os.environ['MASTER_PORT'] = '29521'
+        os.environ['MASTER_PORT'] = '29520'
         os.environ['RANK'] = str(rank)
 
         num_gpus = torch.cuda.device_count()

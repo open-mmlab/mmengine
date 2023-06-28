@@ -173,7 +173,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                 or backward_prefetch is None):
             raise TypeError(
                 '`backward_prefetch` should be `None`, string of '
-                '"BACKWARD_PRE" and "BACKWARD_POST",  or '
+                '"BACKWARD_PRE" and "BACKWARD_POST", or '
                 f'`BackwardPrefetch`, but has type {type(backward_prefetch)}')
 
         if isinstance(param_init_fn, str):
