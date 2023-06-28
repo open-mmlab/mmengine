@@ -277,8 +277,9 @@ class Runner:
 
         # recursively copy the `cfg` because `self.cfg` will be modified
         # everywhere.
+        from mmengine.config.new_config import Config as NewConfig
         if cfg is not None:
-            if isinstance(cfg, Config):
+            if isinstance(cfg, (Config, NewConfig)):
                 self.cfg = copy.deepcopy(cfg)
             elif isinstance(cfg, dict):
                 self.cfg = Config(cfg)

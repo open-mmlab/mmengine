@@ -471,25 +471,8 @@ class Config:
                 env_variables=env_variables,
             )
         else:
-            # Enable lazy import when parsing the config.
-            # Using try-except to make sure ``ConfigDict.lazy`` will be reset
-            # to False. See more details about lazy in the docstring of
-            # ConfigDict
-            ConfigDict.lazy = True
-            try:
-                cfg_dict, imported_names = Config._parse_lazy_import(filename)
-            except Exception as e:
-                raise e
-            finally:
-                # disable lazy import to get the real type. See more details
-                # about lazy in the docstring of ConfigDict
-                ConfigDict.lazy = False
-
-            cfg = Config(
-                cfg_dict,
-                filename=filename,
-                format_python_code=format_python_code)
-            object.__setattr__(cfg, '_imported_names', imported_names)
+            from .new_config import Config as NewConfig
+            cfg = NewConfig.fromfile(filename, lazy_import=lazy_import)
             return cfg
 
     @staticmethod

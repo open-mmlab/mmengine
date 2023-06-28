@@ -993,6 +993,8 @@ class TestConfig:
                 assert len(a) == len(b)
                 for item_a, item_b in zip(a, b):
                     _compare_dict(item_a, item_b)
+            elif isinstance(a, type):
+                assert a.__module__ + a.__name__ == str(b)
             else:
                 assert str(a) == str(b)
 
@@ -1015,7 +1017,7 @@ class TestConfig:
         error_obj = tmp_path / 'error_obj.py'
         error_obj.write_text("""from mmengine.fileio import error_obj""")
         # match pattern should be double escaped
-        match = str(error_obj).encode('unicode_escape').decode()
+        match = 'Failed to import mmengine.fileio.error_obj'
         with pytest.raises(ImportError, match=match):
             cfg = Config.fromfile(str(error_obj))
             cfg.error_obj
@@ -1025,14 +1027,14 @@ class TestConfig:
 import mmengine
 error_attr = mmengine.error_attr
 """)  # noqa: E122
-        match = str(error_attr).encode('unicode_escape').decode()
-        with pytest.raises(ImportError, match=match):
+        match = "module 'mmengine' has no attribute 'error_attr'"
+        with pytest.raises(AttributeError, match=match):
             cfg = Config.fromfile(str(error_attr))
             cfg.error_attr
 
         error_module = tmp_path / 'error_module.py'
         error_module.write_text("""import error_module""")
-        match = str(error_module).encode('unicode_escape').decode()
+        match = 'Failed to import error_module'
         with pytest.raises(ImportError, match=match):
             cfg = Config.fromfile(str(error_module))
             cfg.error_module
@@ -1051,7 +1053,7 @@ error_attr = mmengine.error_attr
             lazy_import=False)
 
         # current lazy-import config, base text config
-        with pytest.raises(RuntimeError, match='_base_ ='):
+        with pytest.raises(AttributeError, match='item2'):
             Config.fromfile(
                 osp.join(self.data_path,
                          'config/lazy_module_config/error_mix_using2.py'))
