@@ -100,15 +100,12 @@ class FSDPStrategy(DDPStrategy):
                  skip_init_weights=False,
                  state_dict_cfg: Union[str, dict] = 'local',
                  **kwargs):
+        super().__init__(model_wrapper=model_wrapper, **kwargs)
         self._init_state_dict_cfg(state_dict_cfg)
-        model_wrapper = model_wrapper or dict()
         if not isinstance(skip_init_weights, bool):
             raise TypeError('skip_init_weights must be a boolean, but got '
                             f'{type(skip_init_weights)}')
         self.skip_init_weights = skip_init_weights
-        self.model_wrapper = model_wrapper
-        super().__init__(model_wrapper=model_wrapper, **kwargs)
-        self.last_checkpoint = None
 
     def _wrap_model(self, model: nn.Module) -> None:
         """Wrap the model to :obj:``MMFullyShardedDataParallel`` or other
@@ -126,10 +123,12 @@ class FSDPStrategy(DDPStrategy):
 
         assert model is not None, ('Model should have been built before wrap')
 
-        self.model_wrapper.setdefault('type', 'MMFullyShardedDataParallel')
-        self.model_wrapper.setdefault('module', model)
-        self.model_wrapper.setdefault('device_id', os.getenv('LOCAL_RANK'))
-        model = MODEL_WRAPPERS.build(self.model_wrapper)
+        if self.model_wrapper is None:
+            self.model_wrapper = dict(type='MMFullyShardedDataParallel')
+
+        default_args = dict(module=model, device_ids=os.getenv('LOCAL_RANK'))
+        model = MODEL_WRAPPERS.build(
+            self.model_wrapper, default_args=default_args)
         model.set_state_dict_type(model, self.state_dict_type,
                                   self.state_dict_config,
                                   self.optim_state_dict_config)
