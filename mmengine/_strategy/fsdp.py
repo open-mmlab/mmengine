@@ -42,7 +42,7 @@ FSDP_CONFIGS.register_module(module=LocalStateDictConfig)
 class FSDPStrategy(DDPStrategy):
     """Support training model with FullyShardedDataParallel (FSDP).
 
-    Keyword Args::
+    Keyword Args:
         model_wrapper (dict, optional): Config dict for model wrapper. The
             default configuration is:
 
