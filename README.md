@@ -94,7 +94,7 @@ v0.8.0 was released on 2023-06-30.
   - Support inheriting two configuration files containing the same field
   - Load the configuration file without other third-party requirements
 
-  Refer to the [tutorial](<[../advanced_tutorials/config.md#a-pure-python-style-configuration-file-beta](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#a-pure-python-style-configuration-file-beta)>) for more detailed usages.
+  Refer to the [tutorial](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#a-pure-python-style-configuration-file-beta) for more detailed usages.
 
 Read [Changelog](./docs/en/notes/changelog.md#v080-06302023) for more details.
 
