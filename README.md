@@ -80,14 +80,23 @@ Major features:
 
 ## What's New
 
-v0.7.4 was released on 2023-06-03.
+v0.8.0 was released on 2023-06-30.
 
 ### Highlights
 
-- Support using [`ClearML`](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#clearml) to record experiment data
-- Add [`Sophia`](https://mmengine.readthedocs.io/en/latest/common_usage/better_optimizers.html#sophia) optimizers
+- Support training with [FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp) and [DeepSpeed](https://www.deepspeed.ai/). Refer to the [example](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training_with_flexible_runner.py) for more detailed usages.
 
-Read [Changelog](./docs/en/notes/changelog.md#v074-06032023) for more details.
+- Introduce the pure Python style configuration file:
+
+  - Support navigating to base configuration file in IDE
+  - Support navigating to base variable in IDE
+  - Support navigating to source code of class in IDE
+  - Support inheriting two configuration files containing the same field
+  - Load the configuration file without other third-party requirements
+
+  Refer to the [tutorial](<[../advanced_tutorials/config.md#a-pure-python-style-configuration-file-beta](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#a-pure-python-style-configuration-file-beta)>) for more detailed usages.
+
+Read [Changelog](./docs/en/notes/changelog.md#v080-06302023) for more details.
 
 ## Installation
 
