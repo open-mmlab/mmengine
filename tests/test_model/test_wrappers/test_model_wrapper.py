@@ -19,7 +19,7 @@ from mmengine.testing._internal import MultiProcessTestCase
 from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.utils.version_utils import digit_version
 
-if digit_version(TORCH_VERSION) >= digit_version('1.11.0'):
+if digit_version(TORCH_VERSION) >= digit_version('2.0.0'):
     from mmengine.model import MMFullyShardedDataParallel  # noqa: F401
 
 

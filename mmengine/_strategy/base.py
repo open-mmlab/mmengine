@@ -828,11 +828,11 @@ class BaseStrategy(metaclass=ABCMeta):
 
         Keyword Args:     load_from (str, optional): The checkpoint file to
         load from.         Defaults to None.     resume (bool or str): Whether
-        to resume training.         Defaults to False. If ``resume`` is True
-        and ``load_from`` is         None, automatically to find latest
-        checkpoint from         ``work_dir``. If not found, resuming does
-        nothing.         If ``resume`` is a string, it will be treated as the
-        checkpoint         file to resume from.
+        to resume training. Defaults to         False. If ``resume`` is True
+        and ``load_from`` is None,         automatically to find latest
+        checkpoint from ``work_dir``.         If not found, resuming does
+        nothing. If ``resume`` is a string,         it will be treated as the
+        checkpoint file to resume from.
         """
         from mmengine.runner import find_latest_checkpoint
 
