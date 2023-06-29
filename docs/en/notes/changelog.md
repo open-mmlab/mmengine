@@ -34,7 +34,7 @@
 
 - Add a document to introduce how to debug with vscode by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1212
 - Update English introduction by [@evdcush](https://github.com/evdcush) in https://github.com/open-mmlab/mmengine/pull/1189
-- Fix parameter typing error in document. by [@syo093c](https://github.com/syo093c) in https://github.com/open-mmlab/mmengine/pull/1201
+- Fix parameter typing error in document by [@syo093c](https://github.com/syo093c) in https://github.com/open-mmlab/mmengine/pull/1201
 - Fix gpu collection during evaluation by [@edkair](https://github.com/edkair) in https://github.com/open-mmlab/mmengine/pull/1208
 - Fix a comment in runner tutorial by [@joihn](https://github.com/joihn) in https://github.com/open-mmlab/mmengine/pull/1210
 
