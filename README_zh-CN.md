@@ -74,7 +74,7 @@
 
   请参考[教程](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/config.html#python-beta)以获取更详细的用法说明。
 
-  <video src="https://github.com/open-mmlab/mmengine/assets/57566630/fc8c6c9c-276f-4acf-a758-2884e8c95e95" controls loop width=480>
+  <video src="https://github.com/open-mmlab/mmengine/assets/57566630/18356cc2-8449-4399-8a77-c342a99e6bab" controls loop width=480>
   </video>
 
 如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v080-06302023)
