@@ -1454,6 +1454,13 @@ class Config:
 
         return other
 
+    def copy(self):
+        cls = self.__class__
+        other = cls.__new__(cls)
+        other.__dict__.update(self.__dict__)
+
+        return other
+
     def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str],
                                         dict]):
         _cfg_dict, _filename, _text, _env_variables = state
