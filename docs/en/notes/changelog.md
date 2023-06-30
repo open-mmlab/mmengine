@@ -16,6 +16,9 @@
 
   Refer to the [tutorial](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#a-pure-python-style-configuration-file-beta) for more detailed usages.
 
+  <video src="https://github.com/open-mmlab/mmengine/assets/57566630/86814b7d-9e05-4325-9f11-b5ac0fb0bcbb" controls loop width=480>
+  </video>
+
 ### New Features & Enhancements
 
 - Support training with FSDP by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1213

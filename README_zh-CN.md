@@ -56,6 +56,29 @@
     <img src="https://user-images.githubusercontent.com/25839884/219026120-ba71e48b-6e94-4bd4-b4e9-b7d175b5e362.png" width="3%" alt="" /></a>
 </div>
 
+## 最近进展
+
+最新版本 v0.8.0 在 2023.06.30 发布。
+
+亮点：
+
+- 支持使用 [FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp) 和 [DeepSpeed](https://www.deepspeed.ai/) 进行训练。请参考[示例](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training_with_flexible_runner.py)以获取更详细的用法说明。
+
+- 引入纯 Python 风格的配置文件：
+
+  - 支持在 IDE 中导航到基础配置文件
+  - 支持在 IDE 中导航到基础变量
+  - 支持在 IDE 中导航到类的源代码
+  - 支持继承包含相同字段的两个配置文件
+  - 在加载配置文件时不需要其他第三方依赖
+
+  请参考[教程](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/config.html#python-beta)以获取更详细的用法说明。
+
+  <video src="https://github.com/open-mmlab/mmengine/assets/57566630/fc8c6c9c-276f-4acf-a758-2884e8c95e95" controls loop width=480>
+  </video>
+
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v080-06302023)
+
 ## 简介
 
 MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的基础库。它为开发人员提供了坚实的工程基础，以此避免在工作流上编写冗余代码。作为 OpenMMLab 所有代码库的训练引擎，其在不同研究领域支持了上百个算法。此外，MMEngine 也可以用于非 OpenMMLab 项目中。
@@ -77,26 +100,6 @@ MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的�
    - 定义了“乐高”式的训练流程。
    - 提供了丰富的组件和策略。
    - 使用不同等级的 API 控制训练过程。
-
-## 最近进展
-
-最新版本 v0.8.0 在 2023.06.30 发布。
-
-亮点：
-
-- 支持使用[FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp)和[DeepSpeed](https://www.deepspeed.ai/)进行训练。请参考[示例](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training_with_flexible_runner.py)以获取更详细的用法说明。
-
-- 引入纯Python风格的配置文件：
-
-  - 支持在IDE中导航到基础配置文件
-  - 支持在IDE中导航到基础变量
-  - 支持在IDE中导航到类的源代码
-  - 支持继承包含相同字段的两个配置文件
-  - 在加载配置文件时不需要其他第三方依赖
-
-  请参考[教程](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/config.html#python-beta)以获取更详细的用法说明。
-
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v080-06302023)
 
 ## 安装
 

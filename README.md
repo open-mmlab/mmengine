@@ -56,6 +56,29 @@ English | [简体中文](README_zh-CN.md)
     <img src="https://user-images.githubusercontent.com/25839884/219026120-ba71e48b-6e94-4bd4-b4e9-b7d175b5e362.png" width="3%" alt="" /></a>
 </div>
 
+## What's New
+
+v0.8.0 was released on 2023-06-30.
+
+### Highlights
+
+- Support training with [FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp) and [DeepSpeed](https://www.deepspeed.ai/). Refer to the [example](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training_with_flexible_runner.py) for more detailed usages.
+
+- Introduce the pure Python style configuration file:
+
+  - Support navigating to base configuration file in IDE
+  - Support navigating to base variable in IDE
+  - Support navigating to source code of class in IDE
+  - Support inheriting two configuration files containing the same field
+  - Load the configuration file without other third-party requirements
+
+  Refer to the [tutorial](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#a-pure-python-style-configuration-file-beta) for more detailed usages.
+
+  <video src="https://github.com/open-mmlab/mmengine/assets/57566630/86814b7d-9e05-4325-9f11-b5ac0fb0bcbb" controls loop width=480>
+  </video>
+
+Read [Changelog](./docs/en/notes/changelog.md#v080-06302023) for more details.
+
 ## Introduction
 
 MMEngine is a foundational library for training deep learning models based on PyTorch. It provides a solid engineering foundation and frees developers from writing redundant codes on workflows. It serves as the training engine of all OpenMMLab codebases, which support hundreds of algorithms in various research areas. Moreover, MMEngine is also generic to be applied to non-OpenMMLab projects.
@@ -77,26 +100,6 @@ Major features:
    - Defines the training process just like playing with Legos.
    - Provides rich components and strategies.
    - Complete controls on the training process with different levels of APIs.
-
-## What's New
-
-v0.8.0 was released on 2023-06-30.
-
-### Highlights
-
-- Support training with [FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp) and [DeepSpeed](https://www.deepspeed.ai/). Refer to the [example](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training_with_flexible_runner.py) for more detailed usages.
-
-- Introduce the pure Python style configuration file:
-
-  - Support navigating to base configuration file in IDE
-  - Support navigating to base variable in IDE
-  - Support navigating to source code of class in IDE
-  - Support inheriting two configuration files containing the same field
-  - Load the configuration file without other third-party requirements
-
-  Refer to the [tutorial](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#a-pure-python-style-configuration-file-beta) for more detailed usages.
-
-Read [Changelog](./docs/en/notes/changelog.md#v080-06302023) for more details.
 
 ## Installation
 
