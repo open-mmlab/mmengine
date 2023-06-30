@@ -1451,8 +1451,11 @@ class Config:
         cls = self.__class__
         other = cls.__new__(cls)
         other.__dict__.update(self.__dict__)
+        super(Config, other).__setattr__('_cfg_dict', self._cfg_dict.copy())
 
         return other
+
+    copy = __copy__
 
     def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str],
                                         dict]):
