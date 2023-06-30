@@ -60,7 +60,7 @@ English | [简体中文](README_zh-CN.md)
 
 v0.8.0 was released on 2023-06-30.
 
-### Highlights
+Highlights:
 
 - Support training with [FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp) and [DeepSpeed](https://www.deepspeed.ai/). Refer to the [example](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training_with_flexible_runner.py) for more detailed usages.
 
