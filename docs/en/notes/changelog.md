@@ -16,8 +16,7 @@
 
   Refer to the [tutorial](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#a-pure-python-style-configuration-file-beta) for more detailed usages.
 
-  <video src="https://github.com/open-mmlab/mmengine/assets/57566630/eb05227b-fcef-436d-b478-493c2933f2e9" controls loop width=480>
-  </video>
+  ![new-config-en](https://github.com/open-mmlab/mmengine/assets/57566630/7eb41748-9374-488f-901e-fcd7f0d3c8a1)
 
 ### New Features & Enhancements
 
