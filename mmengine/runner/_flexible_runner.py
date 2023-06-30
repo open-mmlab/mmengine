@@ -370,8 +370,9 @@ class FlexibleRunner:
 
         # Used to reset registries location. See :meth:`Registry.build` for
         # more details.
-        self.default_scope = DefaultScope.get_instance(
-            self.experiment_name, scope_name=default_scope)
+        if default_scope is not None:
+            self.default_scope = DefaultScope.get_instance(
+                self.experiment_name, scope_name=default_scope)
         # Build log processor to format message.
         log_processor = dict() if log_processor is None else log_processor
         self.log_processor = self.build_log_processor(log_processor)
