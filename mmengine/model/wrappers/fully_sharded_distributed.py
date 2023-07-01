@@ -358,7 +358,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         #    recognized an ignored module.
         def find_ignored_modules(root_module: nn.Module):
             if not list(root_module.children()):
-                if 'mixed' == get_grad_state(root_module):
+                if get_grad_state(root_module) == 'mixed':
                     auto_ignored_modules.append(root_module)
             else:
                 children = list(root_module.children())
