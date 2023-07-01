@@ -147,19 +147,24 @@ class LazyAttr:
 
         if isinstance(self.source, LazyObject):
             if isinstance(self.source._module, str):
-                # In this case, the source code of LazyObject could be one of
-                # the following:
-                # 1. import xxx.yyy as zzz
-                # 2. from xxx.yyy import zzz
-
-                # The equivalent code of LazyObject is:
-                # 1. zzz = LazyObject('xxx.yyy')
-                # 2. zzz = LazyObject('xxx.yyy', 'zzz')
-
-                # The source code of LazyAttr will be:
-                # eee = zzz.eee
-                # Then, eee._module = xxx.yyy
-                self._module = self.source._module
+                if self.source._imported is None:
+                    # source code:
+                    # from xxx.yyy import zzz
+                    # equivalent code:
+                    # zzz = LazyObject('xxx.yyy', 'zzz')
+                    # The source code of get attribute:
+                    # eee = zzz.eee
+                    # Then, `eee._module` should be "xxx.yyy.zzz"
+                    self._module = self.source._module
+                else:
+                    # source code:
+                    # import xxx.yyy as zzz
+                    # equivalent code:
+                    # zzz = LazyObject('xxx.yyy')
+                    # The source code of get attribute:
+                    # eee = zzz.eee
+                    # Then, `eee._module` should be "xxx.yyy"
+                    self._module = f'{self.source._module}.{self.source}'
             else:
                 # The source code of LazyObject should be
                 # 1. import xxx.yyy
