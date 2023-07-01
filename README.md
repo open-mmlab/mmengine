@@ -56,28 +56,6 @@ English | [简体中文](README_zh-CN.md)
     <img src="https://user-images.githubusercontent.com/25839884/219026120-ba71e48b-6e94-4bd4-b4e9-b7d175b5e362.png" width="3%" alt="" /></a>
 </div>
 
-## What's New
-
-v0.8.0 was released on 2023-06-30.
-
-Highlights:
-
-- Support training with [FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp) and [DeepSpeed](https://www.deepspeed.ai/). Refer to the [example](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training_with_flexible_runner.py) for more detailed usages.
-
-- Introduce the pure Python style configuration file:
-
-  - Support navigating to base configuration file in IDE
-  - Support navigating to base variable in IDE
-  - Support navigating to source code of class in IDE
-  - Support inheriting two configuration files containing the same field
-  - Load the configuration file without other third-party requirements
-
-  Refer to the [tutorial](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#a-pure-python-style-configuration-file-beta) for more detailed usages.
-
-  ![new-config-en](https://github.com/open-mmlab/mmengine/assets/57566630/7eb41748-9374-488f-901e-fcd7f0d3c8a1)
-
-Read [Changelog](./docs/en/notes/changelog.md#v080-06302023) for more details.
-
 ## Introduction
 
 MMEngine is a foundational library for training deep learning models based on PyTorch. It provides a solid engineering foundation and frees developers from writing redundant codes on workflows. It serves as the training engine of all OpenMMLab codebases, which support hundreds of algorithms in various research areas. Moreover, MMEngine is also generic to be applied to non-OpenMMLab projects.
@@ -99,6 +77,17 @@ Major features:
    - Defines the training process just like playing with Legos.
    - Provides rich components and strategies.
    - Complete controls on the training process with different levels of APIs.
+
+## What's New
+
+v0.7.4 was released on 2023-06-03.
+
+### Highlights
+
+- Support using [`ClearML`](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#clearml) to record experiment data
+- Add [`Sophia`](https://mmengine.readthedocs.io/en/latest/common_usage/better_optimizers.html#sophia) optimizers
+
+Read [Changelog](./docs/en/notes/changelog.md#v074-06032023) for more details.
 
 ## Installation
 
