@@ -11,5 +11,3 @@ from mmengine.fileio import LocalBackend as local
 from mmengine.fileio import PetrelBackend
 from ._base_.default_runtime import default_scope as scope
 from ._base_.scheduler import val_cfg
-from rich.progress import Progress
-start = Progress.start

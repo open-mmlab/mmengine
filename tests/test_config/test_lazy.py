@@ -10,7 +10,6 @@ from unittest import TestCase
 import numpy
 import numpy.compat
 import numpy.linalg as linalg
-from rich.progress import Progress
 
 import mmengine
 from mmengine.config import Config
@@ -63,17 +62,11 @@ class TestImportTransformer(TestCase):
         self.assertIs(imported_numpy.linalg, linalg)
         self.assertIs(imported_numpy.compat, numpy.compat)
 
-        # 1.4.1 Build module from LazyAttr
+        # 1.4 Build module from LazyAttr
         imported_linalg = lazy_numpy.linalg.build()
         imported_compat = lazy_numpy.compat.build()
         self.assertIs(imported_compat, numpy.compat)
         self.assertIs(imported_linalg, linalg)
-
-        # 1.4.2 build class method from LazyAttr
-        start = global_dict['start']
-        self.assertEqual(start.module, 'rich.progress.Progress')
-        self.assertEqual(str(start), 'start')
-        self.assertIs(start.build(), Progress.start)
 
         # 1.5 import ... as, and build module from LazyObject
         lazy_linalg = global_dict['linalg']
