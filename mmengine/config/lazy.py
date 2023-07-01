@@ -163,7 +163,7 @@ class LazyAttr:
                     # zzz = LazyObject('xxx.yyy')
                     # The source code of get attribute:
                     # eee = zzz.eee
-                    # Then, `eee._module` should be "xxx.yyy"
+                    # Then, `eee._module` should be "xxx.yyy.eee"
                     self._module = f'{self.source.module}.{self.source}'
             else:
                 # The source code of LazyObject should be
