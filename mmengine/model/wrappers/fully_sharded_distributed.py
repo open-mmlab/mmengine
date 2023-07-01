@@ -219,9 +219,10 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                 '`mixed_precision` should be `None`, `dict` or '
                 f'`MixedPrecision`, but has type {type(mixed_precision)}')
 
-        self._fixed_modules = self._get_fixed_module(module, ignored_modules)
         ignored_modules = [] if ignored_modules is None else ignored_modules
-        ignored_modules = chain(ignored_modules, self._fixed_modules)
+        self._auto_ignored_modules = self._find_ignored_module(
+            module, ignored_modules)
+        ignored_modules = chain(ignored_modules, self._auto_ignored_modules)
         super().__init__(
             module=module,
             process_group=process_group,
@@ -313,7 +314,15 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                             f'list, tuple or dict, but got {type(data)}')
         return results
 
-    def _get_fixed_module(self, module, ignored_modules):
+    def _find_ignored_module(self, module: nn.Module,
+                             ignored_modules: Union[Iterable[str],
+                                                    Iterable[nn.Module]]):
+        """FSDP in PyTorch 2.0 cannot wrap the subumodule of which
+        `requireds_grad` is not consistent directly.
+
+        This method will automatically find and consider those module as the
+        ignored modules.
+        """
         module_dict = dict(module.named_modules())
         if is_seq_of(ignored_modules, str):
             ignored_modules = [module_dict[name] for name in ignored_modules]
@@ -323,30 +332,66 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                 '`ignored_modules` should be `None`, `Iterable[str]` or '
                 f'`Iterable[nn.Module]`, but has type {type(ignored_modules)}')
 
-        def find_fixed_modules_recursively(
-                root_module: nn.Module) -> List[nn.Module]:
-            """Helper function to find fixed modules whose parameters are all
-            untrainable, i.e. `requires_grad=False`.
+        def get_grad_state(module):
+            if all(p.requires_grad for p in module.parameters()):
+                return 'true'
+            elif all(not p.requires_grad for p in module.parameters()):
+                return 'false'
+            else:
+                return 'mixed'
 
-            This function performs
-            recursively.
-            Args:
-                root_module (nn.Module): root module for recursion
-            Returns:
-                List[nn.Module]: fixed modules in root_module
-            """
-            if all(p.requires_grad for p in root_module.parameters()):
-                return []
-            if all(not p.requires_grad for p in root_module.parameters()):
-                return [root_module]
-            fixed_modules = []
-            for sub_module in root_module.children():
-                fixed_modules.extend(
-                    find_fixed_modules_recursively(sub_module))
-            return fixed_modules
+        auto_ignored_modules = []
 
-        fixed_modules = find_fixed_modules_recursively(module)
-        return fixed_modules
+        # Here are three states for a module:
+        # 1. `true` module: All parameters require the gradient
+        # 2. `false` module: None of the parameters requrires the gradient
+        # 3. `mixed` module: Only part of the parameters requrie the gradient
+
+        # Here are some rules to recognize the ignored modules:
+        # 1. If `module._modules` is empty, such as `nn.Linear`, it will be
+        #    recognized as an ignored module if its parameters is `mixed`
+        # 2. `module._parameters` is empty, such as `ResNet50`, it will be
+        #    recognized as an ignored module if both `true` module and `false`
+        #    module exist in its submodules.
+        # 3. For other cases, if its parameters are `mixed` or the state of
+        #    its submodules diff from the state of the parameters, it will be
+        #    recognized an ignored module.
+        def find_ignored_modules(root_module: nn.Module):
+            if not list(root_module.children()):
+                if get_grad_state(root_module) == 'mixed':
+                    auto_ignored_modules.append(root_module)
+            else:
+                children = list(root_module.children())
+                params = list(root_module.parameters(recurse=False))
+                if children and not params:
+                    states = list(get_grad_state(m) for m in children)
+                    if not (all(s == 'true' for s in states)
+                            or all(s == 'false'
+                                   for s in states) or 'mixed' in states):
+                        auto_ignored_modules.append(root_module)
+                        return
+                elif params and children:
+                    if all(p.requires_grad for p in params):
+                        state = 'true'
+                    elif all(not p.requires_grad for p in params):
+                        state = 'false'
+                    else:
+                        auto_ignored_modules.append(root_module)
+                        return
+                    states = list(get_grad_state(m) for m in children)
+                    if not all(s == state for s in states):
+                        auto_ignored_modules.append(root_module)
+                        return
+                for child in children:
+                    find_ignored_modules(child)
+
+        find_ignored_modules(module)
+
+        # If the state of the root module is mixed, but no ignored submodule
+        # is found, the whole root module will not be sharded.
+        if get_grad_state(module) == 'mixed' and not auto_ignored_modules:
+            auto_ignored_modules.append(module)
+        return auto_ignored_modules
 
     if digit_version(torch.__version__) < digit_version('2.0.1'):
 
