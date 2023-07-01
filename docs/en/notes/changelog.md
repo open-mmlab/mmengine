@@ -1,5 +1,49 @@
 # Changelog of v0.x
 
+## v0.8.0 (06/30/2023)
+
+### Highlights
+
+- Support training with [FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp) and [DeepSpeed](https://www.deepspeed.ai/). Refer to the [example](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training_with_flexible_runner.py) for more detailed usages.
+
+- Introduce the pure Python style configuration file:
+
+  - Support navigating to base configuration file in IDE
+  - Support navigating to base variable in IDE
+  - Support navigating to source code of class in IDE
+  - Support inheriting two configuration files containing the same field
+  - Load the configuration file without other third-party requirements
+
+  Refer to the [tutorial](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#a-pure-python-style-configuration-file-beta) for more detailed usages.
+
+  ![new-config-en](https://github.com/open-mmlab/mmengine/assets/57566630/7eb41748-9374-488f-901e-fcd7f0d3c8a1)
+
+### New Features & Enhancements
+
+- Support training with FSDP by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1213
+- Add `FlexibleRunner` and `Strategies`, and support training with DeepSpeed by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1183
+- Support pure Python style configuration file by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1071
+- Learning rate in log can show the base learning rate of optimizer by [@AkideLiu](https://github.com/AkideLiu) in https://github.com/open-mmlab/mmengine/pull/1019
+- Refine the error message when auto_scale_lr is not set correctly by [@alexander-soare](https://github.com/alexander-soare) in https://github.com/open-mmlab/mmengine/pull/1181
+- WandbVisBackend supports updating config by [@zgzhengSEU](https://github.com/zgzhengSEU) in https://github.com/open-mmlab/mmengine/pull/977
+
+### Bug fixes
+
+- CheckpointHook should check whether file exists before removing it by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1198
+- Fix undefined variable error in Runner by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1219
+
+### Docs
+
+- Add a document to introduce how to debug with vscode by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1212
+- Update English introduction by [@evdcush](https://github.com/evdcush) in https://github.com/open-mmlab/mmengine/pull/1189
+- Fix parameter typing error in document by [@syo093c](https://github.com/syo093c) in https://github.com/open-mmlab/mmengine/pull/1201
+- Fix gpu collection during evaluation by [@edkair](https://github.com/edkair) in https://github.com/open-mmlab/mmengine/pull/1208
+- Fix a comment in runner tutorial by [@joihn](https://github.com/joihn) in https://github.com/open-mmlab/mmengine/pull/1210
+
+### Contributors
+
+A total of 9 developers contributed to this release. Thanks [@evdcush](https://github.com/evdcush), [@zhouzaida](https://github.com/zhouzaida), [@AkideLiu](https://github.com/AkideLiu), [@joihn](https://github.com/joihn), [@HAOCHENYE](https://github.com/HAOCHENYE), [@edkair](https://github.com/edkair), [@alexander-soare](https://github.com/alexander-soare), [@syo093c](https://github.com/syo093c), [@zgzhengSEU](https://github.com/zgzhengSEU)
+
 ## v0.7.4 (06/03/2023)
 
 ### Highlights
