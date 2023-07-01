@@ -389,7 +389,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
 
         # If the state of the root module is mixed, but no ignored submodule
         # is found, the whole root module will not be sharded.
-        if get_grad_state(module) == 'mixed' and not ignored_modules:
+        if get_grad_state(module) == 'mixed' and not auto_ignored_modules:
             auto_ignored_modules.append(module)
         return auto_ignored_modules
 

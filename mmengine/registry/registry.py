@@ -442,19 +442,6 @@ class Registry:
                 'The key argument of `Registry.get` must be a str, '
                 f'got {type(key)}')
 
-        # Actually, it's strange to implement this `try ... except` to get the
-        # object by its name in `Registry.get`. However, If we want to build
-        # the model using a configuration like
-        # `dict(type='mmengine.model.BaseModel')`, which can
-        # be dumped by lazy import config, we need this code snippet
-        # for `Registry.get` to work.
-        try:
-            obj_cls = get_object_from_string(key)
-        except Exception:
-            raise RuntimeError(f'Failed to get {key}')
-        if obj_cls is not None:
-            return obj_cls
-
         scope, real_key = self.split_scope_key(key)
         obj_cls = None
         registry_name = self.name
@@ -508,6 +495,18 @@ class Registry:
                 else:
                     obj_cls = root.get(key)
 
+        if obj_cls is None:
+            # Actually, it's strange to implement this `try ... except` to
+            # get the object by its name in `Registry.get`. However, If we
+            # want to build the model using a configuration like
+            # `dict(type='mmengine.model.BaseModel')`, which can
+            # be dumped by lazy import config, we need this code snippet
+            # for `Registry.get` to work.
+            try:
+                obj_cls = get_object_from_string(key)
+            except Exception:
+                raise RuntimeError(f'Failed to get {key}')
+
         if obj_cls is not None:
             # For some rare cases (e.g. obj_cls is a partial function), obj_cls
             # doesn't have `__name__`. Use default value to prevent error
@@ -517,6 +516,7 @@ class Registry:
                 f' registry in "{scope_name}"',
                 logger='current',
                 level=logging.DEBUG)
+
         return obj_cls
 
     def _search_child(self, scope: str) -> Optional['Registry']:
