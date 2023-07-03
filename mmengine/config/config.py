@@ -134,6 +134,8 @@ class ConfigDict(Dict):
     copy = __copy__
 
     def __iter__(self):
+        # Implement `__iter__` to overwrite the unpacking operator `**cfg_dict`
+        # to get the built lazy object
         return iter(self.keys())
 
     def get(self, key: str, default: Optional[Any] = None) -> Any:
