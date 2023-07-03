@@ -3,6 +3,7 @@ from mmengine.config import read_base
 from mmengine.dataset import DefaultSampler
 from mmengine.hooks import EMAHook
 from mmengine.model import MomentumAnnealingEMA
+from mmengine.runner import FlexibleRunner
 from mmengine.testing.runner_test_case import ToyDataset, ToyMetric
 
 with read_base():
@@ -44,3 +45,5 @@ custom_hooks = [
         strict_load=False,
         priority=49)
 ]
+
+runner_type = FlexibleRunner

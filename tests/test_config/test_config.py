@@ -965,6 +965,11 @@ class TestConfig:
         cfg.dump(dumped_cfg_path)
         dumped_cfg = Config.fromfile(dumped_cfg_path)
 
+        copied_cfg_path = tmp_path / 'test_dump_copied_lazy.py'
+        cfg_copy = cfg.copy()
+        cfg_copy.dump(copied_cfg_path)
+        copied_cfg = Config.fromfile(copied_cfg_path)
+
         def _compare_dict(a, b):
             if isinstance(a, dict):
                 assert len(a) == len(b)
@@ -978,6 +983,7 @@ class TestConfig:
                 assert str(a) == str(b)
 
         _compare_dict(cfg.to_dict(), dumped_cfg.to_dict())
+        _compare_dict(cfg.to_dict(), copied_cfg.to_dict())
 
         # TODO reimplement this part of unit test when mmdetection adds the
         # new config.

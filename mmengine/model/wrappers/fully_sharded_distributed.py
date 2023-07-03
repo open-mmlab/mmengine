@@ -155,11 +155,12 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             if auto_wrap_policy is None:
                 raise ValueError('`auto_wrap_policy` is not registered!')
         elif isinstance(auto_wrap_policy, dict):
-            ori_func = FUNCTIONS.get(  # type: ignore
-                auto_wrap_policy.pop('type'))
-            if auto_wrap_policy is None:
+            policy = auto_wrap_policy.pop('type')
+            if isinstance(policy, str):
+                policy = FUNCTIONS.get(policy)  # type: ignore
+            if policy is None:
                 raise ValueError('`auto_wrap_policy` is not registered!')
-            auto_wrap_policy = partial(ori_func, **auto_wrap_policy)
+            auto_wrap_policy = partial(policy, **auto_wrap_policy)
 
         if not (auto_wrap_policy is None
                 or callable(auto_wrap_policy)):  # type: ignore
@@ -182,10 +183,12 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             if param_init_fn is None:
                 raise ValueError('`param_init_fn` is not registered!')
         elif isinstance(param_init_fn, dict):
-            param_init_fn = FUNCTIONS.get(param_init_fn.pop('type'))
-            if param_init_fn is None:
+            init_fn = param_init_fn.pop('type')
+            if isinstance(param_init_fn, str):
+                init_fn = FUNCTIONS.get(init_fn)  # type: ignore
+            if init_fn is None:
                 raise ValueError('`param_init_fn` is not registered!')
-            param_init_fn = partial(param_init_fn, **param_init_fn)
+            param_init_fn = partial(init_fn, **param_init_fn)
 
         if not (callable(param_init_fn) or param_init_fn is None):
             raise TypeError('`param_init_fn` should be a str, a '
