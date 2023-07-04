@@ -51,11 +51,13 @@ def turn_on_fast_conv_bn_eval(model: torch.nn.Module):
         # If our current node isn't calling a Module then we can ignore it.
         if node.op != 'call_module':
             continue
-        found_pair = [
-            node for conv_class, bn_class in patterns
-            if isinstance(modules[node.target], bn_class)
-            and isinstance(modules[node.args[0].target], conv_class)
-        ]
+        target_module = modules[node.target]
+        source_module = modules[node.args[0].target]
+        found_pair = False
+        for conv_class, bn_class in patterns:
+            if isinstance(target_module, bn_class) and \
+                    isinstance(source_module, conv_class):
+                found_pair = True
         # Not a conv-BN pattern or output of conv is used by other nodes
         if not found_pair or len(node.args[0].users) > 1:
             continue
