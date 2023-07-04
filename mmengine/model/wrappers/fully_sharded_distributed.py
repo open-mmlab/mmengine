@@ -227,7 +227,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                 module, kwargs['ignored_parameters'])
 
         if 'ignored_modules' in kwargs:
-            kwargs['ignored_modules'] = self.ignored_modules(
+            kwargs['ignored_modules'] = self._get_ignored_modules(
                 module, kwargs['ignored_modules'])
 
         super().__init__(
