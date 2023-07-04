@@ -1728,12 +1728,13 @@ class Runner:
                     module = attrgetter(module_name)(ori_model)
                     turn_on_fast_conv_bn_eval(module)
             else:
-                warnings.warn('The config requires the "fast_conv_bn_eval" '
-                              'feature. However, either MMCV is not '
-                              'installed, or the MMCV version you use'
-                              ' does not support this feature.'
-                              ' Please install the latest version of MMCV'
-                              ' to use this feature.')
+                raise RuntimeError(
+                    'The config requires the "fast_conv_bn_eval" '
+                    'feature. However, either MMCV is not '
+                    'installed, or the MMCV version you use'
+                    ' does not support this feature.'
+                    ' Please install the latest version of MMCV'
+                    ' to use this feature.')
 
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
