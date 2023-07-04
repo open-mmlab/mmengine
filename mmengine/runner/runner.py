@@ -1709,8 +1709,8 @@ class Runner:
         self._init_model_weights()
 
         # try to enable fast_conv_bn_eval feature
-        fast_conv_bn_eval = self.cfg.get('fast_conv_bn_eval', False)
-        if fast_conv_bn_eval:
+        fast_conv_bn_eval = self.cfg.get('fast_conv_bn_eval', None)
+        if fast_conv_bn_eval is not None:
             can_use_fast_conv_bn_eval = False
             if is_installed('mmcv'):
                 from mmcv.cnn import ConvModule
@@ -1719,7 +1719,7 @@ class Runner:
             if can_use_fast_conv_bn_eval:
                 from mmengine.model.turn_on_fast_conv_bn_eval import \
                     turn_on_fast_conv_bn_eval
-                modules = self.cfg.get('fast_conv_bn_eval_modules', 'backbone')
+                modules = fast_conv_bn_eval
                 if isinstance(modules, str):
                     modules = [modules]
                 self.logger.info(f'Enabling the "fast_conv_bn_eval" feature'
