@@ -318,6 +318,8 @@ class Config:
         cfg_text (str, optional): Text of config. Defaults to None.
         filename (str or Path, optional): Name of config file.
             Defaults to None.
+        format_python_code (bool): Whether to format Python code by yapf.
+            Defaults to True.
 
     Here is a simple example:
 
@@ -348,7 +350,8 @@ class Config:
                  cfg_dict: dict = None,
                  cfg_text: Optional[str] = None,
                  filename: Optional[Union[str, Path]] = None,
-                 env_variables: Optional[dict] = None):
+                 env_variables: Optional[dict] = None,
+                 format_python_code: bool = True):
         filename = str(filename) if isinstance(filename, Path) else filename
         if cfg_dict is None:
             cfg_dict = dict()
@@ -363,6 +366,7 @@ class Config:
             cfg_dict = ConfigDict(cfg_dict)
         super().__setattr__('_cfg_dict', cfg_dict)
         super().__setattr__('_filename', filename)
+        super().__setattr__('_format_python_code', format_python_code)
         if cfg_text:
             text = cfg_text
         elif filename:
@@ -380,7 +384,8 @@ class Config:
                  use_predefined_variables: bool = True,
                  import_custom_modules: bool = True,
                  use_environment_variables: bool = True,
-                 lazy_import: Optional[bool] = None) -> 'Config':
+                 lazy_import: Optional[bool] = None,
+                 format_python_code: bool = True) -> 'Config':
         """Build a Config instance from config file.
 
         Args:
@@ -392,6 +397,8 @@ class Config:
             lazy_import (bool): Whether to load config in `lazy_import` mode.
                 If it is `None`, it will be deduced by the content of the
                 config file. Defaults to None.
+            format_python_code (bool): Whether to format Python code by yapf.
+                Defaults to True.
 
         Returns:
             Config: Config instance built from config file.
@@ -440,7 +447,10 @@ class Config:
 
             # disable lazy import to get the real type. See more details about
             # lazy in the docstring of ConfigDict
-            cfg = Config(cfg_dict, filename=filename)
+            cfg = Config(
+                cfg_dict,
+                filename=filename,
+                format_python_code=format_python_code)
             object.__setattr__(cfg, '_imported_names', imported_names)
             return cfg
 
@@ -1321,8 +1331,6 @@ class Config:
         def _format_basic_types(k, v, use_mapping=False):
             if isinstance(v, str):
                 v_str = repr(v)
-            elif isinstance(v, (LazyObject, LazyAttr)):
-                v_str = f"'{v.module}.{str(v)}'"
             else:
                 v_str = str(v)
 
@@ -1354,8 +1362,6 @@ class Config:
                     v_str += f'{_indent(_format_list_tuple(None, item), indent)},\n'  # noqa: 501
                 elif isinstance(item, str):
                     v_str += f'{_indent(repr(item), indent)},\n'
-                elif isinstance(item, (LazyObject, LazyAttr)):
-                    v_str += f"'{str(item)}',\n"
                 else:
                     v_str += str(item) + ',\n'
             if k is None:
@@ -1385,9 +1391,7 @@ class Config:
             for idx, (k, v) in enumerate(input_dict.items()):
                 is_last = idx >= len(input_dict) - 1
                 end = '' if outest_level or is_last else ','
-                if isinstance(v, (LazyObject, LazyAttr)):
-                    attr_str = _format_basic_types(k, v, use_mapping) + end
-                elif isinstance(v, dict):
+                if isinstance(v, dict):
                     v_str = '\n' + _format_dict(v)
                     if use_mapping:
                         k_str = f"'{k}'" if isinstance(k, str) else str(k)
@@ -1406,19 +1410,20 @@ class Config:
                 r += '}'
             return r
 
-        cfg_dict = self._to_lazy_dict()
+        cfg_dict = self.to_dict()
         text = _format_dict(cfg_dict, outest_level=True)
-        # copied from setup.cfg
-        yapf_style = dict(
-            based_on_style='pep8',
-            blank_line_before_nested_class_or_def=True,
-            split_before_expression_after_opening_paren=True)
-        try:
-            text, _ = FormatCode(text, style_config=yapf_style, verify=True)
-        except:  # noqa: E722
-            raise SyntaxError('Failed to format the config file, please '
-                              f'check the syntax of: \n{text}')
-
+        if self._format_python_code:
+            # copied from setup.cfg
+            yapf_style = dict(
+                based_on_style='pep8',
+                blank_line_before_nested_class_or_def=True,
+                split_before_expression_after_opening_paren=True)
+            try:
+                text, _ = FormatCode(
+                    text, style_config=yapf_style, verify=True)
+            except:  # noqa: E722
+                raise SyntaxError('Failed to format the config file, please '
+                                  f'check the syntax of: \n{text}')
         return text
 
     def __repr__(self):
@@ -1490,7 +1495,7 @@ class Config:
             str or None: Config text.
         """
         file = str(file) if isinstance(file, Path) else file
-        cfg_dict = super().__getattribute__('_cfg_dict').to_dict()
+        cfg_dict = self.to_dict()
         if file is None:
             if self.filename is None or self.filename.endswith('.py'):
                 return self.pretty_text
