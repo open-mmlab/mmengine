@@ -66,10 +66,10 @@ def turn_on_fast_conv_bn_eval(model: torch.nn.Module):
         conv_name = node.args[0].target
         bn_name = node.target
 
-        conv = modules[conv_name]
-        bn = modules[bn_name]
+        conv_module = modules[conv_name]
+        bn_module = modules[bn_name]
 
         # Fuse conv and bn into a ConvModule
-        new_conv = ConvModule.create_from_conv_bn(conv, bn)
+        new_conv = ConvModule.create_from_conv_bn(conv_module, bn_module)
         replace_sub_module(model, conv_name, new_conv)
         replace_sub_module(model, bn_name, nn.Identity())
