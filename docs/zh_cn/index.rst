@@ -92,6 +92,7 @@
    mmengine.registry <api/registry>
    mmengine.config <api/config>
    mmengine.runner <api/runner>
+   mmengine._strategy <api/strategy>
    mmengine.hooks <api/hooks>
    mmengine.model <api/model>
    mmengine.optim <api/optim>
@@ -115,6 +116,7 @@
    notes/changelog.md
    notes/contributing.md
    notes/code_style.md
+   notes/debug_with_vscode.md
 
 .. toctree::
    :caption: 语言切换

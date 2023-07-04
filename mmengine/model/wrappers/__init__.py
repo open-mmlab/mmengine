@@ -10,7 +10,7 @@ __all__ = [
     'MMSeparateDistributedDataParallel'
 ]
 
-if digit_version(TORCH_VERSION) >= digit_version('1.11.0'):
+if digit_version(TORCH_VERSION) >= digit_version('2.0.0'):
     from .fully_sharded_distributed import \
         MMFullyShardedDataParallel  # noqa:F401
     __all__.append('MMFullyShardedDataParallel')

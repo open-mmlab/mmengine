@@ -19,6 +19,9 @@ LOOPS = Registry('loop')
 # manage all kinds of hooks like `CheckpointHook`
 HOOKS = Registry('hook')
 
+# manage all kinds of strategies like `NativeStrategy` and `DDPStrategy`
+STRATEGIES = Registry('strategy')
+
 # manage data-related modules
 DATASETS = Registry('dataset')
 DATA_SAMPLERS = Registry('data sampler')

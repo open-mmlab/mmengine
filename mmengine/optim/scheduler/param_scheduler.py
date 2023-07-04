@@ -14,12 +14,12 @@ from typing import Callable, List, Optional, Sequence, Union
 from torch.optim import Optimizer
 
 from mmengine.logging import print_log
-from mmengine.optim import OptimWrapper
+from mmengine.optim import BaseOptimWrapper
 from mmengine.registry import PARAM_SCHEDULERS
 
 INF = int(1e9)
 
-OptimizerType = Union[OptimWrapper, Optimizer]
+OptimizerType = Union[BaseOptimWrapper, Optimizer]
 
 
 class _ParamScheduler:
@@ -32,7 +32,7 @@ class _ParamScheduler:
     https://github.com/pytorch/pytorch/blob/master/torch/optim/lr_scheduler.py.
 
     Args:
-        optimizer (OptimWrapper or Optimizer): Wrapped optimizer.
+        optimizer (BaseOptimWrapper or Optimizer): Wrapped optimizer.
         param_name (str): Name of the parameter to be adjusted, such as
             ``lr``, ``momentum``.
         begin (int): Step at which to start updating the parameters.
@@ -58,7 +58,7 @@ class _ParamScheduler:
                  verbose: bool = False):
 
         # Attach optimizer
-        if not isinstance(optimizer, (Optimizer, OptimWrapper)):
+        if not isinstance(optimizer, (Optimizer, BaseOptimWrapper)):
             raise TypeError('``optimizer`` should be an Optimizer,'
                             'but got {}'.format(type(optimizer).__name__))
         self.optimizer = optimizer
@@ -228,7 +228,7 @@ class StepParamScheduler(_ParamScheduler):
     other changes to the parameter value from outside this scheduler.
 
     Args:
-        optimizer (OptimWrapper or Optimizer): Wrapped optimizer.
+        optimizer (BaseOptimWrapper or Optimizer): Wrapped optimizer.
         param_name (str): Name of the parameter to be adjusted, such as
             ``lr``, ``momentum``.
         step_size (int): Period of parameter value decay.
@@ -316,7 +316,7 @@ class MultiStepParamScheduler(_ParamScheduler):
     scheduler.
 
     Args:
-        optimizer (OptimWrapper or Optimizer): Wrapped optimizer.
+        optimizer (BaseOptimWrapper or Optimizer): Wrapped optimizer.
         param_name (str): Name of the parameter to be adjusted, such as
             ``lr``, ``momentum``.
         milestones (list): List of epoch indices. Must be increasing.
@@ -405,7 +405,7 @@ class ConstantParamScheduler(_ParamScheduler):
     parameter value from outside this scheduler.
 
     Args:
-        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
+        optimizer (Optimizer or BaseOptimWrapper): optimizer or Wrapped
             optimizer.
         param_name (str): Name of the parameter to be adjusted, such as
             ``lr``, ``momentum``.
@@ -494,7 +494,7 @@ class ExponentialParamScheduler(_ParamScheduler):
     """Decays the parameter value of each parameter group by gamma every epoch.
 
     Args:
-        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
+        optimizer (Optimizer or BaseOptimWrapper): optimizer or Wrapped
             optimizer.
         param_name (str): Name of the parameter to be adjusted, such as
             ``lr``, ``momentum``.
@@ -593,7 +593,7 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
     only implements the cosine annealing part of SGDR, and not the restarts.
 
     Args:
-        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
+        optimizer (Optimizer or BaseOptimWrapper): optimizer or Wrapped
             optimizer.
         param_name (str): Name of the parameter to be adjusted, such as
             ``lr``, ``momentum``.
@@ -620,7 +620,7 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Union[Optimizer, OptimWrapper],
+                 optimizer: Union[Optimizer, BaseOptimWrapper],
                  param_name: str,
                  T_max: Optional[int] = None,
                  eta_min: Optional[float] = None,
@@ -714,7 +714,7 @@ class LinearParamScheduler(_ParamScheduler):
     parameter value from outside this scheduler.
 
     Args:
-        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
+        optimizer (Optimizer or BaseOptimWrapper): optimizer or Wrapped
             optimizer.
         param_name (str): Name of the parameter to be adjusted, such as
             ``lr``, ``momentum``.
@@ -736,7 +736,7 @@ class LinearParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Union[Optimizer, OptimWrapper],
+                 optimizer: Union[Optimizer, BaseOptimWrapper],
                  param_name: str,
                  start_factor: float = 1.0 / 3,
                  end_factor: float = 1.0,
@@ -812,7 +812,7 @@ class PolyParamScheduler(_ParamScheduler):
     parameter value from outside this scheduler.
 
     Args:
-        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
+        optimizer (Optimizer or BaseOptimWrapper): optimizer or Wrapped
             optimizer.
         param_name (str): Name of the parameter to be adjusted, such as
             ``lr``, ``momentum``.
@@ -832,7 +832,7 @@ class PolyParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Union[Optimizer, OptimWrapper],
+                 optimizer: Union[Optimizer, BaseOptimWrapper],
                  param_name: str,
                  eta_min: float = 0,
                  power: float = 1.0,
@@ -954,7 +954,7 @@ class OneCycleParamScheduler(_ParamScheduler):
     """  # noqa E501
 
     def __init__(self,
-                 optimizer: Union[Optimizer, OptimWrapper],
+                 optimizer: Union[Optimizer, BaseOptimWrapper],
                  param_name: str,
                  eta_max: float = 0,
                  total_steps: Optional[int] = None,
@@ -1143,7 +1143,7 @@ class CosineRestartParamScheduler(_ParamScheduler):
     with `restart_weight`.
 
     Args:
-        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
+        optimizer (Optimizer or BaseOptimWrapper): optimizer or Wrapped
             optimizer.
         param_name (str): Name of the parameter to be adjusted, such as
             ``lr``, ``momentum``.
@@ -1168,7 +1168,7 @@ class CosineRestartParamScheduler(_ParamScheduler):
     """
 
     def __init__(self,
-                 optimizer: Union[Optimizer, OptimWrapper],
+                 optimizer: Union[Optimizer, BaseOptimWrapper],
                  param_name: str,
                  periods: List[int],
                  restart_weights: Sequence[float] = (1, ),
@@ -1296,7 +1296,7 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
     The implementation is motivated by `PyTorch ReduceLROnPlateau`_.
 
     Args:
-        optimizer (Optimizer or OptimWrapper): optimizer or Wrapped
+        optimizer (Optimizer or BaseOptimWrapper): optimizer or Wrapped
             optimizer.
         param_name (str): Name of the parameter to be adjusted, such as
             ``lr``, ``momentum``.
@@ -1369,7 +1369,7 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
                  verbose: bool = False):
 
         # Attach optimizer
-        if not isinstance(optimizer, (Optimizer, OptimWrapper)):
+        if not isinstance(optimizer, (Optimizer, BaseOptimWrapper)):
             raise TypeError('``optimizer`` should be an Optimizer,'
                             'but got {}'.format(type(optimizer).__name__))
         self.optimizer = optimizer
@@ -1414,7 +1414,7 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
         # base learning rate (lr) which is not affected by the paramwise_cfg.
         # By retrieving the base lr, we can obtain the actual base lr that
         # reflects the learning progress.
-        if isinstance(optimizer, OptimWrapper):
+        if isinstance(optimizer, BaseOptimWrapper):
             raw_optimizer = optimizer.optimizer
         else:
             raw_optimizer = optimizer
@@ -1427,8 +1427,8 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
             # Consider the `min_value` of the last param_groups
             # as the base setting. And we only add this value when
             # the optimizer is OptimWrapper.
-            if isinstance(optimizer, OptimWrapper) and \
-                    optimizer.base_param_settings is not None:
+            if isinstance(optimizer, BaseOptimWrapper) and \
+                    optimizer.base_param_settings is not None:  # type: ignore
                 self.min_values.append(self.min_values[-1])
 
         else:
