@@ -20,6 +20,7 @@ Runner
    :template: classtemplate.rst
 
    Runner
+   FlexibleRunner
 
 Loop
 ----------------
