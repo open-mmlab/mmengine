@@ -52,20 +52,34 @@ def turn_on_fast_conv_bn_eval(model: torch.nn.Module):
         if node.op != 'call_module':
             continue
         target_module = modules[node.target]
-        source_module = modules[node.args[0].target]
         found_pair = False
         for conv_class, bn_class in patterns:
-            if isinstance(target_module, bn_class) and \
-                    isinstance(source_module, conv_class):
-                found_pair = True
+            if isinstance(target_module, bn_class):
+                source_module = modules[node.args[0].target]
+                if isinstance(source_module, conv_class):
+                    found_pair = True
         # Not a conv-BN pattern or output of conv is used by other nodes
         if not found_pair or len(node.args[0].users) > 1:
             continue
 
-        # Find a pair of conv and bn to optimize
+        # check if the conv and bn modules are used in multiple nodes
         conv_name = node.args[0].target
         bn_name = node.target
 
+        conv_usage_count = 0
+        bn_usage_count = 0
+        for _node in fx_model.graph.nodes:
+            if _node.op != 'call_module':
+                continue
+            if _node.target == conv_name:
+                conv_usage_count += 1
+            if _node.target == bn_name:
+                bn_usage_count += 1
+
+        if conv_usage_count > 1 or bn_usage_count > 1:
+            continue
+
+        # Find a pair of conv and bn to optimize
         conv_module = modules[conv_name]
         bn_module = modules[bn_name]
 
