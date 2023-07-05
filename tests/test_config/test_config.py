@@ -1085,7 +1085,7 @@ class TestConfigDict(TestCase):
                 ]))
         cfg_dict = ConfigDict(raw)
         # check `items` and values
-        self.assertDictEqual(cfg_dict.to_dict(), raw)
+        self.assertDictEqual(cfg_dict._to_lazy_dict(), raw)
         self._check(cfg_dict)
 
         # check getattr
@@ -1132,10 +1132,10 @@ class TestConfigDict(TestCase):
     def _check(self, cfg_dict):
         self._recursive_check_lazy(cfg_dict,
                                    lambda x: not isinstance(x, LazyObject))
-        self._recursive_check_lazy(cfg_dict.to_dict(),
+        self._recursive_check_lazy(cfg_dict._to_lazy_dict(),
                                    lambda x: x is not mmengine)
         self._recursive_check_lazy(
-            cfg_dict.to_dict(), lambda x: not isinstance(x, ConfigDict)
+            cfg_dict._to_lazy_dict(), lambda x: not isinstance(x, ConfigDict)
             if isinstance(x, dict) else True)
         self._recursive_check_lazy(
             cfg_dict, lambda x: isinstance(x, ConfigDict)

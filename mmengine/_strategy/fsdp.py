@@ -121,6 +121,9 @@ class FSDPStrategy(DDPStrategy):
         if is_model_wrapper(model):
             return
 
+        for _, module in model.named_modules():
+            if hasattr(module, 'data_preprocessor'):
+                module.data_preprocessor.cuda()
         if self.model_wrapper is None:
             self.model_wrapper = dict(type='MMFullyShardedDataParallel')
 
