@@ -458,6 +458,8 @@ class Config:
                 raise e
             finally:
                 ConfigDict.lazy = False
+
+            # delete builtin imported objects
             for key, value in list(cfg_dict._to_lazy_dict().items()):
                 if isinstance(value, (types.FunctionType, types.ModuleType)):
                     cfg_dict.pop(key)
@@ -1635,8 +1637,7 @@ class Config:
         If you import third-party objects in the config file, all imported
         objects will be converted to a string like ``torch.optim.SGD``
         """
-        _cfg_dict = self._to_lazy_dict(keep_imported)
-        return _lazy2string(_cfg_dict)
+        return self._cfg_dict.to_dict()
 
 
 class DictAction(Action):
