@@ -71,7 +71,7 @@ runner = FlexibleRunner(
     train_cfg=dict(by_epoch=True, max_epochs=10, val_interval=1),
     val_dataloader=val_dataloader,
     val_cfg=dict(),
-    val_evaluator=dict(type=[Accuracy, MMResNet50]))
+    val_evaluator=dict(type=Accuracy))
 
 # 开始训练
 runner.train()
@@ -143,7 +143,7 @@ runner = FlexibleRunner(
     train_cfg=dict(by_epoch=True, max_epochs=10, val_interval=1),
     val_dataloader=val_dataloader,
     val_cfg=dict(),
-    val_evaluator=dict(type=[Accuracy, MMResNet50]))
+    val_evaluator=dict(type=Accuracy))
 
 # 开始训练
 runner.train()
