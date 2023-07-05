@@ -1,5 +1,19 @@
 # Changelog of v0.x
 
+## v0.8.1 (07/05/2023)
+
+### New Features & Enhancements
+
+- Accelerate `Config.dump` and support converting Lazyxxx to string in `ConfigDict.to_dict`by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1232
+
+### Bug fixes
+
+- FSDP should call `_get_ignored_modules` by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1235
+
+### Docs
+
+- Add a document to introduce how to train a large model by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1228
+
 ## v0.8.0 (06/30/2023)
 
 ### Highlights
