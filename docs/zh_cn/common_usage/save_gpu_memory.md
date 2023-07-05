@@ -66,6 +66,10 @@ runner.train()
 
 ## 大模型训练
 
+```{warning}
+如果你有训练大模型的需求，推荐阅读[大模型训练](./large_model_training.md)。
+```
+
 PyTorch 1.11 中已经原生支持了 FSDP 技术。配置写法如下所示：
 
 ```python
