@@ -1,37 +1,38 @@
-# 大模型训练
+# Traning Big Models
 
-在训练大模型时，需要庞大的资源。单卡显存通常不能满足训练的需要，因此出现了大模型训练技术，其中典型的一种是 [DeepSpeed ZeRO](https://www.deepspeed.ai/tutorials/zero/#zero-overview)。DeepSpedd ZeRO 支持切分优化器、梯度以及参数。
+When training large models, significant resources are required. A single GPU memory is often insufficient to meet the training needs. As a result, techniques for training large models have been developed, and one typical approach is [DeepSpeed ZeRO](https://www.deepspeed.ai/tutorials/zero/#zero-overview). DeepSpeed ZeRO supports optimizer, gradient, and parameter sharding.
 
-为了更加灵活地支持大模型训练技术，从 MMEngine v0.8.0 开始，我们提供了新的执行器 [FlexibleRunner](mmengine.runner.FlexibleRunner) 和多个抽象策略 [Strategy](../api/strategy)。
+To provide more flexibility in supporting large model training techniques, starting from MMEngine v0.8.0, we have introduced a new executor called [FlexibleRunner](mmengine.runner.FlexibleRunner) and multiple abstract [Strategies](../api/strategy).
 
 ```{warning}
-新的执行器 FlexibleRunner 和 Strategy 还处于实验性阶段，在将来的版本中，它们的接口有可能会发生变化。
+The new FlexibleRunner and Strategy are still in the experimental stage, and their interfaces may change in future versions.
 ```
 
-下面的示例代码摘自 [examples/distributed_training_with_flexible_runner.py](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training_with_flexible_runner.py)。
+The following example code is excerpted from [examples/distributed_training_with_flexible_runner.py](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training_with_flexible_runner.py).
 
 ## DeepSpeed
 
-[DeepSpeed](https://github.com/microsoft/DeepSpeed/tree/master) 是微软开源的基于 PyTorch 的分布式框架，其支持了 `ZeRO`, `3D-Parallelism`, `DeepSpeed-MoE`, `ZeRO-Infinity` 等训练策略。
-MMEngine 自 v0.8.0 开始支持使用 DeepSpeed 进行模型的训练。
+[DeepSpeed](https://github.com/microsoft/DeepSpeed/tree/master) is an open-source distributed framework based on PyTorch, developed by Microsoft. It supports training strategies such as `ZeRO`, `3D-Parallelism`, `DeepSpeed-MoE`, and `ZeRO-Infinity`.
 
-使用 DeepSpeed 前需安装 deepspeed：
+Starting from MMEngine v0.8.0, MMEngine supports training models using DeepSpeed.
+
+To use DeepSpeed, you need to install it first by running the following command:
 
 ```bash
 pip install deepspeed
 ```
 
-安装好 deepspeed 后，需配置 FlexibleRunner 的 strategy 和 optim_wrapper 参数：
+After installing DeepSpeed, you need to configure the strategy and optim_wrapper parameters of FlexibleRunner as follows:
 
-- strategy：指定 `type='DeepSpeedStrategy'` 并配置参数。参数的详细介绍可阅读 [DeepSpeedStrategy](mmengine._strategy.DeepSpeedStrategy)。
-- optim_wrapper：指定 `type='DeepSpeedOptimWrapper'` 并配置参数。参数的详细介绍可阅读 [DeepSpeedOptimWrapper](mmengine.optim.DeepSpeedOptimWrapper)。
+- strategy: Set `type='DeepSpeedStrategy'` and configure other parameters. For detailed information about the parameters, you can refer to [DeepSpeedStrategy](mmengine._strategy.DeepSpeedStrategy).
+- optim_wrapper: Set `type='DeepSpeedOptimWrapper'` and configure other parameters. For detailed information about the parameters, you can refer to [DeepSpeedOptimWrapper](mmengine.optim.DeepSpeedOptimWrapper).
 
-下面是 DeepSpeed 相关的配置：
+Here is an example configuration related to DeepSpeed:
 
 ```python
 from mmengine.runner._flexible_runner import FlexibleRunner
 
-# 指定 DeepSpeedStrategy 并配置参数
+# set `type='DeepSpeedStrategy'` and configure other parameters
 strategy = dict(
     type='DeepSpeedStrategy',
     fp16=dict(
@@ -55,12 +56,12 @@ strategy = dict(
         cpu_offload=False),
 )
 
-# 指定 DeepSpeedOptimWrapper 并配置参数
+# set `type='DeepSpeedOptimWrapper'` and configure other parameters
 optim_wrapper = dict(
     type='DeepSpeedOptimWrapper',
     optimizer=dict(type='AdamW', lr=1e-3))
 
-# 初始化 FlexibleRunner
+# construct FlexibleRunner
 runner = FlexibleRunner(
     model=MMResNet50(),
     work_dir='./work_dirs',
@@ -73,18 +74,18 @@ runner = FlexibleRunner(
     val_cfg=dict(),
     val_evaluator=dict(type=[Accuracy, MMResNet50]))
 
-# 开始训练
+# start training
 runner.train()
 ```
 
-使用两张卡启动分布式训练：
+Using two GPUs to launch distributed training:
 
 ```bash
 torchrun --nproc-per-node 2 examples/distributed_training_with_flexible_runner.py --use-deepspeed
 ```
 
 <details>
-<summary>训练日志</summary>
+<summary>traning log</summary>
 
 ```
 07/03 13:04:17 - mmengine - INFO - Epoch(train)  [1][ 10/196]  lr: 3.3333e-04  eta: 0:13:14  time: 0.4073  data_time: 0.0335  memory: 970  loss: 6.1887
@@ -112,27 +113,27 @@ torchrun --nproc-per-node 2 examples/distributed_training_with_flexible_runner.p
 
 ## FullyShardedDataParallel (FSDP)
 
-PyTorch 从 v1.11 版本开始支持 [FullyShardedDataParallel](https://pytorch.org/docs/stable/fsdp.html) 训练，但由于其接口一直处于变动中，我们只支持 PyTorch v2.0.0 及以上的版本。
+PyTorch has supported training with FullyShardedDataParallel (FSDP) since version v1.11. However, due to its evolving interface, we only support PyTorch versions 2.0.0 and above.
 
-使用 FSDP 需配置 FlexibleRunner 的 strategy 参数：指定 `type='FSDPStrategy'` 并配置参数。参数的详细介绍可阅读 [FSDPStrategy](mmengine._strategy.FSDPStrategy)。
+To use FSDP, you need to configure the `'strategy'` parameter of FlexibleRunner by specifying `type='FSDPStrategy'` and configuring the parameters. For detailed information about it, you can refer to [FSDPStrategy](mmengine._strategy.FSDPStrategy).
 
-下面是 FSDP 相关的配置：
+Here is an example configuration related to FSDP:
 
 ```python
 from torch.distributed.fsdp.wrap import size_based_auto_wrap_policy
 size_based_auto_wrap_policy = partial(
     size_based_auto_wrap_policy, min_num_params=1e7)
 
-# 指定 FSDPStrategy 并配置参数
+# set `type='FSDPStrategy'` and configure other parameters
 strategy = dict(
     type='FSDPStrategy',
     model_wrapper=dict(auto_wrap_policy=size_based_auto_wrap_policy))
 
-# 指定 AmpOptimWrapper 并配置参数
+# set `type='AmpOptimWrapper'` and configure other parameters
 optim_wrapper = dict(
     type='AmpOptimWrapper', optimizer=dict(type='AdamW', lr=1e-3))
 
-# 初始化 FlexibleRunner
+# construct FlexibleRunner
 runner = FlexibleRunner(
     model=MMResNet50(),
     work_dir='./work_dirs',
@@ -145,18 +146,18 @@ runner = FlexibleRunner(
     val_cfg=dict(),
     val_evaluator=dict(type=[Accuracy, MMResNet50]))
 
-# 开始训练
+# start training
 runner.train()
 ```
 
-使用两张卡启动分布式训练：
+Using two GPUs to launch distributed training:
 
 ```bash
 torchrun --nproc-per-node 2 examples/distributed_training_with_flexible_runner.py --use-fsdp
 ```
 
 <details>
-<summary>训练日志</summary>
+<summary>traning log</summary>
 
 ```
 07/03 13:05:37 - mmengine - INFO - Epoch(train)  [1][ 10/196]  lr: 3.3333e-04  eta: 0:08:28  time: 0.2606  data_time: 0.0330  memory: 954  loss: 6.1265
