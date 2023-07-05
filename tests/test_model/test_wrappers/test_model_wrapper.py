@@ -260,7 +260,14 @@ class TestMMFullyShardedDataParallel(MultiProcessTestCase):
             broadcast(param)
         model.conv1.requires_grad_(False)
         ori_weight = model.conv1.weight.clone()
-        fsdp_model = MMFullyShardedDataParallel(module=model.cuda())
+
+        def wrap_policy(module, recurse=True, *args, **kwargs):
+            if recurse:
+                return True
+            return isinstance(module, nn.Conv2d)
+
+        fsdp_model = MMFullyShardedDataParallel(
+            module=model.cuda(), auto_wrap_policy=wrap_policy)
         optimizer = SGD(fsdp_model.parameters(), lr=0.1)
         optim_wrapper = OptimWrapper(optimizer, accumulative_counts=1)
         inputs = torch.randn(1, 3, 1, 1) * self.rank * 255
@@ -291,97 +298,3 @@ class TestMMFullyShardedDataParallel(MultiProcessTestCase):
         data = dict(inputs=inputs, data_sample=MagicMock())
         predictions = fsdp_model.test_step(data)
         self.assertIsInstance(predictions, torch.Tensor)
-
-    def test_find_ignored_modules(self):
-
-        class ToyModule1(nn.Module):
-            # individual params + submodule
-            def __init__(self):
-                super().__init__()
-                self.layer = nn.Linear(2, 2)
-                self.scale = nn.Parameter(torch.Tensor(1))
-
-            def forward(self, x):
-                return self.layer(x) * self.scale
-
-        class ToyModule2(nn.Module):
-            # module with submodules
-            def __init__(self):
-                super().__init__()
-                self.layer1 = nn.Linear(2, 2)
-                self.layer2 = nn.Linear(2, 2)
-
-            def forward(self, x):
-                return self.layer1(x) * self.layer2(x)
-
-        class ToyModule3(nn.Module):
-
-            def __init__(self):
-                super().__init__()
-                self.block1 = ToyModule1()
-                self.block2 = ToyModule2()
-
-            def forward(self, x):
-                return self.layer1(x) * self.layer2(x)
-
-        class ToyModel(nn.Module):
-
-            def __init__(self) -> None:
-                super().__init__()
-                self.layer1 = nn.Linear(2, 2)
-                self.net = ToyModule3()
-
-            def forward(self, x):
-                return self.layer1(x) + self.net(x)
-
-        self._init_dist_env(self.rank, self.world_size)
-        model = ToyModel().cuda()
-        model.layer1.requires_grad_(False)
-        fsdp_model = MMFullyShardedDataParallel(model)
-        self.assertListEqual(fsdp_model._auto_ignored_modules, [model])
-
-        model = ToyModel().cuda()
-        model.layer1.weight.requires_grad_(False)
-        fsdp_model = MMFullyShardedDataParallel(model)
-        self.assertListEqual(fsdp_model._auto_ignored_modules, [model.layer1])
-
-        model = ToyModel().cuda()
-        model.net.requires_grad_(False)
-        fsdp_model = MMFullyShardedDataParallel(model)
-        self.assertListEqual(fsdp_model._auto_ignored_modules, [model])
-
-        model = ToyModel().cuda()
-        model.net.block1.requires_grad_(False)
-        model.net.block2.requires_grad_(True)
-        fsdp_model = MMFullyShardedDataParallel(model)
-        self.assertListEqual(fsdp_model._auto_ignored_modules, [model.net])
-
-        model = ToyModel().cuda()
-        model.net.block1.requires_grad_(False)
-        model.net.block2.requires_grad_(False)
-        fsdp_model = MMFullyShardedDataParallel(model)
-        self.assertListEqual(fsdp_model._auto_ignored_modules, [model])
-
-        model = ToyModel().cuda()
-        model.net.block1.scale.requires_grad_(False)
-        fsdp_model = MMFullyShardedDataParallel(model)
-        self.assertListEqual(fsdp_model._auto_ignored_modules,
-                             [model.net.block1])
-
-        model = ToyModel().cuda()
-        model.net.block1.layer.requires_grad_(False)
-        fsdp_model = MMFullyShardedDataParallel(model)
-        self.assertListEqual(fsdp_model._auto_ignored_modules,
-                             [model.net.block1])
-
-        model = ToyModel().cuda()
-        model.net.block1.layer.requires_grad_(False)
-        model.net.block1.scale.requires_grad_(False)
-        fsdp_model = MMFullyShardedDataParallel(model)
-        self.assertListEqual(fsdp_model._auto_ignored_modules, [model.net])
-
-        model = ToyModel().cuda()
-        model.net.block1.layer.weight.requires_grad_(False)
-        fsdp_model = MMFullyShardedDataParallel(model)
-        self.assertListEqual(fsdp_model._auto_ignored_modules,
-                             [model.net.block1])

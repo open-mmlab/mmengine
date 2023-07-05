@@ -125,6 +125,19 @@ class ConfigDict(Dict):
             other[copy.deepcopy(key, memo)] = copy.deepcopy(value, memo)
         return other
 
+    def __copy__(self):
+        other = self.__class__()
+        for key, value in super().items():
+            other[key] = value
+        return other
+
+    copy = __copy__
+
+    def __iter__(self):
+        # Implement `__iter__` to overwrite the unpacking operator `**cfg_dict`
+        # to get the built lazy object
+        return iter(self.keys())
+
     def get(self, key: str, default: Optional[Any] = None) -> Any:
         """Get the value of the key. If class attribute ``lazy`` is True, the
         LazyObject will be built and returned.
