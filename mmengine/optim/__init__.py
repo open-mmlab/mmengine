@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from mmengine.utils import is_installed
 from .optimizer import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                         AmpOptimWrapper, ApexOptimWrapper, BaseOptimWrapper,
                         DefaultOptimWrapperConstructor, OptimWrapper,
@@ -33,3 +34,7 @@ __all__ = [
     'ReduceOnPlateauMomentum', 'ReduceOnPlateauParamScheduler',
     'ZeroRedundancyOptimizer', 'BaseOptimWrapper'
 ]
+
+if is_installed('deepspeed'):
+    from .optimizer import DeepSpeedOptimWrapper  # noqa:F401
+    __all__.append('DeepSpeedOptimWrapper')

@@ -2,7 +2,7 @@
 
 When training large models, significant resources are required. A single GPU memory is often insufficient to meet the training needs. As a result, techniques for training large models have been developed, and one typical approach is [DeepSpeed ZeRO](https://www.deepspeed.ai/tutorials/zero/#zero-overview). DeepSpeed ZeRO supports optimizer, gradient, and parameter sharding.
 
-To provide more flexibility in supporting large model training techniques, starting from MMEngine v0.8.0, we have introduced a new executor called [FlexibleRunner](mmengine.runner.FlexibleRunner) and multiple abstract [Strategies](../api/strategy).
+To provide more flexibility in supporting large model training techniques, starting from MMEngine v0.8.0, we have introduced a new runner called [FlexibleRunner](mmengine.runner.FlexibleRunner) and multiple abstract [Strategies](../api/strategy).
 
 ```{warning}
 The new FlexibleRunner and Strategy are still in the experimental stage, and their interfaces may change in future versions.
@@ -22,10 +22,10 @@ To use DeepSpeed, you need to install it first by running the following command:
 pip install deepspeed
 ```
 
-After installing DeepSpeed, you need to configure the strategy and optim_wrapper parameters of FlexibleRunner as follows:
+After installing DeepSpeed, you need to configure the `strategy` and `optim_wrapper` parameters of FlexibleRunner as follows:
 
-- strategy: Set `type='DeepSpeedStrategy'` and configure other parameters. For detailed information about the parameters, you can refer to [DeepSpeedStrategy](mmengine._strategy.DeepSpeedStrategy).
-- optim_wrapper: Set `type='DeepSpeedOptimWrapper'` and configure other parameters. For detailed information about the parameters, you can refer to [DeepSpeedOptimWrapper](mmengine.optim.DeepSpeedOptimWrapper).
+- strategy: Set `type='DeepSpeedStrategy'` and configure other parameters. See [DeepSpeedStrategy](mmengine._strategy.DeepSpeedStrategy) for more details.
+- optim_wrapper: Set `type='DeepSpeedOptimWrapper'` and configure other parameters. See [DeepSpeedOptimWrapper](mmengine.optim.DeepSpeedOptimWrapper) for more details.
 
 Here is an example configuration related to DeepSpeed:
 
