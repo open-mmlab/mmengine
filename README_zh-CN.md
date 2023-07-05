@@ -62,7 +62,7 @@
 
 亮点：
 
-- 支持使用 [FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp) 和 [DeepSpeed](https://www.deepspeed.ai/) 进行训练。请参考[示例](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training_with_flexible_runner.py)以获取更详细的用法说明。
+- 支持使用 [FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp) 和 [DeepSpeed](https://www.deepspeed.ai/) 进行训练。可阅读[大模型训练](https://mmengine.readthedocs.io/zh_cn/latest/common_usage/large_model_training.html)了解用法。
 
 - 引入纯 Python 风格的配置文件：
 
