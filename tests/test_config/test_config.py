@@ -1030,6 +1030,12 @@ error_attr = mmengine.error_attr
                 osp.join(self.data_path,
                          'config/lazy_module_config/error_mix_using1.py'))
 
+        # Force to import in non-lazy-import mode
+        Config.fromfile(
+            osp.join(self.data_path,
+                     'config/lazy_module_config/error_mix_using1.py'),
+            lazy_import=False)
+
         # current lazy-import config, base text config
         with pytest.raises(RuntimeError, match='_base_ ='):
             Config.fromfile(
