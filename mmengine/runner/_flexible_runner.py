@@ -23,7 +23,7 @@ from mmengine.optim import OptimWrapper, OptimWrapperDict, _ParamScheduler
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, FUNCTIONS,
                                HOOKS, LOG_PROCESSORS, LOOPS, RUNNERS,
                                STRATEGIES, VISUALIZERS, DefaultScope)
-from mmengine.utils import digit_version, is_installed
+from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
@@ -641,9 +641,6 @@ class FlexibleRunner:
             else:
                 strategy_name = strategy['type'].__name__
             if strategy_name == 'DeepSpeedStrategy':
-                if not is_installed('deepspeed'):
-                    raise RuntimeWarning('Please install deepspeed with `pip install deepspeed`.')
-              
                 if self._train_dataloader is None:
                     strategy['train_micro_batch_size_per_gpu'] = 1
                 else:
