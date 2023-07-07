@@ -6,7 +6,9 @@ from .deepspeed import DeepSpeedStrategy
 from .distributed import DDPStrategy
 from .single_device import SingleDeviceStrategy
 
-__all__ = ['BaseStrategy', 'DDPStrategy', 'SingleDeviceStrategy', 'DeepSpeedStrategy']
+__all__ = [
+    'BaseStrategy', 'DDPStrategy', 'SingleDeviceStrategy', 'DeepSpeedStrategy'
+]
 
 
 if digit_version(TORCH_VERSION) >= digit_version('2.0.0'):

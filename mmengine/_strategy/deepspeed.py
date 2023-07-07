@@ -78,7 +78,7 @@ class DeepSpeedStrategy(BaseStrategy):
         assert deepspeed is not None, \
             'DeepSpeed is not installed. Please check ' \
             'https://github.com/microsoft/DeepSpeed#installation.'
-        
+
         super().__init__(**kwargs)
 
         self.config = self._parse_config(config)
