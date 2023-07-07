@@ -422,7 +422,7 @@ class Config:
         """
         filename = str(filename) if isinstance(filename, Path) else filename
         inferred_lazy_import = Config._is_lazy_import(filename)
-        if not inferred_lazy_import:
+        if not inferred_lazy_import or lazy_import is False:
             cfg_dict, cfg_text, env_variables = Config._file2dict(
                 filename, use_predefined_variables, use_environment_variables,
                 lazy_import)
