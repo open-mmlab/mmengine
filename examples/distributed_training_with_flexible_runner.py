@@ -24,6 +24,20 @@ class MMResNet50(BaseModel):
             return x, labels
 
 
+class MMViT(BaseModel):
+
+    def __init__(self):
+        super().__init__()
+        self.vit = torchvision.models.vit_h_16()
+
+    def forward(self, imgs, labels, mode):
+        x = self.vit(imgs)
+        if mode == 'loss':
+            return {'loss': F.cross_entropy(x, labels)}
+        elif mode == 'predict':
+            return x, labels
+
+
 class Accuracy(BaseMetric):
 
     def process(self, data_batch, data_samples):
@@ -42,42 +56,93 @@ class Accuracy(BaseMetric):
 def parse_args():
     parser = argparse.ArgumentParser(description='Distributed Training')
     parser.add_argument('--local_rank', '--local-rank', type=int, default=0)
+    parser.add_argument('--model', default='reset', choices=['reset', 'vit'])
     parser.add_argument('--use-fsdp', action='store_true')
     parser.add_argument('--use-deepspeed', action='store_true')
+    parser.add_argument(
+        '--dummy-data', action='store_true', help='use fake data to benchmark')
     args = parser.parse_args()
     return args
 
 
 def main():
     args = parse_args()
-    norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
-    train_set = torchvision.datasets.CIFAR10(
-        'data/cifar10',
-        train=True,
-        download=True,
-        transform=transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(**norm_cfg)
-        ]))
-    valid_set = torchvision.datasets.CIFAR10(
-        'data/cifar10',
-        train=False,
-        download=True,
-        transform=transforms.Compose(
-            [transforms.ToTensor(),
-             transforms.Normalize(**norm_cfg)]))
-    train_dataloader = dict(
-        batch_size=128,
-        dataset=train_set,
-        sampler=dict(type='DefaultSampler', shuffle=True),
-        collate_fn=dict(type='default_collate'))
-    val_dataloader = dict(
-        batch_size=128,
-        dataset=valid_set,
-        sampler=dict(type='DefaultSampler', shuffle=False),
-        collate_fn=dict(type='default_collate'))
+
+    if args.model == 'reset':
+        model = MMResNet50()
+        if args.dummy_data:
+            train_set = torchvision.datasets.FakeData(50000, (3, 32, 32), 10,
+                                                      transforms.ToTensor())
+            valid_set = torchvision.datasets.FakeData(10000, (3, 32, 32), 10,
+                                                      transforms.ToTensor())
+        else:
+            norm_cfg = dict(
+                mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
+            train_set = torchvision.datasets.CIFAR10(
+                'data/cifar10',
+                train=True,
+                download=True,
+                transform=transforms.Compose([
+                    transforms.RandomCrop(32, padding=4),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.ToTensor(),
+                    transforms.Normalize(**norm_cfg)
+                ]))
+            valid_set = torchvision.datasets.CIFAR10(
+                'data/cifar10',
+                train=False,
+                download=True,
+                transform=transforms.Compose(
+                    [transforms.ToTensor(),
+                     transforms.Normalize(**norm_cfg)]))
+        train_dataloader = dict(
+            batch_size=128,
+            dataset=train_set,
+            sampler=dict(type='DefaultSampler', shuffle=True),
+            collate_fn=dict(type='default_collate'))
+        val_dataloader = dict(
+            batch_size=128,
+            dataset=valid_set,
+            sampler=dict(type='DefaultSampler', shuffle=False),
+            collate_fn=dict(type='default_collate'))
+    else:
+        model = MMViT()
+        if args.dummy_data:
+            train_set = torchvision.datasets.FakeData(1281167, (3, 224, 224),
+                                                      1000,
+                                                      transforms.ToTensor())
+            valid_set = torchvision.datasets.FakeData(50000, (3, 224, 224),
+                                                      1000,
+                                                      transforms.ToTensor())
+        else:
+            normalize = transforms.Normalize(
+                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            train_set = torchvision.datasets.ImageFolder(
+                'data/imagenet/train',
+                transform=transforms.Compose([
+                    transforms.RandomResizedCrop(224),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.ToTensor(),
+                    normalize,
+                ]))
+            valid_set = torchvision.datasets.ImageFolder(
+                'data/imagenet/val',
+                transform=transforms.Compose([
+                    transforms.Resize(256),
+                    transforms.CenterCrop(224),
+                    transforms.ToTensor(),
+                    normalize,
+                ]))
+        train_dataloader = dict(
+            batch_size=128,
+            dataset=train_set,
+            sampler=dict(type='DefaultSampler', shuffle=True),
+            collate_fn=dict(type='default_collate'))
+        val_dataloader = dict(
+            batch_size=128,
+            dataset=valid_set,
+            sampler=dict(type='DefaultSampler', shuffle=False),
+            collate_fn=dict(type='default_collate'))
 
     if args.use_deepspeed:
         strategy = dict(
@@ -98,6 +163,10 @@ def main():
                 reduce_scatter=True,
                 allgather_bucket_size=50000000,
                 reduce_bucket_size=50000000,
+                # stage3_max_live_parameters=1e9,
+                # stage3_max_reuse_distance=1e9,
+                # stage3_prefetch_bucket_size=5e8,
+                # stage3_param_persistence_threshold=1e6,
                 overlap_comm=True,
                 contiguous_gradients=True,
                 cpu_offload=False),
@@ -122,7 +191,7 @@ def main():
             type='AmpOptimWrapper', optimizer=dict(type='AdamW', lr=1e-3))
 
     runner = FlexibleRunner(
-        model=MMResNet50(),
+        model=model,
         work_dir='./work_dirs',
         strategy=strategy,
         train_dataloader=train_dataloader,
