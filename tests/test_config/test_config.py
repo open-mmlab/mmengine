@@ -1036,6 +1036,22 @@ error_attr = mmengine.error_attr
                 osp.join(self.data_path,
                          'config/lazy_module_config/error_mix_using2.py'))
 
+        cfg = Config.fromfile(
+            osp.join(self.data_path,
+                     'config/lazy_module_config/test_mix_builtin.py'))
+        assert cfg.path == osp.join('a', 'b')
+        assert cfg.name == 'a/b'
+        assert cfg.suffix == '.py'
+        assert cfg.chained == [1, 2, 3, 4]
+
+        cfg_dict = cfg.to_dict()
+        dumped_cfg_path = tmp_path / 'test_dump_lazy.py'
+        cfg.dump(dumped_cfg_path)
+        dumped_cfg = Config.fromfile(dumped_cfg_path)
+
+        assert set(dumped_cfg.keys()) == {'path', 'name', 'suffix', 'chained'}
+        assert dumped_cfg.to_dict() == cfg.to_dict()
+
 
 class TestConfigDict(TestCase):
 

@@ -996,7 +996,7 @@ class Config:
         #    accessed, but will not be dumped by default.
 
         with open(filename, encoding='utf-8') as f:
-            global_dict = {'LazyObject': LazyObject}
+            global_dict = {'LazyObject': LazyObject, '__file__': filename}
             base_dict = {}
 
             parsed_codes = ast.parse(f.read())
@@ -1470,9 +1470,10 @@ class Config:
     def __iter__(self):
         return iter(self._cfg_dict)
 
-    def __getstate__(self) -> Tuple[dict, Optional[str], Optional[str], dict]:
+    def __getstate__(
+            self) -> Tuple[dict, Optional[str], Optional[str], dict, bool]:
         return (self._cfg_dict, self._filename, self._text,
-                self._env_variables)
+                self._env_variables, self._format_python_code)
 
     def __deepcopy__(self, memo):
         cls = self.__class__
@@ -1495,12 +1496,12 @@ class Config:
     copy = __copy__
 
     def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str],
-                                        dict]):
-        _cfg_dict, _filename, _text, _env_variables = state
-        super().__setattr__('_cfg_dict', _cfg_dict)
-        super().__setattr__('_filename', _filename)
-        super().__setattr__('_text', _text)
-        super().__setattr__('_text', _env_variables)
+                                        dict, bool]):
+        super().__setattr__('_cfg_dict', state[0])
+        super().__setattr__('_filename', state[1])
+        super().__setattr__('_text', state[2])
+        super().__setattr__('_env_variables', state[3])
+        super().__setattr__('_format_python_code', state[4])
 
     def dump(self, file: Optional[Union[str, Path]] = None):
         """Dump config to file or return config text.
@@ -1637,7 +1638,14 @@ class Config:
         If you import third-party objects in the config file, all imported
         objects will be converted to a string like ``torch.optim.SGD``
         """
-        return self._cfg_dict.to_dict()
+        cfg_dict = self._cfg_dict.to_dict()
+        if hasattr(self, '_imported_names') and not keep_imported:
+            cfg_dict = {
+                key: value
+                for key, value in cfg_dict.items()
+                if key not in self._imported_names
+            }
+        return cfg_dict
 
 
 class DictAction(Action):

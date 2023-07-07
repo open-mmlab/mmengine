@@ -165,6 +165,8 @@ def _is_builtin_module(module_name: str) -> bool:
         return False
     if module_name.startswith('mmengine.config'):
         return True
+    if module_name in sys.builtin_module_names:
+        return True
     spec = find_spec(module_name.split('.')[0])
     # Module not found
     if spec is None:
@@ -314,6 +316,14 @@ class ImportTransformer(ast.NodeTransformer):
         # Built-in modules will not be parsed as LazyObject
         module = f'{node.level*"."}{node.module}'
         if _is_builtin_module(module):
+            for alias in node.names:
+                if alias.asname is not None:
+                    self.imported_obj.add(alias.asname)
+                elif alias.name == '*':
+                    raise ConfigParsingError(
+                        'Cannot import * from non-base config')
+                else:
+                    self.imported_obj.add(alias.name)
             return node
 
         if module in self.base_dict:
@@ -408,6 +418,8 @@ class ImportTransformer(ast.NodeTransformer):
         # TODO Support multiline import
         alias = alias_list[0]
         if alias.asname is not None:
+            if _is_builtin_module(alias.name.split('.')[0]):
+                return node
             self.imported_obj.add(alias.asname)
             return ast.parse(  # type: ignore
                 f'{alias.asname} = LazyObject('
