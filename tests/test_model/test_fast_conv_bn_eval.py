@@ -5,7 +5,7 @@ import torch
 from mmcv.cnn import ConvModule
 from torch import nn
 
-from mmengine.model.turn_on_fast_conv_bn_eval import turn_on_fast_conv_bn_eval
+from mmengine.model.fast_conv_bn_eval import turn_on_fast_conv_bn_eval
 from mmengine.testing import assert_allclose
 
 

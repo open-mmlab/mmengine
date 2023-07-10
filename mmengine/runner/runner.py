@@ -1717,7 +1717,7 @@ class Runner:
                 if hasattr(ConvModule, 'turn_on_fast_conv_bn_eval'):
                     can_use_fast_conv_bn_eval = True
             if can_use_fast_conv_bn_eval:
-                from mmengine.model.turn_on_fast_conv_bn_eval import \
+                from mmengine.model.fast_conv_bn_eval import \
                     turn_on_fast_conv_bn_eval
                 modules = fast_conv_bn_eval
                 if isinstance(modules, str):
