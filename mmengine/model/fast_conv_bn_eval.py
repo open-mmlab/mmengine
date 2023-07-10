@@ -1,11 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from operator import attrgetter
-from typing import Tuple
+from typing import List, Tuple
 
 import torch
 import torch.fx as fx
 import torch.nn as nn
 from mmcv.cnn import ConvModule
+
+if not hasattr(ConvModule, 'turn_on_fast_conv_bn_eval'):
+    raise RuntimeError(
+        'The MMCV you use does not support "fast_conv_bn_eval" feature.'
+        'Please install the latest version of MMCV to use this feature.')
 
 
 # Helper function to split a qualname into parent path and last atom.
@@ -30,7 +35,7 @@ def replace_sub_module(model, name, new_module):
     setattr(parent, name, new_module)
 
 
-def turn_on_fast_conv_bn_eval(model: torch.nn.Module):
+def turn_on_fast_conv_bn_eval_for_single_model(model: torch.nn.Module):
 
     # first, turn on fast_conv_bn_eval feature for existing ConvModule
     for name, module in model.named_modules():
@@ -87,3 +92,9 @@ def turn_on_fast_conv_bn_eval(model: torch.nn.Module):
         new_conv = ConvModule.create_from_conv_bn(conv_module, bn_module)
         replace_sub_module(model, conv_name, new_conv)
         replace_sub_module(model, bn_name, nn.Identity())
+
+
+def turn_on_fast_conv_bn_eval(model: torch.nn.Module, modules: List[str]):
+    for module_name in modules:
+        module = attrgetter(module_name)(model)
+        turn_on_fast_conv_bn_eval_for_single_model(module)

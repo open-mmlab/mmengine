@@ -5,7 +5,8 @@ import torch
 from mmcv.cnn import ConvModule
 from torch import nn
 
-from mmengine.model.fast_conv_bn_eval import turn_on_fast_conv_bn_eval
+from mmengine.model.fast_conv_bn_eval import \
+    turn_on_fast_conv_bn_eval_for_single_model
 from mmengine.testing import assert_allclose
 
 
@@ -45,7 +46,7 @@ class TestFastConvBNEval(TestCase):
         model.eval()
         input = torch.randn(64, 6, 32, 32)
         output = model(input)
-        turn_on_fast_conv_bn_eval(model)
+        turn_on_fast_conv_bn_eval_for_single_model(model)
         output2 = model(input)
         print((output - output2).abs().max().item())
         assert_allclose(output, output2)

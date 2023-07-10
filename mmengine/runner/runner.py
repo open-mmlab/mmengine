@@ -9,7 +9,6 @@ import time
 import warnings
 from collections import OrderedDict
 from functools import partial
-from operator import attrgetter
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
 import torch
@@ -36,8 +35,7 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, FUNCTIONS,
                                HOOKS, LOG_PROCESSORS, LOOPS, MODEL_WRAPPERS,
                                MODELS, OPTIM_WRAPPERS, PARAM_SCHEDULERS,
                                RUNNERS, VISUALIZERS, DefaultScope)
-from mmengine.utils import (apply_to, digit_version, get_git_hash,
-                            is_installed, is_seq_of)
+from mmengine.utils import apply_to, digit_version, get_git_hash, is_seq_of
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
                                      set_multi_processing)
 from mmengine.visualization import Visualizer
@@ -1711,30 +1709,14 @@ class Runner:
         # try to enable fast_conv_bn_eval feature
         fast_conv_bn_eval = self.cfg.get('fast_conv_bn_eval', None)
         if fast_conv_bn_eval is not None:
-            can_use_fast_conv_bn_eval = False
-            if is_installed('mmcv'):
-                from mmcv.cnn import ConvModule
-                if hasattr(ConvModule, 'turn_on_fast_conv_bn_eval'):
-                    can_use_fast_conv_bn_eval = True
-            if can_use_fast_conv_bn_eval:
-                from mmengine.model.fast_conv_bn_eval import \
-                    turn_on_fast_conv_bn_eval
-                modules = fast_conv_bn_eval
-                if isinstance(modules, str):
-                    modules = [modules]
-                self.logger.info(f'Enabling the "fast_conv_bn_eval" feature'
-                                 f' for these modules: {modules}')
-                for module_name in modules:
-                    module = attrgetter(module_name)(ori_model)
-                    turn_on_fast_conv_bn_eval(module)
-            else:
-                raise RuntimeError(
-                    'The config requires the "fast_conv_bn_eval" '
-                    'feature. However, either MMCV is not '
-                    'installed, or the MMCV version you use'
-                    ' does not support this feature.'
-                    ' Please install the latest version of MMCV'
-                    ' to use this feature.')
+            from mmengine.model.fast_conv_bn_eval import \
+                turn_on_fast_conv_bn_eval
+            modules = fast_conv_bn_eval
+            if isinstance(modules, str):
+                modules = [modules]
+            self.logger.info(f'Enabling the "fast_conv_bn_eval" feature'
+                             f' for these modules: {modules}')
+            turn_on_fast_conv_bn_eval(ori_model, modules)
 
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
