@@ -390,7 +390,7 @@ class Config:
                  filename: Optional[Union[str, Path]] = None,
                  env_variables: Optional[dict] = None,
                  format_python_code: bool = True,
-                 imported_names: Optional[set] = None):
+                 imported_names: set = set()):
         filename = str(filename) if isinstance(filename, Path) else filename
         if cfg_dict is None:
             cfg_dict = dict()
@@ -469,7 +469,7 @@ class Config:
                 cfg_text=cfg_text,
                 filename=filename,
                 env_variables=env_variables,
-                imported_names=set())
+            )
         else:
             # Enable lazy import when parsing the config.
             # Using try-except to make sure ``ConfigDict.lazy`` will be reset
