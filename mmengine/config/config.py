@@ -459,11 +459,6 @@ class Config:
             finally:
                 ConfigDict.lazy = False
 
-            # delete builtin imported objects
-            for key, value in list(cfg_dict._to_lazy_dict().items()):
-                if isinstance(value, (types.FunctionType, types.ModuleType)):
-                    cfg_dict.pop(key)
-
             # disable lazy import to get the real type. See more details about
             # lazy in the docstring of ConfigDict
             cfg = Config(
@@ -1617,8 +1612,8 @@ class Config:
         return False
 
     def _to_lazy_dict(self, keep_imported: bool = False) -> dict:
-        """Convert config object to dictionary and filter the imported
-        object."""
+        """Convert config object to dictionary with lazy object, and filter the
+        imported object."""
         res = self._cfg_dict._to_lazy_dict()
         if hasattr(self, '_imported_names') and not keep_imported:
             res = {

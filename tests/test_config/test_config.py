@@ -1043,13 +1043,17 @@ error_attr = mmengine.error_attr
         assert cfg.name == 'a/b'
         assert cfg.suffix == '.py'
         assert cfg.chained == [1, 2, 3, 4]
+        assert cfg.existed
+        assert cfg.cfgname == 'test_mix_builtin.py'
 
         cfg_dict = cfg.to_dict()
         dumped_cfg_path = tmp_path / 'test_dump_lazy.py'
         cfg.dump(dumped_cfg_path)
         dumped_cfg = Config.fromfile(dumped_cfg_path)
 
-        assert set(dumped_cfg.keys()) == {'path', 'name', 'suffix', 'chained'}
+        assert set(dumped_cfg.keys()) == {
+            'path', 'name', 'suffix', 'chained', 'existed', 'cfgname'
+        }
         assert dumped_cfg.to_dict() == cfg.to_dict()
 
 

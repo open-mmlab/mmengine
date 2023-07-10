@@ -316,6 +316,7 @@ class ImportTransformer(ast.NodeTransformer):
         # Built-in modules will not be parsed as LazyObject
         module = f'{node.level*"."}{node.module}'
         if _is_builtin_module(module):
+            # Make sure builtin module will be added into `self.imported_obj`
             for alias in node.names:
                 if alias.asname is not None:
                     self.imported_obj.add(alias.asname)
@@ -418,9 +419,9 @@ class ImportTransformer(ast.NodeTransformer):
         # TODO Support multiline import
         alias = alias_list[0]
         if alias.asname is not None:
+            self.imported_obj.add(alias.asname)
             if _is_builtin_module(alias.name.split('.')[0]):
                 return node
-            self.imported_obj.add(alias.asname)
             return ast.parse(  # type: ignore
                 f'{alias.asname} = LazyObject('
                 f'"{alias.name}",'
