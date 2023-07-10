@@ -1,19 +1,26 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import unittest
 from unittest import TestCase
 
 import torch
-from mmcv.cnn import ConvModule
 from torch import nn
 
-from mmengine.model.fast_conv_bn_eval import \
-    turn_on_fast_conv_bn_eval_for_single_model
 from mmengine.testing import assert_allclose
+
+should_test = True
+
+try:
+    from mmengine.model.fast_conv_bn_eval import \
+        turn_on_fast_conv_bn_eval_for_single_model
+except RuntimeError:
+    should_test = False
 
 
 class BackboneModel(nn.Module):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        from mmcv.cnn import ConvModule
         conv0 = nn.Conv2d(6, 6, 6)
         bn0 = nn.BatchNorm2d(6)
         self.mod1 = ConvModule.create_from_conv_bn(conv0, bn0)
@@ -38,6 +45,7 @@ class BackboneModel(nn.Module):
         return x
 
 
+@unittest.skipIf(not should_test, reason='package requirement not satisfied')
 class TestFastConvBNEval(TestCase):
     """Test the turn_on_fast_conv_bn_eval function."""
 
