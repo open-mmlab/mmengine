@@ -1707,15 +1707,12 @@ class Runner:
         self._init_model_weights()
 
         # try to enable fast_conv_bn_eval feature
-        fast_conv_bn_eval = self.cfg.get('fast_conv_bn_eval', None)
-        if fast_conv_bn_eval is not None:
+        modules = self.cfg.get('fast_conv_bn_eval', None)
+        if modules is not None:
             from mmengine.model.fast_conv_bn_eval import \
                 turn_on_fast_conv_bn_eval
-            modules = fast_conv_bn_eval
-            if isinstance(modules, str):
-                modules = [modules]
             self.logger.info(f'Enabling the "fast_conv_bn_eval" feature'
-                             f' for these modules: {modules}')
+                             f' for sub-modules: {modules}')
             turn_on_fast_conv_bn_eval(ori_model, modules)
 
         # make sure checkpoint-related hooks are triggered after `before_run`

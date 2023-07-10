@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from operator import attrgetter
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import torch
 import torch.fx as fx
@@ -94,7 +94,10 @@ def turn_on_fast_conv_bn_eval_for_single_model(model: torch.nn.Module):
         replace_sub_module(model, bn_name, nn.Identity())
 
 
-def turn_on_fast_conv_bn_eval(model: torch.nn.Module, modules: List[str]):
+def turn_on_fast_conv_bn_eval(model: torch.nn.Module, modules: Union[List[str],
+                                                                     str]):
+    if isinstance(modules, str):
+        modules = [modules]
     for module_name in modules:
         module = attrgetter(module_name)(model)
         turn_on_fast_conv_bn_eval_for_single_model(module)
