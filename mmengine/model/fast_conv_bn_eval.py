@@ -28,8 +28,7 @@ def replace_sub_module(model, name, new_module):
     # usage: replace_sub_module(model, 'layer1.block2.conv2', conv)
     parent_name, name = _parent_name(name)
     if parent_name != '':
-        getter = attrgetter(parent_name)
-        parent = getter(model)
+        parent = attrgetter(parent_name)(model)
     else:
         parent = model
     setattr(parent, name, new_module)
