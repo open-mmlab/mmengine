@@ -355,6 +355,9 @@ class Config:
             Defaults to None.
         format_python_code (bool): Whether to format Python code by yapf.
             Defaults to True.
+        imported_names (set, optional): Imported object names for pure Python
+            style config, and these variables will not be dumped.
+            Defaults to None.
 
     Here is a simple example:
 
@@ -386,7 +389,8 @@ class Config:
                  cfg_text: Optional[str] = None,
                  filename: Optional[Union[str, Path]] = None,
                  env_variables: Optional[dict] = None,
-                 format_python_code: bool = True):
+                 format_python_code: bool = True,
+                 imported_names: Optional[set] = None):
         filename = str(filename) if isinstance(filename, Path) else filename
         if cfg_dict is None:
             cfg_dict = dict()
@@ -402,6 +406,7 @@ class Config:
         super().__setattr__('_cfg_dict', cfg_dict)
         super().__setattr__('_filename', filename)
         super().__setattr__('_format_python_code', format_python_code)
+        super().__setattr__('_imported_names', imported_names)
         if cfg_text:
             text = cfg_text
         elif filename:
@@ -463,10 +468,8 @@ class Config:
                 cfg_dict,
                 cfg_text=cfg_text,
                 filename=filename,
-                env_variables=env_variables)
-            # _imported_names will not be used in this control flow. Only for
-            # the unified attribute access interface.
-            object.__setattr__(cfg, '_imported_names', set())
+                env_variables=env_variables,
+                imported_names=set())
         else:
             # Enable lazy import when parsing the config.
             # Using try-except to make sure ``ConfigDict.lazy`` will be reset
@@ -485,9 +488,8 @@ class Config:
             cfg = Config(
                 cfg_dict,
                 filename=filename,
-                format_python_code=format_python_code)
-            object.__setattr__(cfg, '_imported_names', imported_names)
-
+                format_python_code=format_python_code,
+                imported_names=imported_names)
         return cfg
 
     @staticmethod
