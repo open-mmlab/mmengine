@@ -321,7 +321,7 @@ The following figure shows the registry structure of `MMAlpha` and `MMBeta`.
 
 <div align="center">
   <img src="https://user-images.githubusercontent.com/58739961/185307738-9ddbce2d-f8b5-40c4-bf8f-603830ccc0dc.png"/>
-</div>benchmarks/benchmark-ab.py
+</div>
 
 Now we call the modules of `MMAlpha` in `MMBeta`.
 
