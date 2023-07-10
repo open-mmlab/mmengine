@@ -464,7 +464,7 @@ class Config:
                         'include the directory which contains your custom '
                         'module')
                     raise ImportError(err_msg) from e
-            cfg = Config(
+            return Config(
                 cfg_dict,
                 cfg_text=cfg_text,
                 filename=filename,
@@ -485,12 +485,11 @@ class Config:
 
             # disable lazy import to get the real type. See more details about
             # lazy in the docstring of ConfigDict
-            cfg = Config(
+            return Config(
                 cfg_dict,
                 filename=filename,
                 format_python_code=format_python_code,
                 imported_names=imported_names)
-        return cfg
 
     @staticmethod
     def fromstring(cfg_str: str, file_format: str) -> 'Config':
