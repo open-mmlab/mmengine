@@ -963,6 +963,7 @@ class TestConfig:
                             'config/lazy_module_config/toy_model.py')
         cfg = Config.fromfile(cfg_path)
         pickled = pickle.loads(pickle.dumps(cfg))
+        assert pickled.__dict__ == cfg.__dict__
 
     def test_lazy_import(self, tmp_path):
         lazy_import_cfg_path = osp.join(
