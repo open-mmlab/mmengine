@@ -3,6 +3,7 @@ import argparse
 import copy
 import os
 import os.path as osp
+import pickle
 import platform
 import sys
 import tempfile
@@ -950,6 +951,18 @@ class TestConfig:
         assert model.backbone.style == 'pytorch'
         assert isinstance(model.roi_head.bbox_head.loss_cls, ToyLoss)
         DefaultScope._instance_dict.pop('test1')
+
+    def test_pickle(self):
+        # Text style config
+        cfg_path = osp.join(self.data_path, 'config/py_config/test_py_base.py')
+        cfg = Config.fromfile(cfg_path)
+        pickled = pickle.loads(pickle.dumps(cfg))
+        assert pickled.__dict__ == cfg.__dict__
+
+        cfg_path = osp.join(self.data_path,
+                            'config/lazy_module_config/toy_model.py')
+        cfg = Config.fromfile(cfg_path)
+        pickled = pickle.loads(pickle.dumps(cfg))
 
     def test_lazy_import(self, tmp_path):
         lazy_import_cfg_path = osp.join(

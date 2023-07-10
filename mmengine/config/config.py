@@ -261,6 +261,24 @@ class ConfigDict(Dict):
         for key, value in merged.items():
             self[key] = value
 
+    def __getstate__(self):
+        state = {}
+        for key, value in super().items():
+            state[key] = value
+        return state
+
+    def __setstate__(self, state):
+        for key, value in state.items():
+            self[key] = value
+
+    def __eq__(self, other):
+        if isinstance(other, ConfigDict):
+            return other.to_dict() == self.to_dict()
+        elif isinstance(other, dict):
+            return {k: v for k, v in self.items()} == other
+        else:
+            return False
+
     def _to_lazy_dict(self):
         """Convert the ConfigDict to a normal dictionary recursively, and keep
         the ``LazyObject`` or ``LazyAttr`` object not built."""
@@ -441,11 +459,14 @@ class Config:
                         'include the directory which contains your custom '
                         'module')
                     raise ImportError(err_msg) from e
-            return Config(
+            cfg = Config(
                 cfg_dict,
                 cfg_text=cfg_text,
                 filename=filename,
                 env_variables=env_variables)
+            # _imported_names will not be used in this control flow. Only for
+            # the unified attribute access interface.
+            object.__setattr__(cfg, '_imported_names', set())
         else:
             # Enable lazy import when parsing the config.
             # Using try-except to make sure ``ConfigDict.lazy`` will be reset
@@ -466,7 +487,8 @@ class Config:
                 filename=filename,
                 format_python_code=format_python_code)
             object.__setattr__(cfg, '_imported_names', imported_names)
-            return cfg
+
+        return cfg
 
     @staticmethod
     def fromstring(cfg_str: str, file_format: str) -> 'Config':
@@ -1466,9 +1488,12 @@ class Config:
         return iter(self._cfg_dict)
 
     def __getstate__(
-            self) -> Tuple[dict, Optional[str], Optional[str], dict, bool]:
-        return (self._cfg_dict, self._filename, self._text,
-                self._env_variables, self._format_python_code)
+            self
+    ) -> Tuple[dict, Optional[str], Optional[str], dict, bool, set]:
+        state = (self._cfg_dict, self._filename, self._text,
+                 self._env_variables, self._format_python_code,
+                 self._imported_names)
+        return state
 
     def __deepcopy__(self, memo):
         cls = self.__class__
@@ -1491,12 +1516,13 @@ class Config:
     copy = __copy__
 
     def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str],
-                                        dict, bool]):
+                                        dict, bool, set]):
         super().__setattr__('_cfg_dict', state[0])
         super().__setattr__('_filename', state[1])
         super().__setattr__('_text', state[2])
         super().__setattr__('_env_variables', state[3])
         super().__setattr__('_format_python_code', state[4])
+        super().__setattr__('_imported_names', state[5])
 
     def dump(self, file: Optional[Union[str, Path]] = None):
         """Dump config to file or return config text.

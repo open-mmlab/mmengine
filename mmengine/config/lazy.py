@@ -121,6 +121,12 @@ class LazyObject:
 
     __repr__ = __str__
 
+    def __getstate__(self):
+        return self.__dict__
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+
 
 class LazyAttr:
     """The attribute of the LazyObject.
@@ -219,3 +225,9 @@ class LazyAttr:
         return self.name
 
     __repr__ = __str__
+
+    def __getstate__(self):
+        return self.__dict__
+
+    def __setstate__(self, state):
+        self.__dict__ = state
