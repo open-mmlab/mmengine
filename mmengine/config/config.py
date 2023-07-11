@@ -261,6 +261,24 @@ class ConfigDict(Dict):
         for key, value in merged.items():
             self[key] = value
 
+    def __getstate__(self):
+        state = {}
+        for key, value in super().items():
+            state[key] = value
+        return state
+
+    def __setstate__(self, state):
+        for key, value in state.items():
+            self[key] = value
+
+    def __eq__(self, other):
+        if isinstance(other, ConfigDict):
+            return other.to_dict() == self.to_dict()
+        elif isinstance(other, dict):
+            return {k: v for k, v in self.items()} == other
+        else:
+            return False
+
     def _to_lazy_dict(self):
         """Convert the ConfigDict to a normal dictionary recursively, and keep
         the ``LazyObject`` or ``LazyAttr`` object not built."""
@@ -281,8 +299,8 @@ class ConfigDict(Dict):
         return _to_dict(self)
 
     def to_dict(self):
-        """Convert the ConfigDict to a normal dictionary recursively, and keep
-        the ``LazyObject`` or ``LazyAttr`` object not built."""
+        """Convert the ConfigDict to a normal dictionary recursively, and
+        convert the ``LazyObject`` or ``LazyAttr`` to string."""
         return _lazy2string(self, dict_type=dict)
 
 
@@ -363,12 +381,14 @@ class Config:
     .. _config tutorial: https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html
     """  # noqa: E501
 
-    def __init__(self,
-                 cfg_dict: dict = None,
-                 cfg_text: Optional[str] = None,
-                 filename: Optional[Union[str, Path]] = None,
-                 env_variables: Optional[dict] = None,
-                 format_python_code: bool = True):
+    def __init__(
+        self,
+        cfg_dict: dict = None,
+        cfg_text: Optional[str] = None,
+        filename: Optional[Union[str, Path]] = None,
+        env_variables: Optional[dict] = None,
+        format_python_code: bool = True,
+    ):
         filename = str(filename) if isinstance(filename, Path) else filename
         if cfg_dict is None:
             cfg_dict = dict()
@@ -384,6 +404,9 @@ class Config:
         super().__setattr__('_cfg_dict', cfg_dict)
         super().__setattr__('_filename', filename)
         super().__setattr__('_format_python_code', format_python_code)
+        if not hasattr(self, '_imported_names'):
+            super().__setattr__('_imported_names', set())
+
         if cfg_text:
             text = cfg_text
         elif filename:
@@ -445,7 +468,8 @@ class Config:
                 cfg_dict,
                 cfg_text=cfg_text,
                 filename=filename,
-                env_variables=env_variables)
+                env_variables=env_variables,
+            )
         else:
             # Enable lazy import when parsing the config.
             # Using try-except to make sure ``ConfigDict.lazy`` will be reset
@@ -457,15 +481,10 @@ class Config:
             except Exception as e:
                 raise e
             finally:
+                # disable lazy import to get the real type. See more details
+                # about lazy in the docstring of ConfigDict
                 ConfigDict.lazy = False
 
-            # delete builtin imported objects
-            for key, value in list(cfg_dict._to_lazy_dict().items()):
-                if isinstance(value, (types.FunctionType, types.ModuleType)):
-                    cfg_dict.pop(key)
-
-            # disable lazy import to get the real type. See more details about
-            # lazy in the docstring of ConfigDict
             cfg = Config(
                 cfg_dict,
                 filename=filename,
@@ -996,7 +1015,7 @@ class Config:
         #    accessed, but will not be dumped by default.
 
         with open(filename, encoding='utf-8') as f:
-            global_dict = {'LazyObject': LazyObject}
+            global_dict = {'LazyObject': LazyObject, '__file__': filename}
             base_dict = {}
 
             parsed_codes = ast.parse(f.read())
@@ -1470,9 +1489,13 @@ class Config:
     def __iter__(self):
         return iter(self._cfg_dict)
 
-    def __getstate__(self) -> Tuple[dict, Optional[str], Optional[str], dict]:
-        return (self._cfg_dict, self._filename, self._text,
-                self._env_variables)
+    def __getstate__(
+            self
+    ) -> Tuple[dict, Optional[str], Optional[str], dict, bool, set]:
+        state = (self._cfg_dict, self._filename, self._text,
+                 self._env_variables, self._format_python_code,
+                 self._imported_names)
+        return state
 
     def __deepcopy__(self, memo):
         cls = self.__class__
@@ -1495,12 +1518,13 @@ class Config:
     copy = __copy__
 
     def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str],
-                                        dict]):
-        _cfg_dict, _filename, _text, _env_variables = state
-        super().__setattr__('_cfg_dict', _cfg_dict)
-        super().__setattr__('_filename', _filename)
-        super().__setattr__('_text', _text)
-        super().__setattr__('_text', _env_variables)
+                                        dict, bool, set]):
+        super().__setattr__('_cfg_dict', state[0])
+        super().__setattr__('_filename', state[1])
+        super().__setattr__('_text', state[2])
+        super().__setattr__('_env_variables', state[3])
+        super().__setattr__('_format_python_code', state[4])
+        super().__setattr__('_imported_names', state[5])
 
     def dump(self, file: Optional[Union[str, Path]] = None):
         """Dump config to file or return config text.
@@ -1616,8 +1640,8 @@ class Config:
         return False
 
     def _to_lazy_dict(self, keep_imported: bool = False) -> dict:
-        """Convert config object to dictionary and filter the imported
-        object."""
+        """Convert config object to dictionary with lazy object, and filter the
+        imported object."""
         res = self._cfg_dict._to_lazy_dict()
         if hasattr(self, '_imported_names') and not keep_imported:
             res = {
@@ -1637,7 +1661,14 @@ class Config:
         If you import third-party objects in the config file, all imported
         objects will be converted to a string like ``torch.optim.SGD``
         """
-        return self._cfg_dict.to_dict()
+        cfg_dict = self._cfg_dict.to_dict()
+        if hasattr(self, '_imported_names') and not keep_imported:
+            cfg_dict = {
+                key: value
+                for key, value in cfg_dict.items()
+                if key not in self._imported_names
+            }
+        return cfg_dict
 
 
 class DictAction(Action):
