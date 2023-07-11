@@ -1,47 +1,121 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import warnings
+from functools import partial
 from operator import attrgetter
-from typing import List, Tuple, Union
+from typing import List, Union
 
 import torch
 import torch.fx as fx
 import torch.nn as nn
-from mmcv.cnn import ConvModule
 
-if not hasattr(ConvModule, 'turn_on_fast_conv_bn_eval'):
-    raise RuntimeError(
-        'The MMCV you use does not support "fast_conv_bn_eval" feature.'
-        'Please install the latest version of MMCV to use this feature.')
+from mmengine.utils import is_installed
+
+optimize_conv_module = False
+
+if is_installed('mmcv'):
+    from mmcv.cnn import ConvModule
+    optimize_conv_module = hasattr(ConvModule, 'turn_on_fast_conv_bn_eval')
+
+if not optimize_conv_module:
+    warnings.warn(
+        'Either MMCV is not installed, or the MMCV you use does not support '
+        '"fast_conv_bn_eval" feature for ConvModule.'
+        'We will only turn on "fast_conv_bn_eval" feature for pytorch native '
+        'conv and bn modules. This is ok if you do not use '
+        'mmcv.cnn.ConvModule')
 
 
-# Helper function to split a qualname into parent path and last atom.
-def _parent_name(target: str) -> Tuple[str, str]:
-    """Splits a qualname into parent path and last atom.
+def fast_conv_bn_eval_forward(bn: nn.modules.batchnorm._BatchNorm,
+                              conv: nn.modules.conv._ConvNd, x: torch.Tensor):
+    """Code borrowed from mmcv 2.0.1, so that this feature can be used for old
+    mmcv versions.
 
-    For example, `foo.bar.baz` -> (`foo.bar`, `baz`)
+    Implementation based on https://arxiv.org/abs/2305.11624
+    "Tune-Mode ConvBN Blocks For Efficient Transfer Learning"
+    It leverages the associative law between convolution and affine transform,
+    i.e., normalize (weight conv feature) = (normalize weight) conv feature.
+    It works for Eval mode of ConvBN blocks during validation, and can be used
+    for training as well. It reduces memory and computation cost.
+    Args:
+        bn (_BatchNorm): a BatchNorm module.
+        conv (nn._ConvNd): a conv module
+        x (torch.Tensor): Input feature map.
     """
-    *parent, name = target.rsplit('.', 1)
-    return parent[0] if parent else '', name
-
-
-def replace_sub_module(model, name, new_module):
-    # Remove the original module from the model
-    # usage: replace_sub_module(model, 'layer1.block2.conv2', conv)
-    parent_name, name = _parent_name(name)
-    if parent_name != '':
-        parent = attrgetter(parent_name)(model)
+    # These lines of code are designed to deal with various cases
+    # like bn without affine transform, and conv without bias
+    weight_on_the_fly = conv.weight
+    if conv.bias is not None:
+        bias_on_the_fly = conv.bias
     else:
-        parent = model
-    setattr(parent, name, new_module)
+        bias_on_the_fly = torch.zeros_like(bn.running_var)
+
+    if bn.weight is not None:
+        bn_weight = bn.weight
+    else:
+        bn_weight = torch.ones_like(bn.running_var)
+
+    if bn.bias is not None:
+        bn_bias = bn.bias
+    else:
+        bn_bias = torch.zeros_like(bn.running_var)
+
+    # shape of [C_out, 1, 1, 1] in Conv2d
+    weight_coeff = torch.rsqrt(bn.running_var +
+                               bn.eps).reshape([-1] + [1] *
+                                               (len(conv.weight.shape) - 1))
+    # shape of [C_out, 1, 1, 1] in Conv2d
+    coefff_on_the_fly = bn_weight.view_as(weight_coeff) * weight_coeff
+
+    # shape of [C_out, C_in, k, k] in Conv2d
+    weight_on_the_fly = weight_on_the_fly * coefff_on_the_fly
+    # shape of [C_out] in Conv2d
+    bias_on_the_fly = bn_bias + coefff_on_the_fly.flatten() *\
+        (bias_on_the_fly - bn.running_mean)
+
+    return conv._conv_forward(x, weight_on_the_fly, bias_on_the_fly)
 
 
-def turn_on_fast_conv_bn_eval_for_single_model(model: torch.nn.Module):
+def bn_once_empty_forward(bn: nn.modules.batchnorm._BatchNorm,
+                          x: torch.Tensor):
+    """The forward function is an identity function.
 
-    # first, turn on fast_conv_bn_eval feature for existing ConvModule
-    for name, module in model.named_modules():
-        if isinstance(module, ConvModule):
-            module.turn_on_fast_conv_bn_eval()
+    The magic is that after one call, the `bn.forward` will be restored to what
+    it used to be.
+    """
+    bn.__dict__.pop('forward')
+    return x
 
-    # second, merge consecutive conv+bn into ConvModule for the given model
+
+def fast_conv_bn_eval_control(bn: nn.modules.batchnorm._BatchNorm,
+                              conv: nn.modules.conv._ConvNd, x: torch.Tensor):
+    """This function controls whether to use `fast_conv_bn_eval_forward`.
+
+    If the following `bn` is in `eval` mode, then we turn on the special
+    `fast_conv_bn_eval_forward` and let the following call of `bn.forward` to
+    be identity. Note that this `bn.forward` modification only works for one
+    call. After the call, `bn.forward` will be restored to the default
+    function. This is to deal with the case where one `bn` module is used in
+    multiple places.
+    """
+    if not bn.training:
+        # bn in eval mode
+        output = fast_conv_bn_eval_forward(bn, conv, x)
+        bn.forward = partial(bn_once_empty_forward, bn)
+        return output
+    else:
+        return conv._conv_forward(x, conv.weight, conv.bias)
+
+
+def turn_on_fast_conv_bn_eval_for_single_model(
+        model: torch.nn.Module, optimize_conv_module: bool = True):
+
+    if optimize_conv_module:
+        # first, turn on fast_conv_bn_eval feature for existing ConvModule
+        for name, module in model.named_modules():
+            if isinstance(module, ConvModule):
+                module.turn_on_fast_conv_bn_eval()
+
+    # second, optimize consecutive conv+bn by modifying forward function
 
     # Symbolically trace the input model to create an FX GraphModule
     fx_model: fx.GraphModule = fx.symbolic_trace(model)
@@ -87,16 +161,16 @@ def turn_on_fast_conv_bn_eval_for_single_model(model: torch.nn.Module):
         conv_module = modules[conv_name]
         bn_module = modules[bn_name]
 
-        # Fuse conv and bn into a ConvModule
-        new_conv = ConvModule.create_from_conv_bn(conv_module, bn_module)
-        replace_sub_module(model, conv_name, new_conv)
-        replace_sub_module(model, bn_name, nn.Identity())
+        conv_module.forward = partial(fast_conv_bn_eval_control, bn_module,
+                                      conv_module)
 
 
 def turn_on_fast_conv_bn_eval(model: torch.nn.Module, modules: Union[List[str],
                                                                      str]):
     if isinstance(modules, str):
         modules = [modules]
+    global optimize_conv_module
     for module_name in modules:
         module = attrgetter(module_name)(model)
-        turn_on_fast_conv_bn_eval_for_single_model(module)
+        turn_on_fast_conv_bn_eval_for_single_model(module,
+                                                   optimize_conv_module)
