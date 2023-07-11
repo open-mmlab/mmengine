@@ -421,8 +421,8 @@ class Config:
             Config: Config instance built from config file.
         """
         filename = str(filename) if isinstance(filename, Path) else filename
-        inferred_lazy_import = Config._is_lazy_import(filename)
-        if not inferred_lazy_import or lazy_import is False:
+        if (lazy_import is False or
+            (lazy_import is None and not Config._is_lazy_import(filename))):
             cfg_dict, cfg_text, env_variables = Config._file2dict(
                 filename, use_predefined_variables, use_environment_variables,
                 lazy_import)
