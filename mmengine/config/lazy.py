@@ -103,9 +103,6 @@ class LazyObject:
         self.__dict__ = state
 
 
-LazyAttr = LazyObject
-
-
 class LazyImportContext:
 
     def __init__(self, enable=True):

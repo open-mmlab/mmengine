@@ -14,7 +14,6 @@ import numpy as np
 import torch
 
 from mmengine.config import Config
-from mmengine.config.new_config import Config as NewConfig
 from mmengine.fileio import dump
 from mmengine.hooks.logger_hook import SUFFIX_TYPE
 from mmengine.logging import MMLogger, print_log
@@ -236,7 +235,7 @@ class LocalVisBackend(BaseVisBackend):
         Args:
             config (Config): The Config object
         """
-        assert isinstance(config, (Config, NewConfig))
+        assert isinstance(config, Config)
         config.dump(self._config_save_file)
 
     @force_init_env

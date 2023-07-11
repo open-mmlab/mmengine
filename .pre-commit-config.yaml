@@ -55,7 +55,7 @@ repos:
         args: ["mmengine", "tests"]
       - id: remove-improper-eol-in-cn-docs
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.4.1
+    rev: v0.812
     hooks:
       - id: mypy
         exclude: "docs"

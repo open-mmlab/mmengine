@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import copy
 import importlib
 import inspect
 import platform
@@ -9,15 +8,13 @@ from importlib.machinery import PathFinder
 from importlib.util import spec_from_loader
 from pathlib import Path
 from types import BuiltinFunctionType, FunctionType, ModuleType
-from typing import Any, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 from yapf.yapflib.yapf_api import FormatCode
 
-from mmengine.fileio import dump
-from .config import ConfigDict
+from .config import Config, ConfigDict
 from .lazy import LazyImportContext, LazyObject
 
-DELETE_KEY = '_delete_'
 RESERVED_KEYS = ['filename', 'text', 'pretty_text']
 
 if platform.system() == 'Windows':
@@ -51,7 +48,35 @@ def recover_lazy_field(cfg):
     return cfg
 
 
-class Config:
+def dump_extra_type(value):
+    if isinstance(value, LazyObject):
+        return value.dump_str
+    if isinstance(value, (type, FunctionType, BuiltinFunctionType)):
+        return '<' + value.__module__ + '.' + value.__name__ + '>'
+    if isinstance(value, ModuleType):
+        return f'<{value.__name__}>'
+
+    typename = type(value).__module__ + type(value).__name__
+    if typename == 'torch.dtype':
+        return '<' + str(value) + '>'
+
+    return None
+
+
+def filter_imports(item):
+    k, v = item
+    # If the name is the same as the function/type name,
+    # It should come from import instead of a field
+    if isinstance(v, (FunctionType, type)):
+        return v.__name__ != k
+    elif isinstance(v, LazyObject):
+        return v.name != k
+    elif isinstance(v, ModuleType):
+        return False
+    return True
+
+
+class ConfigV2(Config):
     """A facility for config and config files.
 
     It supports common file formats as configs: python/json/yaml.
@@ -108,13 +133,13 @@ class Config:
         for key in cfg_dict:
             if key in RESERVED_KEYS:
                 raise KeyError(f'{key} is reserved for config file')
-        self._sanity_check(cfg_dict)
 
         if not isinstance(cfg_dict, ConfigDict):
             cfg_dict = ConfigDict(cfg_dict)
-        super().__setattr__('_cfg_dict', cfg_dict)
-        super().__setattr__('_filename', filename)
-        super().__setattr__('_format_python_code', format_python_code)
+        super(Config, self).__setattr__('_cfg_dict', cfg_dict)
+        super(Config, self).__setattr__('_filename', filename)
+        super(Config, self).__setattr__('_format_python_code',
+                                        format_python_code)
         if cfg_text:
             text = cfg_text
         elif filename:
@@ -122,18 +147,21 @@ class Config:
                 text = f.read()
         else:
             text = ''
-        super().__setattr__('_text', text)
+
+        super(Config, self).__setattr__('_text', text)
+
+        self._sanity_check(self._to_lazy_dict())
 
     @staticmethod
     def _sanity_check(cfg):
         if isinstance(cfg, dict):
             for v in cfg.values():
-                Config._sanity_check(v)
+                ConfigV2._sanity_check(v)
         elif isinstance(cfg, (tuple, list, set)):
             for v in cfg:
-                Config._sanity_check(v)
+                ConfigV2._sanity_check(v)
         elif isinstance(cfg, (type, FunctionType)):
-            if (Config._parent_pkg in cfg.__module__
+            if (ConfigV2._parent_pkg in cfg.__module__
                     or '__main__' in cfg.__module__):
                 msg = ('You cannot use temporary functions '
                        'as the value of a field.\n\n')
@@ -142,7 +170,8 @@ class Config:
 
     @staticmethod
     def fromfile(filename: Union[str, Path],
-                 lazy_import: Optional[bool] = None) -> 'Config':
+                 keep_imported: bool = False,
+                 format_python_code: bool = True) -> 'ConfigV2':
         """Build a Config instance from config file.
 
         Args:
@@ -162,51 +191,35 @@ class Config:
         # Using try-except to make sure ``ConfigDict.lazy`` will be reset
         # to False. See more details about lazy in the docstring of
         # ConfigDict
-        ConfigDict.lazy = lazy_import
+        ConfigDict.lazy = True
         try:
-            cfg_dict = Config._parse_lazy_import(filename)
+            module = ConfigV2._get_config_module(filename)
+            module_dict = {
+                k: getattr(module, k)
+                for k in dir(module) if not k.startswith('__')
+            }
+            if not keep_imported:
+                module_dict = dict(filter(filter_imports, module_dict.items()))
+
+            cfg_dict = ConfigDict(module_dict)
+            # Recover dumped lazy object like '<torch.nn.Linear>' from string
+            cfg_dict = recover_lazy_field(cfg_dict)
+
+            cfg = ConfigV2(
+                cfg_dict,
+                filename=filename,
+                format_python_code=format_python_code)
         finally:
             ConfigDict.lazy = False
 
-        for key, value in list(cfg_dict.to_dict().items()):
-            # Remove functions or modules
-            if isinstance(value, (LazyObject, ModuleType, FunctionType, type)):
-                cfg_dict.pop(key)
-
-        # Recover dumped lazy object like '<torch.nn.Linear>' from string
-        cfg_dict = recover_lazy_field(cfg_dict)
-
-        cfg = Config(cfg_dict, filename=filename)
         return cfg
-
-    @staticmethod
-    def _parse_lazy_import(filename: Union[str, Path]) -> ConfigDict:
-        """Transform file to variables dictionary.
-
-        Args:
-            filename (str): Name of config file.
-
-        Returns:
-            Tuple[dict, dict]: ``cfg_dict`` and ``imported_names``.
-
-              - cfg_dict (dict): Variables dictionary of parsed config.
-              - imported_names (set): Used to mark the names of
-                imported object.
-        """
-        module = Config._get_config_module(filename)
-        module_dict = {
-            k: getattr(module, k)
-            for k in dir(module) if not k.startswith('__')
-        }
-
-        return ConfigDict(module_dict)
 
     @staticmethod
     def _get_config_module(filename: Union[str, Path], level=0):
         file = Path(filename).absolute()
         module_name = re.sub(r'\W|^(?=\d)', '_', file.stem)
-        parent_pkg = Config._parent_pkg + str(level)
-        fullname = '.'.join([parent_pkg] * Config._max_parent_depth +
+        parent_pkg = ConfigV2._parent_pkg + str(level)
+        fullname = '.'.join([parent_pkg] * ConfigV2._max_parent_depth +
                             [module_name])
 
         # import config file as a module
@@ -234,72 +247,12 @@ class Config:
         if isinstance(cfg, dict):
             cfg_dict = ConfigDict()
             for key, value in cfg.items():
-                cfg_dict[key] = Config._dict_to_config_dict_lazy(value)
+                cfg_dict[key] = ConfigV2._dict_to_config_dict_lazy(value)
             return cfg_dict
         if isinstance(cfg, (tuple, list)):
             return type(cfg)(
-                Config._dict_to_config_dict_lazy(_cfg) for _cfg in cfg)
+                ConfigV2._dict_to_config_dict_lazy(_cfg) for _cfg in cfg)
         return cfg
-
-    @staticmethod
-    def _merge_a_into_b(a: dict,
-                        b: dict,
-                        allow_list_keys: bool = False) -> dict:
-        """merge dict ``a`` into dict ``b`` (non-inplace).
-
-        Values in ``a`` will overwrite ``b``. ``b`` is copied first to avoid
-        in-place modifications.
-
-        Args:
-            a (dict): The source dict to be merged into ``b``.
-            b (dict): The origin dict to be fetch keys from ``a``.
-            allow_list_keys (bool): If True, int string keys (e.g. '0', '1')
-              are allowed in source ``a`` and will replace the element of the
-              corresponding index in b if b is a list. Defaults to False.
-
-        Returns:
-            dict: The modified dict of ``b`` using ``a``.
-
-        Examples:
-            # Normally merge a into b.
-            >>> Config._merge_a_into_b(
-            ...     dict(obj=dict(a=2)), dict(obj=dict(a=1)))
-            {'obj': {'a': 2}}
-
-            # Delete b first and merge a into b.
-            >>> Config._merge_a_into_b(
-            ...     dict(obj=dict(_delete_=True, a=2)), dict(obj=dict(a=1)))
-            {'obj': {'a': 2}}
-
-            # b is a list
-            >>> Config._merge_a_into_b(
-            ...     {'0': dict(a=2)}, [dict(a=1), dict(b=2)], True)
-            [{'a': 2}, {'b': 2}]
-        """
-        b = b.copy()
-        for k, v in a.items():
-            if allow_list_keys and k.isdigit() and isinstance(b, list):
-                k = int(k)
-                if len(b) <= k:
-                    raise KeyError(f'Index {k} exceeds the length of list {b}')
-                b[k] = Config._merge_a_into_b(v, b[k], allow_list_keys)
-            elif isinstance(v, dict):
-                if k in b and not v.pop(DELETE_KEY, False):
-                    allowed_types: Union[Tuple, type] = (
-                        dict, list) if allow_list_keys else dict
-                    if not isinstance(b[k], allowed_types):
-                        raise TypeError(
-                            f'{k}={v} in child config cannot inherit from '
-                            f'base because {k} is a dict in the child config '
-                            f'but is of type {type(b[k])} in base config. '
-                            f'You may set `{DELETE_KEY}=True` to ignore the '
-                            f'base config.')
-                    b[k] = Config._merge_a_into_b(v, b[k], allow_list_keys)
-                else:
-                    b[k] = ConfigDict(v)
-            else:
-                b[k] = v
-        return b
 
     @property
     def filename(self) -> str:
@@ -356,21 +309,12 @@ class Config:
                 return _format_dict(input_)
             elif isinstance(input_, (list, set, tuple)):
                 return _format_list_tuple_set(input_)
-            elif isinstance(input_, LazyObject):
-                return repr(input_.dump_str)
-            elif isinstance(input_, (type, FunctionType, BuiltinFunctionType)):
-                if Config._parent_pkg in input_.__module__:
-                    # defined in the config file.
-                    module = input_.__module__.rpartition('.')[-1]
-                else:
-                    module = input_.__module__
-                return repr('<' + module + '.' + input_.__name__ + '>')
-            elif isinstance(input_, ModuleType):
-                return repr(f'<{input_.__name__}>')
-            elif 'torch.dtype' in str(type(input_)):
-                return repr('<' + str(input_) + '>')
             else:
-                return str(input_)
+                dump_str = dump_extra_type(input_)
+                if dump_str is not None:
+                    return repr(dump_str)
+                else:
+                    return str(input_)
 
         cfg_dict = self._to_lazy_dict()
 
@@ -394,150 +338,24 @@ class Config:
 
         return text
 
-    def __repr__(self):
-        return f'Config (path: {self.filename}): {self._cfg_dict.__repr__()}'
-
-    def __len__(self):
-        return len(self._cfg_dict)
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._cfg_dict, name)
-
-    def __getitem__(self, name):
-        return self._cfg_dict.__getitem__(name)
-
-    def __setattr__(self, name, value):
-        self._sanity_check(value)
-        if isinstance(value, dict):
-            value = ConfigDict(value)
-        self._cfg_dict.__setattr__(name, value)
-
-    def __setitem__(self, name, value):
-        self._sanity_check(value)
-        if isinstance(value, dict):
-            value = ConfigDict(value)
-        self._cfg_dict.__setitem__(name, value)
-
-    def __iter__(self):
-        return iter(self._cfg_dict)
-
-    def __getstate__(self) -> Tuple[dict, Optional[str], Optional[str], dict]:
+    def __getstate__(self) -> Tuple[dict, Optional[str], Optional[str]]:
         return (self._cfg_dict, self._filename, self._text)
 
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        other = cls.__new__(cls)
-        memo[id(self)] = other
-
-        for key, value in self.__dict__.items():
-            super(Config, other).__setattr__(key, copy.deepcopy(value, memo))
-
-        return other
-
-    def __copy__(self):
-        cls = self.__class__
-        other = cls.__new__(cls)
-        other.__dict__.update(self.__dict__)
-
-        return other
-
-    def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str],
-                                        dict]):
+    def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str]]):
         _cfg_dict, _filename, _text = state
-        super().__setattr__('_cfg_dict', _cfg_dict)
-        super().__setattr__('_filename', _filename)
-        super().__setattr__('_text', _text)
-
-    def dump(self, file: Optional[Union[str, Path]] = None):
-        """Dump config to file or return config text.
-
-        Args:
-            file (str or Path, optional): If not specified, then the object
-            is dumped to a str, otherwise to a file specified by the filename.
-            Defaults to None.
-
-        Returns:
-            str or None: Config text.
-        """
-        file = str(file) if isinstance(file, Path) else file
-        cfg_dict = super().__getattribute__('_cfg_dict').to_dict()
-        if file is None:
-            if self.filename is None or self.filename.endswith('.py'):
-                return self.pretty_text
-            else:
-                file_format = self.filename.split('.')[-1]
-                return dump(cfg_dict, file_format=file_format)
-        elif file.endswith('.py'):
-            with open(file, 'w', encoding='utf-8') as f:
-                f.write(self.pretty_text)
-        else:
-            file_format = file.split('.')[-1]
-            return dump(cfg_dict, file=file, file_format=file_format)
-
-    def merge_from_dict(self,
-                        options: dict,
-                        allow_list_keys: bool = True) -> None:
-        """Merge list into cfg_dict.
-
-        Merge the dict parsed by MultipleKVAction into this cfg.
-
-        Args:
-            options (dict): dict of configs to merge from.
-            allow_list_keys (bool): If True, int string keys (e.g. '0', '1')
-                are allowed in ``options`` and will replace the element of the
-                corresponding index in the config if the config is a list.
-                Defaults to True.
-
-        Examples:
-            >>> from mmengine import Config
-            >>> #  Merge dictionary element
-            >>> options = {'model.backbone.depth': 50, 'model.backbone.with_cp': True}
-            >>> cfg = Config(dict(model=dict(backbone=dict(type='ResNet'))))
-            >>> cfg.merge_from_dict(options)
-            >>> cfg._cfg_dict
-            {'model': {'backbone': {'type': 'ResNet', 'depth': 50, 'with_cp': True}}}
-            >>> # Merge list element
-            >>> cfg = Config(
-            >>>     dict(pipeline=[dict(type='LoadImage'),
-            >>>                    dict(type='LoadAnnotations')]))
-            >>> options = dict(pipeline={'0': dict(type='SelfLoadImage')})
-            >>> cfg.merge_from_dict(options, allow_list_keys=True)
-            >>> cfg._cfg_dict
-            {'pipeline': [{'type': 'SelfLoadImage'}, {'type': 'LoadAnnotations'}]}
-        """  # noqa: E501
-        option_cfg_dict: dict = {}
-        for full_key, v in options.items():
-            d = option_cfg_dict
-            key_list = full_key.split('.')
-            for subkey in key_list[:-1]:
-                d.setdefault(subkey, ConfigDict())
-                d = d[subkey]
-            subkey = key_list[-1]
-            d[subkey] = v
-
-        cfg_dict = super().__getattribute__('_cfg_dict')
-        super().__setattr__(
-            '_cfg_dict',
-            Config._merge_a_into_b(
-                option_cfg_dict, cfg_dict, allow_list_keys=allow_list_keys))
+        super(Config, self).__setattr__('_cfg_dict', _cfg_dict)
+        super(Config, self).__setattr__('_filename', _filename)
+        super(Config, self).__setattr__('_text', _text)
 
     def _to_lazy_dict(self, keep_imported: bool = False) -> dict:
         """Convert config object to dictionary and filter the imported
         object."""
-        res = self._cfg_dict.to_dict()
-
-        def filter_item(item):
-            _, v = item
-            if isinstance(v, (LazyObject, ModuleType, FunctionType, type)):
-                return False
-            if v is read_base:
-                return False
-            return True
+        res = self._cfg_dict._to_lazy_dict()
 
         if keep_imported:
             return res
         else:
-            return dict(filter(filter_item, res.items()))
+            return dict(filter(filter_imports, res.items()))
 
     def to_dict(self, keep_imported: bool = False):
         """Convert all data in the config to a builtin ``dict``.
@@ -558,10 +376,9 @@ class Config:
                      for k, v in cfg_dict.items()})
             elif isinstance(cfg_dict, (tuple, list)):
                 return type(cfg_dict)(lazy2string(v) for v in cfg_dict)
-            elif isinstance(cfg_dict, LazyObject):
-                return str(cfg_dict)
             else:
-                return cfg_dict
+                dump_str = dump_extra_type(cfg_dict)
+                return dump_str if dump_str is not None else cfg_dict
 
         return lazy2string(_cfg_dict)
 
@@ -574,11 +391,11 @@ class BaseConfigLoader(Loader):
 
     def create_module(self, spec):
         file = self.filepath
-        return Config._get_config_module(file, level=self.level)
+        return ConfigV2._get_config_module(file, level=self.level)
 
     def exec_module(self, module):
         for k in dir(module):
-            module.__dict__[k] = Config._dict_to_config_dict_lazy(
+            module.__dict__[k] = ConfigV2._dict_to_config_dict_lazy(
                 getattr(module, k))
 
 
@@ -600,7 +417,7 @@ class BaseImportContext(MetaPathFinder):
 
         The search is based on sys.path_hooks and sys.path_importer_cache.
         """
-        parent_pkg = Config._parent_pkg + str(self.level)
+        parent_pkg = ConfigV2._parent_pkg + str(self.level)
         names = fullname.split('.')
 
         if names[-1] == parent_pkg:
@@ -652,7 +469,8 @@ class BaseImportContext(MetaPathFinder):
         stack = inspect.stack()[1]
         file = inspect.getfile(stack[0])
         folder = Path(file).parent
-        self.root_path = folder.joinpath(*(['..'] * Config._max_parent_depth))
+        self.root_path = folder.joinpath(*(['..'] *
+                                           ConfigV2._max_parent_depth))
 
         self.base_modules = []
         self.level = len(
