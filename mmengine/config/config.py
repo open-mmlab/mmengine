@@ -444,11 +444,11 @@ class Config:
             Config: Config instance built from config file.
         """
         filename = str(filename) if isinstance(filename, Path) else filename
-        if lazy_import is None:
-            lazy_import = Config._is_lazy_import(filename)
-        if not lazy_import:
+        if lazy_import is False or \
+           lazy_import is None and not Config._is_lazy_import(filename):
             cfg_dict, cfg_text, env_variables = Config._file2dict(
-                filename, use_predefined_variables, use_environment_variables)
+                filename, use_predefined_variables, use_environment_variables,
+                lazy_import)
             if import_custom_modules and cfg_dict.get('custom_imports', None):
                 try:
                     import_modules_from_strings(**cfg_dict['custom_imports'])
@@ -813,18 +813,22 @@ class Config:
     def _file2dict(
             filename: str,
             use_predefined_variables: bool = True,
-            use_environment_variables: bool = True) -> Tuple[dict, str, dict]:
+            use_environment_variables: bool = True,
+            lazy_import: Optional[bool] = None) -> Tuple[dict, str, dict]:
         """Transform file to variables dictionary.
 
         Args:
             filename (str): Name of config file.
             use_predefined_variables (bool, optional): Whether to use
                 predefined variables. Defaults to True.
+            lazy_import (bool): Whether to load config in `lazy_import` mode.
+                If it is `None`, it will be deduced by the content of the
+                config file. Defaults to None.
 
         Returns:
             Tuple[dict, str]: Variables dictionary and text of Config.
         """
-        if Config._is_lazy_import(filename):
+        if lazy_import is None and Config._is_lazy_import(filename):
             raise RuntimeError(
                 'The configuration file type in the inheritance chain '
                 'must match the current configuration file type, either '
@@ -871,7 +875,9 @@ class Config:
                     _cfg_dict, _cfg_text, _env_variables = Config._file2dict(
                         filename=base_cfg_path,
                         use_predefined_variables=use_predefined_variables,
-                        use_environment_variables=use_environment_variables)
+                        use_environment_variables=use_environment_variables,
+                        lazy_import=lazy_import,
+                    )
                     cfg_text_list.append(_cfg_text)
                     env_variables.update(_env_variables)
                     duplicate_keys = base_cfg_dict.keys() & _cfg_dict.keys()
