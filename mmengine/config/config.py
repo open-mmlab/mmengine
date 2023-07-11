@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import ast
 import copy
+import difflib
 import os
 import os.path as osp
 import platform
@@ -1574,6 +1575,11 @@ class Config:
             '_cfg_dict',
             Config._merge_a_into_b(
                 option_cfg_dict, cfg_dict, allow_list_keys=allow_list_keys))
+
+    @staticmethod
+    def diff(cfg1, cfg2) -> str:
+        res = difflib.unified_diff( cfg1.pretty_text.split("\n"), cfg2.pretty_text.split("\n"))
+        return "\n".join(res)
 
     @staticmethod
     def _is_lazy_import(filename: str) -> bool:
