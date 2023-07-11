@@ -299,8 +299,8 @@ class ConfigDict(Dict):
         return _to_dict(self)
 
     def to_dict(self):
-        """Convert the ConfigDict to a normal dictionary recursively, and keep
-        the ``LazyObject`` or ``LazyAttr`` object not built."""
+        """Convert the ConfigDict to a normal dictionary recursively, and
+        convert the ``LazyObject`` or ``LazyAttr`` to string."""
         return _lazy2string(self, dict_type=dict)
 
 
