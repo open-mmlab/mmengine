@@ -121,6 +121,10 @@ class LazyObject:
 
     __repr__ = __str__
 
+    # `pickle.dump` will try to get the `__getstate__` and `__setstate__`
+    # methods of the dumped object. If these two methods are not defined,
+    # LazyObject will return a `__getstate__` LazyObject` or `__setstate__`
+    # LazyObject.
     def __getstate__(self):
         return self.__dict__
 
@@ -226,6 +230,10 @@ class LazyAttr:
 
     __repr__ = __str__
 
+    # `pickle.dump` will try to get the `__getstate__` and `__setstate__`
+    # methods of the dumped object. If these two methods are not defined,
+    # LazyAttr will return a `__getstate__` LazyAttr` or `__setstate__`
+    # LazyAttr.
     def __getstate__(self):
         return self.__dict__
 

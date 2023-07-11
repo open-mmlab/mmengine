@@ -355,9 +355,6 @@ class Config:
             Defaults to None.
         format_python_code (bool): Whether to format Python code by yapf.
             Defaults to True.
-        imported_names (set, optional): Imported object names for pure Python
-            style config, and these variables will not be dumped.
-            Defaults to None.
 
     Here is a simple example:
 
@@ -384,13 +381,14 @@ class Config:
     .. _config tutorial: https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html
     """  # noqa: E501
 
-    def __init__(self,
-                 cfg_dict: dict = None,
-                 cfg_text: Optional[str] = None,
-                 filename: Optional[Union[str, Path]] = None,
-                 env_variables: Optional[dict] = None,
-                 format_python_code: bool = True,
-                 imported_names: set = set()):
+    def __init__(
+        self,
+        cfg_dict: dict = None,
+        cfg_text: Optional[str] = None,
+        filename: Optional[Union[str, Path]] = None,
+        env_variables: Optional[dict] = None,
+        format_python_code: bool = True,
+    ):
         filename = str(filename) if isinstance(filename, Path) else filename
         if cfg_dict is None:
             cfg_dict = dict()
@@ -406,7 +404,9 @@ class Config:
         super().__setattr__('_cfg_dict', cfg_dict)
         super().__setattr__('_filename', filename)
         super().__setattr__('_format_python_code', format_python_code)
-        super().__setattr__('_imported_names', imported_names)
+        if not hasattr(self, '_imported_names'):
+            super().__setattr__('_imported_names', set())
+
         if cfg_text:
             text = cfg_text
         elif filename:
@@ -481,15 +481,16 @@ class Config:
             except Exception as e:
                 raise e
             finally:
+                # disable lazy import to get the real type. See more details
+                # about lazy in the docstring of ConfigDict
                 ConfigDict.lazy = False
 
-            # disable lazy import to get the real type. See more details about
-            # lazy in the docstring of ConfigDict
-            return Config(
+            cfg = Config(
                 cfg_dict,
                 filename=filename,
-                format_python_code=format_python_code,
-                imported_names=imported_names)
+                format_python_code=format_python_code)
+            object.__setattr__(cfg, '_imported_names', imported_names)
+            return cfg
 
     @staticmethod
     def fromstring(cfg_str: str, file_format: str) -> 'Config':
