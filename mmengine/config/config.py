@@ -1578,8 +1578,9 @@ class Config:
 
     @staticmethod
     def diff(cfg1, cfg2) -> str:
-        res = difflib.unified_diff( cfg1.pretty_text.split("\n"), cfg2.pretty_text.split("\n"))
-        return "\n".join(res)
+        res = difflib.unified_diff(
+            cfg1.pretty_text.split('\n'), cfg2.pretty_text.split('\n'))
+        return '\n'.join(res)
 
     @staticmethod
     def _is_lazy_import(filename: str) -> bool:
