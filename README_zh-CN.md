@@ -78,6 +78,19 @@
 
 如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v080-06302023)
 
+## 目录
+
+- [简介](#简介)
+- [安装](#安装)
+- [快速上手](#快速上手)
+- [了解更多](#了解更多)
+- [贡献指南](#贡献指南)
+- [引用](#引用)
+- [开源许可证](#开源许可证)
+- [生态项目](#生态项目)
+- [OpenMMLab 的其他项目](#openmmlab-的其他项目)
+- [欢迎加入 OpenMMLab 社区](#欢迎加入-openmmlab-社区)
+
 ## 简介
 
 MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的基础库。它为开发人员提供了坚实的工程基础，以此避免在工作流上编写冗余代码。作为 OpenMMLab 所有代码库的训练引擎，其在不同研究领域支持了上百个算法。此外，MMEngine 也可以用于非 OpenMMLab 项目中。
@@ -339,6 +352,10 @@ runner.train()
 ## 开源许可证
 
 该项目采用 [Apache 2.0 license](LICENSE) 开源许可证。
+
+## 生态项目
+
+- [APES: Attention-based Point Cloud Edge Sampling](https://github.com/JunweiZheng93/APES)
 
 ## OpenMMLab 的其他项目
 
