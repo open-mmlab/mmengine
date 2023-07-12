@@ -1,4 +1,4 @@
-<div align="center">
+<div id="top" align="center">
   <img src="https://user-images.githubusercontent.com/58739961/187154444-fce76639-ac8d-429b-9354-c6fac64b7ef8.jpg" width="600"/>
   <div>&nbsp;</div>
   <div align="center">
@@ -78,6 +78,20 @@ Highlights:
 
 Read [Changelog](./docs/en/notes/changelog.md#v080-06302023) for more details.
 
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Installation](#installation)
+- [Get Started](#get-started)
+- [Learn More](#learn-more)
+- [Contributing](#contributing)
+- [Citation](#citation)
+- [License](#license)
+- [Ecosystem](#ecosystem)
+- [Projects in OpenMMLab](#projects-in-openmmlab)
+
+<p align="right"><a href="#top">🔝Back to top</a></p>
+
 ## Introduction
 
 MMEngine is a foundational library for training deep learning models based on PyTorch. It provides a solid engineering foundation and frees developers from writing redundant codes on workflows. It serves as the training engine of all OpenMMLab codebases, which support hundreds of algorithms in various research areas. Moreover, MMEngine is also generic to be applied to non-OpenMMLab projects.
@@ -100,6 +114,8 @@ Major features:
    - Provides rich components and strategies.
    - Complete controls on the training process with different levels of APIs.
 
+<p align="right"><a href="#top">🔝Back to top</a></p>
+
 ## Installation
 
 Before installing MMEngine, please ensure that PyTorch has been successfully installed following the [official guide](https://pytorch.org/get-started/locally/).
@@ -116,6 +132,8 @@ Verify the installation
 ```bash
 python -c 'from mmengine.utils.dl_utils import collect_env;print(collect_env())'
 ```
+
+<p align="right"><a href="#top">🔝Back to top</a></p>
 
 ## Get Started
 
@@ -246,6 +264,8 @@ runner.train()
 
 </details>
 
+<p align="right"><a href="#top">🔝Back to top</a></p>
+
 ## Learn More
 
 <details>
@@ -319,9 +339,13 @@ runner.train()
 
 </details>
 
+<p align="right"><a href="#top">🔝Back to top</a></p>
+
 ## Contributing
 
 We appreciate all contributions to improve MMEngine. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for the contributing guideline.
+
+<p align="right"><a href="#top">🔝Back to top</a></p>
 
 ## Citation
 
@@ -336,9 +360,19 @@ If you find this project useful in your research, please consider cite:
 }
 ```
 
+<p align="right"><a href="#top">🔝Back to top</a></p>
+
 ## License
 
 This project is released under the [Apache 2.0 license](LICENSE).
+
+<p align="right"><a href="#top">🔝Back to top</a></p>
+
+## Ecosystem
+
+- [APES: Attention-based Point Cloud Edge Sampling](https://github.com/JunweiZheng93/APES)
+
+<p align="right"><a href="#top">🔝Back to top</a></p>
 
 ## Projects in OpenMMLab
 
@@ -363,3 +397,5 @@ This project is released under the [Apache 2.0 license](LICENSE).
 - [MMDeploy](https://github.com/open-mmlab/mmdeploy): OpenMMLab model deployment framework.
 - [MMRazor](https://github.com/open-mmlab/mmrazor): OpenMMLab model compression toolbox and benchmark.
 - [Playground](https://github.com/open-mmlab/playground): A central hub for gathering and showcasing amazing projects built upon OpenMMLab.
+
+<p align="right"><a href="#top">🔝Back to top</a></p>
