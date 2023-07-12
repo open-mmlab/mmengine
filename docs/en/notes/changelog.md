@@ -1,5 +1,12 @@
 # Changelog of v0.x
 
+## v0.8.2 (07/12/2023)
+
+### Bug fixes
+
+- Fix pickling the Python style config by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1241
+- Fix the logic of setting `lazy_import` by [@Li-Qingyun](https://github.com/Li-Qingyun) in https://github.com/open-mmlab/mmengine/pull/1239
+
 ## v0.8.1 (07/05/2023)
 
 ### New Features & Enhancements
