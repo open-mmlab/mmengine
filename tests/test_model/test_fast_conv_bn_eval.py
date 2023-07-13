@@ -39,8 +39,8 @@ class BackboneModel(nn.Module):
         # this conv-bn pair cannot use fast_conv_bn_eval feature
         # because `self.conv2` is used twice
         x = self.bn2(self.conv2(self.conv2(x)))
-        # this conv-bn pair cannot use fast_conv_bn_eval feature
-        # because `self.bn3` is used twice
+        # this conv-bn pair can use fast_conv_bn_eval feature
+        # just for the first forward of the `self.bn3`
         x = self.bn3(self.bn3(self.conv3(x)))
         return x
 

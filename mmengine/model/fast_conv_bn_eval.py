@@ -143,21 +143,18 @@ def turn_on_fast_conv_bn_eval_for_single_model(
         if not found_pair or len(node.args[0].users) > 1:
             continue
 
-        # check if the conv and bn modules are used in multiple nodes
+        # check if the conv modules are used in multiple nodes
         conv_name = node.args[0].target
         bn_name = node.target
 
         conv_usage_count = 0
-        bn_usage_count = 0
         for _node in fx_model.graph.nodes:
             if _node.op != 'call_module':
                 continue
             if _node.target == conv_name:
                 conv_usage_count += 1
-            if _node.target == bn_name:
-                bn_usage_count += 1
 
-        if conv_usage_count > 1 or bn_usage_count > 1:
+        if conv_usage_count > 1:
             continue
 
         # Find a pair of conv and bn to optimize
