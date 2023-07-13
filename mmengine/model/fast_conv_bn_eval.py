@@ -75,8 +75,8 @@ def fast_conv_bn_eval_forward(bn: nn.modules.batchnorm._BatchNorm,
     return conv._conv_forward(x, weight_on_the_fly, bias_on_the_fly)
 
 
-def bn_once_empty_forward(bn: nn.modules.batchnorm._BatchNorm,
-                          x: torch.Tensor):
+def bn_once_identity_forward(bn: nn.modules.batchnorm._BatchNorm,
+                             x: torch.Tensor):
     """The forward function is an identity function.
 
     The magic is that after one call, the `bn.forward` will be restored to what
@@ -100,7 +100,7 @@ def fast_conv_bn_eval_control(bn: nn.modules.batchnorm._BatchNorm,
     if not bn.training:
         # bn in eval mode
         output = fast_conv_bn_eval_forward(bn, conv, x)
-        bn.forward = partial(bn_once_empty_forward, bn)
+        bn.forward = partial(bn_once_identity_forward, bn)
         return output
     else:
         return conv._conv_forward(x, conv.weight, conv.bias)
