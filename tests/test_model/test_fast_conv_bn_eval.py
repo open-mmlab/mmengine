@@ -16,7 +16,6 @@ class BackboneModel(nn.Module):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        global optimize_conv_module
         if optimize_conv_module:
             from mmcv.cnn import ConvModule
             conv0 = nn.Conv2d(6, 6, 6)
@@ -30,7 +29,6 @@ class BackboneModel(nn.Module):
         self.bn3 = nn.BatchNorm2d(6)
 
     def forward(self, x):
-        global optimize_conv_module
         if optimize_conv_module:
             # this ConvModule can use fast_conv_bn_eval feature
             x = self.mod1(x)

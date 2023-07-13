@@ -169,7 +169,6 @@ def turn_on_fast_conv_bn_eval(model: torch.nn.Module, modules: Union[List[str],
                                                                      str]):
     if isinstance(modules, str):
         modules = [modules]
-    global optimize_conv_module
     for module_name in modules:
         module = attrgetter(module_name)(model)
         turn_on_fast_conv_bn_eval_for_single_model(module,
