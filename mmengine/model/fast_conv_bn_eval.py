@@ -110,10 +110,12 @@ def turn_on_fast_conv_bn_eval_for_single_model(
         model: torch.nn.Module, optimize_conv_module: bool = True):
 
     if optimize_conv_module:
-        # first, turn on fast_conv_bn_eval feature for existing ConvModule
-        # note that ConvModule has a very complicated forward function,
-        # which will fail `torch.fx.symbolic_trace`. Therefore, ConvModule is
-        # treated as a special case.
+        # first, turn on `fast_conv_bn_eval` feature for existing `ConvModule`
+        # note that `ConvModule` has a very complicated `forward` function,
+        # its `forward` function can be called with `norm=True`
+        # and `norm=False`, which have different computation graphs.
+        # Therefore, we cannot rely on `torch.fx.symbolic_trace` to deal with
+        # `ConvModule`. It is treated as a special case here.
         for name, module in model.named_modules():
             if isinstance(module, ConvModule):
                 module.turn_on_fast_conv_bn_eval()
