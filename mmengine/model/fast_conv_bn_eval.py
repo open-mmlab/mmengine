@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import warnings
 from functools import partial
 from operator import attrgetter
 from typing import List, Union
@@ -7,22 +6,6 @@ from typing import List, Union
 import torch
 import torch.fx as fx
 import torch.nn as nn
-
-from mmengine.utils import is_installed
-
-optimize_conv_module = False
-
-if is_installed('mmcv'):
-    from mmcv.cnn import ConvModule
-    optimize_conv_module = hasattr(ConvModule, 'turn_on_fast_conv_bn_eval')
-
-if not optimize_conv_module:
-    warnings.warn(
-        'Either MMCV is not installed, or the MMCV you use does not support '
-        '"fast_conv_bn_eval" feature for ConvModule.'
-        'We will only turn on "fast_conv_bn_eval" feature for pytorch native '
-        'conv and bn modules. This is ok if you do not use '
-        'mmcv.cnn.ConvModule')
 
 
 def fast_conv_bn_eval_forward(bn: nn.modules.batchnorm._BatchNorm,
@@ -106,22 +89,8 @@ def fast_conv_bn_eval_control(bn: nn.modules.batchnorm._BatchNorm,
         return conv._conv_forward(x, conv.weight, conv.bias)
 
 
-def turn_on_fast_conv_bn_eval_for_single_model(
-        model: torch.nn.Module, optimize_conv_module: bool = True):
-
-    if optimize_conv_module:
-        # first, turn on `fast_conv_bn_eval` feature for existing `ConvModule`
-        # note that `ConvModule` has a very complicated `forward` function,
-        # its `forward` function can be called with `norm=True`
-        # and `norm=False`, which have different computation graphs.
-        # Therefore, we cannot rely on `torch.fx.symbolic_trace` to deal with
-        # `ConvModule`. It is treated as a special case here.
-        for name, module in model.named_modules():
-            if isinstance(module, ConvModule):
-                module.turn_on_fast_conv_bn_eval()
-
-    # second, optimize consecutive conv+bn by modifying forward function
-
+def turn_on_fast_conv_bn_eval_for_single_model(model: torch.nn.Module):
+    # optimize consecutive conv+bn by modifying forward function
     # Symbolically trace the input model to create an FX GraphModule
     fx_model: fx.GraphModule = fx.symbolic_trace(model)
     modules = dict(fx_model.named_modules())
@@ -173,5 +142,4 @@ def turn_on_fast_conv_bn_eval(model: torch.nn.Module, modules: Union[List[str],
         modules = [modules]
     for module_name in modules:
         module = attrgetter(module_name)(model)
-        turn_on_fast_conv_bn_eval_for_single_model(module,
-                                                   optimize_conv_module)
+        turn_on_fast_conv_bn_eval_for_single_model(module)

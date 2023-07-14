@@ -4,19 +4,19 @@ from unittest import TestCase
 import torch
 from torch import nn
 
-import mmengine.model.fast_conv_bn_eval as mod
 from mmengine.model.fast_conv_bn_eval import \
     turn_on_fast_conv_bn_eval_for_single_model
 from mmengine.testing import assert_allclose
+from mmengine.utils import is_installed
 
-optimize_conv_module = mod.optimize_conv_module
+mmcv_is_installed = is_installed('mmcv')
 
 
 class BackboneModel(nn.Module):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        if optimize_conv_module:
+        if mmcv_is_installed:
             from mmcv.cnn import ConvModule
             conv0 = nn.Conv2d(6, 6, 6)
             bn0 = nn.BatchNorm2d(6)
@@ -29,7 +29,7 @@ class BackboneModel(nn.Module):
         self.bn3 = nn.BatchNorm2d(6)
 
     def forward(self, x):
-        if optimize_conv_module:
+        if mmcv_is_installed:
             # this ConvModule can use fast_conv_bn_eval feature
             x = self.mod1(x)
         # this conv-bn pair can use fast_conv_bn_eval feature
