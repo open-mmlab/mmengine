@@ -29,6 +29,7 @@ from mmengine.hooks import Hook
 from mmengine.logging import MessageHub, MMLogger, print_log
 from mmengine.model import (MMDistributedDataParallel, convert_sync_batchnorm,
                             is_model_wrapper, revert_sync_batchnorm)
+from mmengine.model.fast_conv_bn_eval import turn_on_fast_conv_bn_eval
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, FUNCTIONS,
@@ -1709,8 +1710,6 @@ class Runner:
         # try to enable fast_conv_bn_eval feature
         modules = self.cfg.get('fast_conv_bn_eval', None)
         if modules is not None:
-            from mmengine.model.fast_conv_bn_eval import \
-                turn_on_fast_conv_bn_eval
             self.logger.info(f'Enabling the "fast_conv_bn_eval" feature'
                              f' for sub-modules: {modules}')
             turn_on_fast_conv_bn_eval(ori_model, modules)
