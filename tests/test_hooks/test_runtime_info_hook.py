@@ -1,7 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 from unittest.mock import Mock
-
+import numpy as np
+import torch
 import torch.nn as nn
 from torch.optim import SGD
 
@@ -123,6 +124,41 @@ class TestRuntimeInfoHook(RunnerTestCase):
         hook.after_test_epoch(runner, metrics={'acc': 0.8})
         self.assertEqual(
             runner.message_hub.get_scalar('test/acc').current(), 0.8)
+
+    def test_scalar_chech(self):
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        runner = self.build_runner(cfg)
+        hook = self._get_runtime_info_hook(runner)
+
+        # check other scalar dtypes
+        val = np.mean([5])  # this is not ndarray but dtype is np.float64.
+        hook.after_val_epoch(runner, metrics={
+            'acc_f32': val.astype(np.float32),
+            'acc_i32': val.astype(np.int32),
+            'acc_u8': val.astype(np.uint8),
+            'acc_ndarray': np.array([5]),
+        })
+        self.assertEqual(
+            runner.message_hub.get_scalar('val/acc_f32').current(), 5)
+        self.assertEqual(
+            runner.message_hub.get_scalar('val/acc_i32').current(), 5)
+        self.assertEqual(
+            runner.message_hub.get_scalar('val/acc_u8').current(), 5)
+        self.assertEqual(
+            runner.message_hub.get_scalar('val/acc_ndarray').current(), 5)
+
+        val = torch.tensor([5.0]).mean()
+        hook.after_val_epoch(runner, metrics={
+            'acc_f32': val.float(),
+            'acc_i64': val.long(),
+            'acc_tensor': torch.tensor([5]),
+        })
+        self.assertEqual(
+            runner.message_hub.get_scalar('val/acc_f32').current(), 5)
+        self.assertEqual(
+            runner.message_hub.get_scalar('val/acc_i64').current(), 5)
+        self.assertEqual(
+            runner.message_hub.get_scalar('val/acc_tensor').current(), 5)
 
     def _get_runtime_info_hook(self, runner):
         for hook in runner.hooks:
