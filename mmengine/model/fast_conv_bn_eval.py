@@ -4,7 +4,6 @@ from operator import attrgetter
 from typing import List, Union
 
 import torch
-import torch.fx as fx
 import torch.nn as nn
 
 
@@ -92,6 +91,7 @@ def fast_conv_bn_eval_control(bn: nn.modules.batchnorm._BatchNorm,
 def turn_on_fast_conv_bn_eval_for_single_model(model: torch.nn.Module):
     # optimize consecutive conv+bn by modifying forward function
     # Symbolically trace the input model to create an FX GraphModule
+    import torch.fx as fx
     fx_model: fx.GraphModule = fx.symbolic_trace(model)
     modules = dict(fx_model.named_modules())
 
