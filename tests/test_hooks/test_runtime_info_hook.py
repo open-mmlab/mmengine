@@ -125,7 +125,7 @@ class TestRuntimeInfoHook(RunnerTestCase):
         self.assertEqual(
             runner.message_hub.get_scalar('test/acc').current(), 0.8)
 
-    def test_scalar_chech(self):
+    def test_scalar_check(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         runner = self.build_runner(cfg)
         hook = self._get_runtime_info_hook(runner)
