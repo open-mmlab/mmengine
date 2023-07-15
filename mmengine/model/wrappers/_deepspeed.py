@@ -8,7 +8,7 @@ from mmengine.registry import MODEL_WRAPPERS
 
 try:
     from deepspeed.runtime.engine import DeepSpeedEngine
-except:
+except ImportError:
     DeepSpeedEngine = None
 
 
