@@ -7,8 +7,9 @@ import torch
 import torch.nn as nn
 
 
-def fast_conv_bn_eval_forward(bn: nn.modules.batchnorm._BatchNorm,
-                              conv: nn.modules.conv._ConvNd, x: torch.Tensor):
+def efficient_conv_bn_eval_forward(bn: nn.modules.batchnorm._BatchNorm,
+                                   conv: nn.modules.conv._ConvNd,
+                                   x: torch.Tensor):
     """Code borrowed from mmcv 2.0.1, so that this feature can be used for old
     mmcv versions.
 
@@ -68,27 +69,28 @@ def bn_once_identity_forward(bn: nn.modules.batchnorm._BatchNorm,
     return x
 
 
-def fast_conv_bn_eval_control(bn: nn.modules.batchnorm._BatchNorm,
-                              conv: nn.modules.conv._ConvNd, x: torch.Tensor):
-    """This function controls whether to use `fast_conv_bn_eval_forward`.
+def efficient_conv_bn_eval_control(bn: nn.modules.batchnorm._BatchNorm,
+                                   conv: nn.modules.conv._ConvNd,
+                                   x: torch.Tensor):
+    """This function controls whether to use `efficient_conv_bn_eval_forward`.
 
     If the following `bn` is in `eval` mode, then we turn on the special
-    `fast_conv_bn_eval_forward` and let the following call of `bn.forward` to
-    be identity. Note that this `bn.forward` modification only works for one
+    `efficient_conv_bn_eval_forward` and let the following call of `bn.forward`
+    to be identity. Note that this `bn.forward` modification only works for one
     call. After the call, `bn.forward` will be restored to the default
     function. This is to deal with the case where one `bn` module is used in
     multiple places.
     """
     if not bn.training:
         # bn in eval mode
-        output = fast_conv_bn_eval_forward(bn, conv, x)
+        output = efficient_conv_bn_eval_forward(bn, conv, x)
         bn.forward = partial(bn_once_identity_forward, bn)
         return output
     else:
         return conv._conv_forward(x, conv.weight, conv.bias)
 
 
-def turn_on_fast_conv_bn_eval_for_single_model(model: torch.nn.Module):
+def turn_on_efficient_conv_bn_eval_for_single_model(model: torch.nn.Module):
     # optimize consecutive conv+bn by modifying forward function
     # Symbolically trace the input model to create an FX GraphModule
     import torch.fx as fx
@@ -132,14 +134,14 @@ def turn_on_fast_conv_bn_eval_for_single_model(model: torch.nn.Module):
         conv_module = modules[conv_name]
         bn_module = modules[bn_name]
 
-        conv_module.forward = partial(fast_conv_bn_eval_control, bn_module,
-                                      conv_module)
+        conv_module.forward = partial(efficient_conv_bn_eval_control,
+                                      bn_module, conv_module)
 
 
-def turn_on_fast_conv_bn_eval(model: torch.nn.Module, modules: Union[List[str],
-                                                                     str]):
+def turn_on_efficient_conv_bn_eval(model: torch.nn.Module,
+                                   modules: Union[List[str], str]):
     if isinstance(modules, str):
         modules = [modules]
     for module_name in modules:
         module = attrgetter(module_name)(model)
-        turn_on_fast_conv_bn_eval_for_single_model(module)
+        turn_on_efficient_conv_bn_eval_for_single_model(module)
