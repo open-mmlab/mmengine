@@ -1,9 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from mmengine.utils import is_installed
 from .optimizer import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                         AmpOptimWrapper, ApexOptimWrapper, BaseOptimWrapper,
-                        DeepSpeedOptimWrapper, DefaultOptimWrapperConstructor, 
-                        OptimWrapper, OptimWrapperDict, 
+                        DeepSpeedOptimWrapper, DefaultOptimWrapperConstructor,
+                        OptimWrapper, OptimWrapperDict,
                         ZeroRedundancyOptimizer, build_optim_wrapper)
 # yapf: disable
 from .scheduler import (ConstantLR, ConstantMomentum, ConstantParamScheduler,
