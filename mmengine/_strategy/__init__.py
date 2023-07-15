@@ -10,7 +10,6 @@ __all__ = [
     'BaseStrategy', 'DDPStrategy', 'SingleDeviceStrategy', 'DeepSpeedStrategy'
 ]
 
-
 if digit_version(TORCH_VERSION) >= digit_version('2.0.0'):
     try:
         from .fsdp import FSDPStrategy  # noqa:F401
