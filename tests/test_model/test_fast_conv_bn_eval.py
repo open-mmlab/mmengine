@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import unittest
 from unittest import TestCase
 
 import torch
@@ -8,6 +9,8 @@ from mmengine.model.efficient_conv_bn_eval import \
     turn_on_efficient_conv_bn_eval_for_single_model
 from mmengine.testing import assert_allclose
 from mmengine.utils import is_installed
+from mmengine.utils.dl_utils import TORCH_VERSION
+from mmengine.utils.version_utils import digit_version
 
 mmcv_is_installed = is_installed('mmcv')
 
@@ -43,6 +46,9 @@ class BackboneModel(nn.Module):
         return x
 
 
+@unittest.skipIf(
+    digit_version(TORCH_VERSION) < digit_version('1.8'),
+    reason='torch.fx needs Pytorch 1.8 or higher')
 class TestFastConvBNEval(TestCase):
     """Test the turn_on_efficient_conv_bn_eval function."""
 
