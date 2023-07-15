@@ -4,8 +4,8 @@ from unittest import TestCase
 import torch
 from torch import nn
 
-from mmengine.model.fast_conv_bn_eval import \
-    turn_on_fast_conv_bn_eval_for_single_model
+from mmengine.model.efficient_conv_bn_eval import \
+    turn_on_efficient_conv_bn_eval_for_single_model
 from mmengine.testing import assert_allclose
 from mmengine.utils import is_installed
 
@@ -30,28 +30,28 @@ class BackboneModel(nn.Module):
 
     def forward(self, x):
         if mmcv_is_installed:
-            # this ConvModule can use fast_conv_bn_eval feature
+            # this ConvModule can use efficient_conv_bn_eval feature
             x = self.mod1(x)
-        # this conv-bn pair can use fast_conv_bn_eval feature
+        # this conv-bn pair can use efficient_conv_bn_eval feature
         x = self.bn1(self.conv1(x))
-        # this conv-bn pair cannot use fast_conv_bn_eval feature
+        # this conv-bn pair cannot use efficient_conv_bn_eval feature
         # because `self.conv2` is used twice
         x = self.bn2(self.conv2(self.conv2(x)))
-        # this conv-bn pair can use fast_conv_bn_eval feature
+        # this conv-bn pair can use efficient_conv_bn_eval feature
         # just for the first forward of the `self.bn3`
         x = self.bn3(self.bn3(self.conv3(x)))
         return x
 
 
 class TestFastConvBNEval(TestCase):
-    """Test the turn_on_fast_conv_bn_eval function."""
+    """Test the turn_on_efficient_conv_bn_eval function."""
 
-    def test_fast_conv_bn_eval(self):
+    def test_efficient_conv_bn_eval(self):
         model = BackboneModel()
         model.eval()
         input = torch.randn(64, 6, 32, 32)
         output = model(input)
-        turn_on_fast_conv_bn_eval_for_single_model(model)
+        turn_on_efficient_conv_bn_eval_for_single_model(model)
         output2 = model(input)
         print((output - output2).abs().max().item())
         assert_allclose(output, output2)
