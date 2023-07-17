@@ -112,7 +112,7 @@ Major features:
    - Provides rich components and strategies.
    - Complete controls on the training process with different levels of APIs.
 
-![mmengine_dataflow](https://github.com/open-mmlab/mmengine/assets/58739961/708c283d-0edc-4cc3-aec1-d4aacfe200f4)
+![mmengine_dataflow](https://github.com/open-mmlab/mmengine/assets/58739961/9f969825-6ec5-4588-b5bd-b945e0c7db00)
 
 ## Installation
 
