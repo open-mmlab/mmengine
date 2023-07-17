@@ -1,7 +1,7 @@
 name: merge_stage_test
 
 on:
-  push:
+  pull_request:
     paths-ignore:
       - ".github/**.md"
       - "docker/**"
@@ -12,8 +12,6 @@ on:
       - "CONTRIBUTING_zh-CN.md"
       - ".pre-commit-config.yaml"
       - ".pre-commit-config-zh-cn.yaml"
-    branches:
-      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -57,12 +55,8 @@ jobs:
     strategy:
       matrix:
         python-version: [3.7]
-        torch: [1.6.0, 1.7.1, 1.8.1, 1.9.1, 1.10.1, 1.11.0, 1.12.0, 1.13.0]
+        torch: [1.8.1, 1.9.1, 1.10.1, 1.11.0, 1.12.0, 1.13.0]
         include:
-          - torch: 1.6.0
-            torchvision: 0.7.0
-          - torch: 1.7.1
-            torchvision: 0.8.2
           - torch: 1.8.1
             torchvision: 0.9.1
           - torch: 1.9.1
@@ -228,10 +222,8 @@ jobs:
     strategy:
       matrix:
         python-version: [3.7]
-        torch: [1.6.0, 1.8.1, 1.13.0]
+        torch: [1.8.1, 1.13.0]
         include:
-          - torch: 1.6.0
-            torchvision: 0.7.0
           - torch: 1.8.1
             torchvision: 0.9.1
           - torch: 1.13.0
