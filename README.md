@@ -112,6 +112,8 @@ Major features:
    - Provides rich components and strategies.
    - Complete controls on the training process with different levels of APIs.
 
+![mmengine_dataflow](https://github.com/open-mmlab/mmengine/assets/58739961/708c283d-0edc-4cc3-aec1-d4aacfe200f4)
+
 ## Installation
 
 Before installing MMEngine, please ensure that PyTorch has been successfully installed following the [official guide](https://pytorch.org/get-started/locally/).
