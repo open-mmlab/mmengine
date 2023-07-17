@@ -302,7 +302,6 @@ MMENGINE_MODELS.build(dict(type="LogSoftmax"))
 # Works because we are using mmalpha registry
 init_default_scope('mmalpha')
 MMENGINE_MODELS.build(dict(type="LogSoftmax"))
-
 ```
 
 ### Use the module of a sibling node
