@@ -10,8 +10,8 @@ from typing import Any, Dict, Generator, List, Optional, Tuple, Type, Union
 from rich.console import Console
 from rich.table import Table
 
-from mmengine.config.utils import MODULE2PACKAGE
 from mmengine.config.lazy import LazyObject
+from mmengine.config.utils import MODULE2PACKAGE
 from mmengine.utils import is_seq_of
 from .default_scope import DefaultScope
 

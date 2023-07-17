@@ -666,14 +666,16 @@ class ConfigV1(Config):
         """get used environment variables."""
         return self._env_variables
 
-    def __getstate__(self) -> Tuple[dict, Optional[str], Optional[str], dict]:
-        return (self._cfg_dict, self._filename, self._text,
-                self._env_variables)
+    def __getstate__(
+            self) -> Tuple[dict, Optional[str], Optional[str], dict, bool]:
+        state = (self._cfg_dict, self._filename, self._text,
+                 self._env_variables, self._format_python_code)
+        return state
 
     def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str],
-                                        dict]):
-        _cfg_dict, _filename, _text, _env_variables = state
-        super(Config, self).__setattr__('_cfg_dict', _cfg_dict)
-        super(Config, self).__setattr__('_filename', _filename)
-        super(Config, self).__setattr__('_text', _text)
-        super(Config, self).__setattr__('_text', _env_variables)
+                                        dict, bool]):
+        super(Config, self).__setattr__('_cfg_dict', state[0])
+        super(Config, self).__setattr__('_filename', state[1])
+        super(Config, self).__setattr__('_text', state[2])
+        super(Config, self).__setattr__('_env_variables', state[3])
+        super(Config, self).__setattr__('_format_python_code', state[4])

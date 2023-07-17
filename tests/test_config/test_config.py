@@ -986,8 +986,9 @@ class TestConfig:
         cfg_dict = cfg.to_dict()
         assert (cfg_dict['train_dataloader']['dataset']['type'] ==
                 '<mmengine.testing.runner_test_case.ToyDataset>')
-        assert (
-            cfg_dict['custom_hooks'][0]['type'] == '<mmengine.hooks.EMAHook>')
+        assert (cfg_dict['custom_hooks'][0]['type']
+                in ('<mmengine.hooks.EMAHook>',
+                    '<mmengine.hooks.ema_hook.EMAHook>'))
         # Dumped config
         dumped_cfg_path = tmp_path / 'test_dump_lazy.py'
         cfg.dump(dumped_cfg_path)
@@ -1060,12 +1061,6 @@ error_attr = mmengine.error_attr
                 osp.join(self.data_path,
                          'config/lazy_module_config/error_mix_using1.py'))
 
-        # Force to import in non-lazy-import mode
-        Config.fromfile(
-            osp.join(self.data_path,
-                     'config/lazy_module_config/error_mix_using1.py'),
-            lazy_import=False)
-
         # current lazy-import config, base text config
         with pytest.raises(AttributeError, match='item2'):
             Config.fromfile(
@@ -1088,7 +1083,7 @@ error_attr = mmengine.error_attr
         dumped_cfg = Config.fromfile(dumped_cfg_path)
 
         assert set(dumped_cfg.keys()) == {
-            'path', 'name', 'suffix', 'chained', 'existed', 'cfgname'
+            'path', 'name', 'suffix', 'chained', 'existed', 'cfgname', 'ex'
         }
         assert dumped_cfg.to_dict() == cfg.to_dict()
 
