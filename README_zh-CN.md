@@ -113,7 +113,7 @@ MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的�
    - 提供了丰富的组件和策略。
    - 使用不同等级的 API 控制训练过程。
 
-![mmengine_dataflow](https://github.com/open-mmlab/mmengine/assets/58739961/9f969825-6ec5-4588-b5bd-b945e0c7db00)
+![mmengine_dataflow](https://github.com/open-mmlab/mmengine/assets/58739961/267db9cb-72e4-4af2-a58b-877b30091acc)
 
 ## 安装
 
