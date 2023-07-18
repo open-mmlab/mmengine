@@ -198,7 +198,7 @@ def main():
         target_transform=target_transform)
 
     train_dataloader = dict(
-        batch_size=12,
+        batch_size=3,
         dataset=train_set,
         sampler=dict(type='DefaultSampler', shuffle=True),
         collate_fn=dict(type='default_collate'))
