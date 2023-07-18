@@ -1,10 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from mmengine.utils import is_installed
 from .optimizer import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                         AmpOptimWrapper, ApexOptimWrapper, BaseOptimWrapper,
-                        DefaultOptimWrapperConstructor, OptimWrapper,
-                        OptimWrapperDict, ZeroRedundancyOptimizer,
-                        build_optim_wrapper)
+                        DeepSpeedOptimWrapper, DefaultOptimWrapperConstructor,
+                        OptimWrapper, OptimWrapperDict,
+                        ZeroRedundancyOptimizer, build_optim_wrapper)
 # yapf: disable
 from .scheduler import (ConstantLR, ConstantMomentum, ConstantParamScheduler,
                         CosineAnnealingLR, CosineAnnealingMomentum,
@@ -32,9 +31,5 @@ __all__ = [
     'OptimWrapperDict', 'OneCycleParamScheduler', 'OneCycleLR', 'PolyLR',
     'PolyMomentum', 'PolyParamScheduler', 'ReduceOnPlateauLR',
     'ReduceOnPlateauMomentum', 'ReduceOnPlateauParamScheduler',
-    'ZeroRedundancyOptimizer', 'BaseOptimWrapper'
+    'ZeroRedundancyOptimizer', 'BaseOptimWrapper', 'DeepSpeedOptimWrapper'
 ]
-
-if is_installed('deepspeed'):
-    from .optimizer import DeepSpeedOptimWrapper  # noqa:F401
-    __all__.append('DeepSpeedOptimWrapper')
