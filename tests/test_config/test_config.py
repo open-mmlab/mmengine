@@ -183,6 +183,15 @@ class TestConfig:
         with pytest.raises(KeyError):
             cfg.merge_from_dict(input_options, allow_list_keys=True)
 
+    def test_diff(self):
+        cfg1 = Config(dict(a=1, b=2))
+        cfg2 = Config(dict(a=1, b=3))
+
+        diff_str = \
+            '--- \n\n+++ \n\n@@ -1,3 +1,3 @@\n\n a = 1\n-b = 2\n+b = 3\n '
+
+        assert Config.diff(cfg1, cfg2) == diff_str
+
     def test_auto_argparser(self):
         # Temporarily make sys.argv only has one argument and keep backups
         tmp = sys.argv[1:]
