@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import inspect
 import logging
 import os
 import os.path as osp
@@ -1441,7 +1442,17 @@ class Runner:
                 collate_fn = FUNCTIONS.get(collate_fn_type)
             else:
                 collate_fn = collate_fn_type
-            collate_fn = partial(collate_fn, **collate_fn_cfg)  # type: ignore
+            # If 'collate_fn' is a function, utilizing the functools.partial
+            # method to apply partial argument settings.
+            # If 'collate_fn' is a class, creating an instance of this class.
+            if inspect.isfunction(collate_fn):
+                collate_fn = partial(
+                    collate_fn,  # type: ignore
+                    **collate_fn_cfg)
+            elif inspect.isclass(collate_fn):
+                collate_fn = collate_fn(**collate_fn_cfg)  # type: ignore
+            else:
+                raise NotImplementedError
         elif callable(collate_fn_cfg):
             collate_fn = collate_fn_cfg
         else:
