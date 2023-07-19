@@ -3,6 +3,7 @@ import argparse
 import copy
 import os
 import os.path as osp
+import pickle
 import platform
 import sys
 import tempfile
@@ -951,6 +952,19 @@ class TestConfig:
         assert isinstance(model.roi_head.bbox_head.loss_cls, ToyLoss)
         DefaultScope._instance_dict.pop('test1')
 
+    def test_pickle(self):
+        # Text style config
+        cfg_path = osp.join(self.data_path, 'config/py_config/test_py_base.py')
+        cfg = Config.fromfile(cfg_path)
+        pickled = pickle.loads(pickle.dumps(cfg))
+        assert pickled.__dict__ == cfg.__dict__
+
+        cfg_path = osp.join(self.data_path,
+                            'config/lazy_module_config/toy_model.py')
+        cfg = Config.fromfile(cfg_path)
+        pickled = pickle.loads(pickle.dumps(cfg))
+        assert pickled.__dict__ == cfg.__dict__
+
     def test_lazy_import(self, tmp_path):
         lazy_import_cfg_path = osp.join(
             self.data_path, 'config/lazy_module_config/toy_model.py')
@@ -1030,11 +1044,37 @@ error_attr = mmengine.error_attr
                 osp.join(self.data_path,
                          'config/lazy_module_config/error_mix_using1.py'))
 
+        # Force to import in non-lazy-import mode
+        Config.fromfile(
+            osp.join(self.data_path,
+                     'config/lazy_module_config/error_mix_using1.py'),
+            lazy_import=False)
+
         # current lazy-import config, base text config
         with pytest.raises(RuntimeError, match='_base_ ='):
             Config.fromfile(
                 osp.join(self.data_path,
                          'config/lazy_module_config/error_mix_using2.py'))
+
+        cfg = Config.fromfile(
+            osp.join(self.data_path,
+                     'config/lazy_module_config/test_mix_builtin.py'))
+        assert cfg.path == osp.join('a', 'b')
+        assert cfg.name == 'a/b'
+        assert cfg.suffix == '.py'
+        assert cfg.chained == [1, 2, 3, 4]
+        assert cfg.existed
+        assert cfg.cfgname == 'test_mix_builtin.py'
+
+        cfg_dict = cfg.to_dict()
+        dumped_cfg_path = tmp_path / 'test_dump_lazy.py'
+        cfg.dump(dumped_cfg_path)
+        dumped_cfg = Config.fromfile(dumped_cfg_path)
+
+        assert set(dumped_cfg.keys()) == {
+            'path', 'name', 'suffix', 'chained', 'existed', 'cfgname'
+        }
+        assert dumped_cfg.to_dict() == cfg.to_dict()
 
 
 class TestConfigDict(TestCase):

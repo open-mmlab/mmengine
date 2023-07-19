@@ -78,6 +78,18 @@ Highlights:
 
 Read [Changelog](./docs/en/notes/changelog.md#v080-06302023) for more details.
 
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Installation](#installation)
+- [Get Started](#get-started)
+- [Learn More](#learn-more)
+- [Contributing](#contributing)
+- [Citation](#citation)
+- [License](#license)
+- [Ecosystem](#ecosystem)
+- [Projects in OpenMMLab](#projects-in-openmmlab)
+
 ## Introduction
 
 MMEngine is a foundational library for training deep learning models based on PyTorch. It provides a solid engineering foundation and frees developers from writing redundant codes on workflows. It serves as the training engine of all OpenMMLab codebases, which support hundreds of algorithms in various research areas. Moreover, MMEngine is also generic to be applied to non-OpenMMLab projects.
@@ -99,6 +111,8 @@ Major features:
    - Defines the training process just like playing with Legos.
    - Provides rich components and strategies.
    - Complete controls on the training process with different levels of APIs.
+
+![mmengine_dataflow](https://github.com/open-mmlab/mmengine/assets/58739961/267db9cb-72e4-4af2-a58b-877b30091acc)
 
 ## Installation
 
@@ -339,6 +353,10 @@ If you find this project useful in your research, please consider cite:
 ## License
 
 This project is released under the [Apache 2.0 license](LICENSE).
+
+## Ecosystem
+
+- [APES: Attention-based Point Cloud Edge Sampling](https://github.com/JunweiZheng93/APES)
 
 ## Projects in OpenMMLab
 

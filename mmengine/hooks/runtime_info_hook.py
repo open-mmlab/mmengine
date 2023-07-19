@@ -23,7 +23,7 @@ def _is_scalar(value: Any) -> bool:
     """
     if isinstance(value, np.ndarray):
         return value.size == 1
-    elif isinstance(value, (int, float)):
+    elif isinstance(value, (int, float, np.number)):
         return True
     elif isinstance(value, torch.Tensor):
         return value.numel() == 1

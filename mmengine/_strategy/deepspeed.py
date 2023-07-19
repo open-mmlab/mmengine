@@ -4,7 +4,11 @@ import os.path as osp
 import time
 from typing import Callable, Dict, List, Optional, Union
 
-import deepspeed
+try:
+    import deepspeed
+except ImportError:
+    deepspeed = None
+
 import torch.nn as nn
 
 import mmengine
@@ -71,6 +75,10 @@ class DeepSpeedStrategy(BaseStrategy):
         # the following args are for BaseStrategy
         **kwargs,
     ):
+        assert deepspeed is not None, \
+            'DeepSpeed is not installed. Please check ' \
+            'https://github.com/microsoft/DeepSpeed#installation.'
+
         super().__init__(**kwargs)
 
         self.config = self._parse_config(config)

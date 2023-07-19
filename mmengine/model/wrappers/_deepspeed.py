@@ -2,10 +2,14 @@
 from typing import Any, Dict, List, Optional, Union
 
 import torch
-from deepspeed.runtime.engine import DeepSpeedEngine
 
 from mmengine.optim.optimizer._deepspeed import DeepSpeedOptimWrapper
 from mmengine.registry import MODEL_WRAPPERS
+
+try:
+    from deepspeed.runtime.engine import DeepSpeedEngine
+except ImportError:
+    DeepSpeedEngine = None
 
 
 @MODEL_WRAPPERS.register_module()
