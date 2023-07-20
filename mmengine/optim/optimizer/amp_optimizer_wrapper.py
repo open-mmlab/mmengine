@@ -70,6 +70,7 @@ class AmpOptimWrapper(OptimWrapper):
                  loss_scale: str = 'dynamic',
                  dtype: Union[str, torch.dtype] = None,
                  use_fsdp: bool = False,
+                 cache_enabled: bool = True,
                  **kwargs):
         assert digit_version(TORCH_VERSION) >= digit_version('1.6.0'), (
             '`torch.cuda.amp` is only available when pytorch version >= 1.6')
@@ -78,7 +79,7 @@ class AmpOptimWrapper(OptimWrapper):
             'on gpu, npu or mlu')
         super().__init__(**kwargs)
         self._scale_update_param = None
-
+        self._cache_enabled = cache_enabled
         if use_fsdp:
             if digit_version(torch.__version__) >= digit_version('2.0.0'):
                 from torch.distributed.fsdp.sharded_grad_scaler import \
@@ -185,5 +186,6 @@ class AmpOptimWrapper(OptimWrapper):
             model (nn.Module): The training model.
         """
         from mmengine.runner.amp import autocast
-        with super().optim_context(model), autocast(dtype=self.cast_dtype):
+        with super().optim_context(model), autocast(
+                dtype=self.cast_dtype, cache_enabled=self._cache_enabled):
             yield
