@@ -6,6 +6,7 @@
 git clone https://github.com/open-mmlab/mmengine.git
 cd mmengine
 pip install -e . -v
+pip install -U transformers
 ```
 
 ## Prepare data

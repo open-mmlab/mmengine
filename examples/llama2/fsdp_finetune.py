@@ -17,8 +17,10 @@ from transformers.models.llama.modeling_llama import LlamaDecoderLayer
 from mmengine import load, print_log
 from mmengine._strategy import FSDPStrategy
 from mmengine.dataset import DefaultSampler
+from mmengine.dist.utils import is_main_process
 from mmengine.optim.scheduler import CosineAnnealingLR
 from mmengine.utils import apply_to
+from mmengine.visualization import Visualizer, WandbVisBackend
 
 IGNORE_INDEX = -100
 ORI_BATCH_SIZE = 8
@@ -182,11 +184,15 @@ def train():
         model_wrapper=dict(
             auto_wrap_policy=partial(
                 transformer_auto_wrap_policy,
-                transformer_layer_cls={LlamaDecoderLayer}), ), )
+                transformer_layer_cls={LlamaDecoderLayer}), ),
+        state_dict_cfg='full')
+    visualizer = Visualizer(
+        name='mmengine',
+        save_dir=args.output_dir,
+        vis_backends=[dict(type=WandbVisBackend)])
 
     tokenizer = LlamaTokenizer.from_pretrained(args.checkpoint)
     model = LlamaForCausalLM.from_pretrained(args.checkpoint)
-
     model.train()
 
     smart_tokenizer_and_embedding_resize(
@@ -242,8 +248,17 @@ def train():
                                  f'Loss: {loss.item():.3f}, '
                                  f'Lr: {optimizer.get_lr()["lr"][0]:.6f} '
                                  f'Memory: {max_memory/1e9:.3f}G')
+            visualizer.add_scalars({'loss': loss.item()})
             torch.cuda.reset_peak_memory_stats()
-        strategy.save_checkpoint(f'{args.output_dir}/epoch_{epoch}')
+        save_dir = f'{args.output_dir}/epoch_{epoch}'
+        state_dict = model.state_dict()
+
+        if is_main_process():
+            model.save_pretrained(
+                save_dir,
+                state_dict=state_dict,
+            )
+            tokenizer.save_pretrained(save_dir)
 
 
 if __name__ == '__main__':
