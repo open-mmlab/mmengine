@@ -131,7 +131,7 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
             for m in self.children():
                 if is_model_wrapper(m) and not hasattr(m, 'init_weights'):
                     m = m.module
-                if hasattr(m, 'init_weights') and getattr(
+                if hasattr(m, 'init_weights') and not getattr(
                         m, '_is_init', False):
                     m.init_weights()
                     # users may overload the `init_weights`
