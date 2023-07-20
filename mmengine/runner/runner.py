@@ -1446,9 +1446,8 @@ class Runner:
             # method to apply partial argument settings.
             # If 'collate_fn' is a class, creating an instance of this class.
             if inspect.isfunction(collate_fn):
-                collate_fn = partial(
-                    collate_fn,  # type: ignore
-                    **collate_fn_cfg)
+                collate_fn = partial(  # type: ignore
+                    collate_fn, **collate_fn_cfg)  # type: ignore
             elif inspect.isclass(collate_fn):
                 collate_fn = collate_fn(**collate_fn_cfg)  # type: ignore
             else:
