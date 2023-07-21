@@ -1,5 +1,6 @@
 import argparse
 
+import torch
 from transformers import AutoTokenizer, LlamaForCausalLM
 
 # flake8: noqa
@@ -26,7 +27,8 @@ if __name__ == '__main__':
     model.eval()
 
     inputs = tokenizer(prompt, return_tensors='pt')
-    generate_ids = model.generate(inputs.input_ids.cuda(), max_length=300)
+    with torch.no_grad():
+        generate_ids = model.generate(inputs.input_ids.cuda(), max_length=300)
     print(
         tokenizer.batch_decode(
             generate_ids,

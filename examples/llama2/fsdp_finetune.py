@@ -3,18 +3,18 @@ import copy
 from functools import partial
 
 import torch
+import torch.distributed as dist
 from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
 from torch.optim import AdamW
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, DistributedSampler
 from transformers import LlamaForCausalLM, LlamaTokenizer
 from transformers.data import default_data_collator
 from transformers.models.llama.modeling_llama import LlamaDecoderLayer
 
 from mmengine import load
 from mmengine._strategy import FSDPStrategy
-from mmengine.dataset import DefaultSampler
 from mmengine.dist.utils import is_main_process
-from mmengine.optim.scheduler import StepLR
+from mmengine.optim import StepLR
 from mmengine.utils import apply_to
 from mmengine.visualization import Visualizer, WandbVisBackend
 
@@ -97,7 +97,8 @@ def train():
             auto_wrap_policy=partial(
                 transformer_auto_wrap_policy,
                 transformer_layer_cls={LlamaDecoderLayer})),
-        state_dict_cfg='full')
+        state_dict_cfg='full',
+        env_kwargs=dict(randomness=dict(seed=42)))
     visualizer = Visualizer(
         name='mmengine',
         save_dir=args.output_dir,
@@ -105,7 +106,9 @@ def train():
 
     # Prepare model
     tokenizer = LlamaTokenizer.from_pretrained(args.checkpoint)
+    tokenizer.add_special_tokens({'pad_token': '<PAD>'})
     model = LlamaForCausalLM.from_pretrained(args.checkpoint)
+    model.to(torch.bfloat16)
     model.train()
 
     # Prepare dataset
@@ -114,7 +117,12 @@ def train():
     train_dataloader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
-        sampler=DefaultSampler(dataset=train_dataset),
+        sampler=DistributedSampler(
+            train_dataset,
+            rank=dist.get_rank(),
+            num_replicas=dist.get_world_size(),
+            shuffle=True,
+        ),
         collate_fn=default_data_collator,
         drop_last=True)
 
@@ -124,7 +132,7 @@ def train():
     optim_cfg = dict(
         optimizer=dict(type=AdamW, lr=1e-4, weight_decay=0.0),
         accumulative_counts=ORI_BATCH_SIZE / args.batch_size)
-    scheduler_cfgs = [dict(type=StepLR, step_size=1)]
+    scheduler_cfgs = [dict(type=StepLR, step_size=1, gamma=0.85)]
     model, optimizer, schedulers = strategy.prepare(
         model,
         optim_wrapper=optim_cfg,
@@ -137,7 +145,7 @@ def train():
             inputs = apply_to(inputs, lambda m: isinstance(m, torch.Tensor),
                               lambda m: m.cuda())
 
-            loss = model(**inputs)['loss'].mean()
+            loss = model(**inputs).loss
             optimizer.update_params(loss)
 
             max_memory = torch.cuda.max_memory_allocated()
