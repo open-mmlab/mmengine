@@ -32,7 +32,7 @@ Download model weights from https://huggingface.co/meta-llama/Llama-2-7b-hf
 ## Train
 
 ```bash
-torchrun --nproc-per-node 8 examples/llama2/fsdp_finetune.py  data/alpaca_data.json ${model_weights}
+torchrun --nproc-per-node 8 examples/llama2/fsdp_finetune.py data/alpaca_data.json ${model_weights}
 ```
 
 ## Inference

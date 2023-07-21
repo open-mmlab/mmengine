@@ -18,7 +18,6 @@ from mmengine.optim.scheduler import StepLR
 from mmengine.utils import apply_to
 from mmengine.visualization import Visualizer, WandbVisBackend
 
-IGNORE_INDEX = -100
 ORI_BATCH_SIZE = 4
 PROMPT_DICT = {
     'prompt_input':
@@ -34,15 +33,13 @@ PROMPT_DICT = {
 }
 
 
-# Copied from https://github.com/facebookresearch/llama-recipes/blob/main/ft_datasets/alpaca_dataset.py  # noqa: E501
+# Modified from https://github.com/facebookresearch/llama-recipes/blob/main/ft_datasets/alpaca_dataset.py  # noqa: E501
 class AlpacaDataset(Dataset):
 
     def __init__(self, data_path, tokenizer, max_words=224):
         self.ann = load(data_path)
         self.max_words = max_words
-        # tokenizer = Tokenizer(model_path=model_path + "./tokenizer.model")
         self.tokenizer = tokenizer
-        # self.tokenizer1 = tokenizer
 
     def __len__(self):
         return len(self.ann)
@@ -81,7 +78,7 @@ class AlpacaDataset(Dataset):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Distributed Training')
+    parser = argparse.ArgumentParser(description='Train alpaca with llama2')
     parser.add_argument('data_root', type=str)
     parser.add_argument('checkpoint', type=str)
     parser.add_argument('--output-dir', type=str, default='work_dirs')

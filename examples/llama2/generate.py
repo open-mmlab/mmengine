@@ -13,7 +13,7 @@ Imagine you are from the 1700s. Try to write a sentence in the language used in 
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Distributed Training')
+    parser = argparse.ArgumentParser(description='llama2 inference')
     parser.add_argument('checkpoint', type=str)
     args = parser.parse_args()
     return args
