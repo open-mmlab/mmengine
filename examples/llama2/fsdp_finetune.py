@@ -3,16 +3,16 @@ import copy
 from functools import partial
 
 import torch
-import torch.distributed as dist
 from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
 from torch.optim import AdamW
-from torch.utils.data import DataLoader, Dataset, DistributedSampler
+from torch.utils.data import DataLoader, Dataset
 from transformers import LlamaForCausalLM, LlamaTokenizer
 from transformers.data import default_data_collator
 from transformers.models.llama.modeling_llama import LlamaDecoderLayer
 
 from mmengine import load
 from mmengine._strategy import FSDPStrategy
+from mmengine.dataset import DefaultSampler
 from mmengine.dist.utils import is_main_process
 from mmengine.optim import StepLR
 from mmengine.utils import apply_to
@@ -117,12 +117,7 @@ def train():
     train_dataloader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
-        sampler=DistributedSampler(
-            train_dataset,
-            rank=dist.get_rank(),
-            num_replicas=dist.get_world_size(),
-            shuffle=True,
-        ),
+        sampler=DefaultSampler(train_dataset, seed=0),
         collate_fn=default_data_collator,
         drop_last=True)
 
