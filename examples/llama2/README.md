@@ -2,12 +2,19 @@
 
 ## Setup env
 
-```bash
-git clone https://github.com/open-mmlab/mmengine.git
-cd mmengine
-pip install -e . -v
-pip install -U transformers
-```
+- Install MMEngine
+
+  ```bash
+  git clone https://github.com/open-mmlab/mmengine.git
+  cd mmengine
+  pip install -e . -v
+  ```
+
+- Install third-party dependencies
+
+  ```bash
+  pip install -U transformers accelerate tokenizers
+  ```
 
 ## Prepare data
 
@@ -18,12 +25,12 @@ wget https://raw.githubusercontent.com/tatsu-lab/stanford_alpaca/main/alpaca_dat
 
 ## Prepare model
 
-Download model weights from https://huggingface.co/meta-llama/Llama-2-13b-hf
+Download model weights from https://huggingface.co/meta-llama/Llama-2-7b-hf
 
 ## Train
 
 ```bash
-PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:500 torchrun --nproc-per-node 8 examples/llama2/fsdp_finetune.py  data/alpaca_data.json ${model_weights}
+torchrun --nproc-per-node 8 examples/llama2/fsdp_finetune.py  data/alpaca_data.json ${model_weights}
 ```
 
 ## Inference

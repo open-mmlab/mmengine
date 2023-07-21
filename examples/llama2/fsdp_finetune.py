@@ -4,7 +4,6 @@ import copy
 from functools import partial
 
 import torch
-import transformers
 from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, Dataset
@@ -36,31 +35,7 @@ PROMPT_DICT = {
 }
 
 
-def smart_tokenizer_and_embedding_resize(
-    tokenizer: transformers.PreTrainedTokenizer,
-    model: transformers.PreTrainedModel,
-):
-    """Resize tokenizer and embedding.
-
-    Note: This is the unoptimized version that may make your embedding size
-    not be divisible by 64.
-    """
-    num_new_tokens = tokenizer.add_special_tokens({'pad_token': '<PAD>'})
-    model.resize_token_embeddings(len(tokenizer))
-
-    if num_new_tokens > 0:
-        input_embeddings = model.get_input_embeddings().weight.data
-        output_embeddings = model.get_output_embeddings().weight.data
-
-        input_embeddings_avg = input_embeddings[:-num_new_tokens].mean(
-            dim=0, keepdim=True)
-        output_embeddings_avg = output_embeddings[:-num_new_tokens].mean(
-            dim=0, keepdim=True)
-
-        input_embeddings[-num_new_tokens:] = input_embeddings_avg
-        output_embeddings[-num_new_tokens:] = output_embeddings_avg
-
-
+#  Copied from https://github.com/facebookresearch/llama-recipes/blob/main/ft_datasets/alpaca_dataset.py  # noqa: E501
 class AlpacaDataset(Dataset):
 
     def __init__(self, data_path, tokenizer, max_words=224):
@@ -120,21 +95,24 @@ def parse_args():
 
 def train():
     args = parse_args()
+    # Setup distributed related component in Strategy.
     strategy = FSDPStrategy(
         model_wrapper=dict(
             auto_wrap_policy=partial(
                 transformer_auto_wrap_policy,
-                transformer_layer_cls={LlamaDecoderLayer}), ),
+                transformer_layer_cls={LlamaDecoderLayer})),
         state_dict_cfg='full')
     visualizer = Visualizer(
         name='mmengine',
         save_dir=args.output_dir,
         vis_backends=[dict(type=WandbVisBackend)])
 
+    # Prepare model
     tokenizer = LlamaTokenizer.from_pretrained(args.checkpoint)
     model = LlamaForCausalLM.from_pretrained(args.checkpoint)
     model.train()
 
+    # Prepare dataset
     train_dataset = AlpacaDataset(
         tokenizer=tokenizer, data_path=args.data_root)
     train_dataloader = DataLoader(
@@ -142,18 +120,14 @@ def train():
         batch_size=args.batch_size,
         sampler=DefaultSampler(dataset=train_dataset),
         collate_fn=default_data_collator)
+
+    # Get the prepared model, scheduler and optimizer from strategy
     epoch_length = len(train_dataloader)
     max_iters = epoch_length * args.max_epoch
     optim_cfg = dict(
         optimizer=dict(type=AdamW, lr=1e-4, weight_decay=0.0),
         accumulative_counts=ORI_BATCH_SIZE / args.batch_size)
-    scheduler_cfgs = [
-        dict(
-            type=StepLR,
-            step_size=1,
-        ),
-    ]
-
+    scheduler_cfgs = [dict(type=StepLR, step_size=1)]
     model, optimizer, schedulers = strategy.prepare(
         model,
         optim_wrapper=optim_cfg,
@@ -177,10 +151,11 @@ def train():
                                  f'Lr: {optimizer.get_lr()["lr"][0]:.6f} '
                                  f'Memory: {max_memory/1e9:.3f}G')
             visualizer.add_scalars({'loss': loss.item()})
+
             torch.cuda.reset_peak_memory_stats()
 
             if cur_iter % args.save_interval == 0:
-                save_dir = f'{args.output_dir}/epoch_{epoch}_{idx+1}'
+                save_dir = f'{args.output_dir}/epoch_{epoch}_iter_{idx+1}'
                 state_dict = model.state_dict()
 
                 if is_main_process():
