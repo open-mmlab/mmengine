@@ -86,7 +86,7 @@ def parse_args():
     parser.add_argument('data_root', type=str)
     parser.add_argument('checkpoint', type=str)
     parser.add_argument('--output-dir', type=str, default='work_dirs')
-    parser.add_argument('--max-epoch', type=int, default=2)
+    parser.add_argument('--max-epoch', type=int, default=3)
     parser.add_argument('--batch-size', type=int, default=4)
     parser.add_argument('--save-interval', type=int, default=500)
     args = parser.parse_args()
