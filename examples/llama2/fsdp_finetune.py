@@ -1,10 +1,7 @@
 #  modified from https://github.com/tatsu-lab/stanford_alpaca/blob/main/train.py  # noqa: E501
 import argparse
 import copy
-import logging
-from dataclasses import dataclass
 from functools import partial
-from typing import Dict, Sequence
 
 import torch
 import transformers
@@ -12,18 +9,19 @@ from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, Dataset
 from transformers import LlamaForCausalLM, LlamaTokenizer
+from transformers.data import default_data_collator
 from transformers.models.llama.modeling_llama import LlamaDecoderLayer
 
-from mmengine import load, print_log
+from mmengine import load
 from mmengine._strategy import FSDPStrategy
 from mmengine.dataset import DefaultSampler
 from mmengine.dist.utils import is_main_process
-from mmengine.optim.scheduler import CosineAnnealingLR
+from mmengine.optim.scheduler import StepLR
 from mmengine.utils import apply_to
 from mmengine.visualization import Visualizer, WandbVisBackend
 
 IGNORE_INDEX = -100
-ORI_BATCH_SIZE = 8
+ORI_BATCH_SIZE = 4
 PROMPT_DICT = {
     'prompt_input':
     ('Below is an instruction that describes a task, paired with an input '
@@ -47,7 +45,7 @@ def smart_tokenizer_and_embedding_resize(
     Note: This is the unoptimized version that may make your embedding size
     not be divisible by 64.
     """
-    num_new_tokens = tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+    num_new_tokens = tokenizer.add_special_tokens({'pad_token': '<PAD>'})
     model.resize_token_embeddings(len(tokenizer))
 
     if num_new_tokens > 0:
@@ -63,108 +61,49 @@ def smart_tokenizer_and_embedding_resize(
         output_embeddings[-num_new_tokens:] = output_embeddings_avg
 
 
-def _tokenize_fn(strings: Sequence[str],
-                 tokenizer: transformers.PreTrainedTokenizer) -> Dict:
-    """Tokenize a list of strings."""
-    tokenized_list = [
-        tokenizer(
-            text,
-            return_tensors='pt',
-            padding='longest',
-            max_length=tokenizer.model_max_length,
-            truncation=True,
-        ) for text in strings
-    ]
-    input_ids = labels = [
-        tokenized.input_ids[0] for tokenized in tokenized_list
-    ]
-    input_ids_lens = labels_lens = [
-        tokenized.input_ids.ne(tokenizer.pad_token_id).sum().item()
-        for tokenized in tokenized_list
-    ]
-    return dict(
-        input_ids=input_ids,
-        labels=labels,
-        input_ids_lens=input_ids_lens,
-        labels_lens=labels_lens,
-    )
+class AlpacaDataset(Dataset):
 
-
-def preprocess(
-    sources: Sequence[str],
-    targets: Sequence[str],
-    tokenizer: transformers.PreTrainedTokenizer,
-) -> Dict:
-    """Preprocess the data by tokenizing."""
-    examples = [s + t for s, t in zip(sources, targets)]
-    examples_tokenized, sources_tokenized = (
-        _tokenize_fn(strings, tokenizer) for strings in (examples, sources))
-    input_ids = examples_tokenized['input_ids']
-    labels = copy.deepcopy(input_ids)
-    for label, source_len in zip(labels, sources_tokenized['input_ids_lens']):
-        label[:source_len] = IGNORE_INDEX
-    return dict(input_ids=input_ids, labels=labels)
-
-
-class SupervisedDataset(Dataset):
-    """""Dataset for supervised fine-tuning.""."""
-
-    def __init__(self, data_path: str,
-                 tokenizer: transformers.PreTrainedTokenizer):
-        super().__init__()
-        print_log('Loading data...', level=logging.WARNING)
-        list_data_dict = load(data_path)
-
-        print_log('Formatting inputs...', level=logging.WARNING)
-        prompt_input, prompt_no_input = \
-            PROMPT_DICT['prompt_input'], PROMPT_DICT['prompt_no_input']
-        sources = [
-            prompt_input.format_map(example) if example.get('input', '') != ''
-            else prompt_no_input.format_map(example)
-            for example in list_data_dict
-        ]
-        targets = [
-            f'{example["output"]}{tokenizer.eos_token}'
-            for example in list_data_dict
-        ]
-
-        print_log(
-            'Tokenizing inputs... This may take some time...',
-            level=logging.WARNING)
-        data_dict = preprocess(sources, targets, tokenizer)
-
-        self.input_ids = data_dict['input_ids']
-        self.labels = data_dict['labels']
+    def __init__(self, data_path, tokenizer, max_words=224):
+        self.ann = load(data_path)
+        self.max_words = max_words
+        # tokenizer = Tokenizer(model_path=model_path + "./tokenizer.model")
+        self.tokenizer = tokenizer
+        # self.tokenizer1 = tokenizer
 
     def __len__(self):
-        return len(self.input_ids)
+        return len(self.ann)
 
-    def __getitem__(self, i) -> Dict[str, torch.Tensor]:
-        return dict(input_ids=self.input_ids[i], labels=self.labels[i])
+    def __getitem__(self, index):
+        ann = self.ann[index]
+        if ann.get('input', '') == '':
+            prompt = PROMPT_DICT['prompt_no_input'].format_map(ann)
+        else:
+            prompt = PROMPT_DICT['prompt_input'].format_map(ann)
+        example = prompt + ann['output']
+        prompt = torch.tensor(self.tokenizer.encode(prompt), dtype=torch.int64)
+        example = self.tokenizer.encode(example)
+        example.append(self.tokenizer.eos_token_id)
+        example = torch.tensor(example, dtype=torch.int64)
+        padding = self.max_words - example.shape[0]
+        if padding > 0:
+            example = torch.cat(
+                (example, torch.zeros(padding, dtype=torch.int64) - 1))
+        elif padding < 0:
+            example = example[:self.max_words]
+        labels = copy.deepcopy(example)
+        labels[:len(prompt)] = -1
+        example_mask = example.ge(0)
+        label_mask = labels.ge(0)
+        example[~example_mask] = 0
+        labels[~label_mask] = 0
+        example_mask = example_mask.float()
+        label_mask = label_mask.float()
 
-
-@dataclass
-class DataCollatorForSupervisedDataset:
-    """Collate examples for supervised fine-tuning."""
-
-    tokenizer: transformers.PreTrainedTokenizer
-
-    def __call__(self, instances: Sequence[Dict]) -> Dict[str, torch.Tensor]:
-        input_ids, labels = tuple([instance[key] for instance in instances]
-                                  for key in ('input_ids', 'labels'))
-        input_ids = torch.nn.utils.rnn.pad_sequence(
-            input_ids,
-            batch_first=True,
-            padding_value=self.tokenizer.pad_token_id)
-        labels = torch.nn.utils.rnn.pad_sequence(
-            labels, batch_first=True, padding_value=IGNORE_INDEX)
-        attention_mask = input_ids.ne(  # type: ignore
-            self.tokenizer.pad_token_id)
-        return dict(
-            input_ids=input_ids,
-            labels=labels,
-            attention_mask=attention_mask,
-        )
+        return {
+            'input_ids': example,
+            'labels': labels,
+            'attention_mask': example_mask,
+        }
 
 
 def parse_args():
@@ -173,7 +112,8 @@ def parse_args():
     parser.add_argument('checkpoint', type=str)
     parser.add_argument('--output-dir', type=str, default='work_dirs')
     parser.add_argument('--max-epoch', type=int, default=2)
-    parser.add_argument('--batch-size', type=int, default=2)
+    parser.add_argument('--batch-size', type=int, default=4)
+    parser.add_argument('--save-interval', type=int, default=500)
     args = parser.parse_args()
     return args
 
@@ -195,30 +135,23 @@ def train():
     model = LlamaForCausalLM.from_pretrained(args.checkpoint)
     model.train()
 
-    smart_tokenizer_and_embedding_resize(
-        tokenizer=tokenizer,
-        model=model,
-    )
-
-    train_dataset = SupervisedDataset(
+    train_dataset = AlpacaDataset(
         tokenizer=tokenizer, data_path=args.data_root)
     train_dataloader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
         sampler=DefaultSampler(dataset=train_dataset),
-        collate_fn=DataCollatorForSupervisedDataset(tokenizer=tokenizer))
+        collate_fn=default_data_collator)
     epoch_length = len(train_dataloader)
     max_iters = epoch_length * args.max_epoch
     optim_cfg = dict(
-        optimizer=dict(
-            type=AdamW, lr=5e-5, betas=(0.9, 0.95), eps=1e-5,
-            weight_decay=0.1),
+        optimizer=dict(type=AdamW, lr=1e-4, weight_decay=0.0),
         accumulative_counts=ORI_BATCH_SIZE / args.batch_size)
     scheduler_cfgs = [
         dict(
-            type=CosineAnnealingLR,
-            T_max=max_iters * args.batch_size / ORI_BATCH_SIZE,
-            eta_min_ratio=0.1),
+            type=StepLR,
+            step_size=1,
+        ),
     ]
 
     model, optimizer, schedulers = strategy.prepare(
@@ -229,7 +162,7 @@ def train():
 
     for epoch in range(args.max_epoch):
         for idx, inputs in enumerate(train_dataloader):
-            cur_iter = epoch * epoch_length + idx
+            cur_iter = epoch * epoch_length + idx + 1
             # Convert inputs to target device.
             inputs = apply_to(inputs, lambda m: isinstance(m, torch.Tensor),
                               lambda m: m.cuda())
@@ -237,28 +170,28 @@ def train():
             loss = model(**inputs)['loss'].mean()
             optimizer.update_params(loss)
 
-            # Keep the lr update frequency the same as the original batch size.
-            if cur_iter * args.batch_size % ORI_BATCH_SIZE == 0:
-                for scheduler in schedulers:
-                    scheduler.step()
-
             max_memory = torch.cuda.max_memory_allocated()
-            strategy.logger.info(f'Epoch: {epoch}/{args.max_epoch}, '
-                                 f'Iter: {idx}/{epoch_length}, '
+            strategy.logger.info(f'Epoch: {epoch+1}/{args.max_epoch}, '
+                                 f'Iter: {idx+1}/{epoch_length}, '
                                  f'Loss: {loss.item():.3f}, '
                                  f'Lr: {optimizer.get_lr()["lr"][0]:.6f} '
                                  f'Memory: {max_memory/1e9:.3f}G')
             visualizer.add_scalars({'loss': loss.item()})
             torch.cuda.reset_peak_memory_stats()
-        save_dir = f'{args.output_dir}/epoch_{epoch}'
-        state_dict = model.state_dict()
 
-        if is_main_process():
-            model.save_pretrained(
-                save_dir,
-                state_dict=state_dict,
-            )
-            tokenizer.save_pretrained(save_dir)
+            if cur_iter % args.save_interval == 0:
+                save_dir = f'{args.output_dir}/epoch_{epoch}_{idx+1}'
+                state_dict = model.state_dict()
+
+                if is_main_process():
+                    model.save_pretrained(
+                        save_dir,
+                        state_dict=state_dict,
+                    )
+                    tokenizer.save_pretrained(save_dir)
+
+        for scheduler in schedulers:
+            scheduler.step()
 
 
 if __name__ == '__main__':
