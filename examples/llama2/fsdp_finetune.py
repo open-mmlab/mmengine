@@ -1,4 +1,3 @@
-#  modified from https://github.com/tatsu-lab/stanford_alpaca/blob/main/train.py  # noqa: E501
 import argparse
 import copy
 from functools import partial
@@ -35,7 +34,7 @@ PROMPT_DICT = {
 }
 
 
-#  Copied from https://github.com/facebookresearch/llama-recipes/blob/main/ft_datasets/alpaca_dataset.py  # noqa: E501
+# Copied from https://github.com/facebookresearch/llama-recipes/blob/main/ft_datasets/alpaca_dataset.py  # noqa: E501
 class AlpacaDataset(Dataset):
 
     def __init__(self, data_path, tokenizer, max_words=224):
@@ -119,7 +118,8 @@ def train():
         train_dataset,
         batch_size=args.batch_size,
         sampler=DefaultSampler(dataset=train_dataset),
-        collate_fn=default_data_collator)
+        collate_fn=default_data_collator,
+        drop_last=True)
 
     # Get the prepared model, scheduler and optimizer from strategy
     epoch_length = len(train_dataloader)

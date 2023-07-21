@@ -2,6 +2,8 @@
 
 ## Setup env
 
+Note: This example requires PyTorch 2.0+ and MMEngine 0.8.0+.
+
 - Install MMEngine
 
   ```bash
