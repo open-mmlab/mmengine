@@ -133,7 +133,6 @@ def train():
 
     for epoch in range(args.max_epoch):
         for idx, inputs in enumerate(train_dataloader):
-            cur_iter = epoch * epoch_length + idx + 1
             # Convert inputs to target device.
             inputs = apply_to(inputs, lambda m: isinstance(m, torch.Tensor),
                               lambda m: m.cuda())
@@ -151,19 +150,15 @@ def train():
 
             torch.cuda.reset_peak_memory_stats()
 
-            if cur_iter % args.save_interval == 0:
-                save_dir = f'{args.output_dir}/epoch_{epoch}_iter_{idx+1}'
-                state_dict = model.state_dict()
-
-                if is_main_process():
-                    model.save_pretrained(
-                        save_dir,
-                        state_dict=state_dict,
-                    )
-                    tokenizer.save_pretrained(save_dir)
-
         for scheduler in schedulers:
             scheduler.step()
+
+        save_dir = f'{args.output_dir}/epoch_{epoch+1}'
+        state_dict = model.state_dict()
+
+        if is_main_process():
+            model.save_pretrained(save_dir, state_dict=state_dict)
+            tokenizer.save_pretrained(save_dir)
 
 
 if __name__ == '__main__':
