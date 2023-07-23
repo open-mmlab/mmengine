@@ -192,6 +192,14 @@ class TestConfig:
 
         assert Config.diff(cfg1, cfg2) == diff_str
 
+        cfg1_file = osp.join(self.data_path, 'config/py_config/test_diff_1.py')
+        cfg1 = Config.fromfile(cfg1_file)
+
+        cfg2_file = osp.join(self.data_path, 'config/py_config/test_diff_2.py')
+        cfg2 = Config.fromfile(cfg2_file)
+
+        assert Config.diff(cfg1, cfg2) == diff_str
+
     def test_auto_argparser(self):
         # Temporarily make sys.argv only has one argument and keep backups
         tmp = sys.argv[1:]

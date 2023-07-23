@@ -1433,7 +1433,8 @@ class Config:
             use_mapping = _contain_invalid_identifier(input_dict)
             if use_mapping:
                 r += '{'
-            for idx, (k, v) in enumerate(input_dict.items()):
+            for idx, (k, v) in enumerate(
+                    sorted(input_dict.items(), key=lambda x: str(x))):
                 is_last = idx >= len(input_dict) - 1
                 end = '' if outest_level or is_last else ','
                 if isinstance(v, dict):
@@ -1607,9 +1608,20 @@ class Config:
                 option_cfg_dict, cfg_dict, allow_list_keys=allow_list_keys))
 
     @staticmethod
-    def diff(cfg1, cfg2) -> str:
+    def diff(cfg1: Union[str, 'Config'], cfg2: Union[str, 'Config']) -> str:
+        if isinstance(cfg1, str):
+            cfg1_config = Config.fromfile(cfg1)
+        else:
+            cfg1_config = cfg1
+
+        if isinstance(cfg2, str):
+            cfg2_config = Config.fromfile(cfg2)
+        else:
+            cfg2_config = cfg2
+
         res = difflib.unified_diff(
-            cfg1.pretty_text.split('\n'), cfg2.pretty_text.split('\n'))
+            cfg1_config.pretty_text.split('\n'),
+            cfg2_config.pretty_text.split('\n'))
         return '\n'.join(res)
 
     @staticmethod
