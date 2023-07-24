@@ -58,9 +58,9 @@ English | [简体中文](README_zh-CN.md)
 
 ## What's New
 
-v0.8.0 was released on 2023-06-30.
-
 Highlights:
+
+- Add an [example](./examples/llama2/) to finetune Llama2.
 
 - Support training with [FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp) and [DeepSpeed](https://www.deepspeed.ai/). Refer to the [Training Large Models](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html) for more detailed usages.
 
