@@ -868,8 +868,7 @@ class Config:
                 # Handle base files
                 base_cfg_dict = ConfigDict()
                 cfg_text_list = list()
-                for base_cfg_path in Config._get_base_files(
-                        temp_config_file.name):
+                for base_cfg_path in Config._get_base_files(filename):
                     base_cfg_path, scope = Config._get_cfg_path(
                         base_cfg_path, filename)
                     _cfg_dict, _cfg_text, _env_variables = Config._file2dict(
@@ -903,7 +902,7 @@ class Config:
                         parsed_codes = ast.parse(f.read())
                         parsed_codes = RemoveAssignFromAST(BASE_KEY).visit(
                             parsed_codes)
-                    codeobj = compile(parsed_codes, '', mode='exec')
+                    codeobj = compile(parsed_codes, filename, mode='exec')
                     # Support load global variable in nested function of the
                     # config.
                     global_locals_var = {BASE_KEY: base_cfg_dict}
@@ -1221,8 +1220,9 @@ class Config:
             cfg_dict = mmengine.load(filename)
             base_files = cfg_dict.get(BASE_KEY, [])
         else:
-            raise TypeError('The config type should be py, json, yaml or '
-                            f'yml, but got {file_format}')
+            raise ConfigParsingError(
+                'The config type should be py, json, yaml or '
+                f'yml, but got {file_format}')
         base_files = base_files if isinstance(base_files,
                                               list) else [base_files]
         return base_files
