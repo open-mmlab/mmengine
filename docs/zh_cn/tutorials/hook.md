@@ -133,7 +133,7 @@ runner.train()
 
 - 设置开始保存权重的 epoch 数或者 iteration 数
 
-  如果想要设置控制开始保存权重的 epoch 数或者 iteration 数，可以设置 `save_begin` 参数，默认为1，表示从训练开始就保存权重。例如，如果总共训练 10 个 epoch，并且 `save_begin` 设置为 6，则将保存第 6、7、8、9 和 10 个 epoch 的权重。如果`interval=2`，则仅保存epoch 6、8和10的权重。
+  如果想要设置控制开始保存权重的 epoch 数或者 iteration 数，可以设置 `save_begin` 参数，默认为 1，表示从训练开始就保存权重。例如，如果总共训练 10 个 epoch，并且 `save_begin` 设置为 6，则将保存第 6、7、8、9 和 10 个 epoch 的权重。如果 `interval=2`，则仅保存第 6、8 和 10 个 epoch 的权重。
 
   ```python
   default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=2, save_begin=6))
