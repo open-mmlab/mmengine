@@ -1610,18 +1610,14 @@ class Config:
     @staticmethod
     def diff(cfg1: Union[str, 'Config'], cfg2: Union[str, 'Config']) -> str:
         if isinstance(cfg1, str):
-            cfg1_config = Config.fromfile(cfg1)
-        else:
-            cfg1_config = cfg1
+            cfg1 = Config.fromfile(cfg1)
 
         if isinstance(cfg2, str):
-            cfg2_config = Config.fromfile(cfg2)
-        else:
-            cfg2_config = cfg2
+            cfg2 = Config.fromfile(cfg2)
 
         res = difflib.unified_diff(
-            cfg1_config.pretty_text.split('\n'),
-            cfg2_config.pretty_text.split('\n'))
+            cfg1.pretty_text.split('\n'),
+            cfg2.pretty_text.split('\n'))
         return '\n'.join(res)
 
     @staticmethod
