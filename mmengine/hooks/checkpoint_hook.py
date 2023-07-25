@@ -92,9 +92,10 @@ class CheckpointHook(Hook):
             publish model with keys in the list after training.
             Defaults to None.
             `New in version 0.7.1.`
-        save_begin (int) : Control the epoch number or iteration number
+        save_begin (int): Control the epoch number or iteration number
             at which checkpoint saving begins. Defaults to 0, which means
             saving at the beginning.
+            `New in version 0.8.3.`
 
     Examples:
         >>> # Save best based on single metric
