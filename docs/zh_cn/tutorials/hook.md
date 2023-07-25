@@ -72,10 +72,11 @@ runner.train()
 - 保存最优权重
 - 指定保存权重的路径
 - 制作发布用的权重
+- 设置开始保存权重的 epoch 数或者 iteration 数
 
 如需了解其他功能，请阅读 [CheckpointHook API 文档](mmengine.hooks.CheckpointHook)。
 
-下面介绍上面提到的 4 个功能。
+下面介绍上面提到的 6 个功能。
 
 - 按照间隔保存权重，支持按 epoch 数或者 iteration 数保存权重
 
@@ -128,6 +129,14 @@ runner.train()
 
   ```python
   default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=1, save_best='accuracy', rule='less', published_keys=['meta', 'state_dict']))
+  ```
+
+- 设置开始保存权重的 epoch 数或者 iteration 数
+
+  如果想要设置控制开始保存权重的 epoch 数或者 iteration 数，可以设置 `save_begin` 参数，默认为 0，表示从训练开始就保存权重。例如，如果总共训练 10 个 epoch，并且 `save_begin` 设置为 5，则将保存第 5、6、7、8、9 和 10 个 epoch 的权重。如果 `interval=2`，则仅保存第 5、7 和 9 个 epoch 的权重。
+
+  ```python
+  default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=2, save_begin=5))
   ```
 
 ### LoggerHook

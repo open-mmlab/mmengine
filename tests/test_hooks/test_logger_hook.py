@@ -63,6 +63,9 @@ class TestLoggerHook(RunnerTestCase):
 
     def test_after_train_iter(self):
         # Test LoggerHook by iter.
+        # Avoid to compare `Runner.iter` (MagicMock) with other integers.
+        ori_every_n_train_iters = LoggerHook.every_n_train_iters
+        LoggerHook.every_n_train_iters = MagicMock(return_value=True)
         runner = MagicMock()
         runner.log_processor.get_log_after_iter = MagicMock(
             return_value=(dict(), 'log_str'))
@@ -112,6 +115,7 @@ class TestLoggerHook(RunnerTestCase):
         logger_hook = LoggerHook()
         logger_hook.after_train_iter(runner, batch_idx=8)
         runner.log_processor.get_log_after_iter.assert_called()
+        LoggerHook.every_n_train_iters = ori_every_n_train_iters
 
     def test_after_val_epoch(self):
         logger_hook = LoggerHook()
