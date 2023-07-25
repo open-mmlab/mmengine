@@ -342,8 +342,8 @@ class Hook:
             runner (Runner): The runner of the training, validation or testing
                 process.
             n (int): Whether current epoch can be evenly divided by n.
-            st(int): The parameter of save_begin, controlling the
-                epoch number at which checkpoint saving begins.
+            start (int): Starting from `start` to check the logic for every n epochs.
+                Defaults to 0.
 
         Returns:
             bool: Whether current epoch can be evenly divided by n.
