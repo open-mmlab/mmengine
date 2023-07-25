@@ -643,7 +643,7 @@ class TestCheckpointHook(RunnerTestCase):
             self.assertFalse(
                 osp.isfile(osp.join(cfg.work_dir, f'{training_type}_{i}.pth')))
         for i in range(6, 11):
-            if i % 2:
+            if i % 2 == 1:
                 self.assertFalse(
                     osp.isfile(
                         osp.join(cfg.work_dir, f'{training_type}_{i}.pth')))
