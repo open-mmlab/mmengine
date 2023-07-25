@@ -105,7 +105,7 @@ def _init_dist_pytorch(backend, init_backend='torch', **kwargs) -> None:
         torch.mlu.set_device(local_rank)
         torch_dist.init_process_group(
             backend='cncl',
-            rank=local_rank,
+            rank=rank,
             world_size=int(os.environ['WORLD_SIZE']),
             **kwargs)
     elif is_npu_available():
