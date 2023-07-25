@@ -164,14 +164,7 @@ class Visualizer(ManagerMixin):
         super().__init__(name)
         self._dataset_meta: Optional[dict] = None
         self._vis_backends: Union[Dict, Dict[str, 'BaseVisBackend']] = dict()
-
-        if save_dir is None:
-            print_log(
-                '`Visualizer` backend is not initialized '
-                'because save_dir is None.',
-                logger='current',
-                level=logging.WARNING)
-        elif vis_backends is not None:
+        if vis_backends is not None:
             assert len(vis_backends) > 0, 'empty list'
             names = [
                 vis_backend.get('name', None) for vis_backend in vis_backends
@@ -194,11 +187,18 @@ class Visualizer(ManagerMixin):
             if None not in names and len(set(names)) != len(names):
                 raise RuntimeError('The name fields cannot be the same')
 
-            save_dir = osp.join(save_dir, 'vis_data')
+            save_dir = osp.join(save_dir, 'vis_data') if save_dir else None
 
             for vis_backend in vis_backends:
                 name = vis_backend.pop('name', vis_backend['type'])
-                vis_backend.setdefault('save_dir', save_dir)
+                backend_save_dir = vis_backend.setdefault('save_dir', save_dir)
+                if backend_save_dir is None:
+                    print_log(
+                        f'`Visualizer` backend {name} is not initialized '
+                        'and save_dir in Visualizer is None.',
+                        logger='current',
+                        level=logging.WARNING)
+                    continue
                 self._vis_backends[name] = VISBACKENDS.build(vis_backend)
 
         self.fig_save = None
