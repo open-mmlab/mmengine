@@ -250,7 +250,6 @@ class TestBaseModule(TestCase):
 
         # Test submodule.init_weights will be skipped if submodule's `is_init`
         # is set to True
-
         model: FooModel = FOOMODELS.build(copy.deepcopy(self.model_cfg))
         for child in model.children():
             child.init_weights = Mock()
