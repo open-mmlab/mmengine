@@ -342,14 +342,14 @@ class Hook:
             runner (Runner): The runner of the training, validation or testing
                 process.
             n (int): Whether current epoch can be evenly divided by n.
-            start (int): Starting from `start` to check the logic for every n epochs.
-                Defaults to 0.
+            start (int): Starting from `start` to check the logic for
+                every n epochs. Defaults to 0.
 
         Returns:
             bool: Whether current epoch can be evenly divided by n.
         """
         dividend = runner.epoch + 1 - start
-        return dividend % n == 0 if dividend >=0 and n > 0 else False
+        return dividend % n == 0 if dividend >= 0 and n > 0 else False
 
     def every_n_inner_iters(self, batch_idx: int, n: int) -> bool:
         """Test whether current inner iteration can be evenly divided by n.
@@ -366,21 +366,22 @@ class Hook:
         """
         return (batch_idx + 1) % n == 0 if n > 0 else False
 
-    def every_n_train_iters(self, runner, n: int, st: int = 0) -> bool:
+    def every_n_train_iters(self, runner, n: int, start: int = 0) -> bool:
         """Test whether current training iteration can be evenly divided by n.
 
         Args:
             runner (Runner): The runner of the training, validation or testing
                 process.
             n (int): Whether current iteration can be evenly divided by n.
-            st(int): The parameter of save_begin, controlling the
-                iteration number at which checkpoint saving begins.
+            start (int): Starting from `start` to check the logic for
+                every n iterations. Defaults to 0.
 
         Returns:
             bool: Return True if the current iteration can be evenly divided
             by n, otherwise False.
         """
-        return (runner.iter + 1 - st) % n == 0 if n > 0 else False
+        dividend = runner.iter + 1 - start
+        return dividend % n == 0 if dividend >= 0 and n > 0 else False
 
     def end_of_epoch(self, dataloader, batch_idx: int) -> bool:
         """Check whether the current iteration reaches the last iteration of
