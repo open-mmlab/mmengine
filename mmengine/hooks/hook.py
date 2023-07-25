@@ -335,7 +335,7 @@ class Hook:
             mode (str): Current mode of runner. Defaults to 'train'.
         """
 
-    def every_n_epochs(self, runner, n: int, st: int = 0) -> bool:
+    def every_n_epochs(self, runner, n: int, start: int = 0) -> bool:
         """Test whether current epoch can be evenly divided by n.
 
         Args:
