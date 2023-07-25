@@ -92,6 +92,10 @@ class CheckpointHook(Hook):
             publish model with keys in the list after training.
             Defaults to None.
             `New in version 0.7.1.`
+        save_begin (int) : Control the epoch number or iteration number
+            at which checkpoint saving begins. Defaults to 1, which means
+            saving at the beginning.
+
     Examples:
         >>> # Save best based on single metric
         >>> CheckpointHook(interval=2, by_epoch=True, save_best='acc',
@@ -139,6 +143,7 @@ class CheckpointHook(Hook):
                  filename_tmpl: Optional[str] = None,
                  backend_args: Optional[dict] = None,
                  published_keys: Union[str, List[str], None] = None,
+                 save_begin: int = 1,
                  **kwargs) -> None:
         self.interval = interval
         self.by_epoch = by_epoch
@@ -244,6 +249,7 @@ class CheckpointHook(Hook):
         self.published_keys = published_keys
 
         self.last_ckpt = None
+        self.save_begin = save_begin
 
     def before_train(self, runner) -> None:
         """Finish all operations, related to checkpoint.
@@ -323,6 +329,9 @@ class CheckpointHook(Hook):
             runner (Runner): The runner of the training process.
         """
         if not self.by_epoch:
+            return
+
+        if runner.epoch + 1 < self.save_begin:
             return
 
         # save checkpoint for following cases:
@@ -640,6 +649,9 @@ class CheckpointHook(Hook):
             outputs (dict, optional): Outputs from model.
         """
         if self.by_epoch:
+            return
+
+        if runner.iter + 1 < self.save_begin:
             return
 
         # save checkpoint for following cases:
