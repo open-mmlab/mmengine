@@ -348,7 +348,8 @@ class Hook:
         Returns:
             bool: Whether current epoch can be evenly divided by n.
         """
-        return (runner.epoch + 1 - st) % n == 0 if n > 0 else False
+        dividend = runner.epoch + 1 - start
+        return dividend % n == 0 if dividend >=0 and n > 0 else False
 
     def every_n_inner_iters(self, batch_idx: int, n: int) -> bool:
         """Test whether current inner iteration can be evenly divided by n.
