@@ -252,7 +252,7 @@ class CheckpointHook(Hook):
         self.last_ckpt = None
         if save_begin < 0:
             raise ValueError(
-                'save_begin should not less than 0, but got {save_begin}')
+                'save_begin should not be less than 0, but got {save_begin}')
         self.save_begin = save_begin
 
     def before_train(self, runner) -> None:
