@@ -335,9 +335,6 @@ class CheckpointHook(Hook):
         if not self.by_epoch:
             return
 
-        if runner.epoch + 1 < self.save_begin:
-            return
-
         # save checkpoint for following cases:
         # 1. every ``self.interval`` epochs which start at ``self.save_begin``
         # 2. reach the last epoch of training
