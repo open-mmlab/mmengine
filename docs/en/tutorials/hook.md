@@ -132,10 +132,10 @@ The six features mentioned above are described below.
 
 - Control the epoch number or iteration number at which checkpoint saving begins
 
-  If you want to set the number of epochs or iterations to control the start of saving weights, you can set the `save_begin` parameter, defaults to 1, which means saving checkpoints from the beginning of training. For example, if you train for a total of 10 epochs, and `save_begin` is set to 6, then the checkpoints for epochs 6, 7, 8, 9, and 10 will be saved. If `interval=2`, only save checkpoints for epochs 6, 8 and 10.
+  If you want to set the number of epochs or iterations to control the start of saving weights, you can set the `save_begin` parameter, defaults to 0, which means saving checkpoints from the beginning of training. For example, if you train for a total of 10 epochs, and `save_begin` is set to 5, then the checkpoints for epochs 5, 6, 7, 8, 9, and 10 will be saved. If `interval=2`, only save checkpoints for epochs 5, 7 and 9.
 
   ```python
-  default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=2, save_begin=6))
+  default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=2, save_begin=5))
   ```
 
 [LoggerHook](mmengine.hooks.LoggerHook) collects logs from different components of `Runner` and write them to terminal, JSON file, tensorboard and wandb .etc.

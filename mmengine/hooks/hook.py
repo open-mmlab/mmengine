@@ -335,18 +335,20 @@ class Hook:
             mode (str): Current mode of runner. Defaults to 'train'.
         """
 
-    def every_n_epochs(self, runner, n: int) -> bool:
+    def every_n_epochs(self, runner, n: int, st: int = 0) -> bool:
         """Test whether current epoch can be evenly divided by n.
 
         Args:
             runner (Runner): The runner of the training, validation or testing
                 process.
             n (int): Whether current epoch can be evenly divided by n.
+            st(int): The parameter of save_begin, controlling the
+                epoch number at which checkpoint saving begins.
 
         Returns:
             bool: Whether current epoch can be evenly divided by n.
         """
-        return (runner.epoch + 1) % n == 0 if n > 0 else False
+        return (runner.epoch + 1 - st) % n == 0 if n > 0 else False
 
     def every_n_inner_iters(self, batch_idx: int, n: int) -> bool:
         """Test whether current inner iteration can be evenly divided by n.
@@ -363,19 +365,21 @@ class Hook:
         """
         return (batch_idx + 1) % n == 0 if n > 0 else False
 
-    def every_n_train_iters(self, runner, n: int) -> bool:
+    def every_n_train_iters(self, runner, n: int, st: int = 0) -> bool:
         """Test whether current training iteration can be evenly divided by n.
 
         Args:
             runner (Runner): The runner of the training, validation or testing
                 process.
             n (int): Whether current iteration can be evenly divided by n.
+            st(int): The parameter of save_begin, controlling the
+                iteration number at which checkpoint saving begins.
 
         Returns:
             bool: Return True if the current iteration can be evenly divided
             by n, otherwise False.
         """
-        return (runner.iter + 1) % n == 0 if n > 0 else False
+        return (runner.iter + 1 - st) % n == 0 if n > 0 else False
 
     def end_of_epoch(self, dataloader, batch_idx: int) -> bool:
         """Check whether the current iteration reaches the last iteration of
