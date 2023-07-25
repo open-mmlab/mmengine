@@ -188,7 +188,7 @@ class TestConfig:
         cfg2 = Config(dict(a=1, b=3))
 
         diff_str = \
-            '--- \n\n+++ \n\n@@ -1,3 +1,3 @@\n\n a = 1\n-b = 2\n+b = 3\n '
+            '--- \n\n+++ \n\n@@ -1,3 +1,3 @@\n\n a = 1\n-b = 2\n+b = 3\n \n\n'
 
         assert Config.diff(cfg1, cfg2) == diff_str
 

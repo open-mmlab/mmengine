@@ -18,6 +18,8 @@ from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple, Union
 
 from addict import Dict
+from rich.console import Console
+from rich.text import Text
 from yapf.yapflib.yapf_api import FormatCode
 
 from mmengine.fileio import dump, load
@@ -1616,9 +1618,26 @@ class Config:
             cfg2 = Config.fromfile(cfg2)
 
         res = difflib.unified_diff(
-            cfg1.pretty_text.split('\n'),
-            cfg2.pretty_text.split('\n'))
-        return '\n'.join(res)
+            cfg1.pretty_text.split('\n'), cfg2.pretty_text.split('\n'))
+
+        # Convert into rich format for better visualization
+        console = Console()
+        text = Text()
+        for line in res:
+            if line.startswith('+'):
+                color = 'bright_green'
+            elif line.startswith('-'):
+                color = 'bright_red'
+            else:
+                color = 'bright_white'
+            line = Text(line + '\n')
+            line.stylize(color)
+            text.append(line)
+
+        with console.capture() as capture:
+            console.print(text)
+
+        return capture.get()
 
     @staticmethod
     def _is_lazy_import(filename: str) -> bool:
