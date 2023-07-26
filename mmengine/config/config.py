@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import ast
 import copy
+import difflib
 import os
 import os.path as osp
 import platform
@@ -17,6 +18,8 @@ from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple, Union
 
 from addict import Dict
+from rich.console import Console
+from rich.text import Text
 from yapf.yapflib.yapf_api import FormatCode
 
 from mmengine.fileio import dump, load
@@ -1432,7 +1435,8 @@ class Config:
             use_mapping = _contain_invalid_identifier(input_dict)
             if use_mapping:
                 r += '{'
-            for idx, (k, v) in enumerate(input_dict.items()):
+            for idx, (k, v) in enumerate(
+                    sorted(input_dict.items(), key=lambda x: str(x[0]))):
                 is_last = idx >= len(input_dict) - 1
                 end = '' if outest_level or is_last else ','
                 if isinstance(v, dict):
@@ -1604,6 +1608,36 @@ class Config:
             '_cfg_dict',
             Config._merge_a_into_b(
                 option_cfg_dict, cfg_dict, allow_list_keys=allow_list_keys))
+
+    @staticmethod
+    def diff(cfg1: Union[str, 'Config'], cfg2: Union[str, 'Config']) -> str:
+        if isinstance(cfg1, str):
+            cfg1 = Config.fromfile(cfg1)
+
+        if isinstance(cfg2, str):
+            cfg2 = Config.fromfile(cfg2)
+
+        res = difflib.unified_diff(
+            cfg1.pretty_text.split('\n'), cfg2.pretty_text.split('\n'))
+
+        # Convert into rich format for better visualization
+        console = Console()
+        text = Text()
+        for line in res:
+            if line.startswith('+'):
+                color = 'bright_green'
+            elif line.startswith('-'):
+                color = 'bright_red'
+            else:
+                color = 'bright_white'
+            _text = Text(line + '\n')
+            _text.stylize(color)
+            text.append(_text)
+
+        with console.capture() as capture:
+            console.print(text)
+
+        return capture.get()
 
     @staticmethod
     def _is_lazy_import(filename: str) -> bool:
