@@ -1436,7 +1436,7 @@ class Config:
             if use_mapping:
                 r += '{'
             for idx, (k, v) in enumerate(
-                    sorted(input_dict.items(), key=lambda x: str(x))):
+                    sorted(input_dict.items(), key=lambda x: str(x[0]))):
                 is_last = idx >= len(input_dict) - 1
                 end = '' if outest_level or is_last else ','
                 if isinstance(v, dict):
