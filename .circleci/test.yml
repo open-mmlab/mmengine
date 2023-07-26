@@ -264,11 +264,11 @@ workflows:
           cudnn: 8
           requires:
             - hold
-  # merge_stage_test:
-  #   when:
-  #     not:
-  #       << pipeline.parameters.lint_only >>
-    # jobs:
+  merge_stage_test:
+    when:
+      not:
+        << pipeline.parameters.lint_only >>
+    jobs:
       - build_cuda:
           name: minimum_version_gpu
           torch: 1.8.0
