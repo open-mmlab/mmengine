@@ -1,92 +1,24 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import ast
 import dis
+import types
 import inspect
 import textwrap
 from typing import Any, List, Optional, Tuple, Union
 
 from mmengine.registry import HOOKS
+from mmengine.logging import MessageHub, HistoryBuffer
 from . import Hook
-
-
-class FunctionRecorder():
-
-    def __init__(self):
-        self._data_buffer: List = list()
-        self.now_epoch = 0
-
-    @property
-    def data_buffer(self) -> List:
-        """list: data buffer."""
-        return self._data_buffer
-
-    def func_after_assign(self):
-        pass
-
-    def next_epoch(self):
-        self.now_epoch += 1
-
-    def get_record_data(self,
-                        record_idx: int = 0,
-                        data_idx: Optional[int] = None) -> Any:
-        """Get data from ``data_buffer``.
-
-        Args:
-            record_idx (int): The index of the record saved in
-                ``data_buffer``. If a source is executed N times during
-                forward, there will be N records in ``data_buffer``.
-            data_index (int, optional):  The index of target data in
-                a record. A record may be a tuple or a list, if data_idx is
-                None, the whole list or tuple is returned. Defaults to None.
-
-        Returns:
-            Any: The type of the return value is undefined, and different
-                source data may have different types.
-        """
-        assert record_idx < len(self._data_buffer), \
-            'record_idx is illegal. The length of data_buffer is ' \
-            f'{len(self._data_buffer)}, but record_idx is ' \
-            f'{record_idx}.'
-
-        record = self._data_buffer[record_idx]
-
-        if data_idx is None:
-            target_data = record
-        else:
-            if isinstance(record, (list, tuple)):
-                assert data_idx < len(record), \
-                    'data_idx is illegal. The length of record is ' \
-                    f'{len(record)}, but data_idx is {data_idx}.'
-                target_data = record[data_idx]
-            else:
-                raise TypeError('When data_idx is not None, record should be '
-                                'a list or tuple instance, but got '
-                                f'{type(record)}.')
-
-        return target_data
-
-    def reset_data_buffer(self) -> None:
-        """Clear data in data_buffer."""
-
-        self._data_buffer = list()
-
 
 # model的 存到 runner的 message_hub
 class RecorderAdder(ast.NodeTransformer):
 
     def visit_Assign(self, node):
-        # 这将创建一个新的print调用节点
-        print_call = ast.Expr(
-            value=ast.Call(
-                func=ast.Name(id='print', ctx=ast.Load()),
-                args=[
-                    ast.Str(s='Assigning to variable '),
-                    ast.Name(id=node.targets[0].id, ctx=ast.Load())
-                ],
-                keywords=[]))
+        add2messagehub = ast.Expr(value=ast.Call(func=ast.Attribute(value=ast.Name(id='message_hub', ctx=ast.Load()), attr='update_info', ctx=ast.Load()),
+                                         args=[ast.Constant(value='task'), ast.Name(id=node.targets[0].id, ctx=ast.Load())], keywords=[]))
 
         # 插入print语句
-        return [node, print_call]
+        return [node, add2messagehub]
 
 
 # class RecorderAdder(ast.NodeTransformer):
@@ -111,10 +43,13 @@ class RecorderAdder(ast.NodeTransformer):
 class RecorderHook(Hook):
     priority = 'LOWEST'
 
-    recorder = FunctionRecorder()
+    # recorder = FunctionRecorder()
 
     def __init__(self, ):
         pass
+
+    def _get_ast(source_code):
+        return ast.parse(source_code)
 
     def _modify_func(self, func):
         # 获取函数的源代码
@@ -125,17 +60,21 @@ class RecorderHook(Hook):
         tree = ast.parse(source)
 
         import_from_statement = ast.ImportFrom(
-            module='mmengine.hooks',
+            module='mmengine.logging.MessageHub',
             names=[ast.alias(name='RecorderHook', asname=None)],
             level=0)
 
-        tree.body[0].body.insert(0, import_from_statement)
+        func_body = tree.body[0].body
+        import_statement = ast.ImportFrom(module='mmengine.logging', names=[ast.alias(name='MessageHub')], level=0)
+        add_message_hub = ast.Assign(targets=[ast.Name(id='message_hub', ctx=ast.Store())], value=ast.Call(func=ast.Attribute(value=ast.Name(id='MessageHub', ctx=ast.Load()), attr='get_instance', ctx=ast.Load()), args=[ast.Constant(value='mmengine')], keywords=[]))
+        tree.body[0].body = [import_statement, add_message_hub] + func_body
+        # tree.body[0].body.insert(0, import_statement)
 
         # 修改AST
         tree = RecorderAdder().visit(tree)
         tree = ast.fix_missing_locations(tree)
 
-        # print(ast.dump(tree, indent=4))
+        print(ast.dump(tree, indent=4))
 
         # 编译修改后的AST为一个新的函数
         namespace = {}
@@ -150,11 +89,18 @@ class RecorderHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
-        import dis
+        log_scalars = dict(loss=HistoryBuffer())
+        runtime_info = dict(task='task')
+        resumed_keys = dict(loss=True)
+         # create `MessageHub` from data.
+        message_hub2 = MessageHub(
+            name = 'name',
+            log_scalars = log_scalars,
+            runtime_info = runtime_info,
+            resumed_keys = resumed_keys)
         model = runner.model
         print('---------------------------')
         # breakpoint()
-        import types
 
         model.forward = types.MethodType(
             self._modify_func(model.forward), model)
