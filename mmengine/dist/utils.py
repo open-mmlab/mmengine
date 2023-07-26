@@ -101,7 +101,8 @@ def _init_dist_pytorch(backend, init_backend='torch', **kwargs) -> None:
     rank = int(os.environ['RANK'])
     if is_mlu_available():
         import torch_mlu  # noqa: F401
-        torch.mlu.set_device(rank)
+        local_rank = int(os.environ['LOCAL_RANK'])
+        torch.mlu.set_device(local_rank)
         torch_dist.init_process_group(
             backend='cncl',
             rank=rank,
