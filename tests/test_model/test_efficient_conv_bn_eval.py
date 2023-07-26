@@ -37,8 +37,8 @@ class BackboneModel(nn.Module):
             x = self.mod1(x)
         # this conv-bn pair can use efficient_conv_bn_eval feature
         x = self.bn1(self.conv1(x))
-        # this conv-bn pair cannot use efficient_conv_bn_eval feature
-        # because `self.conv2` is used twice
+        # this conv-bn pair can use efficient_conv_bn_eval feature
+        # only for the second `self.conv2` call.
         x = self.bn2(self.conv2(self.conv2(x)))
         # this conv-bn pair can use efficient_conv_bn_eval feature
         # just for the first forward of the `self.bn3`
