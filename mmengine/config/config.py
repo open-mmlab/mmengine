@@ -1630,9 +1630,9 @@ class Config:
                 color = 'bright_red'
             else:
                 color = 'bright_white'
-            line = Text(line + '\n')
-            line.stylize(color)
-            text.append(line)
+            _text = Text(line + '\n')
+            _text.stylize(color)
+            text.append(_text)
 
         with console.capture() as capture:
             console.print(text)
