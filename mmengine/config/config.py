@@ -264,15 +264,11 @@ class ConfigDict(Dict):
         for key, value in merged.items():
             self[key] = value
 
-    def __getstate__(self):
-        state = {}
-        for key, value in super().items():
-            state[key] = value
-        return state
-
-    def __setstate__(self, state):
-        for key, value in state.items():
-            self[key] = value
+    def __reduce_ex__(self, proto):
+        #
+        return (self.__class__, ({k: v
+                                  for k, v in super().items()}, ), None, None,
+                None, None)
 
     def __eq__(self, other):
         if isinstance(other, ConfigDict):
