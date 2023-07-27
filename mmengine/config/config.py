@@ -868,7 +868,8 @@ class Config:
                 # Handle base files
                 base_cfg_dict = ConfigDict()
                 cfg_text_list = list()
-                for base_cfg_path in Config._get_base_files(filename):
+                for base_cfg_path in Config._get_base_files(
+                        temp_config_file.name):
                     base_cfg_path, scope = Config._get_cfg_path(
                         base_cfg_path, filename)
                     _cfg_dict, _cfg_text, _env_variables = Config._file2dict(
