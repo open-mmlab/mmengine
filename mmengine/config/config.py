@@ -265,7 +265,7 @@ class ConfigDict(Dict):
             self[key] = value
 
     def __reduce_ex__(self, proto):
-        # Customize this dump related function to void `self.items` will be
+        # Override __reduce_ex__ to void `self.items` will be
         # called by CPython interpreter during pickling. See more details in
         # https://github.com/python/cpython/blob/8d61a71f9c81619e34d4a30b625922ebc83c561b/Objects/typeobject.c#L6196  # noqa: E501
         return (self.__class__, ({k: v
