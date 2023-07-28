@@ -1,21 +1,31 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import ast
 import dis
-import types
 import inspect
 import textwrap
+import types
 from typing import Any, List, Optional, Tuple, Union
 
+from mmengine.logging import HistoryBuffer, MessageHub
 from mmengine.registry import HOOKS
-from mmengine.logging import MessageHub, HistoryBuffer
 from . import Hook
+
 
 # model的 存到 runner的 message_hub
 class RecorderAdder(ast.NodeTransformer):
 
     def visit_Assign(self, node):
-        add2messagehub = ast.Expr(value=ast.Call(func=ast.Attribute(value=ast.Name(id='message_hub', ctx=ast.Load()), attr='update_info', ctx=ast.Load()),
-                                         args=[ast.Constant(value='task'), ast.Name(id=node.targets[0].id, ctx=ast.Load())], keywords=[]))
+        add2messagehub = ast.Expr(
+            value=ast.Call(
+                func=ast.Attribute(
+                    value=ast.Name(id='message_hub', ctx=ast.Load()),
+                    attr='update_scalar',
+                    ctx=ast.Load()),
+                args=[
+                    ast.Constant(value='task'),
+                    ast.Name(id=node.targets[0].id, ctx=ast.Load())
+                ],
+                keywords=[]))
 
         # 插入print语句
         return [node, add2messagehub]
@@ -65,8 +75,19 @@ class RecorderHook(Hook):
             level=0)
 
         func_body = tree.body[0].body
-        import_statement = ast.ImportFrom(module='mmengine.logging', names=[ast.alias(name='MessageHub')], level=0)
-        add_message_hub = ast.Assign(targets=[ast.Name(id='message_hub', ctx=ast.Store())], value=ast.Call(func=ast.Attribute(value=ast.Name(id='MessageHub', ctx=ast.Load()), attr='get_instance', ctx=ast.Load()), args=[ast.Constant(value='mmengine')], keywords=[]))
+        import_statement = ast.ImportFrom(
+            module='mmengine.logging',
+            names=[ast.alias(name='MessageHub')],
+            level=0)
+        add_message_hub = ast.Assign(
+            targets=[ast.Name(id='message_hub', ctx=ast.Store())],
+            value=ast.Call(
+                func=ast.Attribute(
+                    value=ast.Name(id='MessageHub', ctx=ast.Load()),
+                    attr='get_instance',
+                    ctx=ast.Load()),
+                args=[ast.Constant(value='mmengine')],
+                keywords=[]))
         tree.body[0].body = [import_statement, add_message_hub] + func_body
         # tree.body[0].body.insert(0, import_statement)
 
@@ -90,17 +111,24 @@ class RecorderHook(Hook):
             runner (Runner): The runner of the training process.
         """
         log_scalars = dict(loss=HistoryBuffer())
-        runtime_info = dict(task='task')
+        runtime_info = dict()
         resumed_keys = dict(loss=True)
-         # create `MessageHub` from data.
-        message_hub2 = MessageHub(
-            name = 'name',
-            log_scalars = log_scalars,
-            runtime_info = runtime_info,
-            resumed_keys = resumed_keys)
+        # create `MessageHub` from data.
+        self.message_hub2 = MessageHub(
+            name='name',
+            log_scalars=log_scalars,
+            runtime_info=runtime_info,
+            resumed_keys=resumed_keys)
         model = runner.model
         print('---------------------------')
         # breakpoint()
 
         model.forward = types.MethodType(
             self._modify_func(model.forward), model)
+
+    def after_train_iter(self,
+                        runner,
+                        batch_idx: int,
+                        data_batch = None,
+                        outputs = None) -> None:
+        print(self.message_hub2.__dict__)
