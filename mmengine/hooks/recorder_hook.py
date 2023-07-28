@@ -127,8 +127,8 @@ class RecorderHook(Hook):
             self._modify_func(model.forward), model)
 
     def after_train_iter(self,
-                        runner,
-                        batch_idx: int,
-                        data_batch = None,
-                        outputs = None) -> None:
+                         runner,
+                         batch_idx: int,
+                         data_batch=None,
+                         outputs=None) -> None:
         print(self.message_hub2.__dict__)
