@@ -24,8 +24,9 @@ from yapf.yapflib.yapf_api import FormatCode
 
 from mmengine.fileio import dump, load
 from mmengine.logging import print_log
-from mmengine.utils import (check_file_exist, get_installed_path,
-                            import_modules_from_strings, is_installed)
+from mmengine.utils import (check_file_exist, digit_version,
+                            get_installed_path, import_modules_from_strings,
+                            is_installed)
 from .lazy import LazyAttr, LazyObject
 from .utils import (ConfigParsingError, ImportTransformer, RemoveAssignFromAST,
                     _gather_abs_import_lazyobj, _get_external_cfg_base_path,
@@ -264,15 +265,18 @@ class ConfigDict(Dict):
         for key, value in merged.items():
             self[key] = value
 
-    def __getstate__(self):
-        state = {}
-        for key, value in super().items():
-            state[key] = value
-        return state
-
-    def __setstate__(self, state):
-        for key, value in state.items():
-            self[key] = value
+    def __reduce_ex__(self, proto):
+        # Override __reduce_ex__ to avoid `self.items` will be
+        # called by CPython interpreter during pickling. See more details in
+        # https://github.com/python/cpython/blob/8d61a71f9c81619e34d4a30b625922ebc83c561b/Objects/typeobject.c#L6196  # noqa: E501
+        if digit_version(platform.python_version()) < digit_version('3.8'):
+            return (self.__class__, ({k: v
+                                      for k, v in super().items()}, ), None,
+                    None, None)
+        else:
+            return (self.__class__, ({k: v
+                                      for k, v in super().items()}, ), None,
+                    None, None, None)
 
     def __eq__(self, other):
         if isinstance(other, ConfigDict):
