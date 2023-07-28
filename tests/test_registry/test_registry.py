@@ -162,20 +162,10 @@ class TestRegistry:
         # lambda functions can be registered
         CATS.register_module(name='unknown cat', module=lambda: 'unknown')
 
-        # name must be provided when module does not have `__name__` attribute.
-        with pytest.raises(AssertionError):
-            muchkin1 = functools.partial(muchkin, size=0)
-            CATS.register_module(module=muchkin1)
-
         assert CATS.get('muchkin0') is muchkin0
         assert 'unknown cat' in CATS
         assert 'muchkin0' in CATS
         assert len(CATS) == 11
-
-        # register duplicated name partial function
-        with pytest.raises(KeyError):
-            CATS.register_module('muchkin0', False, muchkin0)
-        CATS.register_module('muchkin0', True, muchkin0)
 
     def _build_registry(self):
         """A helper function to build a Hierarchical Registry."""

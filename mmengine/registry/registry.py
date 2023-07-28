@@ -602,9 +602,6 @@ class Registry:
             raise TypeError(f'module must be Callable, but got {type(module)}')
 
         if module_name is None:
-            assert hasattr(module, '__name__'), (
-                'If `name` is not provided for `register_module`, please make '
-                f'sure the {module} has the `__name__` attribute')
             module_name = module.__name__
         if isinstance(module_name, str):
             module_name = [module_name]
@@ -613,17 +610,6 @@ class Registry:
                 existed_module = self.module_dict[name]
                 raise KeyError(f'{name} is already registered in {self.name} '
                                f'at {existed_module.__module__}')
-            # If module is a partial function or user defined callable
-            # object, it may not have `__module__` and `__name__` attributes.
-            # We set the `__module__` and `__name__` attributes for them to
-            # provide more information.
-            if not hasattr(module, '__module__'):
-                module_name = str(inspect.getmodule(sys._getframe(2)))
-                if module_name is None:
-                    module_name = '__main__'
-                module.__module__ = module_name
-            if not hasattr(module, '__name__'):
-                module.__name__ = name
             self._module_dict[name] = module
 
     def register_module(

@@ -98,7 +98,7 @@ def build_from_cfg(
             obj_cls = registry.get(obj_type)
             if obj_cls is None:
                 raise KeyError(
-                    f'{obj_type} is not in the {registry.name} registry. '
+                    f'{obj_type} is not in the {registry.scope}::{registry.name} registry. '  # noqa: E501
                     f'Please check whether the value of `{obj_type}` is '
                     'correct or it was registered as expected. More details '
                     'can be found at '
@@ -117,12 +117,20 @@ def build_from_cfg(
         else:
             obj = obj_cls(**args)  # type: ignore
 
-        print_log(
-            f'An `{obj_cls.__name__}` instance is built from '  # type: ignore # noqa: E501
-            'registry, and its implementation can be found in '
-            f'{obj_cls.__module__}',  # type: ignore
-            logger='current',
-            level=logging.DEBUG)
+        if (inspect.isclass(obj_cls) or inspect.isfunction(obj_cls)
+                or inspect.ismethod(obj_cls)):
+            print_log(
+                f'An `{obj_cls.__name__}` instance is built from '  # type: ignore # noqa: E501
+                'registry, and its implementation can be found in '
+                f'{obj_cls.__module__}',  # type: ignore
+                logger='current',
+                level=logging.DEBUG)
+        else:
+            print_log(
+                'An instance is built from registry, and its constructor '
+                f'is {obj_cls}',
+                logger='current',
+                level=logging.DEBUG)
         return obj
 
 
