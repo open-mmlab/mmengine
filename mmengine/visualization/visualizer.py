@@ -189,23 +189,18 @@ class Visualizer(ManagerMixin):
                 raise RuntimeError('The name fields cannot be the same')
 
             # check if vis_backends are initialized
-            if save_dir is None:
-                for vis_backend in vis_backends:
-                    if vis_backend.get('save_dir') is None:
-                        print_log(
-                            '`Visualizer` backend is not initialized '
-                            'because save_dir is None '
-                            'and at least one vis_backend has no save_dir.',
-                            logger='current',
-                            level=logging.WARNING)
-                        break
-
-            else:
+            if save_dir is not None:
                 save_dir = osp.join(save_dir, 'vis_data')
-                for vis_backend in vis_backends:
-                    name = vis_backend.pop('name', vis_backend['type'])
-                    vis_backend.setdefault('save_dir', save_dir)
-                    self._vis_backends[name] = VISBACKENDS.build(vis_backend)
+            for vis_backend in vis_backends:
+                name = vis_backend.pop('name', vis_backend['type'])
+                if 'save_dir' not in vis_backend:
+                    if save_dir is not None:
+                        vis_backend['save_dir'] = save_dir
+                    else:
+                        raise ValueError(
+                            f'save_dir should be specified in {vis_backend} or '
+                            f'{self.__class__.__name__}')
+                self._vis_backends[name] = VISBACKENDS.build(vis_backend)
         else:
             print_log(
                 '`Visualizer` backend is not initialized '
