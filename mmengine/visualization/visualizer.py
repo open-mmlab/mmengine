@@ -198,6 +198,7 @@ class Visualizer(ManagerMixin):
                             f'or {self.__class__.__name__}')
                 self._vis_backends[name] = VISBACKENDS.build(vis_backend)
 
+        self.fig_save = None
         self.fig_save_cfg = fig_save_cfg
         self.fig_show_cfg = fig_show_cfg
 
