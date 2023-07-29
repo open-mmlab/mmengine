@@ -185,7 +185,6 @@ class Visualizer(ManagerMixin):
             if None not in names and len(set(names)) != len(names):
                 raise RuntimeError('The name fields cannot be the same')
 
-            # check if vis_backends are initialized
             if save_dir is not None:
                 save_dir = osp.join(save_dir, 'vis_data')
             for vis_backend in vis_backends:
@@ -195,11 +194,10 @@ class Visualizer(ManagerMixin):
                         vis_backend['save_dir'] = save_dir
                     else:
                         raise ValueError(
-                            f'save_dir should be specified in {vis_backend} or '
-                            f'{self.__class__.__name__}')
+                            f'save_dir should be specified in {vis_backend} '
+                            f'or {self.__class__.__name__}')
                 self._vis_backends[name] = VISBACKENDS.build(vis_backend)
 
-        self.fig_save = None
         self.fig_save_cfg = fig_save_cfg
         self.fig_show_cfg = fig_show_cfg
 
