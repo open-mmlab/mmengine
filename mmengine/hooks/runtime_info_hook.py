@@ -54,6 +54,8 @@ class RuntimeInfoHook(Hook):
             mmengine_version=__version__ + get_git_hash())
         runner.message_hub.update_info_dict(metainfo)
 
+        self.last_loop_stage = None
+
     def before_train(self, runner) -> None:
         """Update resumed training state.
 
@@ -147,10 +149,14 @@ class RuntimeInfoHook(Hook):
                     runner.message_hub.update_info(f'val/{key}', value)
 
     def after_val(self, runner) -> None:
-        # ValLoop may be called in TrainLoop, so we need to reset the
-        # loop_state
+        # ValLoop may be called within in the TrainLoop, so we need to reset
+        # the loop_state
+        # workflow: before_train -> before_val -> after_val -> after_train
         if self.last_loop_stage == 'train':
             runner.message_hub.update_info('loop_stage', self.last_loop_stage)
+            self.last_loop_stage = None
+        else:
+            runner.message_hub.pop_info('loop_stage')
 
     def before_test(self, runner) -> None:
         runner.message_hub.update_info('loop_stage', 'test')
