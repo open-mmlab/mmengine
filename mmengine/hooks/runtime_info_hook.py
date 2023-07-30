@@ -149,8 +149,8 @@ class RuntimeInfoHook(Hook):
                     runner.message_hub.update_info(f'val/{key}', value)
 
     def after_val(self, runner) -> None:
-        # ValLoop may be called within in the TrainLoop, so we need to reset
-        # the loop_state
+        # ValLoop may be called within the TrainLoop, so we need to reset
+        # the loop_stage
         # workflow: before_train -> before_val -> after_val -> after_train
         if self.last_loop_stage == 'train':
             runner.message_hub.update_info('loop_stage', self.last_loop_stage)
