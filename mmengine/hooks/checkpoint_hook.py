@@ -471,8 +471,8 @@ class CheckpointHook(Hook):
         if self.create_symlink:
             dst_file = osp.join(runner.work_dir, 'latest.pth')
             try:
-                symlink(filepath, dst_file)
-            except:
+                symlink(self.last_ckpt, dst_file)
+            except SystemError:
                 print_log(
                 'create_symlink is set as False because creating symbolic '
                 f'link is not allowed in {self.file_client.name}',
