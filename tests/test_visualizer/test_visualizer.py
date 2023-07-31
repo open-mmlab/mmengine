@@ -11,7 +11,6 @@ import torch
 import torch.nn as nn
 
 from mmengine import VISBACKENDS, Config
-from mmengine.logging import MMLogger
 from mmengine.visualization import Visualizer
 
 
@@ -69,14 +68,9 @@ class TestVisualizer(TestCase):
         visualizer = Visualizer(image=self.image)
         visualizer.get_image()
 
-        # test save_dir
-        # Warning should be raised since no backend is initialized.
-        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
-            Visualizer()
-
+        # build visualizer without `save_dir`
         visualizer = Visualizer(
             vis_backends=copy.deepcopy(self.vis_backend_cfg))
-        assert visualizer.get_backend('mock1') is None
 
         visualizer = Visualizer(
             vis_backends=copy.deepcopy(self.vis_backend_cfg),

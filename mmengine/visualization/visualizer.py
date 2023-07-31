@@ -6,8 +6,6 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
 if TYPE_CHECKING:
     from matplotlib.font_manager import FontProperties
 
-import logging
-
 import cv2
 import numpy as np
 import torch
@@ -15,7 +13,6 @@ import torch.nn.functional as F
 
 from mmengine.config import Config
 from mmengine.dist import master_only
-from mmengine.logging import print_log
 from mmengine.registry import VISBACKENDS, VISUALIZERS
 from mmengine.structures import BaseDataElement
 from mmengine.utils import ManagerMixin
@@ -165,17 +162,9 @@ class Visualizer(ManagerMixin):
         self._dataset_meta: Optional[dict] = None
         self._vis_backends: Union[Dict, Dict[str, 'BaseVisBackend']] = dict()
 
-        if save_dir is None:
-            print_log(
-                '`Visualizer` backend is not initialized '
-                'because save_dir is None.',
-                logger='current',
-                level=logging.WARNING)
-        elif vis_backends is not None:
+        if vis_backends is not None:
             assert len(vis_backends) > 0, 'empty list'
-            names = [
-                vis_backend.get('name', None) for vis_backend in vis_backends
-            ]
+            names = [vis_backend.get('name') for vis_backend in vis_backends]
             if None in names:
                 if len(set(names)) > 1:
                     raise RuntimeError(
@@ -194,8 +183,8 @@ class Visualizer(ManagerMixin):
             if None not in names and len(set(names)) != len(names):
                 raise RuntimeError('The name fields cannot be the same')
 
-            save_dir = osp.join(save_dir, 'vis_data')
-
+            if save_dir is not None:
+                save_dir = osp.join(save_dir, 'vis_data')
             for vis_backend in vis_backends:
                 name = vis_backend.pop('name', vis_backend['type'])
                 vis_backend.setdefault('save_dir', save_dir)
