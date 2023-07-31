@@ -58,9 +58,11 @@
 
 ## 最近进展
 
-最新版本 v0.8.0 在 2023.06.30 发布。
+最新版本 v0.8.3 在 2023.07.31 发布。
 
 亮点：
+
+- 支持使用 `efficient_conv_bn_eval` 参数开启更高效的 `ConvBN` 推理模式。详见[节省显存文档](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/save_gpu_memory.html)
 
 - 新增微调 Llama2 的[示例](./examples/llama2/)。
 
@@ -78,7 +80,7 @@
 
   ![new-config-zh_cn](https://github.com/open-mmlab/mmengine/assets/57566630/c2da9a73-c911-4f78-8253-e3f29496d9f8)
 
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v080-06302023)
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v083-07312023)
 
 ## 目录
 
