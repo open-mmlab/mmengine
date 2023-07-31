@@ -31,7 +31,7 @@
 - Add ecosystem in README by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1247
 - Add short explanation about registry scope by [@mmeendez8](https://github.com/mmeendez8) in https://github.com/open-mmlab/mmengine/pull/1114
 - Add the data flow of Runner in README by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1257
-- Introduce how to customize distributed training settings [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1279
+- Introduce how to customize distributed training settings by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1279
 
 ### Contributors
 
