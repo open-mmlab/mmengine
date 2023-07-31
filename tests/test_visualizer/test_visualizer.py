@@ -68,7 +68,7 @@ class TestVisualizer(TestCase):
         visualizer = Visualizer(image=self.image)
         visualizer.get_image()
 
-        # build without visualizer without `save_dir`
+        # build visualizer without `save_dir`
         visualizer = Visualizer(
             vis_backends=copy.deepcopy(self.vis_backend_cfg))
 
