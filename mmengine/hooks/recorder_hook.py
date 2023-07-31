@@ -23,8 +23,8 @@ class Recorder(metaclass=ABCMeta):
         pass
 
 
-# FunctionRecorder
-class FunctionRecorder(Recorder):
+# AttributeRecorder
+class AttributeRecorder(Recorder):
 
     def __init__(self, target: str):
         super().__init__(target)
@@ -35,7 +35,7 @@ class FunctionRecorder(Recorder):
     def _get_adder_class(self):
         outer_class = self
 
-        class FunctionRecorderAdder(ast.NodeTransformer):
+        class AttributeRecorderAdder(ast.NodeTransformer):
 
             def visit_Assign(self, node):
                 if node.targets[0].id != outer_class._target:
@@ -55,7 +55,7 @@ class FunctionRecorder(Recorder):
                 # 插入print语句
                 return [node, add2messagehub]
 
-        return FunctionRecorderAdder()
+        return AttributeRecorderAdder()
 
     def rewrite(self, ast_tree):
         return self.visit_assign.visit(ast_tree)
@@ -87,7 +87,7 @@ class RecorderHook(Hook):
 
     # RECORDER_MESSAGEHUB_NAME = "_recorder"
 
-    # recorder = FunctionRecorder()
+    # recorder = AttributeRecorder()
 
     def __init__(self, ):
         self.tensor_dict = defaultdict(list)
@@ -131,7 +131,7 @@ class RecorderHook(Hook):
 
         # 修改AST
         # breakpoint()
-        tree = FunctionRecorder('x').rewrite(tree)
+        tree = AttributeRecorder('x').rewrite(tree)
         tree = ast.fix_missing_locations(tree)
 
         print(ast.dump(tree, indent=4))
