@@ -4,16 +4,17 @@ import dis
 import inspect
 import textwrap
 import types
-from typing import Any, List, Optional, Tuple, Union
+from abc import ABCMeta, abstractmethod
 from collections import defaultdict
+from typing import Any, List, Optional, Tuple, Union
 
 from mmengine.logging import HistoryBuffer, MessageHub
 from mmengine.registry import HOOKS
 from . import Hook
-from abc import ABCMeta, abstractmethod
 
 
 class Recorder(metaclass=ABCMeta):
+
     def __init__(self, target: str):
         self._target = target
 
@@ -21,16 +22,21 @@ class Recorder(metaclass=ABCMeta):
     def rewrite(self, ast_tree):
         pass
 
+
 # FunctionRecorder
 class FunctionRecorder(Recorder):
+
     def __init__(self, target: str):
         super().__init__(target)
         self.visit_assign = self._get_adder_class()
+
     # super.__init__()
 
     def _get_adder_class(self):
         outer_class = self
+
         class FunctionRecorderAdder(ast.NodeTransformer):
+
             def visit_Assign(self, node):
                 if node.targets[0].id != outer_class._target:
                     return node
@@ -41,13 +47,14 @@ class FunctionRecorder(Recorder):
                             attr='update_info',
                             ctx=ast.Load()),
                         args=[
-                            ast.Constant(value = node.targets[0].id),
+                            ast.Constant(value=node.targets[0].id),
                             ast.Name(id=node.targets[0].id, ctx=ast.Load())
                         ],
                         keywords=[]))
 
                 # 插入print语句
                 return [node, add2messagehub]
+
         return FunctionRecorderAdder()
 
     def rewrite(self, ast_tree):
@@ -84,6 +91,7 @@ class RecorderHook(Hook):
 
     def __init__(self, ):
         self.tensor_dict = defaultdict(list)
+        self.origin_forward = None
         pass
 
     def _get_ast(source_code):
@@ -117,12 +125,13 @@ class RecorderHook(Hook):
                 args=[],
                 keywords=[]))
 
-        tree.body[0].body = [import_messagehub_statement, add_message_hub] + func_body
+        tree.body[0].body = [import_messagehub_statement, add_message_hub
+                             ] + func_body
         # tree.body[0].body.insert(0, import_statement)
 
         # 修改AST
         # breakpoint()
-        tree = FunctionRecorder("x").rewrite(tree)
+        tree = FunctionRecorder('x').rewrite(tree)
         tree = ast.fix_missing_locations(tree)
 
         print(ast.dump(tree, indent=4))
@@ -156,6 +165,7 @@ class RecorderHook(Hook):
         model = runner.model
         print('---------------------------')
         # breakpoint()
+        self.origin_forward = model.forward
 
         model.forward = types.MethodType(
             self._modify_func(model.forward), model)
@@ -168,4 +178,13 @@ class RecorderHook(Hook):
 
         # print(self.message_hub2.__dict__)
         # print(self.message_hub2.get_info("task"))
-        self.tensor_dict["task"].append(self.message_hub2.get_info("task"))
+        self.tensor_dict['task'].append(self.message_hub2.get_info('task'))
+
+    def before_train(self, runner) -> None:
+        model = runner.model
+
+        model.forward = types.MethodType(
+            self._modify_func(model.forward), model)
+
+    def after_train(self, runner) -> None:
+        runner.model.forward = self.origin_forward
