@@ -18,6 +18,8 @@
 - Add parameter `save_begin` to control when to save checkpoints by [@KerwinKai](https://github.com/KerwinKai) in https://github.com/open-mmlab/mmengine/pull/1271
 - Support multi-node distributed training with MLU backend by [@josh6688](https://github.com/josh6688) in https://github.com/open-mmlab/mmengine/pull/1266
 - Enhance error message thrown by Config, build function and `ConfigDict.items` by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1272, https://github.com/open-mmlab/mmengine/pull/1270 and https://github.com/open-mmlab/mmengine/pull/1088
+- Add the `loop_stage` runtime information in `message_hub` by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1277
+- Fix Visualizer that built `vis_backends` will not be used when `save_dir` is `None` by [@Xinyu302](https://github.com/Xinyu302) in https://github.com/open-mmlab/mmengine/pull/1275
 
 ### Bug fixes
 
@@ -29,6 +31,7 @@
 - Add ecosystem in README by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1247
 - Add short explanation about registry scope by [@mmeendez8](https://github.com/mmeendez8) in https://github.com/open-mmlab/mmengine/pull/1114
 - Add the data flow of Runner in README by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1257
+- Introduce how to customize distributed training settings [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1279
 
 ### Contributors
 
