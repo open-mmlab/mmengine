@@ -80,7 +80,7 @@ runner = Runner(
     train_dataloader=train_dataloader_cfg,
     optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.001, momentum=0.9)),
     train_cfg=dict(by_epoch=True, max_epochs=3),
-    cfg = cfg,
+    cfg=cfg,
 )
 runner.train()
 ```
@@ -102,7 +102,7 @@ runner = Runner(
     train_dataloader=train_dataloader_cfg,
     optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.001, momentum=0.9)),
     train_cfg=dict(by_epoch=True, max_epochs=3),
-    cfg = cfg,
+    cfg=cfg,
 )
 runner.train()
 ```

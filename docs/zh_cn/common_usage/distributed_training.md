@@ -62,7 +62,7 @@ srun -p mm_dev \
 ## 定制化分布式训练
 
 当用户从单卡训练切换到多卡训练时，无需做任何改动，[Runner](mmengine.runner.Runner.wrap_model) 会默认使用 [MMDistributedDataParallel](mmengine.model.MMDistributedDataParallel) 封装 model，从而支持多卡训练。
-如果你希望给 MMDistributedDataParallel 传入更多的参数或者使用自定义的 `CustomDistributedDataParallel`，你可以设置 `model_wrapper_cfg`。
+如果你希望给 `MMDistributedDataParallel` 传入更多的参数或者使用自定义的 `CustomDistributedDataParallel`，你可以设置 `model_wrapper_cfg`。
 
 ### 往 MMDistributedDataParallel 传入更多的参数
 
@@ -79,7 +79,7 @@ runner = Runner(
     train_dataloader=train_dataloader_cfg,
     optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.001, momentum=0.9)),
     train_cfg=dict(by_epoch=True, max_epochs=3),
-    cfg = cfg,
+    cfg=cfg,
 )
 runner.train()
 ```
@@ -101,7 +101,7 @@ runner = Runner(
     train_dataloader=train_dataloader_cfg,
     optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.001, momentum=0.9)),
     train_cfg=dict(by_epoch=True, max_epochs=3),
-    cfg = cfg,
+    cfg=cfg,
 )
 runner.train()
 ```
