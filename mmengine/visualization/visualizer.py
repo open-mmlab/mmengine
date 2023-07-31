@@ -164,9 +164,7 @@ class Visualizer(ManagerMixin):
 
         if vis_backends is not None:
             assert len(vis_backends) > 0, 'empty list'
-            names = [
-                vis_backend.get('name', None) for vis_backend in vis_backends
-            ]
+            names = [vis_backend.get('name') for vis_backend in vis_backends]
             if None in names:
                 if len(set(names)) > 1:
                     raise RuntimeError(
@@ -189,13 +187,7 @@ class Visualizer(ManagerMixin):
                 save_dir = osp.join(save_dir, 'vis_data')
             for vis_backend in vis_backends:
                 name = vis_backend.pop('name', vis_backend['type'])
-                if 'save_dir' not in vis_backend:
-                    if save_dir is not None:
-                        vis_backend['save_dir'] = save_dir
-                    else:
-                        raise ValueError(
-                            f'save_dir should be specified in {vis_backend} '
-                            f'or {self.__class__.__name__}')
+                vis_backend.setdefault('save_dir', save_dir)
                 self._vis_backends[name] = VISBACKENDS.build(vis_backend)
 
         self.fig_save = None

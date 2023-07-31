@@ -68,9 +68,9 @@ class TestVisualizer(TestCase):
         visualizer = Visualizer(image=self.image)
         visualizer.get_image()
 
-        with pytest.raises(ValueError):
-            visualizer = Visualizer(
-                vis_backends=copy.deepcopy(self.vis_backend_cfg))
+        # build without visualizer without `save_dir`
+        visualizer = Visualizer(
+            vis_backends=copy.deepcopy(self.vis_backend_cfg))
 
         visualizer = Visualizer(
             vis_backends=copy.deepcopy(self.vis_backend_cfg),
