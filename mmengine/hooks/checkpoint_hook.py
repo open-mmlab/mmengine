@@ -465,8 +465,8 @@ class CheckpointHook(Hook):
         save_file = osp.join(runner.work_dir, 'last_checkpoint')
         with open(save_file, 'w') as f:
             f.write(self.last_ckpt)  # type: ignore
-            
-        # in some environments, `os.symlink` is not supported, then set 
+        
+        # in some environments, `os.symlink` is not supported, then set
         # 'create_symlink' to False.
         if self.create_symlink:
             dst_file = osp.join(runner.work_dir, 'latest.pth')
@@ -474,10 +474,10 @@ class CheckpointHook(Hook):
                 symlink(self.last_ckpt, dst_file)
             except SystemError:
                 print_log(
-                'create_symlink is set as False because creating symbolic '
-                f'link is not allowed in {self.file_client.name}',
-                logger='current',
-                level=logging.WARNING)
+                    'create_symlink is set as False because creating symbolic '
+                    f'link is not allowed in {self.file_client.name}',
+                    logger='current',
+                    level=logging.WARNING)
                 self.create_symlink = False
 
     def _save_checkpoint(self, runner) -> None:
