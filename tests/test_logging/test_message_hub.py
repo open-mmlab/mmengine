@@ -55,6 +55,14 @@ class TestMessageHub:
         message_hub.update_info('key', 1)
         assert message_hub.runtime_info['key'] == 1
 
+    def test_pop_info(self):
+        message_hub = MessageHub.get_instance('mmengine')
+        message_hub.update_info('pop_key', 'pop_info')
+        assert message_hub.runtime_info['pop_key'] == 'pop_info'
+        assert message_hub.pop_info('pop_key') == 'pop_info'
+
+        assert message_hub.pop_info('not_existed_key', 'info') == 'info'
+
     def test_update_infos(self):
         message_hub = MessageHub.get_instance('mmengine')
         # test runtime value can be overwritten.
