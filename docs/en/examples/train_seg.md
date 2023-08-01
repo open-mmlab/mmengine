@@ -7,6 +7,10 @@ This segmentation task example will be divided into the following steps:
 - [Implement a Segmentation Model](#implement-the-segmentation-model)
 - [Train with Runner](#training-with-runner)
 
+```{note}
+You can also experience the notebook example [here](https://colab.research.google.com/github/open-mmlab/mmengine/blob/main/examples/segmentation/train.ipynb).
+```
+
 ## Download Camvid Dataset
 
 First, you should download the Camvid dataset from OpenDataLab:

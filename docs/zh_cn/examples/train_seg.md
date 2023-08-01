@@ -7,6 +7,10 @@
 - [实现语义分割模型](#实现语义分割模型)
 - [使用 Runner 训练模型](#使用-runner-训练模型)
 
+```{note}
+如果你更喜欢 notebook 风格的样例，也可以在[此处](https://colab.research.google.com/github/open-mmlab/mmengine/blob/main/examples/segmentation/train.ipynb) 体验。
+```
+
 ## 下载 Camvid 数据集
 
 首先，从 opendatalab 下载 Camvid 数据集:

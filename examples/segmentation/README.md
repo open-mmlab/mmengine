@@ -1,12 +1,5 @@
 # Segmentation Task Example
 
-This segmentation task example will be divided into the following steps:
-
-> - [Download Camvid Dataset](#download-camvid-dataset)
-> - [Building Camvid Dataset](#building-camvid-dataset)
-> - [Build a Segmentation Model](#build-a-segmentation-model)
-> - [Train with Runner](#training-with-runner)
-
 ## Download Camvid Dataset
 
 First, you should get the collated Camvid dataset on OpenDataLab to use for the segmentation training example. The official download steps are shown below.
