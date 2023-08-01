@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 import mmengine
 from mmengine._strategy import BaseStrategy
 from mmengine.config import Config, ConfigDict
-from mmengine.dataset import worker_init_fn
+from mmengine.dataset import worker_init_fn as default_worker_init_fn
 from mmengine.dist import get_rank, infer_launcher, master_only
 from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient, join_path
@@ -857,22 +857,28 @@ class FlexibleRunner:
 
         # build dataloader
         init_fn: Optional[partial]
-
-        if seed is not None:
-            disable_subprocess_warning = dataloader_cfg.pop(
-                'disable_subprocess_warning', False)
-            assert isinstance(
-                disable_subprocess_warning,
-                bool), ('disable_subprocess_warning should be a bool, but got '
-                        f'{type(disable_subprocess_warning)}')
-            init_fn = partial(
-                worker_init_fn,
-                num_workers=dataloader_cfg.get('num_workers'),
-                rank=get_rank(),
-                seed=seed,
-                disable_subprocess_warning=disable_subprocess_warning)
+        if 'worker_init_fn' in dataloader_cfg:
+            worker_init_fn_cfg = dataloader_cfg.pop('worker_init_fn')
+            worker_init_fn_type = worker_init_fn_cfg.pop('type')
+            worker_init_fn = FUNCTIONS.get(worker_init_fn_type)
+            assert callable(worker_init_fn)
+            init_fn = partial(worker_init_fn,
+                              **worker_init_fn_cfg)  # type: ignore
         else:
-            init_fn = None
+            if seed is not None:
+                disable_subprocess_warning = dataloader_cfg.pop(
+                    'disable_subprocess_warning', False)
+                assert isinstance(disable_subprocess_warning, bool), (
+                    'disable_subprocess_warning should be a bool, but got '
+                    f'{type(disable_subprocess_warning)}')
+                init_fn = partial(
+                    default_worker_init_fn,
+                    num_workers=dataloader_cfg.get('num_workers'),
+                    rank=get_rank(),
+                    seed=seed,
+                    disable_subprocess_warning=disable_subprocess_warning)
+            else:
+                init_fn = None
 
         # `persistent_workers` requires pytorch version >= 1.7
         if ('persistent_workers' in dataloader_cfg
@@ -891,9 +897,19 @@ class FlexibleRunner:
         # samples into a dict without stacking the batch tensor.
         collate_fn_cfg = dataloader_cfg.pop('collate_fn',
                                             dict(type='pseudo_collate'))
-        collate_fn_type = collate_fn_cfg.pop('type')
-        collate_fn = FUNCTIONS.get(collate_fn_type)
-        collate_fn = partial(collate_fn, **collate_fn_cfg)  # type: ignore
+        if isinstance(collate_fn_cfg, dict):
+            collate_fn_type = collate_fn_cfg.pop('type')
+            if isinstance(collate_fn_type, str):
+                collate_fn = FUNCTIONS.get(collate_fn_type)
+            else:
+                collate_fn = collate_fn_type
+            collate_fn = partial(collate_fn, **collate_fn_cfg)  # type: ignore
+        elif callable(collate_fn_cfg):
+            collate_fn = collate_fn_cfg
+        else:
+            raise TypeError(
+                'collate_fn should be a dict or callable object, but got '
+                f'{collate_fn_cfg}')
         data_loader = DataLoader(
             dataset=dataset,
             sampler=sampler if batch_sampler is None else None,
