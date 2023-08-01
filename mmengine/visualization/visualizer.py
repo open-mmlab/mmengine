@@ -18,6 +18,7 @@ from mmengine.structures import BaseDataElement
 from mmengine.utils import ManagerMixin
 from mmengine.visualization.utils import (check_type, check_type_and_length,
                                           color_str2rgb, color_val_matplotlib,
+                                          color_val_opencv,
                                           convert_overlay_heatmap,
                                           img_from_canvas, tensor2ndarray,
                                           value2list, wait_continue)
@@ -149,15 +150,14 @@ class Visualizer(ManagerMixin):
         >>>         pass
     """
 
-    def __init__(
-        self,
-        name='visualizer',
-        image: Optional[np.ndarray] = None,
-        vis_backends: Optional[List[Dict]] = None,
-        save_dir: Optional[str] = None,
-        fig_save_cfg=dict(frameon=False),
-        fig_show_cfg=dict(frameon=False)
-    ) -> None:
+    def __init__(self,
+                 name='visualizer',
+                 image: Optional[np.ndarray] = None,
+                 vis_backends: Optional[List[Dict]] = None,
+                 save_dir: Optional[str] = None,
+                 fig_save_cfg=dict(frameon=False),
+                 fig_show_cfg=dict(frameon=False),
+                 backend: str = 'matplotlib') -> None:
         super().__init__(name)
         self._dataset_meta: Optional[dict] = None
         self._vis_backends: Union[Dict, Dict[str, 'BaseVisBackend']] = dict()
@@ -189,6 +189,12 @@ class Visualizer(ManagerMixin):
                 name = vis_backend.pop('name', vis_backend['type'])
                 vis_backend.setdefault('save_dir', save_dir)
                 self._vis_backends[name] = VISBACKENDS.build(vis_backend)
+
+        if backend not in ['matplotlib', 'cv2']:
+            raise ValueError('backend should be "matplotlib" or "cv2", '
+                             f'but got {backend} instead')
+
+        self.backend = backend
 
         self.fig_save = None
         self.fig_save_cfg = fig_save_cfg
@@ -257,9 +263,10 @@ class Visualizer(ManagerMixin):
             # will be updated with `win_name`.
             cv2.namedWindow(winname=f'{id(self)}')
             cv2.setWindowTitle(f'{id(self)}', win_name)
-            cv2.imshow(
-                str(id(self)),
-                self.get_image() if drawn_img is None else drawn_img)
+            bgr_image = cv2.cvtColor(
+                self.get_image(),
+                cv2.COLOR_RGB2BGR) if drawn_img is None else drawn_img
+            cv2.imshow(str(id(self)), bgr_image)
             cv2.waitKey(int(np.ceil(wait_time * 1000)))
         else:
             raise ValueError('backend should be "matplotlib" or "cv2", '
@@ -279,17 +286,20 @@ class Visualizer(ManagerMixin):
         self._default_font_size = max(
             np.sqrt(self.height * self.width) // 90, 10)
 
-        # add a small 1e-2 to avoid precision lost due to matplotlib's
-        # truncation (https://github.com/matplotlib/matplotlib/issues/15363)
-        self.fig_save.set_size_inches(  # type: ignore
-            (self.width + 1e-2) / self.dpi, (self.height + 1e-2) / self.dpi)
-        # self.canvas = mpl.backends.backend_cairo.FigureCanvasCairo(fig)
-        self.ax_save.cla()
-        self.ax_save.axis(False)
-        self.ax_save.imshow(
-            image,
-            extent=(0, self.width, self.height, 0),
-            interpolation='none')
+        if self.backend == 'matplotlib':
+            # add a small 1e-2 to avoid precision lost due to matplotlib's
+            # truncation
+            # (https://github.com/matplotlib/matplotlib/issues/15363)
+            self.fig_save.set_size_inches(  # type: ignore
+                (self.width + 1e-2) / self.dpi,
+                (self.height + 1e-2) / self.dpi)
+            # self.canvas = mpl.backends.backend_cairo.FigureCanvasCairo(fig)
+            self.ax_save.cla()
+            self.ax_save.axis(False)
+            self.ax_save.imshow(
+                image,
+                extent=(0, self.width, self.height, 0),
+                interpolation='none')
 
     @master_only
     def get_image(self) -> np.ndarray:
@@ -299,7 +309,10 @@ class Visualizer(ManagerMixin):
             np.ndarray: the drawn image which channel is RGB.
         """
         assert self._image is not None, 'Please set image using `set_image`'
-        return img_from_canvas(self.fig_save_canvas)  # type: ignore
+        if self.backend == 'matplotlib':
+            return img_from_canvas(self.fig_save_canvas)  # type: ignore
+        else:
+            return self._image
 
     def _initialize_fig(self, fig_cfg) -> tuple:
         """Build figure according to fig_cfg.
@@ -533,18 +546,19 @@ class Visualizer(ManagerMixin):
             check_type_and_length('bboxes', bboxes, (dict, list), num_text)
             bboxes = value2list(bboxes, dict, num_text)
 
-        for i in range(num_text):
-            self.ax_save.text(
-                positions[i][0],
-                positions[i][1],
-                texts[i],
-                size=font_sizes[i],  # type: ignore
-                bbox=bboxes[i],  # type: ignore
-                verticalalignment=vertical_alignments[i],
-                horizontalalignment=horizontal_alignments[i],
-                family=font_families[i],
-                fontproperties=font_properties[i],
-                color=colors[i])
+        if self.backend == 'matplotlib':
+            for i in range(num_text):
+                self.ax_save.text(
+                    positions[i][0],
+                    positions[i][1],
+                    texts[i],
+                    size=font_sizes[i],  # type: ignore
+                    bbox=bboxes[i],  # type: ignore
+                    verticalalignment=vertical_alignments[i],
+                    horizontalalignment=horizontal_alignments[i],
+                    family=font_families[i],
+                    fontproperties=font_properties[i],
+                    color=colors[i])
         return self
 
     @master_only
@@ -552,8 +566,8 @@ class Visualizer(ManagerMixin):
         self,
         x_datas: Union[np.ndarray, torch.Tensor],
         y_datas: Union[np.ndarray, torch.Tensor],
-        colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-        line_styles: Union[str, List[str]] = '-',
+        colors: Union[str, tuple, List[Union[str, tuple]]] = 'g',
+        line_styles: Union[str, List[str]] = None,
         line_widths: Union[Union[int, float], List[Union[int, float]]] = 2
     ) -> 'Visualizer':
         """Draw single or multiple line segments.
@@ -575,14 +589,14 @@ class Visualizer(ManagerMixin):
                 value, all the lines will have the same linestyle.
                 Reference to
                 https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
-                for more details. Defaults to '-'.
+                for more details. Defaults to '-' when backend is 'matplotlib',
+                and 'cv2.LINE_8' when backend is 'cv2'.
             line_widths (Union[Union[int, float], List[Union[int, float]]]):
                 The linewidth of lines. ``line_widths`` can have
                 the same length with lines or just single value.
                 If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 2.
         """
-        from matplotlib.collections import LineCollection
         check_type('x_datas', x_datas, (np.ndarray, torch.Tensor))
         x_datas = tensor2ndarray(x_datas)
         check_type('y_datas', y_datas, (np.ndarray, torch.Tensor))
@@ -595,19 +609,41 @@ class Visualizer(ManagerMixin):
         if len(x_datas.shape) == 1:
             x_datas = x_datas[None]
             y_datas = y_datas[None]
-        colors = color_val_matplotlib(colors)  # type: ignore
         lines = np.concatenate(
             (x_datas.reshape(-1, 2, 1), y_datas.reshape(-1, 2, 1)), axis=-1)
         if not self._is_posion_valid(lines):
             warnings.warn(
                 'Warning: The line is out of bounds,'
                 ' the drawn line may not be in the image', UserWarning)
-        line_collect = LineCollection(
-            lines.tolist(),
-            colors=colors,
-            linestyles=line_styles,
-            linewidths=line_widths)
-        self.ax_save.add_collection(line_collect)
+        if self.backend == 'matplotlib':
+            from matplotlib.collections import LineCollection
+            if line_styles is None:
+                line_styles = '-'
+            colors = color_val_matplotlib(colors)
+            line_collect = LineCollection(
+                lines.tolist(),
+                colors=colors,
+                linestyles=line_styles,
+                linewidths=line_widths)
+            self.ax_save.add_collection(line_collect)
+        else:
+            lines = lines.tolist()
+            if line_styles is None:
+                line_styles = [cv2.LINE_8 for _ in range(len(lines))]
+            check_type_and_length('line_styles', line_styles, (int, list),
+                                  len(lines))
+            colors = color_val_opencv(colors)
+            for i, line in enumerate(lines):
+                st_pos = (line[0][0], line[0][1])
+                ed_pos = (line[1][0], line[1][1])
+                cv2.line(
+                    img=self._image,
+                    pt1=st_pos,
+                    pt2=ed_pos,
+                    color=colors[i],
+                    thickness=int(line_widths[i]) if isinstance(
+                        line_widths, list) else int(line_widths),
+                    lineType=line_styles[i])
         return self
 
     @master_only

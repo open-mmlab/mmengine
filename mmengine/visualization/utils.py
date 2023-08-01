@@ -120,6 +120,34 @@ def color_val_matplotlib(
         raise TypeError(f'Invalid type for color: {type(colors)}')
 
 
+def color_val_opencv(
+    colors: Union[str, tuple, List[Union[str, tuple]]]
+) -> Union[str, tuple, List[Union[str, tuple]]]:
+    """Convert various input in BGR order to normalized BGR opencv color
+    tuples,
+    Args:
+        colors (Union[str, tuple, List[Union[str, tuple]]]): Color inputs
+    Returns:
+        Union[str, tuple, List[Union[str, tuple]]]: A tuple of 3 ints
+        indicating BGR channels.
+    """
+    if isinstance(colors, str):
+        return color_str2rgb(colors)
+    elif isinstance(colors, tuple):
+        assert len(colors) == 3
+        for channel in colors:
+            assert 0 <= channel <= 255
+        return colors
+    elif isinstance(colors, list):
+        colors = [
+            color_val_opencv(color)  # type:ignore
+            for color in colors
+        ]
+        return colors
+    else:
+        raise TypeError(f'Invalid type for color: {type(colors)}')
+
+
 def color_str2rgb(color: str) -> tuple:
     """Convert Matplotlib str color to an RGB color which range is 0 to 255,
     silently dropping the alpha channel.
