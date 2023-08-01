@@ -89,7 +89,7 @@ def collate_fn(data):
 def main():
     model = T5ForConditionalGeneration.from_pretrained('t5-small')
 
-    books = load_dataset('opus_books.py', 'en-fr')
+    books = load_dataset('opus_books', 'en-fr')
     books = books['train'].train_test_split(test_size=0.2)
     train_set, test_set = books['train'], books['test']
 
