@@ -19,6 +19,7 @@ from torchvision.models.segmentation.deeplabv3 import \
 from mmengine.evaluator import BaseMetric
 from mmengine.hooks import Hook
 from mmengine.model import BaseModel
+from mmengine.optim import AmpOptimWrapper
 from mmengine.runner import Runner
 
 
@@ -129,6 +130,7 @@ class SegVisHook(Hook):
                        outputs=None) -> None:
         if batch_idx > self.vis_num:
             return
+
         preds, data_samples = outputs
         img_paths = data_samples['img_path']
         mask_paths = data_samples['mask_path']
@@ -212,8 +214,9 @@ def main():
         model=MMDeeplabV3(num_classes),
         work_dir='./work_dir',
         train_dataloader=train_dataloader,
-        optim_wrapper=dict(optimizer=dict(type=AdamW, lr=1e-3)),
-        train_cfg=dict(by_epoch=True, max_epochs=10, val_interval=5),
+        optim_wrapper=dict(
+            type=AmpOptimWrapper, optimizer=dict(type=AdamW, lr=2e-4)),
+        train_cfg=dict(by_epoch=True, max_epochs=10, val_interval=10),
         val_dataloader=val_dataloader,
         val_cfg=dict(),
         val_evaluator=dict(type=IoU),
@@ -222,6 +225,7 @@ def main():
             model_wrapper='MMDistributedDataParallel',
             find_unused_parameters=True),
         custom_hooks=[SegVisHook('data/CamVid')],
+        default_hooks=dict(checkpoint=dict(type='CheckpointHook', interval=1)),
     )
     runner.train()
 
