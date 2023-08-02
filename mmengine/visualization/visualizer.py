@@ -104,9 +104,9 @@ class Visualizer(ManagerMixin):
         >>> vis.draw_texts(text=['MMEngine','OpenMMLab'],
         >>>                position=np.array([[2, 2], [5, 5]]),
         >>>                colors=['b', 'b'])
-        >>> vis.draw_circles(circle_coord=np.array([2, 2]), radius=np.array[1])
-        >>> vis.draw_circles(circle_coord=np.array([[2, 2], [3, 5]),
-        >>>                  radius=np.array[1, 2], colors=['g', 'r'])
+        >>> vis.draw_circles(center=np.array([2, 2]), radius=np.array([1]))
+        >>> vis.draw_circles(center=np.array([[2, 2], [3, 5]]),
+        >>>                  radius=np.array[1, 2], edge_colors=['g', 'r'])
         >>> square = np.array([[0, 0], [100, 0], [100, 100], [0, 100]])
         >>> vis.draw_polygons(polygons=square, edge_colors='g')
         >>> squares = [np.array([[0, 0], [100, 0], [100, 100], [0, 100]]),
@@ -651,8 +651,8 @@ class Visualizer(ManagerMixin):
         self,
         center: Union[np.ndarray, torch.Tensor],
         radius: Union[np.ndarray, torch.Tensor],
-        edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-        line_styles: Union[str, List[str]] = '-',
+        edge_colors: Union[str, tuple, List[Union[str, tuple]]] = 'g',
+        line_styles: Union[str, List[str]] = None,
         line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
         face_colors: Union[str, tuple, List[str], List[tuple]] = 'none',
         alpha: Union[float, int] = 0.8,
@@ -676,7 +676,8 @@ class Visualizer(ManagerMixin):
                 value, all the lines will have the same linestyle.
                 Reference to
                 https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
-                for more details. Defaults to '-'.
+                for more details. Defaults to '-' when backend is 'matplotlib',
+                and 'cv2.LINE_8' when backend is 'cv2'.
             line_widths (Union[Union[int, float], List[Union[int, float]]]):
                 The linewidth of lines. ``line_widths`` can have
                 the same length with lines or just single value.
@@ -687,7 +688,6 @@ class Visualizer(ManagerMixin):
             alpha (Union[int, float]): The transparency of circles.
                 Defaults to 0.8.
         """
-        from matplotlib.collections import PatchCollection
         from matplotlib.patches import Circle
         check_type('center', center, (np.ndarray, torch.Tensor))
         center = tensor2ndarray(center)
@@ -708,26 +708,51 @@ class Visualizer(ManagerMixin):
 
         center = center.tolist()
         radius = radius.tolist()
-        edge_colors = color_val_matplotlib(edge_colors)  # type: ignore
-        face_colors = color_val_matplotlib(face_colors)  # type: ignore
         circles = []
         for i in range(len(center)):
             circles.append(Circle(tuple(center[i]), radius[i]))
-
         if isinstance(line_widths, (int, float)):
             line_widths = [line_widths] * len(circles)
         line_widths = [
             min(max(linewidth, 1), self._default_font_size / 4)
             for linewidth in line_widths
         ]
-        p = PatchCollection(
-            circles,
-            alpha=alpha,
-            facecolors=face_colors,
-            edgecolors=edge_colors,
-            linewidths=line_widths,
-            linestyles=line_styles)
-        self.ax_save.add_collection(p)
+        if self.backend == 'matplotlib':
+            from matplotlib.collections import PatchCollection
+            if line_styles is None:
+                line_styles = '-'
+            edge_colors = color_val_matplotlib(edge_colors)  # type: ignore
+            face_colors = color_val_matplotlib(face_colors)  # type: ignore
+            p = PatchCollection(
+                circles,
+                alpha=alpha,
+                facecolors=face_colors,
+                edgecolors=edge_colors,
+                linewidths=line_widths,
+                linestyles=line_styles)
+            self.ax_save.add_collection(p)
+        else:
+            warnings.warn(
+                'When using cv2 as the backend for visualizer, '
+                'because `cv.circle(img, center, radius, '
+                'color[, thickness[, lineType[, shift]]]) -> img`, '
+                'the parameters `face_colors` and `alpha` '
+                'will be discarded and not called.', UserWarning)
+            edge_colors = color_val_opencv(edge_colors)
+            if line_styles is None:
+                line_styles = [cv2.LINE_8 for _ in range(len(circles))]
+            check_type_and_length('line_styles', line_styles, (int, list),
+                                  len(circles))
+            check_type_and_length('line_widths', line_widths,
+                                  (int, float, list), len(line_widths))
+            for i in range(len(circles)):
+                cv2.circle(
+                    img=self._image,
+                    center=(int(center[i][0]), int(center[i][1])),
+                    radius=int(radius[i]),
+                    color=edge_colors[i],
+                    lineType=int(line_styles[i]),
+                    thickness=int(line_widths[i]))
         return self
 
     @master_only
