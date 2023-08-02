@@ -1003,6 +1003,8 @@ class Visualizer(ManagerMixin):
             f'but got {binary_masks.dtype}')
         binary_masks = binary_masks.astype('uint8') * 255
         img = self.get_image()
+        if self.backend == 'cv2':
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         if binary_masks.ndim == 2:
             binary_masks = binary_masks[None]
         assert img.shape[:2] == binary_masks.shape[
@@ -1034,10 +1036,13 @@ class Visualizer(ManagerMixin):
                 img, img, mask=binary_mask_complement)
             rgb = rgb + img_complement
             img = cv2.addWeighted(img, 1 - alpha, rgb, alpha, 0)
-        self.ax_save.imshow(
-            img,
-            extent=(0, self.width, self.height, 0),
-            interpolation='nearest')
+        if self.backend == 'matplotlib':
+            self.ax_save.imshow(
+                img,
+                extent=(0, self.width, self.height, 0),
+                interpolation='nearest')
+        else:
+            self._image = img
         return self
 
     @staticmethod
