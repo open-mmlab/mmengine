@@ -739,10 +739,13 @@ class Visualizer(ManagerMixin):
                                   len(circles))
             check_type_and_length('line_widths', line_widths,
                                   (int, float, list), len(line_widths))
-            for i in range(len(circles)):
-                overlay = self._image.copy()
+            overlay = self._image.copy()
+            if face_colors != 'none':
+                if isinstance(face_colors, str):
+                    face_colors = [face_colors] * len(circles)
                 face_colors = color_val_opencv(face_colors)
-                if face_colors is not None:
+            for i in range(len(circles)):
+                if face_colors != 'none':
                     cv2.circle(
                         img=self._image,
                         center=(int(center[i][0]), int(center[i][1])),
@@ -757,8 +760,8 @@ class Visualizer(ManagerMixin):
                     color=edge_colors[i],
                     lineType=int(line_styles[i]),
                     thickness=int(line_widths[i]))
-                cv2.addWeighted(self._image, alpha, overlay, 1 - alpha, 0,
-                                self._image)
+            cv2.addWeighted(self._image, alpha, overlay, 1 - alpha, 0,
+                            self._image)
         return self
 
     @master_only
@@ -837,12 +840,15 @@ class Visualizer(ManagerMixin):
                                   len(bboxes))
             check_type_and_length('line_widths', line_widths,
                                   (int, float, list), len(bboxes))
+            overlay = self._image.copy()
+            if face_colors != 'none':
+                if isinstance(face_colors, str):
+                    face_colors = [face_colors] * len(bboxes)
+                face_colors = color_val_opencv(face_colors)
             for i, bbox in enumerate(bboxes):
-                overlay = self._image.copy()
                 pt1 = (bbox[0], bbox[1])
                 pt2 = (bbox[2], bbox[3])
-                if face_colors is not None:
-                    face_colors = color_val_opencv(face_colors)
+                if face_colors != 'none':
                     cv2.rectangle(
                         img=self._image,
                         pt1=pt1,
@@ -858,8 +864,8 @@ class Visualizer(ManagerMixin):
                     lineType=line_styles[i],
                     thickness=int(line_widths[i]) if isinstance(
                         line_widths, list) else int(line_widths))
-                cv2.addWeighted(self._image, alpha, overlay, 1 - alpha, 0,
-                                self._image)
+            cv2.addWeighted(self._image, alpha, overlay, 1 - alpha, 0,
+                            self._image)
         return self
 
     @master_only
@@ -867,10 +873,10 @@ class Visualizer(ManagerMixin):
         self,
         polygons: Union[Union[np.ndarray, torch.Tensor],
                         List[Union[np.ndarray, torch.Tensor]]],
-        edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-        line_styles: Union[str, List[str]] = '-',
+        edge_colors: Union[str, tuple, List[Union[str, tuple]]] = 'g',
+        line_styles: Union[str, List[str]] = None,
         line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
-        face_colors: Union[str, tuple, List[str], List[tuple]] = 'none',
+        face_colors: Union[str, tuple, List[Union[str, tuple]]] = 'none',
         alpha: Union[int, float] = 0.8,
     ) -> 'Visualizer':
         """Draw single or multiple bboxes.
@@ -902,10 +908,7 @@ class Visualizer(ManagerMixin):
             alpha (Union[int, float]): The transparency of polygons.
                 Defaults to 0.8.
         """
-        from matplotlib.collections import PolyCollection
         check_type('polygons', polygons, (list, np.ndarray, torch.Tensor))
-        edge_colors = color_val_matplotlib(edge_colors)  # type: ignore
-        face_colors = color_val_matplotlib(face_colors)  # type: ignore
 
         if isinstance(polygons, (np.ndarray, torch.Tensor)):
             polygons = [polygons]
@@ -926,15 +929,50 @@ class Visualizer(ManagerMixin):
             min(max(linewidth, 1), self._default_font_size / 4)
             for linewidth in line_widths
         ]
-        polygon_collection = PolyCollection(
-            polygons,
-            alpha=alpha,
-            facecolor=face_colors,
-            linestyles=line_styles,
-            edgecolors=edge_colors,
-            linewidths=line_widths)
-
-        self.ax_save.add_collection(polygon_collection)
+        if self.backend == 'matplotlib':
+            from matplotlib.collections import PolyCollection
+            edge_colors = color_val_matplotlib(edge_colors)  # type: ignore
+            face_colors = color_val_matplotlib(face_colors)  # type: ignore
+            if line_styles is None:
+                line_styles = '-'
+            polygon_collection = PolyCollection(
+                polygons,
+                alpha=alpha,
+                facecolor=face_colors,
+                linestyles=line_styles,
+                edgecolors=edge_colors,
+                linewidths=line_widths)
+            self.ax_save.add_collection(polygon_collection)
+        else:
+            edge_colors = color_val_opencv(edge_colors)
+            if line_styles is None:
+                line_styles = [cv2.LINE_8 for _ in range(len(polygons))]
+            check_type_and_length('line_styles', line_styles, (int, list),
+                                  len(polygons))
+            check_type_and_length('line_widths', line_widths,
+                                  (int, float, list), len(polygons))
+            overlay = self._image.copy()
+            if face_colors != 'none':
+                if isinstance(face_colors, str):
+                    face_colors = [face_colors] * len(polygons)
+                face_colors = color_val_opencv(face_colors)
+            for i, polygon in enumerate(polygons):
+                polygon = polygon.reshape((-1, 1, 2))
+                if face_colors != 'none':
+                    cv2.fillPoly(
+                        img=self._image,
+                        pts=[polygon],
+                        color=face_colors[i],
+                        lineType=line_styles[i])
+                cv2.polylines(
+                    img=self._image,
+                    pts=[polygon],
+                    isClosed=True,
+                    color=edge_colors[i],
+                    lineType=line_styles[i],
+                    thickness=line_widths[i])
+            cv2.addWeighted(self._image, alpha, overlay, 1 - alpha, 0,
+                            self._image)
         return self
 
     @master_only
