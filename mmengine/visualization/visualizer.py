@@ -90,7 +90,7 @@ class Visualizer(ManagerMixin):
         >>> # Basic drawing methods
         >>> vis = Visualizer(image=image)
         >>> vis.draw_bboxes(np.array([0, 0, 1, 1]), edge_colors='g')
-        >>> vis.draw_bboxes(bbox=np.array([[1, 1, 2, 2], [2, 2, 3, 3]]),
+        >>> vis.draw_bboxes(bboxes=np.array([[1, 1, 2, 2], [2, 2, 3, 3]]),
         >>>                    edge_colors=['g', 'r'])
         >>> vis.draw_lines(x_datas=np.array([1, 3]),
         >>>                y_datas=np.array([1, 3]),
@@ -736,7 +736,7 @@ class Visualizer(ManagerMixin):
                 'When using cv2 as the backend for visualizer, '
                 'because `cv.circle(img, center, radius, '
                 'color[, thickness[, lineType[, shift]]]) -> img`, '
-                'the parameters `face_colors` and `alpha` '
+                'the parameters `face_colors` '
                 'will be discarded and not called.', UserWarning)
             edge_colors = color_val_opencv(edge_colors)
             if line_styles is None:
@@ -746,6 +746,7 @@ class Visualizer(ManagerMixin):
             check_type_and_length('line_widths', line_widths,
                                   (int, float, list), len(line_widths))
             for i in range(len(circles)):
+                overlay = self._image.copy()
                 cv2.circle(
                     img=self._image,
                     center=(int(center[i][0]), int(center[i][1])),
@@ -753,14 +754,16 @@ class Visualizer(ManagerMixin):
                     color=edge_colors[i],
                     lineType=int(line_styles[i]),
                     thickness=int(line_widths[i]))
+                cv2.addWeighted(self._image, alpha, overlay, 1 - alpha, 0,
+                                self._image)
         return self
 
     @master_only
     def draw_bboxes(
         self,
         bboxes: Union[np.ndarray, torch.Tensor],
-        edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-        line_styles: Union[str, List[str]] = '-',
+        edge_colors: Union[str, tuple, List[Union[str, tuple]]] = 'g',
+        line_styles: Union[str, List[str]] = None,
         line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
         face_colors: Union[str, tuple, List[str], List[tuple]] = 'none',
         alpha: Union[int, float] = 0.8,
@@ -807,18 +810,51 @@ class Visualizer(ManagerMixin):
             warnings.warn(
                 'Warning: The bbox is out of bounds,'
                 ' the drawn bbox may not be in the image', UserWarning)
-        poly = np.stack(
-            (bboxes[:, 0], bboxes[:, 1], bboxes[:, 2], bboxes[:, 1],
-             bboxes[:, 2], bboxes[:, 3], bboxes[:, 0], bboxes[:, 3]),
-            axis=-1).reshape(-1, 4, 2)
-        poly = [p for p in poly]
-        return self.draw_polygons(
-            poly,
-            alpha=alpha,
-            edge_colors=edge_colors,
-            line_styles=line_styles,
-            line_widths=line_widths,
-            face_colors=face_colors)
+        if self.backend == 'matplotlib':
+            if line_styles is None:
+                line_styles = '-'
+            poly = np.stack(
+                (bboxes[:, 0], bboxes[:, 1], bboxes[:, 2], bboxes[:, 1],
+                 bboxes[:, 2], bboxes[:, 3], bboxes[:, 0], bboxes[:, 3]),
+                axis=-1).reshape(-1, 4, 2)
+            poly = [p for p in poly]
+            return self.draw_polygons(
+                poly,
+                alpha=alpha,
+                edge_colors=edge_colors,
+                line_styles=line_styles,
+                line_widths=line_widths,
+                face_colors=face_colors)
+        else:
+            warnings.warn(
+                'When using cv2 as the backend for visualizer, '
+                'because `cv.rectangle(	img, pt1, pt2, '
+                'color[, thickness[, lineType[, shift]]])->img`, '
+                'the parameters `face_colors` '
+                'will be discarded and not called.', UserWarning)
+            bboxes = bboxes.tolist()
+            edge_colors = color_val_opencv(edge_colors)
+            if line_styles is None:
+                line_styles = [cv2.LINE_8 for _ in range(len(bboxes))]
+            check_type_and_length('line_styles', line_styles, (int, list),
+                                  len(bboxes))
+            check_type_and_length('line_widths', line_widths,
+                                  (int, float, list), len(bboxes))
+            for i, bbox in enumerate(bboxes):
+                overlay = self._image.copy()
+                pt1 = (bbox[0], bbox[1])
+                pt2 = (bbox[2], bbox[3])
+                cv2.rectangle(
+                    img=self._image,
+                    pt1=pt1,
+                    pt2=pt2,
+                    color=edge_colors[i],
+                    lineType=line_styles[i],
+                    thickness=int(line_widths[i]) if isinstance(
+                        line_widths, list) else int(line_widths))
+                cv2.addWeighted(self._image, alpha, overlay, 1 - alpha, 0,
+                                self._image)
+        return self
 
     @master_only
     def draw_polygons(
