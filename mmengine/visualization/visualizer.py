@@ -89,6 +89,7 @@ class Visualizer(ManagerMixin):
 
         >>> # Basic drawing methods
         >>> vis = Visualizer(image=image)
+        >>> vis.draw_points(np.array([[1, 3], [2, 4]]), colors=['g', 'r'])
         >>> vis.draw_bboxes(np.array([0, 0, 1, 1]), edge_colors='g')
         >>> vis.draw_bboxes(bboxes=np.array([[1, 1, 2, 2], [2, 2, 3, 3]]),
         >>>                    edge_colors=['g', 'r'])
@@ -384,8 +385,8 @@ class Visualizer(ManagerMixin):
     @master_only
     def draw_points(self,
                     positions: Union[np.ndarray, torch.Tensor],
-                    colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-                    marker: Optional[str] = None,
+                    colors: Union[str, tuple, List[Union[str, tuple]]] = 'g',
+                    marker: Optional[Union[str, int]] = None,
                     sizes: Optional[Union[np.ndarray, torch.Tensor]] = None):
         """Draw single or multiple points.
 
@@ -411,9 +412,46 @@ class Visualizer(ManagerMixin):
         assert positions.shape[-1] == 2, (
             'The shape of `positions` should be (N, 2), '
             f'but got {positions.shape}')
-        colors = color_val_matplotlib(colors)  # type: ignore
-        self.ax_save.scatter(
-            positions[:, 0], positions[:, 1], c=colors, s=sizes, marker=marker)
+        if self.backend == 'matplotlib':
+            assert isinstance(marker, str) or marker is None, (
+                'The type of `marker` in `matplotlib` should be str, '
+                f'but got {type(marker)}')
+            colors = color_val_matplotlib(colors)  # type: ignore
+            self.ax_save.scatter(
+                positions[:, 0],
+                positions[:, 1],
+                c=colors,
+                s=sizes,
+                marker=marker)
+        else:
+            positions = positions.tolist()
+            if isinstance(colors, str):
+                colors = [colors] * len(positions)
+            colors = color_val_opencv(colors)
+            if sizes is not None:
+                sizes = tensor2ndarray(sizes).tolist()
+            if marker is None:
+                for i, pos in enumerate(positions):
+                    pos = (int(pos[0]), int(pos[1]))
+                    cv2.circle(
+                        img=self._image,
+                        center=pos,
+                        radius=int(sizes[i]) if sizes is not None else 6,
+                        color=colors[i],
+                        thickness=-1)
+            else:
+                assert isinstance(
+                    marker,
+                    int), ('The type of `marker` in `cv2` should be int, '
+                           f'but got {type(marker)}')
+                for i, pos in enumerate(positions):
+                    cv2.drawMarker(
+                        img=self._image,
+                        position=pos,
+                        color=colors[i],
+                        markerType=marker,
+                        markerSize=int(sizes[i]) if sizes is not None else 20)
+
         return self
 
     @master_only
@@ -559,6 +597,8 @@ class Visualizer(ManagerMixin):
                     family=font_families[i],
                     fontproperties=font_properties[i],
                     color=colors[i])
+        else:
+            pass
         return self
 
     @master_only
