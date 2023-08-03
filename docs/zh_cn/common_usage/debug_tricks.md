@@ -50,7 +50,7 @@ python tools/train.py configs/resnet/resnet18_8xb16_cifar10.py
 02/20 14:45:01 - mmengine - INFO - Epoch(train)   [1][300/313]  lr: 1.0000e-01  eta: 0:20:39  time: 0.0143  data_time: 0.0003  memory: 214  loss: 1.814
 ```
 
-## 检查不参与梯度图的参数
+## 检查不参与 loss 计算的参数
 
 使用多卡训练时，当模型的参数参与了前向计算，但没有参与 loss 的计算，程序会抛出下面的错误：
 
