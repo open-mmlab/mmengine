@@ -430,7 +430,7 @@ class Visualizer(ManagerMixin):
                 colors = [colors] * len(positions)
             colors = color_val_opencv(colors)
             if sizes is not None:
-                sizes = tensor2ndarray(sizes).tolist()
+                sizes = tensor2ndarray(sizes)
             if marker is None:
                 for i, pos in enumerate(positions):
                     pos = (int(pos[0]), int(pos[1]))
@@ -624,7 +624,7 @@ class Visualizer(ManagerMixin):
                     fontFace=font_families[i],
                     fontScale=font_sizes[i],
                     thickness=2)
-                if bboxes is not None:
+                if bboxes[i] is not None:
                     x1 = int(positions[i][0])
                     y1 = int(positions[i][1] - 5 * font_sizes[i])
                     x2 = int(x1 + text_width)
@@ -634,7 +634,7 @@ class Visualizer(ManagerMixin):
                         line_styles=bboxes[i]['linestyle']
                         if 'linestyle' in bboxes[i] else None,
                         line_widths=bboxes[i]['linewidth']
-                        if 'linewidth ' in bboxes[i] else 2,
+                        if 'linewidth' in bboxes[i] else 2,
                         edge_colors=bboxes[i]['edgecolor']
                         if 'edgecolor' in bboxes[i] else 'g',
                         face_colors=bboxes[i]['facecolor']
@@ -918,6 +918,8 @@ class Visualizer(ManagerMixin):
             edge_colors = color_val_opencv(edge_colors)
             if line_styles is None:
                 line_styles = [cv2.LINE_8 for _ in range(len(bboxes))]
+            if isinstance(line_styles, int):
+                line_styles = [line_styles] * len(bboxes)
             check_type_and_length('line_styles', line_styles, (int, list),
                                   len(bboxes))
             check_type_and_length('line_widths', line_widths,
@@ -928,8 +930,8 @@ class Visualizer(ManagerMixin):
                     face_colors = [face_colors] * len(bboxes)
                 face_colors = color_val_opencv(face_colors)
             for i, bbox in enumerate(bboxes):
-                pt1 = (bbox[0], bbox[1])
-                pt2 = (bbox[2], bbox[3])
+                pt1 = (int(bbox[0]), int(bbox[1]))
+                pt2 = (int(bbox[2]), int(bbox[3]))
                 if face_colors != 'none':
                     cv2.rectangle(
                         img=self._image,
@@ -1029,6 +1031,8 @@ class Visualizer(ManagerMixin):
             edge_colors = color_val_opencv(edge_colors)
             if line_styles is None:
                 line_styles = [cv2.LINE_8 for _ in range(len(polygons))]
+            if isinstance(line_styles, int):
+                line_styles = [line_styles] * len(polygons)
             check_type_and_length('line_styles', line_styles, (int, list),
                                   len(polygons))
             check_type_and_length('line_widths', line_widths,

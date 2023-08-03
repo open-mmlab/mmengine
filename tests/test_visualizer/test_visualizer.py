@@ -5,10 +5,12 @@ from typing import Any
 from unittest import TestCase
 from unittest.mock import MagicMock, call, patch
 
+import cv2
 import numpy as np
 import pytest
 import torch
 import torch.nn as nn
+from parameterized import parameterized
 
 from mmengine import VISBACKENDS, Config
 from mmengine.visualization import Visualizer
@@ -64,8 +66,9 @@ class TestVisualizer(TestCase):
             dict(type='MockVisBackend', name='mock2')
         ]
 
-    def test_init(self):
-        visualizer = Visualizer(image=self.image)
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_init(self, backend):
+        visualizer = Visualizer(image=self.image, backend=backend)
         visualizer.get_image()
 
         # build visualizer without `save_dir`
@@ -120,26 +123,36 @@ class TestVisualizer(TestCase):
         visualizer_any = Visualizer.get_instance(instance_name)
         assert visualizer_any == visualizer
 
-    def test_set_image(self):
-        visualizer = Visualizer()
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_set_image(self, backend):
+        visualizer = Visualizer(backend=backend)
         visualizer.set_image(self.image)
         with pytest.raises(AssertionError):
             visualizer.set_image(None)
 
-    def test_get_image(self):
-        visualizer = Visualizer(image=self.image)
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_get_image(self, backend):
+        visualizer = Visualizer(image=self.image, backend=backend)
         visualizer.get_image()
 
-    def test_draw_bboxes(self):
-        visualizer = Visualizer(image=self.image)
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_draw_bboxes(self, backend):
+        visualizer = Visualizer(image=self.image, backend=backend)
 
         # only support 4 or nx4 tensor and numpy
         visualizer.draw_bboxes(torch.tensor([1, 1, 2, 2]))
         # valid bbox
         visualizer.draw_bboxes(torch.tensor([1, 1, 1, 2]))
         bboxes = torch.tensor([[1, 1, 2, 2], [1, 2, 2, 2.5]])
+        if backend == 'matplotlib':
+            line_styles = '-'
+        else:
+            line_styles = cv2.LINE_4
         visualizer.draw_bboxes(
-            bboxes, alpha=0.5, edge_colors=(255, 0, 0), line_styles='-')
+            bboxes,
+            alpha=0.5,
+            edge_colors=(255, 0, 0),
+            line_styles=line_styles)
         bboxes = bboxes.numpy()
         visualizer.draw_bboxes(bboxes)
 
@@ -159,9 +172,11 @@ class TestVisualizer(TestCase):
         with pytest.raises(TypeError):
             visualizer.draw_bboxes([1, 1, 2, 2])
 
-    def test_close(self):
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_close(self, backend):
         visualizer = Visualizer(
             image=self.image,
+            backend=backend,
             vis_backends=copy.deepcopy(self.vis_backend_cfg),
             save_dir='temp_dir')
 
@@ -171,8 +186,9 @@ class TestVisualizer(TestCase):
         for name in ['mock1', 'mock2']:
             assert visualizer.get_backend(name)._close is True
 
-    def test_draw_points(self):
-        visualizer = Visualizer(image=self.image)
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_draw_points(self, backend):
+        visualizer = Visualizer(image=self.image, backend=backend)
 
         with pytest.raises(TypeError):
             visualizer.draw_points(positions=[1, 2])
@@ -182,14 +198,19 @@ class TestVisualizer(TestCase):
         visualizer.draw_points(
             positions=torch.tensor([[1, 1], [3, 3]]),
             colors=['g', (255, 255, 0)])
+        if backend == 'matplotlib':
+            marker = '.'
+        else:
+            marker = cv2.MARKER_CROSS
         visualizer.draw_points(
             positions=torch.tensor([[1, 1], [3, 3]]),
             colors=['g', (255, 255, 0)],
-            marker='.',
+            marker=marker,
             sizes=[1, 5])
 
-    def test_draw_texts(self):
-        visualizer = Visualizer(image=self.image)
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_draw_texts(self, backend):
+        visualizer = Visualizer(image=self.image, backend=backend)
 
         # only support tensor and numpy
         visualizer.draw_texts(
@@ -226,14 +247,16 @@ class TestVisualizer(TestCase):
             visualizer.draw_texts(['text1', 'test2'],
                                   positions=torch.tensor([[5, 5], [3, 3]]),
                                   colors=['r'])
-        with pytest.raises(AssertionError):
-            visualizer.draw_texts(['text1', 'test2'],
-                                  positions=torch.tensor([[5, 5], [3, 3]]),
-                                  vertical_alignments=['top'])
-        with pytest.raises(AssertionError):
-            visualizer.draw_texts(['text1', 'test2'],
-                                  positions=torch.tensor([[5, 5], [3, 3]]),
-                                  horizontal_alignments=['left'])
+        if backend == 'matplotlib':
+            with pytest.raises(AssertionError):
+                visualizer.draw_texts(['text1', 'test2'],
+                                      positions=torch.tensor([[5, 5], [3, 3]]),
+                                      vertical_alignments=['top'])
+        if backend == 'matplotlib':
+            with pytest.raises(AssertionError):
+                visualizer.draw_texts(['text1', 'test2'],
+                                      positions=torch.tensor([[5, 5], [3, 3]]),
+                                      horizontal_alignments=['left'])
         with pytest.raises(AssertionError):
             visualizer.draw_texts(['text1', 'test2'],
                                   positions=torch.tensor([[5, 5], [3, 3]]),
@@ -245,8 +268,9 @@ class TestVisualizer(TestCase):
                                   positions=torch.tensor([[5, 5], [3, 3]]),
                                   font_sizes='b')
 
-    def test_draw_lines(self):
-        visualizer = Visualizer(image=self.image)
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_draw_lines(self, backend):
+        visualizer = Visualizer(image=self.image, backend=backend)
 
         # only support tensor and numpy
         visualizer.draw_lines(
@@ -254,11 +278,15 @@ class TestVisualizer(TestCase):
         visualizer.draw_lines(
             x_datas=np.array([[1, 5], [2, 4]]),
             y_datas=np.array([[2, 6], [4, 7]]))
+        if backend == 'matplotlib':
+            line_styles = ['-', '-.']
+        else:
+            line_styles = [cv2.LINE_4, cv2.LINE_AA]
         visualizer.draw_lines(
             x_datas=np.array([[1, 5], [2, 4]]),
             y_datas=np.array([[2, 6], [4, 7]]),
             colors='r',
-            line_styles=['-', '-.'],
+            line_styles=line_styles,
             line_widths=[1, 2])
         # test out of bounds
         with pytest.warns(
@@ -280,8 +308,9 @@ class TestVisualizer(TestCase):
                 x_datas=torch.tensor([1, 5]),
                 y_datas=torch.tensor([[2, 6], [4, 7]]))
 
-    def test_draw_circles(self):
-        visualizer = Visualizer(image=self.image)
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_draw_circles(self, backend):
+        visualizer = Visualizer(image=self.image, backend=backend)
 
         # only support tensor and numpy
         visualizer.draw_circles(torch.tensor([1, 5]), torch.tensor([1]))
@@ -297,11 +326,15 @@ class TestVisualizer(TestCase):
             edge_colors=(255, 0, 0))
 
         # test config
+        if backend == 'matplotlib':
+            line_styles = ['-', '-.']
+        else:
+            line_styles = [cv2.LINE_4, cv2.LINE_AA]
         visualizer.draw_circles(
             torch.tensor([[1, 5], [2, 6]]),
             radius=torch.tensor([1, 2]),
             edge_colors=['g', 'r'],
-            line_styles=['-', '-.'],
+            line_styles=line_styles,
             line_widths=[1, 2])
 
         # test out of bounds
@@ -325,8 +358,9 @@ class TestVisualizer(TestCase):
             visualizer.draw_circles(
                 torch.tensor([[1, 5]]), radius=torch.tensor([1, 2]))
 
-    def test_draw_polygons(self):
-        visualizer = Visualizer(image=self.image)
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_draw_polygons(self, backend):
+        visualizer = Visualizer(image=self.image, backend=backend)
         # shape Nx2 or list[Nx2]
         visualizer.draw_polygons(torch.tensor([[1, 1], [2, 2], [3, 4]]))
         visualizer.draw_polygons(np.array([[1, 1], [2, 2], [3, 4]]))
@@ -341,13 +375,17 @@ class TestVisualizer(TestCase):
             ],
             face_colors=(255, 0, 0),
             edge_colors=(255, 0, 0))
+        if backend == 'matplotlib':
+            line_styles = '-'
+        else:
+            line_styles = cv2.LINE_AA
         visualizer.draw_polygons(
             polygons=[
                 np.array([[1, 1], [2, 2], [3, 4]]),
                 torch.tensor([[1, 1], [2, 2], [3, 4]])
             ],
             edge_colors=['r', 'g'],
-            line_styles='-',
+            line_styles=line_styles,
             line_widths=[2, 1])
 
         # test out of bounds
@@ -357,14 +395,15 @@ class TestVisualizer(TestCase):
                 ' the drawn polygon may not be in the image'):
             visualizer.draw_polygons(torch.tensor([[1, 1], [2, 2], [16, 4]]))
 
-    def test_draw_binary_masks(self):
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_draw_binary_masks(self, backend):
         binary_mask = np.random.randint(0, 2, size=(10, 10)).astype(bool)
-        visualizer = Visualizer(image=self.image)
+        visualizer = Visualizer(image=self.image, backend=backend)
         visualizer.draw_binary_masks(binary_mask)
         visualizer.draw_binary_masks(torch.from_numpy(binary_mask))
         # multi binary
         binary_mask = np.random.randint(0, 2, size=(2, 10, 10)).astype(bool)
-        visualizer = Visualizer(image=self.image)
+        visualizer = Visualizer(image=self.image, backend=backend)
         visualizer.draw_binary_masks(binary_mask, colors=['r', (0, 255, 0)])
         # test the error that the size of mask and image are different.
         with pytest.raises(AssertionError):
@@ -384,8 +423,9 @@ class TestVisualizer(TestCase):
         with pytest.raises(AssertionError):
             visualizer.draw_binary_masks(binary_mask)
 
-    def test_draw_featmap(self):
-        visualizer = Visualizer()
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_draw_featmap(self, backend):
+        visualizer = Visualizer(backend=backend)
         image = np.random.randint(0, 256, size=(3, 3, 3), dtype='uint8')
 
         # must be Tensor
@@ -487,8 +527,9 @@ class TestVisualizer(TestCase):
             arrangement=(2, 2))
         assert featmap.shape[:2] == (6, 6)
 
-    def test_chain_call(self):
-        visualizer = Visualizer(image=self.image)
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_chain_call(self, backend):
+        visualizer = Visualizer(image=self.image, backend=backend)
         binary_mask = np.random.randint(0, 2, size=(10, 10)).astype(bool)
         visualizer.draw_bboxes(torch.tensor([1, 1, 2, 2])). \
             draw_texts('test', torch.tensor([5, 5])). \
@@ -498,16 +539,20 @@ class TestVisualizer(TestCase):
             draw_polygons(torch.tensor([[1, 1], [2, 2], [3, 4]])). \
             draw_binary_masks(binary_mask)
 
-    def test_get_backend(self):
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_get_backend(self, backend):
         visualizer = Visualizer(
             image=self.image,
+            backend=backend,
             vis_backends=copy.deepcopy(self.vis_backend_cfg),
             save_dir='temp_dir')
         for name in ['mock1', 'mock2']:
             assert isinstance(visualizer.get_backend(name), MockVisBackend)
 
-    def test_add_config(self):
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_add_config(self, backend):
         visualizer = Visualizer(
+            backend=backend,
             vis_backends=copy.deepcopy(self.vis_backend_cfg),
             save_dir='temp_dir')
 
@@ -516,8 +561,10 @@ class TestVisualizer(TestCase):
         for name in ['mock1', 'mock2']:
             assert visualizer.get_backend(name)._add_config is True
 
-    def test_add_graph(self):
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_add_graph(self, backend):
         visualizer = Visualizer(
+            backend=backend,
             vis_backends=copy.deepcopy(self.vis_backend_cfg),
             save_dir='temp_dir')
 
@@ -534,9 +581,11 @@ class TestVisualizer(TestCase):
         for name in ['mock1', 'mock2']:
             assert visualizer.get_backend(name)._add_graph is True
 
-    def test_add_image(self):
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_add_image(self, backend):
         image = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
         visualizer = Visualizer(
+            backend=backend,
             vis_backends=copy.deepcopy(self.vis_backend_cfg),
             save_dir='temp_dir')
 
@@ -544,16 +593,20 @@ class TestVisualizer(TestCase):
         for name in ['mock1', 'mock2']:
             assert visualizer.get_backend(name)._add_image is True
 
-    def test_add_scalar(self):
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_add_scalar(self, backend):
         visualizer = Visualizer(
+            backend=backend,
             vis_backends=copy.deepcopy(self.vis_backend_cfg),
             save_dir='temp_dir')
         visualizer.add_scalar('map', 0.9, step=0)
         for name in ['mock1', 'mock2']:
             assert visualizer.get_backend(name)._add_scalar is True
 
-    def test_add_scalars(self):
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_add_scalars(self, backend):
         visualizer = Visualizer(
+            backend=backend,
             vis_backends=copy.deepcopy(self.vis_backend_cfg),
             save_dir='temp_dir')
         input_dict = {'map': 0.7, 'acc': 0.9}
@@ -573,15 +626,17 @@ class TestVisualizer(TestCase):
         visualizer3 = DetLocalVisualizer.get_current_instance()
         assert id(visualizer1) == id(visualizer2) == id(visualizer3)
 
-    def test_data_info(self):
-        visualizer = Visualizer()
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_data_info(self, backend):
+        visualizer = Visualizer(backend=backend)
         visualizer.dataset_meta = {'class': 'cat'}
         assert visualizer.dataset_meta['class'] == 'cat'
 
-    def test_show(self):
+    @parameterized.expand([['cv2'], ['matplotlib']])
+    def test_show(self, backend):
         cv2 = MagicMock()
         wait_continue = MagicMock()
-        visualizer = Visualizer('test_show')
+        visualizer = Visualizer('test_show', backend=backend)
         img = np.ones([1, 1, 1])
         with patch('mmengine.visualization.visualizer.cv2', cv2), \
              patch('mmengine.visualization.visualizer.wait_continue',
