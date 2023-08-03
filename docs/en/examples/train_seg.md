@@ -151,7 +151,6 @@ For additional information about `BaseModel`, you can refer to the [Model tutori
 ```python
 from mmengine.model import BaseModel
 from torchvision.models.segmentation import deeplabv3_resnet50
-from torchvision.models.segmentation.deeplabv3 import DeepLabV3_ResNet50_Weights
 import torch.nn.functional as F
 
 
@@ -159,11 +158,7 @@ class MMDeeplabV3(BaseModel):
 
     def __init__(self, num_classes):
         super().__init__()
-        self.deeplab = deeplabv3_resnet50(
-            weights=DeepLabV3_ResNet50_Weights.COCO_WITH_VOC_LABELS_V1,
-            num_classes=21)
-        self.deeplab.classifier[4] = torch.nn.Conv2d(
-            256, num_classes, kernel_size=(1, 1), stride=(1, 1))
+        self.deeplab = deeplabv3_resnet50(num_classes=num_classes)
 
     def forward(self, imgs, data_samples=None, mode='tensor'):
         x = self.deeplab(imgs)['out']
@@ -269,9 +264,6 @@ runner = Runner(
     val_dataloader=val_dataloader,
     val_cfg=dict(),
     val_evaluator=dict(type=IoU),
-    cfg=dict(
-        model_wrapper='MMDistributedDataParallel',
-        find_unused_parameters=True),
     custom_hooks=[SegVisHook('data/CamVid')],
     default_hooks=dict(checkpoint=dict(type='CheckpointHook', interval=1)),
 )
