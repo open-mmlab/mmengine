@@ -33,7 +33,7 @@ tar -xzvf data/CamVid/raw/CamVid.tar.gz.00 -C ./data
 
 ## Implement the Camvid Dataset
 
-We have implemented the CamVid class here, which inherits from VisionDataset. Within this class, we have overridden the `__getitem__` and `__len__` methods to ensure that each index returns a dict of images and labels. Additionally, we have implemented the color_to_class dictionary to map the mask's color to the class index."
+We have implemented the CamVid class here, which inherits from VisionDataset. Within this class, we have overridden the `__getitem__` and `__len__` methods to ensure that each index returns a dict of images and labels. Additionally, we have implemented the color_to_class dictionary to map the mask's color to the class index.
 
 ```python
 import os

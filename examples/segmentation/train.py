@@ -13,9 +13,8 @@ from PIL import Image
 from torch.optim import AdamW
 from torchvision.datasets import VisionDataset
 from torchvision.models.segmentation import deeplabv3_resnet50
-from torchvision.models.segmentation.deeplabv3 import \
-    DeepLabV3_ResNet50_Weights
 
+from mmengine.dist import master_only
 from mmengine.evaluator import BaseMetric
 from mmengine.hooks import Hook
 from mmengine.model import BaseModel
@@ -85,11 +84,7 @@ class MMDeeplabV3(BaseModel):
 
     def __init__(self, num_classes):
         super().__init__()
-        self.deeplab = deeplabv3_resnet50(
-            weights=DeepLabV3_ResNet50_Weights.COCO_WITH_VOC_LABELS_V1,
-            num_classes=21)
-        self.deeplab.classifier[4] = torch.nn.Conv2d(
-            256, num_classes, kernel_size=(1, 1), stride=(1, 1))
+        self.deeplab = deeplabv3_resnet50(num_classes=num_classes)
 
     def forward(self, imgs, data_samples=None, mode='tensor'):
         x = self.deeplab(imgs)['out']
@@ -123,6 +118,7 @@ class SegVisHook(Hook):
         self.vis_num = vis_num
         self.palette = create_palette(osp.join(data_root, 'class_dict.csv'))
 
+    @master_only
     def after_val_iter(self,
                        runner,
                        batch_idx: int,
@@ -221,9 +217,6 @@ def main():
         val_cfg=dict(),
         val_evaluator=dict(type=IoU),
         launcher=args.launcher,
-        cfg=dict(
-            model_wrapper='MMDistributedDataParallel',
-            find_unused_parameters=True),
         custom_hooks=[SegVisHook('data/CamVid')],
         default_hooks=dict(checkpoint=dict(type='CheckpointHook', interval=1)),
     )
