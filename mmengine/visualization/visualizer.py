@@ -183,18 +183,16 @@ class Visualizer(ManagerMixin):
             if isinstance(vis_backend, dict):
                 name = vis_backend.pop('name', None)
                 vis_backend.setdefault('save_dir', save_dir)
-                # Using `get` could be a better chioce here to get the
-                # signature of `VisBackend__init__`.  However, we use
-                # `Registry.build` to build the visbackend first to avoid the
-                # risk of scope error when using `Registry.get`
                 vis_backend = VISBACKENDS.build(vis_backend)
 
+            # If vis_backend requires `save_dir` (with no default value)
+            # but is initialized with None, then don't add this
+            # vis_backend to the visualizer.
             save_dir_arg = inspect.signature(
                 vis_backend.__class__.__init__).parameters.get('save_dir')
-
             if (save_dir_arg is not None
-                    and (save_dir_arg.default is save_dir_arg.empty
-                         and save_dir is None)):
+                    and save_dir_arg.default is save_dir_arg.empty
+                    and getattr(vis_backend, '_save_dir') is None):
                 warnings.warn(f'Failed to add {vis_backend.__class__}, '
                               'please provide the `save_dir` argument.')
                 continue
