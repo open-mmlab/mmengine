@@ -1,4 +1,4 @@
-# Segmentation Task Example
+# Train a Segmentation Model
 
 ## Download Camvid Dataset
 
