@@ -1,4 +1,4 @@
-# Segmentation Task Example
+# 训练一个语义分割模型
 
 语义分割的样例大体可以分成四个步骤:
 
