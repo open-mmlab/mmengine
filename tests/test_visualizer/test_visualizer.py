@@ -110,7 +110,7 @@ class TestVisualizer(TestCase):
         class CustomLocalVisBackend:
 
             def __init__(self, save_dir: str) -> None:
-                ...
+                self._save_dir = save_dir
 
         with pytest.warns(UserWarning):
             visualizer = Visualizer.get_instance(
