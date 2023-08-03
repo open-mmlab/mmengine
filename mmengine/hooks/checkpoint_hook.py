@@ -471,7 +471,7 @@ class CheckpointHook(Hook):
         if self.create_symlink:
             dst_file = osp.join(runner.work_dir, 'latest.pth')
             try:
-                symlink(self.last_ckpt, dst_file)
+                symlink(ckpt_filename, dst_file)
             except SystemError:
                 print_log(
                     'create_symlink is set as False because creating symbolic '
