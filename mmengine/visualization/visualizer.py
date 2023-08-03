@@ -189,9 +189,11 @@ class Visualizer(ManagerMixin):
                 # risk of scope error when using `Registry.get`
                 vis_backend = VISBACKENDS.build(vis_backend)
 
+            # If vis_backend requires save_dir but it's not provided
+            # (the value is None), then don't add this vis_backend to
+            # the visualizer.
             save_dir_arg = inspect.signature(
                 vis_backend.__class__.__init__).parameters.get('save_dir')
-
             if (save_dir_arg is not None
                     and (save_dir_arg.default is save_dir_arg.empty
                          and save_dir is None)):
