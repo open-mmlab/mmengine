@@ -99,12 +99,13 @@ class Visualizer(ManagerMixin):
         >>> vis.draw_lines(x_datas=np.array([[1, 3], [2, 4]]),
         >>>                y_datas=np.array([[1, 3], [2, 4]]),
         >>>                colors=['r', 'r'], line_widths=[1, 2])
-        >>> vis.draw_texts(text='MMEngine',
-        >>>               position=np.array([2, 2]),
+        >>> vis.draw_texts(texts='MMEngine',
+        >>>               positions=np.array([2, 2]),
         >>>               colors='b')
-        >>> vis.draw_texts(text=['MMEngine','OpenMMLab'],
-        >>>                position=np.array([[2, 2], [5, 5]]),
-        >>>                colors=['b', 'b'])
+        >>> vis.draw_texts(texts=['MMEngine','OpenMMLab'],
+        >>>                positions=np.array([[2, 2], [5, 5]]),
+        >>>                colors=['b', 'b'],
+        >>>                bboxes=dict(facecolor='r', alpha=0.6))
         >>> vis.draw_circles(center=np.array([2, 2]), radius=np.array([1]))
         >>> vis.draw_circles(center=np.array([[2, 2], [3, 5]]),
         >>>                  radius=np.array([1, 2]), edge_colors=['g', 'r'])
@@ -459,11 +460,11 @@ class Visualizer(ManagerMixin):
         self,
         texts: Union[str, List[str]],
         positions: Union[np.ndarray, torch.Tensor],
-        font_sizes: Optional[Union[int, List[int]]] = None,
-        colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+        font_sizes: Optional[Union[int, float, List[int], List[float]]] = None,
+        colors: Union[str, tuple, List[Union[str, tuple]]] = 'g',
         vertical_alignments: Union[str, List[str]] = 'top',
         horizontal_alignments: Union[str, List[str]] = 'left',
-        font_families: Union[str, List[str]] = 'sans-serif',
+        font_families: Union[str, int, List[str], List[int]] = 'sans-serif',
         bboxes: Optional[Union[dict, List[dict]]] = None,
         font_properties: Optional[Union['FontProperties',
                                         List['FontProperties']]] = None
@@ -529,7 +530,6 @@ class Visualizer(ManagerMixin):
                 Defaults to None.
                 `New in version 0.6.0.`
         """  # noqa: E501
-        from matplotlib.font_manager import FontProperties
         check_type('texts', texts, (str, list))
         if isinstance(texts, str):
             texts = [texts]
@@ -555,28 +555,6 @@ class Visualizer(ManagerMixin):
 
         check_type_and_length('colors', colors, (str, tuple, list), num_text)
         colors = value2list(colors, (str, tuple), num_text)
-        colors = color_val_matplotlib(colors)  # type: ignore
-
-        check_type_and_length('vertical_alignments', vertical_alignments,
-                              (str, list), num_text)
-        vertical_alignments = value2list(vertical_alignments, str, num_text)
-
-        check_type_and_length('horizontal_alignments', horizontal_alignments,
-                              (str, list), num_text)
-        horizontal_alignments = value2list(horizontal_alignments, str,
-                                           num_text)
-
-        check_type_and_length('font_families', font_families, (str, list),
-                              num_text)
-        font_families = value2list(font_families, str, num_text)
-
-        if font_properties is None:
-            font_properties = [None for _ in range(num_text)]  # type: ignore
-        else:
-            check_type_and_length('font_properties', font_properties,
-                                  (FontProperties, list), num_text)
-            font_properties = value2list(font_properties, FontProperties,
-                                         num_text)
 
         if bboxes is None:
             bboxes = [None for _ in range(num_text)]  # type: ignore
@@ -585,6 +563,28 @@ class Visualizer(ManagerMixin):
             bboxes = value2list(bboxes, dict, num_text)
 
         if self.backend == 'matplotlib':
+            from matplotlib.font_manager import FontProperties
+            colors = color_val_matplotlib(colors)  # type: ignore
+            check_type_and_length('vertical_alignments', vertical_alignments,
+                                  (str, list), num_text)
+            vertical_alignments = value2list(vertical_alignments, str,
+                                             num_text)
+
+            check_type_and_length('horizontal_alignments',
+                                  horizontal_alignments, (str, list), num_text)
+            horizontal_alignments = value2list(horizontal_alignments, str,
+                                               num_text)
+            check_type_and_length('font_families', font_families, (str, list),
+                                  num_text)
+            font_families = value2list(font_families, str, num_text)
+            if font_properties is None:
+                font_properties = [None
+                                   for _ in range(num_text)]  # type: ignore
+            else:
+                check_type_and_length('font_properties', font_properties,
+                                      (FontProperties, list), num_text)
+                font_properties = value2list(font_properties, FontProperties,
+                                             num_text)
             for i in range(num_text):
                 self.ax_save.text(
                     positions[i][0],
@@ -598,7 +598,49 @@ class Visualizer(ManagerMixin):
                     fontproperties=font_properties[i],
                     color=colors[i])
         else:
-            pass
+            warnings.warn(
+                'When using cv2 as the backend for visualizer, '
+                'because `cv.putText(img, text, org, fontFace, '
+                'fontScale, color[, thickness[, lineType[, '
+                'bottomLeftOrigin]]])->img`, '
+                'the parameters `fontproperties`、'
+                '`vertical_alignments` and `horizontal_alignments` '
+                'will be discarded and not called.', UserWarning)
+            colors = color_val_opencv(colors)
+            if font_families == 'sans-serif':
+                font_families = cv2.FONT_HERSHEY_SIMPLEX
+            font_families = value2list(font_families, int, num_text)
+            font_sizes = [font_size / 20.0 for font_size in font_sizes]
+            for i in range(num_text):
+                (text_width, text_height) = cv2.getTextSize(
+                    texts[i], font_families[i], font_sizes[i], thickness=2)[0]
+                pos = (int(positions[i][0]),
+                       int(positions[i][1] + text_height))
+                cv2.putText(
+                    self._image,
+                    text=texts[i],
+                    org=pos,
+                    color=colors[i],
+                    fontFace=font_families[i],
+                    fontScale=font_sizes[i],
+                    thickness=2)
+                if bboxes is not None:
+                    x1 = int(positions[i][0])
+                    y1 = int(positions[i][1] - 5 * font_sizes[i])
+                    x2 = int(x1 + text_width)
+                    y2 = int(y1 + text_height + 15 * font_sizes[i])
+                    self.draw_bboxes(
+                        bboxes=np.array([x1, y1, x2, y2]),
+                        line_styles=bboxes[i]['linestyle']
+                        if 'linestyle' in bboxes[i] else None,
+                        line_widths=bboxes[i]['linewidth']
+                        if 'linewidth ' in bboxes[i] else 2,
+                        edge_colors=bboxes[i]['edgecolor']
+                        if 'edgecolor' in bboxes[i] else 'g',
+                        face_colors=bboxes[i]['facecolor']
+                        if 'facecolor' in bboxes[i] else 'none',
+                        alpha=bboxes[i]['alpha']
+                        if 'alpha' in bboxes[i] else 1)
         return self
 
     @master_only
