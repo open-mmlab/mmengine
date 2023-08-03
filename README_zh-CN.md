@@ -58,7 +58,7 @@
 
 ## 最近进展
 
-最新版本 v0.8.3 在 2023.07.31 发布。
+最新版本 v0.8.4 在 2023.08.03 发布。
 
 亮点：
 
@@ -80,7 +80,7 @@
 
   ![new-config-zh_cn](https://github.com/open-mmlab/mmengine/assets/57566630/c2da9a73-c911-4f78-8253-e3f29496d9f8)
 
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v083-07312023)
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v083-08032023)
 
 ## 目录
 

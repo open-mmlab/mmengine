@@ -1,5 +1,24 @@
 # Changelog of v0.x
 
+## v0.8.4 (03/08/2023)
+
+### New Features & Enhancements
+
+- Support callable `collate_fn` for FlexibleRunner by [@LZHgrla](https://github.com/LZHgrla) in https://github.com/open-mmlab/mmengine/pull/1284
+
+### Bug fixes
+
+- Skip adding `vis_backends` when `save_dir` is not set by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1289
+- Fix dumping pure python style config in colab by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1290
+
+### Docs
+
+- Find unused parameters by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1288
+
+### Contributors
+
+A total of 3 developers contributed to this release. Thanks [@HAOCHENYE](https://github.com/HAOCHENYE), [@zhouzaida](https://github.com/zhouzaida), [@LZHgrla](https://github.com/LZHgrla)
+
 ## v0.8.3 (31/07/2023)
 
 ### Highlights
