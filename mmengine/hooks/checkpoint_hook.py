@@ -461,11 +461,11 @@ class CheckpointHook(Hook):
         # from all ranks, but skip the following procedure.
         if not is_main_process():
             return
-        
+
         save_file = osp.join(runner.work_dir, 'last_checkpoint')
         with open(save_file, 'w') as f:
             f.write(self.last_ckpt)  # type: ignore
-        
+
         # in some environments, `os.symlink` is not supported, then set
         # 'create_symlink' to False.
         if self.create_symlink:
