@@ -1,4 +1,4 @@
-# Segmentation Task Example
+# Train a Segmentation Model
 
 This segmentation task example will be divided into the following steps:
 
