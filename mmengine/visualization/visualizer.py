@@ -176,6 +176,7 @@ class Visualizer(ManagerMixin):
             save_dir = osp.join(save_dir, 'vis_data')
 
         for vis_backend in vis_backends:
+            name = None
             if isinstance(vis_backend, dict):
                 name = vis_backend.pop('name', None)
                 vis_backend.setdefault('save_dir', save_dir)
