@@ -120,6 +120,16 @@ class TestVisualizer(TestCase):
 
         VISBACKENDS.module_dict.pop('CustomLocalVisBackend')
 
+        visualizer = Visualizer.get_instance(
+            'test_save_dir',
+            vis_backends=dict(type='CustomLocalVisBackend', save_dir='tmp'))
+
+        visualizer = Visualizer.get_instance(
+            'test_save_dir', vis_backends=[CustomLocalVisBackend('tmp')])
+
+        visualizer = Visualizer.get_instance(
+            'test_save_dir', vis_backends=CustomLocalVisBackend('tmp'))
+
     def test_set_image(self):
         visualizer = Visualizer()
         visualizer.set_image(self.image)

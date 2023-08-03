@@ -24,6 +24,9 @@ from mmengine.visualization.utils import (check_type, check_type_and_length,
                                           value2list, wait_continue)
 from mmengine.visualization.vis_backend import BaseVisBackend
 
+VisBackendsType = Union[List[Union[List, BaseDataElement]], BaseDataElement,
+                        dict, None]
+
 
 @VISUALIZERS.register_module()
 class Visualizer(ManagerMixin):
@@ -154,32 +157,36 @@ class Visualizer(ManagerMixin):
         self,
         name='visualizer',
         image: Optional[np.ndarray] = None,
-        vis_backends: Union[List[Union[List, BaseDataElement]], None] = None,
+        vis_backends: VisBackendsType = None,
         save_dir: Optional[str] = None,
         fig_save_cfg=dict(frameon=False),
         fig_show_cfg=dict(frameon=False)
     ) -> None:
         super().__init__(name)
         self._dataset_meta: Optional[dict] = None
-        self._vis_backends: Union[Dict, Dict[str, BaseVisBackend]] = dict()
+        self._vis_backends: Dict[str, BaseVisBackend] = {}
 
         if vis_backends is None:
             vis_backends = []
 
         if isinstance(vis_backends, (dict, BaseVisBackend)):
-            vis_backends = [vis_backends]
+            vis_backends = [vis_backends]  # type: ignore
 
         if not is_seq_of(vis_backends, (dict, BaseVisBackend)):
-            raise TypeError('vis_backend must be a list of dicts or a list '
+            raise TypeError('vis_backends must be a list of dicts or a list '
                             'of BaseBackend instances')
         if save_dir is not None:
             save_dir = osp.join(save_dir, 'vis_data')
 
-        for vis_backend in vis_backends:
+        for vis_backend in vis_backends:  # type: ignore
             name = None
             if isinstance(vis_backend, dict):
                 name = vis_backend.pop('name', None)
                 vis_backend.setdefault('save_dir', save_dir)
+                # Using `get` could be a better chioce here to get the
+                # signature of `VisBackend__init__`.  However, we use
+                # `Registry.build` to build the visbackend first to avoid the
+                # risk of scope error when using `Registry.get`
                 vis_backend = VISBACKENDS.build(vis_backend)
 
             save_dir_arg = inspect.signature(
@@ -188,7 +195,7 @@ class Visualizer(ManagerMixin):
             if (save_dir_arg is not None
                     and (save_dir_arg.default is save_dir_arg.empty
                          and save_dir is None)):
-                warnings.warn(f'Failed to build {vis_backend.__class__}, '
+                warnings.warn(f'Failed to add {vis_backend.__class__}, '
                               'please provide the `save_dir` argument.')
                 continue
 
