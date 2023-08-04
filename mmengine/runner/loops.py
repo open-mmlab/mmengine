@@ -51,8 +51,7 @@ class EpochBasedTrainLoop(BaseLoop):
         self._iter = 0
         self.val_begin = val_begin
         self.val_interval = val_interval
-        if num_batch_per_epoch is not None:
-            self._num_batch_per_epoch = num_batch_per_epoch
+        self._num_batch_per_epoch = num_batch_per_epoch
         # This attribute will be updated by `EarlyStoppingHook`
         # when it is enabled.
         self.stop_training = False
@@ -232,8 +231,7 @@ class IterBasedTrainLoop(BaseLoop):
         self._iter = 0
         self.val_begin = val_begin
         self.val_interval = val_interval
-        if num_batch_per_epoch is not None:
-            self._num_batch_per_epoch = num_batch_per_epoch
+        self._num_batch_per_epoch = num_batch_per_epoch
         # This attribute will be updated by `EarlyStoppingHook`
         # when it is enabled.
         self.stop_training = False
@@ -362,8 +360,7 @@ class ValLoop(BaseLoop):
                 'visualizer will be None.',
                 logger='current',
                 level=logging.WARNING)
-        if num_batch_per_epoch is not None:
-            self._num_batch_per_epoch = num_batch_per_epoch
+        self._num_batch_per_epoch = num_batch_per_epoch
         self.fp16 = fp16
 
     def run(self) -> dict:
@@ -440,8 +437,7 @@ class TestLoop(BaseLoop):
                 'visualizer will be None.',
                 logger='current',
                 level=logging.WARNING)
-        if num_batch_per_epoch is not None:
-            self._num_batch_per_epoch = num_batch_per_epoch
+        self._num_batch_per_epoch = num_batch_per_epoch
         self.fp16 = fp16
 
     def run(self) -> dict:
