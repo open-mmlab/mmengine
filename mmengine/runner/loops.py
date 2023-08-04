@@ -340,6 +340,7 @@ class ValLoop(BaseLoop):
                  runner,
                  dataloader: Union[DataLoader, Dict],
                  evaluator: Union[Evaluator, Dict, List],
+                 num_batch_per_epoch: Optional[int] = None,
                  fp16: bool = False) -> None:
         super().__init__(runner, dataloader)
 
@@ -361,6 +362,8 @@ class ValLoop(BaseLoop):
                 'visualizer will be None.',
                 logger='current',
                 level=logging.WARNING)
+        if num_batch_per_epoch is not None:
+            self.num_batch_per_epoch = num_batch_per_epoch
         self.fp16 = fp16
 
     def run(self) -> dict:
@@ -369,6 +372,9 @@ class ValLoop(BaseLoop):
         self.runner.call_hook('before_val_epoch')
         self.runner.model.eval()
         for idx, data_batch in enumerate(self.dataloader):
+            if self.num_batch_per_epoch is not None:
+                if idx > self.num_batch_per_epoch:
+                    break
             self.run_iter(idx, data_batch)
 
         # compute metrics
@@ -415,6 +421,7 @@ class TestLoop(BaseLoop):
                  runner,
                  dataloader: Union[DataLoader, Dict],
                  evaluator: Union[Evaluator, Dict, List],
+                 num_batch_per_epoch: Optional[int] = None,
                  fp16: bool = False):
         super().__init__(runner, dataloader)
 
@@ -433,6 +440,8 @@ class TestLoop(BaseLoop):
                 'visualizer will be None.',
                 logger='current',
                 level=logging.WARNING)
+        if num_batch_per_epoch is not None:
+            self.num_batch_per_epoch = num_batch_per_epoch
         self.fp16 = fp16
 
     def run(self) -> dict:
@@ -441,6 +450,9 @@ class TestLoop(BaseLoop):
         self.runner.call_hook('before_test_epoch')
         self.runner.model.eval()
         for idx, data_batch in enumerate(self.dataloader):
+            if self.num_batch_per_epoch is not None:
+                if idx > self.num_batch_per_epoch:
+                    break
             self.run_iter(idx, data_batch)
 
         # compute metrics

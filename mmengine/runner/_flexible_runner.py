@@ -996,6 +996,7 @@ class FlexibleRunner:
         else:
             loop = ValLoop(
                 **loop_cfg,
+                num_batch_per_epoch=self.num_batch_per_epoch,
                 runner=self,
                 dataloader=self._val_dataloader,
                 evaluator=self._val_evaluator)  # type: ignore
@@ -1038,6 +1039,7 @@ class FlexibleRunner:
         else:
             loop = TestLoop(
                 **loop_cfg,
+                num_batch_per_epoch=self.num_batch_per_epoch,
                 runner=self,
                 dataloader=self._test_dataloader,
                 evaluator=self._test_evaluator)  # type: ignore
