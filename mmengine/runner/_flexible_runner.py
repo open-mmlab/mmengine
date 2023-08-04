@@ -450,7 +450,6 @@ class FlexibleRunner:
             visualizer=cfg.get('visualizer'),
             default_scope=cfg.get('default_scope', 'mmengine'),
             randomness=cfg.get('randomness', dict(seed=None)),
-            num_batch_per_epoch=cfg.get('num_batch_per_epoch', None),
             cfg=cfg,
         )
 
@@ -950,10 +949,7 @@ class FlexibleRunner:
             by_epoch = loop_cfg.pop('by_epoch')
             if by_epoch:
                 loop = EpochBasedTrainLoop(
-                    **loop_cfg,
-                    runner=self,
-                    dataloader=self._train_dataloader,
-                    num_batch_per_epoch=self._num_batch_per_epoch)
+                    **loop_cfg, runner=self, dataloader=self._train_dataloader)
             else:
                 loop = IterBasedTrainLoop(
                     **loop_cfg, runner=self, dataloader=self._train_dataloader)
@@ -996,7 +992,6 @@ class FlexibleRunner:
         else:
             loop = ValLoop(
                 **loop_cfg,
-                num_batch_per_epoch=self._num_batch_per_epoch,
                 runner=self,
                 dataloader=self._val_dataloader,
                 evaluator=self._val_evaluator)  # type: ignore
@@ -1039,7 +1034,6 @@ class FlexibleRunner:
         else:
             loop = TestLoop(
                 **loop_cfg,
-                num_batch_per_epoch=self._num_batch_per_epoch,
                 runner=self,
                 dataloader=self._test_dataloader,
                 evaluator=self._test_evaluator)  # type: ignore
