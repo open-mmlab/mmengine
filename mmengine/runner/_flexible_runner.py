@@ -265,6 +265,7 @@ class FlexibleRunner:
         log_processor: Optional[Dict] = None,
         log_level: str = 'INFO',
         visualizer: Optional[Union[Visualizer, Dict]] = None,
+        num_batch_per_epoch: Optional[int] = None,
         default_scope: Optional[str] = 'mmengine',
         randomness: Dict = dict(seed=None),
         compile: Union[bool, Dict] = False,
@@ -298,6 +299,7 @@ class FlexibleRunner:
                 f'train_dataloader={train_dataloader}, '
                 f'train_cfg={train_cfg}, '
                 f'optim_wrapper={optim_wrapper}.')
+
         self._train_dataloader = train_dataloader
         self._train_loop = train_cfg
 
@@ -394,6 +396,7 @@ class FlexibleRunner:
         self.message_hub = self.build_message_hub()
         # visualizer used for writing log or visualizing all kinds of data
         self.visualizer = self.build_visualizer(visualizer)
+        self.num_batch_per_epoch = num_batch_per_epoch
         if self.cfg:
             self.visualizer.add_config(self.cfg)
 
@@ -447,6 +450,7 @@ class FlexibleRunner:
             visualizer=cfg.get('visualizer'),
             default_scope=cfg.get('default_scope', 'mmengine'),
             randomness=cfg.get('randomness', dict(seed=None)),
+            num_batch_per_epoch=cfg.get('num_batch_per_epoch', None),
             cfg=cfg,
         )
 
@@ -946,7 +950,10 @@ class FlexibleRunner:
             by_epoch = loop_cfg.pop('by_epoch')
             if by_epoch:
                 loop = EpochBasedTrainLoop(
-                    **loop_cfg, runner=self, dataloader=self._train_dataloader)
+                    **loop_cfg,
+                    runner=self,
+                    dataloader=self._train_dataloader,
+                    num_batch_per_epoch=self.num_batch_per_epoch)
             else:
                 loop = IterBasedTrainLoop(
                     **loop_cfg, runner=self, dataloader=self._train_dataloader)
