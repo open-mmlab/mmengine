@@ -52,7 +52,7 @@ class EpochBasedTrainLoop(BaseLoop):
         self.val_begin = val_begin
         self.val_interval = val_interval
         if num_batch_per_epoch is not None:
-            self.num_batch_per_epoch = num_batch_per_epoch
+            self._num_batch_per_epoch = num_batch_per_epoch
         # This attribute will be updated by `EarlyStoppingHook`
         # when it is enabled.
         self.stop_training = False
@@ -112,8 +112,8 @@ class EpochBasedTrainLoop(BaseLoop):
         self.runner.call_hook('before_train_epoch')
         self.runner.model.train()
         for idx, data_batch in enumerate(self.dataloader):
-            if self.num_batch_per_epoch is not None:
-                if idx > self.num_batch_per_epoch:
+            if self._num_batch_per_epoch is not None:
+                if idx > self._num_batch_per_epoch:
                     break
             self.run_iter(idx, data_batch)
 
@@ -233,7 +233,7 @@ class IterBasedTrainLoop(BaseLoop):
         self.val_begin = val_begin
         self.val_interval = val_interval
         if num_batch_per_epoch is not None:
-            self.num_batch_per_epoch = num_batch_per_epoch
+            self._num_batch_per_epoch = num_batch_per_epoch
         # This attribute will be updated by `EarlyStoppingHook`
         # when it is enabled.
         self.stop_training = False
@@ -363,7 +363,7 @@ class ValLoop(BaseLoop):
                 logger='current',
                 level=logging.WARNING)
         if num_batch_per_epoch is not None:
-            self.num_batch_per_epoch = num_batch_per_epoch
+            self._num_batch_per_epoch = num_batch_per_epoch
         self.fp16 = fp16
 
     def run(self) -> dict:
@@ -372,8 +372,8 @@ class ValLoop(BaseLoop):
         self.runner.call_hook('before_val_epoch')
         self.runner.model.eval()
         for idx, data_batch in enumerate(self.dataloader):
-            if self.num_batch_per_epoch is not None:
-                if idx > self.num_batch_per_epoch:
+            if self._num_batch_per_epoch is not None:
+                if idx > self._num_batch_per_epoch:
                     break
             self.run_iter(idx, data_batch)
 
@@ -441,7 +441,7 @@ class TestLoop(BaseLoop):
                 logger='current',
                 level=logging.WARNING)
         if num_batch_per_epoch is not None:
-            self.num_batch_per_epoch = num_batch_per_epoch
+            self._num_batch_per_epoch = num_batch_per_epoch
         self.fp16 = fp16
 
     def run(self) -> dict:
@@ -450,8 +450,8 @@ class TestLoop(BaseLoop):
         self.runner.call_hook('before_test_epoch')
         self.runner.model.eval()
         for idx, data_batch in enumerate(self.dataloader):
-            if self.num_batch_per_epoch is not None:
-                if idx > self.num_batch_per_epoch:
+            if self._num_batch_per_epoch is not None:
+                if idx > self._num_batch_per_epoch:
                     break
             self.run_iter(idx, data_batch)
 

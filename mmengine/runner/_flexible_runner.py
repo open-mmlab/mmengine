@@ -396,7 +396,7 @@ class FlexibleRunner:
         self.message_hub = self.build_message_hub()
         # visualizer used for writing log or visualizing all kinds of data
         self.visualizer = self.build_visualizer(visualizer)
-        self.num_batch_per_epoch = num_batch_per_epoch
+        self._num_batch_per_epoch = num_batch_per_epoch
         if self.cfg:
             self.visualizer.add_config(self.cfg)
 
@@ -953,7 +953,7 @@ class FlexibleRunner:
                     **loop_cfg,
                     runner=self,
                     dataloader=self._train_dataloader,
-                    num_batch_per_epoch=self.num_batch_per_epoch)
+                    num_batch_per_epoch=self._num_batch_per_epoch)
             else:
                 loop = IterBasedTrainLoop(
                     **loop_cfg, runner=self, dataloader=self._train_dataloader)
@@ -996,7 +996,7 @@ class FlexibleRunner:
         else:
             loop = ValLoop(
                 **loop_cfg,
-                num_batch_per_epoch=self.num_batch_per_epoch,
+                num_batch_per_epoch=self._num_batch_per_epoch,
                 runner=self,
                 dataloader=self._val_dataloader,
                 evaluator=self._val_evaluator)  # type: ignore
@@ -1039,7 +1039,7 @@ class FlexibleRunner:
         else:
             loop = TestLoop(
                 **loop_cfg,
-                num_batch_per_epoch=self.num_batch_per_epoch,
+                num_batch_per_epoch=self._num_batch_per_epoch,
                 runner=self,
                 dataloader=self._test_dataloader,
                 evaluator=self._test_evaluator)  # type: ignore
