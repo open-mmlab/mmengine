@@ -59,7 +59,6 @@ class FuncCallVisitor(ast.NodeTransformer):
         else:
             # 倒序遍历call_chain_list
             for i in range(len(call_chain_list) - 1, 0, -1):
-                print(ast.dump(call_node))
                 if isinstance(call_node, ast.Attribute
                               ) and call_node.attr == call_chain_list[i]:
                     call_node = call_node.value
@@ -168,14 +167,11 @@ class FunctionRecorder(Recorder):
 class RecorderHook(Hook):
     priority = 'LOWEST'
 
-    # RECORDER_MESSAGEHUB_NAME = "_recorder"
-
-    # recorder = AttributeRecorder()
-
-    def __init__(self, ):
+    def __init__(self, 
+                recorders: Optional[List[Dict]] = None):
         self.tensor_dict = defaultdict(list)
         self.origin_forward = None
-        pass
+        self._recorders = []
 
     def _get_ast(source_code):
         return ast.parse(source_code)
