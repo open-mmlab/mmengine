@@ -35,6 +35,10 @@ class AttributeRecorderAdder(ast.NodeTransformer):
         return [node, update_messagehub_node]
 
 
+# Take "x = self.conv1(x)" as an example
+# genertate "tmp_func_self_conv1 = self.conv1(x)"
+# and "x = tmp_func_self_conv1"
+# and "message_hub.update_info('conv1', tmp_func_conv1)"
 def get_node_name(func_name):
     return 'tmp_func_' + func_name
 
@@ -83,12 +87,11 @@ class FunctionRecorderAdder(ast.NodeTransformer):
     def visit_Assign(self, node):
         self.function_visitor.visit(node)
         if self.function_visitor.call_nodes:
-            assign_node = self.function_visitor.call_nodes[0]
+            assign_right_node = self.function_visitor.call_nodes[0]
             assign_node_name = get_node_name(self._target.replace('.', '_'))
-            # test = assign node
-            assign = ast.Assign(
+            assign_left_node = ast.Assign(
                 targets=[ast.Name(id=assign_node_name, ctx=ast.Store())],
-                value=assign_node)
+                value=assign_right_node)
             update_messagehub_node = ast.Expr(
                 value=ast.Call(
                     func=ast.Attribute(
@@ -101,7 +104,7 @@ class FunctionRecorderAdder(ast.NodeTransformer):
                     ],
                     keywords=[]))
             self.function_visitor.call_nodes.clear()
-            return [assign, update_messagehub_node, node]
+            return [assign_left_node, update_messagehub_node, node]
         return node
 
 
@@ -200,7 +203,6 @@ class RecorderHook(Hook):
 
         tree.body[0].body = [import_messagehub_node, get_messagehub_node
                              ] + func_body
-        # tree.body[0].body.insert(0, import_statement)
 
         for recorder in self._recorders.values():
             tree = recorder.rewrite(tree)
