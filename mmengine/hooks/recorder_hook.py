@@ -1,20 +1,17 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import ast
-import dis
 import inspect
 import textwrap
 import types
 from abc import ABCMeta, abstractmethod
-from collections import defaultdict
-from typing import Any, List, Optional, Tuple, Union
+from typing import Dict, List, Optional
 
-from mmengine.logging import HistoryBuffer, MessageHub
-from mmengine.registry import HOOKS
+from mmengine.logging import MessageHub
+from mmengine.registry import HOOKS, RECORDERS
 from . import Hook
 
 
 class AttributeRecorderAdder(ast.NodeTransformer):
-
     def __init__(self, target):
         super().__init__()
         self._target = target
@@ -22,7 +19,7 @@ class AttributeRecorderAdder(ast.NodeTransformer):
     def visit_Assign(self, node):
         if node.targets[0].id != self._target:
             return node
-        add2messagehub = ast.Expr(
+        update_messagehub_node = ast.Expr(
             value=ast.Call(
                 func=ast.Attribute(
                     value=ast.Name(id='message_hub', ctx=ast.Load()),
@@ -34,8 +31,7 @@ class AttributeRecorderAdder(ast.NodeTransformer):
                 ],
                 keywords=[]))
 
-        # 插入print语句
-        return [node, add2messagehub]
+        return [node, update_messagehub_node]
 
 
 def get_node_name(func_name):
@@ -57,7 +53,7 @@ class FuncCallVisitor(ast.NodeTransformer):
                 call_node.func,
                 ast.Name) and call_node.func.id == call_chain_list[0]
         else:
-            # 倒序遍历call_chain_list
+            # Traversal call_chain_list in reverse order
             for i in range(len(call_chain_list) - 1, 0, -1):
                 if isinstance(call_node, ast.Attribute
                               ) and call_node.attr == call_chain_list[i]:
@@ -90,13 +86,9 @@ class FunctionRecorderAdder(ast.NodeTransformer):
             assign_node_name = get_node_name(self._target.replace('.', '_'))
             # test = assign node
             assign = ast.Assign(
-                targets=[
-                    ast.Name(
-                        id=assign_node_name,
-                        ctx=ast.Store())
-                ],
+                targets=[ast.Name(id=assign_node_name, ctx=ast.Store())],
                 value=assign_node)
-            add2messagehub = ast.Expr(
+            update_messagehub_node = ast.Expr(
                 value=ast.Call(
                     func=ast.Attribute(
                         value=ast.Name(id='message_hub', ctx=ast.Load()),
@@ -108,7 +100,7 @@ class FunctionRecorderAdder(ast.NodeTransformer):
                     ],
                     keywords=[]))
             self.function_visitor.call_nodes.clear()
-            return [assign, add2messagehub, node]
+            return [assign, update_messagehub_node, node]
         return node
 
 
@@ -122,14 +114,12 @@ class Recorder(metaclass=ABCMeta):
         pass
 
 
-# AttributeRecorder
+@RECORDERS.register_module()
 class AttributeRecorder(Recorder):
 
     def __init__(self, target: str):
         super().__init__(target)
         self.visit_assign = self._get_adder_class()
-
-    # super.__init__()
 
     def _get_adder_class(self):
         return AttributeRecorderAdder(self._target)
@@ -144,6 +134,7 @@ class AttributeRecorder(Recorder):
         return new_ast_tree
 
 
+@RECORDERS.register_module()
 class FunctionRecorder(Recorder):
 
     def __init__(self, target: str):
@@ -167,34 +158,34 @@ class FunctionRecorder(Recorder):
 class RecorderHook(Hook):
     priority = 'LOWEST'
 
-    def __init__(self, 
-                recorders: Optional[List[Dict]] = None):
-        self.tensor_dict = defaultdict(list)
+    def __init__(self, recorders: Optional[List[Dict]] = None):
+        self.tensor_dict = {}
         self.origin_forward = None
-        self._recorders = []
+        self._recorders = {}
+        for recorder in recorders:
+            assert recorder.get('target') is not None
+            self.tensor_dict[recorder['target']] = list()
+            self._recorders[recorder['target']] = RECORDERS.build(recorder)
 
     def _get_ast(source_code):
         return ast.parse(source_code)
 
     def _modify_func(self, func):
-        # 获取函数的源代码
+        # Gets the source code for the function
         source = inspect.getsource(func)
         source = textwrap.dedent(source)
 
-        # 解析源代码为AST
+        # Parse source code as ast
         tree = ast.parse(source)
 
-        import_from_statement = ast.ImportFrom(
-            module='mmengine.logging.MessageHub',
-            names=[ast.alias(name='RecorderHook', asname=None)],
-            level=0)
-
         func_body = tree.body[0].body
-        import_messagehub_statement = ast.ImportFrom(
+        # import mmengine.logging.MessageHub
+        import_messagehub_node = ast.ImportFrom(
             module='mmengine.logging',
             names=[ast.alias(name='MessageHub')],
             level=0)
-        add_message_hub = ast.Assign(
+        # get messagehub instance
+        get_messagehub_node = ast.Assign(
             targets=[ast.Name(id='message_hub', ctx=ast.Store())],
             value=ast.Call(
                 func=ast.Attribute(
@@ -204,16 +195,15 @@ class RecorderHook(Hook):
                 args=[],
                 keywords=[]))
 
-        tree.body[0].body = [import_messagehub_statement, add_message_hub
+        tree.body[0].body = [import_messagehub_node, get_messagehub_node
                              ] + func_body
         # tree.body[0].body.insert(0, import_statement)
 
-        # 修改AST
-        # tree = AttributeRecorder('x').rewrite(tree)
-        tree = FunctionRecorder('self.resnet').rewrite(tree)
+        for recorder in self._recorders.values():
+            tree = recorder.rewrite(tree)
         tree = ast.fix_missing_locations(tree)
 
-        # 编译修改后的AST为一个新的函数
+        # Compile the modified ast as a new function
         namespace = {}
         exec(
             compile(tree, filename='<ast>', mode='exec'), func.__globals__,
@@ -226,16 +216,11 @@ class RecorderHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
-        log_scalars = dict(loss=HistoryBuffer())
-        runtime_info = dict()
-        resumed_keys = dict(loss=True)
-        self.message_hub2 = MessageHub.get_current_instance()
-
+        # get messagehub instance and store it.
+        self.message_hub = MessageHub.get_current_instance()
+        # get model and modify its forward function
         model = runner.model
-        print('---------------------------')
-        # breakpoint()
         self.origin_forward = model.forward
-
         model.forward = types.MethodType(
             self._modify_func(model.forward), model)
 
@@ -244,16 +229,8 @@ class RecorderHook(Hook):
                          batch_idx: int,
                          data_batch=None,
                          outputs=None) -> None:
-
-        # print(self.message_hub2.__dict__)
-        # print(self.message_hub2.get_info("task"))
-        self.tensor_dict['task'].append(self.message_hub2.get_info('task'))
-
-    # def before_train(self, runner) -> None:
-    #     model = runner.model
-
-    #     model.forward = types.MethodType(
-    #         self._modify_func(model.forward), model)
+        for key in self.tensor_dict.keys():
+            self.tensor_dict[key].append(self.message_hub.get_info(key))
 
     def after_train(self, runner) -> None:
         runner.model.forward = self.origin_forward
