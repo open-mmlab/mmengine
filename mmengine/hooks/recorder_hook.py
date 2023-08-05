@@ -12,7 +12,9 @@ from mmengine.logging import HistoryBuffer, MessageHub
 from mmengine.registry import HOOKS
 from . import Hook
 
+
 class AttributeRecorderAdder(ast.NodeTransformer):
+
     def __init__(self, target):
         super().__init__()
         self._target = target
@@ -35,38 +37,48 @@ class AttributeRecorderAdder(ast.NodeTransformer):
         # 插入print语句
         return [node, add2messagehub]
 
+
 def get_node_name(func_name):
-    return "tmp_func_" + func_name
+    return 'tmp_func_' + func_name
+
 
 class FuncCallVisitor(ast.NodeTransformer):
+
     def __init__(self, func_name):
         self.func_name = func_name
         self.call_nodes = []
-    
+
     def is_target_call(self, call_node):
         assert isinstance(call_node, ast.Call)
         call_node = call_node.func
-        call_chain_list = self.func_name.split(".")
+        call_chain_list = self.func_name.split('.')
         if len(call_chain_list) == 1:
-            return isinstance(call_node.func, ast.Name) and call_node.func.id == call_chain_list[0] 
+            return isinstance(
+                call_node.func,
+                ast.Name) and call_node.func.id == call_chain_list[0]
         else:
             # 倒序遍历call_chain_list
             for i in range(len(call_chain_list) - 1, 0, -1):
                 print(ast.dump(call_node))
-                if isinstance(call_node, ast.Attribute) and call_node.attr == call_chain_list[i]:
+                if isinstance(call_node, ast.Attribute
+                              ) and call_node.attr == call_chain_list[i]:
                     call_node = call_node.value
                 else:
                     return False
-            return isinstance(call_node, ast.Name) and call_node.id == call_chain_list[0]
+            return isinstance(call_node,
+                              ast.Name) and call_node.id == call_chain_list[0]
 
     def visit_Call(self, node):
         if not self.is_target_call(node):
             return node
-        new_node = ast.Name(id=get_node_name(self.func_name.replace(".", "_")), ctx=ast.Load())
-        self.call_nodes.append(node)        
+        new_node = ast.Name(
+            id=get_node_name(self.func_name.replace('.', '_')), ctx=ast.Load())
+        self.call_nodes.append(node)
         return new_node
 
+
 class FunctionRecorderAdder(ast.NodeTransformer):
+
     def __init__(self, target):
         super().__init__()
         self._target = target
@@ -76,11 +88,30 @@ class FunctionRecorderAdder(ast.NodeTransformer):
         self.function_visitor.visit(node)
         if self.function_visitor.call_nodes:
             assign_node = self.function_visitor.call_nodes[0]
+            assign_node_name = get_node_name(self._target.replace('.', '_'))
             # test = assign node
-            assign = ast.Assign(targets=[ast.Name(id=get_node_name(self._target.replace(".", "_")), ctx=ast.Store())], value=assign_node)
+            assign = ast.Assign(
+                targets=[
+                    ast.Name(
+                        id=assign_node_name,
+                        ctx=ast.Store())
+                ],
+                value=assign_node)
+            add2messagehub = ast.Expr(
+                value=ast.Call(
+                    func=ast.Attribute(
+                        value=ast.Name(id='message_hub', ctx=ast.Load()),
+                        attr='update_info',
+                        ctx=ast.Load()),
+                    args=[
+                        ast.Constant(value=self._target),
+                        ast.Name(id=assign_node_name, ctx=ast.Load())
+                    ],
+                    keywords=[]))
             self.function_visitor.call_nodes.clear()
-            return [assign, node]
+            return [assign, add2messagehub, node]
         return node
+
 
 class Recorder(metaclass=ABCMeta):
 
@@ -107,13 +138,15 @@ class AttributeRecorder(Recorder):
     def rewrite(self, ast_tree):
         new_ast_tree = self.visit_assign.visit(ast_tree)
         new_ast_tree = ast.fix_missing_locations(new_ast_tree)
-        
+
         modified_source_code = ast.unparse(new_ast_tree)
         print(modified_source_code)
 
         return new_ast_tree
 
+
 class FunctionRecorder(Recorder):
+
     def __init__(self, target: str):
         super().__init__(target)
         self.visit_assign = self._get_adder_class()
@@ -124,11 +157,12 @@ class FunctionRecorder(Recorder):
     def rewrite(self, ast_tree):
         new_ast_tree = self.visit_assign.visit(ast_tree)
         new_ast_tree = ast.fix_missing_locations(new_ast_tree)
-        
+
         modified_source_code = ast.unparse(new_ast_tree)
         print(modified_source_code)
 
         return new_ast_tree
+
 
 @HOOKS.register_module()
 class RecorderHook(Hook):
