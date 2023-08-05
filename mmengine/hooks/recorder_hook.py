@@ -1,12 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import ast
 import inspect
+import logging
 import textwrap
 import types
 from abc import ABCMeta, abstractmethod
 from typing import Any, Dict, List, Optional
 
-from mmengine.logging import MessageHub
+from mmengine.logging import MessageHub, print_log
 from mmengine.registry import HOOKS, RECORDERS
 from . import Hook
 
@@ -129,13 +130,7 @@ class AttributeRecorder(Recorder):
         return AttributeRecorderAdder(self._target)
 
     def rewrite(self, ast_tree):
-        new_ast_tree = self.visit_assign.visit(ast_tree)
-        new_ast_tree = ast.fix_missing_locations(new_ast_tree)
-
-        modified_source_code = ast.unparse(new_ast_tree)
-        print(modified_source_code)
-
-        return new_ast_tree
+        return self.visit_assign.visit(ast_tree)
 
 
 @RECORDERS.register_module()
@@ -149,23 +144,29 @@ class FunctionRecorder(Recorder):
         return FunctionRecorderAdder(self._target)
 
     def rewrite(self, ast_tree):
-        new_ast_tree = self.visit_assign.visit(ast_tree)
-        new_ast_tree = ast.fix_missing_locations(new_ast_tree)
-
-        modified_source_code = ast.unparse(new_ast_tree)
-        print(modified_source_code)
-
-        return new_ast_tree
+        return self.visit_assign.visit(ast_tree)
 
 
 @HOOKS.register_module()
 class RecorderHook(Hook):
     priority = 'LOWEST'
 
-    def __init__(self, recorders: Optional[List[Dict]] = None):
+    def __init__(self,
+                 recorders: Optional[List[Dict]] = None,
+                 print_modification: bool = True,
+                 save_dir: str = ''):
         self.tensor_dict: Dict[str, Any] = {}
         self.origin_forward = None
         self._recorders: Dict[str, Recorder] = {}
+        self._print_modification = print_modification
+        if not save_dir:
+            print_log(
+                '`RecorderHook` cannot save the tensor values '
+                'because save_dir is None.',
+                logger='current',
+                level=logging.WARNING)
+        self._save_dir = save_dir
+
         if recorders is None:
             raise ValueError('recorders not initialized')
         for recorder in recorders:
@@ -206,6 +207,14 @@ class RecorderHook(Hook):
 
         for recorder in self._recorders.values():
             tree = recorder.rewrite(tree)
+            if self._print_modification:
+                new_tree = ast.fix_missing_locations(tree)
+                modified_source_code = ast.unparse(new_tree)
+                print_log(
+                    f'After modification, the source code is:\n'
+                    f'{modified_source_code}',
+                    logger='current',
+                    level=logging.INFO)
         tree = ast.fix_missing_locations(tree)
 
         # Compile the modified ast as a new function
@@ -238,4 +247,6 @@ class RecorderHook(Hook):
             self.tensor_dict[key].append(self.message_hub.get_info(key))
 
     def after_train(self, runner) -> None:
+        import pickle
         runner.model.forward = self.origin_forward
+        pickle.dump(self.tensor_dict, open(self._save_dir + 'tensor', 'wb'))
