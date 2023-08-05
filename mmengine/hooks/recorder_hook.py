@@ -4,7 +4,7 @@ import inspect
 import textwrap
 import types
 from abc import ABCMeta, abstractmethod
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from mmengine.logging import MessageHub
 from mmengine.registry import HOOKS, RECORDERS
@@ -12,6 +12,7 @@ from . import Hook
 
 
 class AttributeRecorderAdder(ast.NodeTransformer):
+
     def __init__(self, target):
         super().__init__()
         self._target = target
@@ -159,9 +160,11 @@ class RecorderHook(Hook):
     priority = 'LOWEST'
 
     def __init__(self, recorders: Optional[List[Dict]] = None):
-        self.tensor_dict = {}
+        self.tensor_dict: Dict[str, Any] = {}
         self.origin_forward = None
-        self._recorders = {}
+        self._recorders: Dict[str, Recorder] = {}
+        if recorders is None:
+            raise ValueError('recorders not initialized')
         for recorder in recorders:
             assert recorder.get('target') is not None
             self.tensor_dict[recorder['target']] = list()
