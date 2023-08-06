@@ -819,7 +819,7 @@ class Visualizer(ManagerMixin):
             edge_colors = color_val_opencv(edge_colors)
             if line_styles is None:
                 line_styles = [cv2.LINE_8 for _ in range(len(circles))]
-            check_type_and_length('line_styles', line_styles, (int, list),
+            check_type_and_length('circles', line_styles, (int, list),
                                   len(circles))
             check_type_and_length('line_widths', line_widths,
                                   (int, float, list), len(line_widths))
