@@ -822,7 +822,7 @@ class Visualizer(ManagerMixin):
             check_type_and_length('circles', line_styles, (int, list),
                                   len(circles))
             check_type_and_length('line_widths', line_widths,
-                                  (int, float, list), len(line_widths))
+                                  (int, float, list), len(circles))
             overlay = self._image.copy()
             if face_colors != 'none':
                 if isinstance(face_colors, str):
