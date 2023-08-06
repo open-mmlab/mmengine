@@ -426,34 +426,36 @@ class Visualizer(ManagerMixin):
                 marker=marker)
         else:
             positions = positions.tolist()
-            if isinstance(colors, str):
+            if isinstance(colors, str) or isinstance(colors, tuple):
                 colors = [colors] * len(positions)
             colors = color_val_opencv(colors)
             if sizes is not None:
                 sizes = tensor2ndarray(sizes)
-            else:
-                sizes = [6] * len(positions)
             if marker is None:
-                for pos, color, size in zip(positions, colors, sizes):
+                for i, pos in enumerate(positions):
                     pos = (int(pos[0]), int(pos[1]))
                     cv2.circle(
                         img=self._image,
                         center=pos,
-                        radius=int(size,
-                        color=colors,
+                        radius=int(sizes[i]) if sizes is not None else 6,
+                        color=colors[i],
                         thickness=-1)
             else:
                 assert isinstance(
                     marker,
                     int), ('The type of `marker` in `cv2` should be int, '
                            f'but got {type(marker)}')
-                for i, pos in enumerate(positions):
-                    cv2.drawMarker(
-                        img=self._image,
-                        position=pos,
-                        color=colors[i],
-                        markerType=marker,
-                        markerSize=int(sizes[i]) if sizes is not None else 20)
+                if sizes is None:
+                    sizes = [20] * len(positions)
+                for pos, color, size in zip(positions, colors, sizes):
+                    kwargs = {
+                        'img': self._image,
+                        'position': pos,
+                        'color': color,
+                        'markerType': marker,
+                        'markerSize': int(size)
+                    }
+                    cv2.drawMarker(**kwargs)
 
         return self
 
@@ -466,7 +468,7 @@ class Visualizer(ManagerMixin):
         colors: Union[str, tuple, List[Union[str, tuple]]] = 'g',
         vertical_alignments: Union[str, List[str]] = 'top',
         horizontal_alignments: Union[str, List[str]] = 'left',
-        font_families: Union[str, int, List[Union[str, int]] = 'sans-serif',
+        font_families: Union[str, int, List[Union[str, int]]] = 'sans-serif',
         bboxes: Optional[Union[dict, List[dict]]] = None,
         font_properties: Optional[Union['FontProperties',
                                         List['FontProperties']]] = None
@@ -819,31 +821,33 @@ class Visualizer(ManagerMixin):
             edge_colors = color_val_opencv(edge_colors)
             if line_styles is None:
                 line_styles = [cv2.LINE_8 for _ in range(len(circles))]
-            check_type_and_length('circles', line_styles, (int, list),
+            check_type_and_length('line_styles', line_styles, (int, list),
                                   len(circles))
             check_type_and_length('line_widths', line_widths,
-                                  (int, float, list), len(circles))
+                                  (int, float, list), len(line_widths))
             overlay = self._image.copy()
             if face_colors != 'none':
                 if isinstance(face_colors, str):
                     face_colors = [face_colors] * len(circles)
                 face_colors = color_val_opencv(face_colors)
-            for i in range(len(circles)):
-                if face_colors != 'none':
-                    cv2.circle(
-                        img=self._image,
-                        center=(int(center[i][0]), int(center[i][1])),
-                        radius=int(radius[i]),
-                        color=face_colors[i],
-                        lineType=int(line_styles[i]),
-                        thickness=-1)
-                cv2.circle(
-                    img=self._image,
-                    center=(int(center[i][0]), int(center[i][1])),
-                    radius=int(radius[i]),
-                    color=edge_colors[i],
-                    lineType=int(line_styles[i]),
-                    thickness=int(line_widths[i]))
+            else:
+                face_colors = ['None'] * len(circles)
+            for ct, radiu, line_style, face_color, edge_color, line_width in \
+                    zip(center, radius, line_styles,
+                        face_colors, edge_colors, line_widths):
+                kwargs = {
+                    'img': self._image,
+                    'center': (int(ct[0]), int(ct[1])),
+                    'radius': int(radiu),
+                    'lineType': int(line_style)
+                }
+                if face_color != 'None':
+                    kwargs['color'] = face_color
+                    kwargs['thickness'] = -1
+                    cv2.circle(**kwargs)
+                kwargs['color'] = edge_color
+                kwargs['thickness'] = int(line_width)
+                cv2.circle(**kwargs)
             cv2.addWeighted(self._image, alpha, overlay, 1 - alpha, 0,
                             self._image)
         return self
@@ -931,25 +935,28 @@ class Visualizer(ManagerMixin):
                 if isinstance(face_colors, str):
                     face_colors = [face_colors] * len(bboxes)
                 face_colors = color_val_opencv(face_colors)
-            for i, bbox in enumerate(bboxes):
+            else:
+                face_colors = ['None'] * len(bboxes)
+            if not isinstance(line_widths, list):
+                line_widths = [line_widths] * len(bboxes)
+            for bbox, edge_color, face_color, line_style, line_width in zip(
+                    bboxes, edge_colors, face_colors, line_styles,
+                    line_widths):
                 pt1 = (int(bbox[0]), int(bbox[1]))
                 pt2 = (int(bbox[2]), int(bbox[3]))
-                if face_colors != 'none':
-                    cv2.rectangle(
-                        img=self._image,
-                        pt1=pt1,
-                        pt2=pt2,
-                        color=face_colors[i],
-                        lineType=line_styles[i],
-                        thickness=-1)
-                cv2.rectangle(
-                    img=self._image,
-                    pt1=pt1,
-                    pt2=pt2,
-                    color=edge_colors[i],
-                    lineType=line_styles[i],
-                    thickness=int(line_widths[i]) if isinstance(
-                        line_widths, list) else int(line_widths))
+                kwargs = {
+                    'img': self._image,
+                    'pt1': pt1,
+                    'pt2': pt2,
+                    'lineType': line_style
+                }
+                if face_color != 'None':
+                    kwargs['color'] = face_color
+                    kwargs['thickness'] = -1
+                    cv2.rectangle(**kwargs)
+                kwargs['color'] = edge_color
+                kwargs['thickness'] = line_width
+                cv2.rectangle(**kwargs)
             cv2.addWeighted(self._image, alpha, overlay, 1 - alpha, 0,
                             self._image)
         return self
@@ -1044,21 +1051,24 @@ class Visualizer(ManagerMixin):
                 if isinstance(face_colors, str):
                     face_colors = [face_colors] * len(polygons)
                 face_colors = color_val_opencv(face_colors)
-            for i, polygon in enumerate(polygons):
+            else:
+                face_colors = ['None'] * len(polygons)
+            for polygon, line_style, face_color, edge_color, line_width in zip(
+                    polygons, line_styles, face_colors, edge_colors,
+                    line_widths):
                 polygon = polygon.reshape((-1, 1, 2))
-                if face_colors != 'none':
-                    cv2.fillPoly(
-                        img=self._image,
-                        pts=[polygon],
-                        color=face_colors[i],
-                        lineType=line_styles[i])
-                cv2.polylines(
-                    img=self._image,
-                    pts=[polygon],
-                    isClosed=True,
-                    color=edge_colors[i],
-                    lineType=line_styles[i],
-                    thickness=line_widths[i])
+                kwargs = {
+                    'img': self._image,
+                    'pts': [polygon],
+                    'lineType': line_style
+                }
+                if face_color != 'None':
+                    kwargs['color'] = face_color,
+                    cv2.fillPoly(**kwargs)
+                kwargs['isClosed'] = True
+                kwargs['color'] = edge_color
+                kwargs['thickness'] = line_width
+                cv2.polylines(**kwargs)
             cv2.addWeighted(self._image, alpha, overlay, 1 - alpha, 0,
                             self._image)
         return self
