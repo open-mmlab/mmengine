@@ -431,14 +431,16 @@ class Visualizer(ManagerMixin):
             colors = color_val_opencv(colors)
             if sizes is not None:
                 sizes = tensor2ndarray(sizes)
+            else:
+                sizes = [6] * len(positions)
             if marker is None:
-                for i, pos in enumerate(positions):
+                for pos, color, size in zip(positions, colors, sizes):
                     pos = (int(pos[0]), int(pos[1]))
                     cv2.circle(
                         img=self._image,
                         center=pos,
-                        radius=int(sizes[i]) if sizes is not None else 6,
-                        color=colors[i],
+                        radius=int(size,
+                        color=colors,
                         thickness=-1)
             else:
                 assert isinstance(
