@@ -466,7 +466,7 @@ class Visualizer(ManagerMixin):
         colors: Union[str, tuple, List[Union[str, tuple]]] = 'g',
         vertical_alignments: Union[str, List[str]] = 'top',
         horizontal_alignments: Union[str, List[str]] = 'left',
-        font_families: Union[str, int, List[str], List[int]] = 'sans-serif',
+        font_families: Union[str, int, List[Union[str, int]] = 'sans-serif',
         bboxes: Optional[Union[dict, List[dict]]] = None,
         font_properties: Optional[Union['FontProperties',
                                         List['FontProperties']]] = None
