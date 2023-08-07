@@ -175,7 +175,7 @@ def _is_builtin_module(module_name: str) -> bool:
     if origin_path is None:
         return False
     origin_path = osp.abspath(origin_path)
-    if ('site-package' in origin_path
+    if ('site-package' in origin_path or 'dist-package' in origin_path
             or not origin_path.startswith(PYTHON_ROOT_DIR)):
         return False
     else:
