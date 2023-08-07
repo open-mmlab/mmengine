@@ -1348,11 +1348,13 @@ class TestRunner(TestCase):
         self.assertIsInstance(loop, CustomTrainLoop)
 
         # input is a dict and contains num_batch_per_epoch
-        cfg = dict(type='EpochBasedTrainLoop', num_batch_per_epoch=5)
+        cfg = dict(
+            type='EpochBasedTrainLoop', max_epochs=3, num_batch_per_epoch=5)
         loop = runner.build_train_loop(cfg)
         self.assertIsInstance(loop, EpochBasedTrainLoop)
 
-        cfg = dict(type='IterBasedTrainLoop', num_batch_per_epoch=5)
+        cfg = dict(
+            type='IterBasedTrainLoop', max_iters=3, num_batch_per_epoch=5)
         loop = runner.build_train_loop(cfg)
         self.assertIsInstance(loop, IterBasedTrainLoop)
 
