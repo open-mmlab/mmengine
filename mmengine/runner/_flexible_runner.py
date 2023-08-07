@@ -265,7 +265,6 @@ class FlexibleRunner:
         log_processor: Optional[Dict] = None,
         log_level: str = 'INFO',
         visualizer: Optional[Union[Visualizer, Dict]] = None,
-        num_batch_per_epoch: Optional[int] = None,
         default_scope: Optional[str] = 'mmengine',
         randomness: Dict = dict(seed=None),
         compile: Union[bool, Dict] = False,
@@ -396,7 +395,6 @@ class FlexibleRunner:
         self.message_hub = self.build_message_hub()
         # visualizer used for writing log or visualizing all kinds of data
         self.visualizer = self.build_visualizer(visualizer)
-        self._num_batch_per_epoch = num_batch_per_epoch
         if self.cfg:
             self.visualizer.add_config(self.cfg)
 

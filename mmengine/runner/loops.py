@@ -220,7 +220,6 @@ class IterBasedTrainLoop(BaseLoop):
             max_iters: int,
             val_begin: int = 1,
             val_interval: int = 1000,
-            num_batch_per_epoch: Optional[int] = None,
             dynamic_intervals: Optional[List[Tuple[int, int]]] = None) -> None:
         super().__init__(runner, dataloader)
         self._max_iters = int(max_iters)
@@ -231,7 +230,6 @@ class IterBasedTrainLoop(BaseLoop):
         self._iter = 0
         self.val_begin = val_begin
         self.val_interval = val_interval
-        self._num_batch_per_epoch = num_batch_per_epoch
         # This attribute will be updated by `EarlyStoppingHook`
         # when it is enabled.
         self.stop_training = False
