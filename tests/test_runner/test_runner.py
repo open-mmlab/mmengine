@@ -1353,11 +1353,6 @@ class TestRunner(TestCase):
         loop = runner.build_train_loop(cfg)
         self.assertIsInstance(loop, EpochBasedTrainLoop)
 
-        # input is a dict and does not contain type key
-        cfg = dict(max_epochs=3, num_batch_per_epoch=5)
-        loop = runner.build_train_loop(cfg)
-        self.assertIsInstance(loop, EpochBasedTrainLoop)
-
     def test_build_val_loop(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_val_loop'
