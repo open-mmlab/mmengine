@@ -79,6 +79,8 @@ class Visualizer(ManagerMixin):
             Defaults to empty dict.
         fig_show_cfg (dict): Keyword parameters of figure for showing.
             Defaults to empty dict.
+        backend (str): Draw backend config. It can be 'matplotlib' or 'cv2'.
+            Defaults to 'matplotlib'.
 
     Examples:
         >>> # Basic info methods
