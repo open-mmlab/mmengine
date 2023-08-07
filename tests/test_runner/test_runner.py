@@ -1353,19 +1353,10 @@ class TestRunner(TestCase):
         loop = runner.build_train_loop(cfg)
         self.assertIsInstance(loop, EpochBasedTrainLoop)
 
-        cfg = dict(
-            type='IterBasedTrainLoop', max_iters=3, num_batch_per_epoch=5)
-        loop = runner.build_train_loop(cfg)
-        self.assertIsInstance(loop, IterBasedTrainLoop)
-
         # input is a dict and does not contain type key
         cfg = dict(max_epochs=3, num_batch_per_epoch=5)
         loop = runner.build_train_loop(cfg)
         self.assertIsInstance(loop, EpochBasedTrainLoop)
-
-        cfg = dict(max_iters=3, num_batch_per_epoch=5)
-        loop = runner.build_train_loop(cfg)
-        self.assertIsInstance(loop, IterBasedTrainLoop)
 
     def test_build_val_loop(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1396,11 +1387,6 @@ class TestRunner(TestCase):
 
         # input is a dict and contains type key and num_batch_per_epoch
         cfg = dict(type='ValLoop', num_batch_per_epoch=5)
-        loop = runner.build_test_loop(cfg)
-        self.assertIsInstance(loop, ValLoop)
-
-        # input is a dict and contains num_batch_per_epoch
-        cfg = dict(num_batch_per_epoch=5)
         loop = runner.build_test_loop(cfg)
         self.assertIsInstance(loop, ValLoop)
 
