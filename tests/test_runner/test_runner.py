@@ -1354,7 +1354,7 @@ class TestRunner(TestCase):
         self.assertIsInstance(loop, EpochBasedTrainLoop)
 
         # input is a dict and does not contain type key
-        cfg = dict(max_epochs=3, num_batch_per_epoch=5)
+        cfg = dict(by_epoch=True, max_epochs=3, num_batch_per_epoch=5)
         loop = runner.build_train_loop(cfg)
         self.assertIsInstance(loop, EpochBasedTrainLoop)
 
