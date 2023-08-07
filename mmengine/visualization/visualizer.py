@@ -100,7 +100,7 @@ class Visualizer(ManagerMixin):
         >>>                y_datas=np.array([[1, 3], [2, 4]]),
         >>>                colors=['r', 'r'], line_widths=[1, 2])
         >>> vis.draw_texts(texts='MMEngine',
-        >>>               positions=np.array([2, 2]),
+        >>>                positions=np.array([2, 2]),
         >>>               colors='b')
         >>> vis.draw_texts(texts=['MMEngine','OpenMMLab'],
         >>>                positions=np.array([[2, 2], [5, 5]]),
