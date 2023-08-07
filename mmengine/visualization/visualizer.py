@@ -756,7 +756,8 @@ class Visualizer(ManagerMixin):
                                   len(lines))
             colors = color_val_opencv(colors)  # type:ignore
             line_widths = value2list(line_widths, (int, float), len(lines))
-            for line, color, line_width, line_style in zip(lines, colors, line_widths, line_styles):
+            for line, color, line_width, line_style in zip(
+                    lines, colors, line_widths, line_styles):
                 st_pos = (line[0][0], line[0][1])
                 ed_pos = (line[1][0], line[1][1])
                 kwargs = {
