@@ -362,6 +362,7 @@ runner.train()
 ## 生态项目
 
 - [APES: Attention-based Point Cloud Edge Sampling](https://github.com/JunweiZheng93/APES)
+- [DiffEngine: diffusers training toolbox with mmengine](https://github.com/okotaku/diffengine)
 
 ## OpenMMLab 的其他项目
 
