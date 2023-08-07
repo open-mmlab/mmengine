@@ -225,6 +225,9 @@ class Visualizer(ManagerMixin):
         if image is not None:
             self.set_image(image)
 
+        # When set to 20, the markers drawn by cv2 and matplotlib look similar
+        self._default_cv2_markersize = 20
+
     @property  # type: ignore
     @master_only
     def dataset_meta(self) -> Optional[dict]:
@@ -465,7 +468,7 @@ class Visualizer(ManagerMixin):
                         'The type of `marker` in `cv2` should be int, '
                         f'but got {type(marker)}')
                 if sizes is None:
-                    sizes = [20] * len(positions)
+                    sizes = [self._default_cv2_markersize] * len(positions)
                 for pos, color, size in zip(positions, colors, sizes):
                     kwargs = {
                         'img': self._image,
