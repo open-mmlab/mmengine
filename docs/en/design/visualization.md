@@ -13,7 +13,7 @@ Based on the above requirements, we proposed the `Visualizer` and various `VisBa
 
 - For convenience, the APIs provided by the `Visualizer` implement the drawing and storage functions.  As an internal property of `Visualizer`, `VisBackend` will be called by `Visualizer` to write data to different backends.
 - Considering that you may want to write data to multiple backends after drawing, `Visualizer` can be configured with multiple backends. When the user calls the storage API of the `Visualizer`, it will traverse and call all the specified APIs of `VisBackend` internally.
-- Considering the difference in drawing performance, the drawing `backend` is an internal property of `Visualizer`, and users can choose a drawing backend according to the usage scenario to achieve a balance between drawing performance and richness of drawing functions.
+- Considering the difference in drawing performance, the drawing `backend` is an internal property of `Visualizer`, and users can choose a drawing backend according to the usage scenario to balance drawing performance and richness of drawing functions.
 
 The UML diagram of the two is as follows.
 
