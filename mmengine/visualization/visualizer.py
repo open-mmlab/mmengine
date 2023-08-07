@@ -747,7 +747,7 @@ class Visualizer(ManagerMixin):
         center: Union[np.ndarray, torch.Tensor],
         radius: Union[np.ndarray, torch.Tensor],
         edge_colors: Union[str, tuple, List[Union[str, tuple]]] = 'g',
-        line_styles: Union[str, List[str]] = None,
+        line_styles: Union[str, List[str], None] = None,
         line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
         face_colors: Union[str, tuple, List[Union[str, tuple]]] = 'none',
         alpha: Union[float, int] = 0.8,
