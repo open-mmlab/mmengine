@@ -430,7 +430,7 @@ class Visualizer(ManagerMixin):
             positions = positions.tolist()
             if isinstance(colors, str) or isinstance(colors, tuple):
                 colors = [colors] * len(positions)
-            colors = color_val_opencv(colors)
+            colors = color_val_opencv(colors)  # type:ignore
             if sizes is not None:
                 sizes = tensor2ndarray(sizes)
             if marker is None:
@@ -616,7 +616,7 @@ class Visualizer(ManagerMixin):
                 'the parameters `fontproperties`、'
                 '`vertical_alignments` and `horizontal_alignments` '
                 'will be discarded and not called.', UserWarning)
-            colors = color_val_opencv(colors)
+            colors = color_val_opencv(colors)  # type:ignore
             if font_families == 'sans-serif':
                 font_families = cv2.FONT_HERSHEY_SIMPLEX
             font_families = value2list(font_families, int, num_text)
@@ -727,7 +727,7 @@ class Visualizer(ManagerMixin):
                 line_styles = [cv2.LINE_8 for _ in range(len(lines))]
             check_type_and_length('line_styles', line_styles, (int, list),
                                   len(lines))
-            colors = color_val_opencv(colors)
+            colors = color_val_opencv(colors)  # type:ignore
             for i, line in enumerate(lines):
                 st_pos = (line[0][0], line[0][1])
                 ed_pos = (line[1][0], line[1][1])
@@ -829,7 +829,7 @@ class Visualizer(ManagerMixin):
                 linestyles=line_styles)
             self.ax_save.add_collection(p)
         else:
-            edge_colors = color_val_opencv(edge_colors)
+            edge_colors = color_val_opencv(edge_colors)  # type:ignore
             if line_styles is None:
                 line_styles = [cv2.LINE_8 for _ in range(len(circles))]
             check_type_and_length('line_styles', line_styles, (int, list),
@@ -840,7 +840,7 @@ class Visualizer(ManagerMixin):
             if face_colors != 'none':
                 if isinstance(face_colors, str):
                     face_colors = [face_colors] * len(circles)
-                face_colors = color_val_opencv(face_colors)
+                face_colors = color_val_opencv(face_colors)  # type:ignore
             else:
                 face_colors = ['None'] * len(circles)
             for ct, radiu, line_style, face_color, edge_color, line_width in \
@@ -935,7 +935,7 @@ class Visualizer(ManagerMixin):
                 face_colors=face_colors)
         else:
             bboxes = bboxes.tolist()
-            edge_colors = color_val_opencv(edge_colors)
+            edge_colors = color_val_opencv(edge_colors)  # type:ignore
             if line_styles is None:
                 line_styles = [cv2.LINE_8 for _ in range(len(bboxes))]
             if isinstance(line_styles, int):
@@ -948,7 +948,7 @@ class Visualizer(ManagerMixin):
             if face_colors != 'none':
                 if isinstance(face_colors, str):
                     face_colors = [face_colors] * len(bboxes)
-                face_colors = color_val_opencv(face_colors)
+                face_colors = color_val_opencv(face_colors)  # type:ignore
             else:
                 face_colors = ['None'] * len(bboxes)
             if not isinstance(line_widths, list):
@@ -1054,7 +1054,7 @@ class Visualizer(ManagerMixin):
                 linewidths=line_widths)
             self.ax_save.add_collection(polygon_collection)
         else:
-            edge_colors = color_val_opencv(edge_colors)
+            edge_colors = color_val_opencv(edge_colors)  # type:ignore
             if line_styles is None:
                 line_styles = [cv2.LINE_8 for _ in range(len(polygons))]
             if isinstance(line_styles, int):
@@ -1067,7 +1067,7 @@ class Visualizer(ManagerMixin):
             if face_colors != 'none':
                 if isinstance(face_colors, str):
                     face_colors = [face_colors] * len(polygons)
-                face_colors = color_val_opencv(face_colors)
+                face_colors = color_val_opencv(face_colors)  # type:ignore
             else:
                 face_colors = ['None'] * len(polygons)
             for polygon, line_style, face_color, edge_color, line_width in zip(

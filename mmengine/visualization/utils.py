@@ -122,7 +122,7 @@ def color_val_matplotlib(
 
 def color_val_opencv(
     colors: Union[str, tuple, List[Union[str, tuple]]]
-) -> Union[str, tuple, List[Union[str, tuple]]]:
+) -> Union[tuple, List[tuple]]:
     """Convert various input in BGR order to BGR opencv color
     tuples,
     Args:
@@ -143,7 +143,7 @@ def color_val_opencv(
             color_val_opencv(color)  # type:ignore
             for color in colors
         ]
-        return colors
+        return colors  # type:ignore
     else:
         raise TypeError(f'Invalid type for color: {type(colors)}')
 
