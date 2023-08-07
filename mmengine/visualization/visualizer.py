@@ -389,7 +389,7 @@ class Visualizer(ManagerMixin):
                     colors: Union[str, tuple, List[Union[str, tuple]]] = 'g',
                     marker: Optional[Union[str, int]] = None,
                     sizes: Optional[Union[np.ndarray, torch.Tensor]] = None):
-        """Draw single or multiple points.
+        """Draw single or multiple points use backend define by self.backend.
 
         Args:
             positions (Union[np.ndarray, torch.Tensor]): Positions to draw.
@@ -401,7 +401,9 @@ class Visualizer(ManagerMixin):
                 for more details. Defaults to 'g.
             marker (str, optional): The marker style.
                 See :mod:`matplotlib.markers` for more information about
-                marker styles. Defaults to None.
+                marker styles in `matplotlib` backend. See: `cv::MarkerTypes`
+                for more information about marker styles in `cv2` backend.
+                Defaults to None.
             sizes (Optional[Union[np.ndarray, torch.Tensor]]): The marker size.
                 Defaults to None.
         """
@@ -473,7 +475,8 @@ class Visualizer(ManagerMixin):
         font_properties: Optional[Union['FontProperties',
                                         List['FontProperties']]] = None
     ) -> 'Visualizer':
-        """Draw single or multiple text boxes.
+        """Draw single or multiple text boxes use backend define by
+        self.backend.
 
         Args:
             texts (Union[str, List[str]]): Texts to draw.
@@ -498,7 +501,7 @@ class Visualizer(ManagerMixin):
                 texts or just single value. If ``vertical_alignments`` is
                 single value, all the texts will have the same
                 verticalalignment. verticalalignment can be 'center' or
-                'top', 'bottom' or 'baseline'. Defaults to 'top'.
+                'top', 'bottom' or 'baseline'. This parameter is only valid in the `matplotlib` drawing backend. Defaults to 'top'.
             horizontal_alignments (Union[str, List[str]]): The
                 horizontalalignment of texts. Horizontalalignment controls
                 whether the x positional argument for the text indicates the
@@ -507,13 +510,16 @@ class Visualizer(ManagerMixin):
                 the same length with texts or just single value.
                 If ``horizontal_alignments`` is single value, all the texts
                 will have the same horizontalalignment. Horizontalalignment
-                can be 'center','right' or 'left'. Defaults to 'left'.
+                can be 'center','right' or 'left'. This parameter is only valid in the `matplotlib` drawing backend. Defaults to 'left'.
             font_families (Union[str, List[str]]): The font family of
                 texts. ``font_families`` can have the same length with texts or
                 just single value. If ``font_families`` is single value, all
                 the texts will have the same font family.
                 font_familiy can be 'serif', 'sans-serif', 'cursive', 'fantasy'
-                or 'monospace'.  Defaults to 'sans-serif'.
+                or 'monospace' in `matplotlib` backend and 'cv2.FONT_HERSHEY_SIMPLEX',
+                'cv2.FONT_HERSHEY_PLAIN', 'cv2.FONT_HERSHEY_DUPLEX', 'cv2.FONT_HERSHEY_COMPLEX',
+                'cv2.FONT_HERSHEY_TRIPLEX', 'cv2.FONT_HERSHEY_COMPLEX_SMALL', 'cv2.FONT_HERSHEY_SCRIPT_SIMPLEX',
+                'cv2.FONT_HERSHEY_SCRIPT_COMPLEX', 'cv2.FONT_ITALIC' or 'sans-serif' in `cv2` backend.  Defaults to 'sans-serif'.
             bboxes (Union[dict, List[dict]], optional): The bounding box of the
                 texts. If bboxes is None, there are no bounding box around
                 texts. ``bboxes`` can have the same length with texts or
@@ -531,7 +537,7 @@ class Visualizer(ManagerMixin):
                 ``font_properties`` can have the same length with texts or
                 just single value. If ``font_properties`` is single value,
                 all the texts will have the same font properties.
-                Defaults to None.
+                Defaults to None. This parameter is only valid in the `matplotlib` drawing backend.
                 `New in version 0.6.0.`
         """  # noqa: E501
         check_type('texts', texts, (str, list))
@@ -614,7 +620,7 @@ class Visualizer(ManagerMixin):
             if font_families == 'sans-serif':
                 font_families = cv2.FONT_HERSHEY_SIMPLEX
             font_families = value2list(font_families, int, num_text)
-            font_sizes = [font_size / 20.0 for font_size in font_sizes]
+            font_sizes = [font_size / 22.0 for font_size in font_sizes]
             for i in range(num_text):
                 (text_width, text_height) = cv2.getTextSize(
                     texts[i], font_families[i], font_sizes[i], thickness=2)[0]
@@ -627,12 +633,12 @@ class Visualizer(ManagerMixin):
                     color=colors[i],
                     fontFace=font_families[i],
                     fontScale=font_sizes[i],
-                    thickness=2)
+                    thickness=1)
                 if bboxes[i] is not None:
-                    x1 = int(positions[i][0])
-                    y1 = int(positions[i][1] - 5 * font_sizes[i])
-                    x2 = int(x1 + text_width)
-                    y2 = int(y1 + text_height + 15 * font_sizes[i])
+                    x1 = int(positions[i][0] - 10 * font_sizes[i])
+                    y1 = int(positions[i][1] - 10 * font_sizes[i])
+                    x2 = int(x1 + text_width + 20 * font_sizes[i])
+                    y2 = int(y1 + text_height + 20 * font_sizes[i])
                     self.draw_bboxes(
                         bboxes=np.array([x1, y1, x2, y2]),
                         line_styles=bboxes[i]['linestyle']
@@ -656,7 +662,8 @@ class Visualizer(ManagerMixin):
         line_styles: Union[str, List[str]] = None,
         line_widths: Union[Union[int, float], List[Union[int, float]]] = 2
     ) -> 'Visualizer':
-        """Draw single or multiple line segments.
+        """Draw single or multiple line segments use backend define by
+        self.backend.
 
         Args:
             x_datas (Union[np.ndarray, torch.Tensor]): The x coordinate of
@@ -675,7 +682,9 @@ class Visualizer(ManagerMixin):
                 value, all the lines will have the same linestyle.
                 Reference to
                 https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
-                for more details. Defaults to '-' when backend is 'matplotlib',
+                for more details when use `matplotlib` backend and
+                see 'cv::LineTypes' for mare details when use `cv2` backend.
+                Defaults to '-' when backend is 'matplotlib',
                 and 'cv2.LINE_8' when backend is 'cv2'.
             line_widths (Union[Union[int, float], List[Union[int, float]]]):
                 The linewidth of lines. ``line_widths`` can have
@@ -743,7 +752,7 @@ class Visualizer(ManagerMixin):
         face_colors: Union[str, tuple, List[Union[str, tuple]]] = 'none',
         alpha: Union[float, int] = 0.8,
     ) -> 'Visualizer':
-        """Draw single or multiple circles.
+        """Draw single or multiple circles use backend define by self.backend.
 
         Args:
             center (Union[np.ndarray, torch.Tensor]): The x coordinate of
@@ -762,7 +771,9 @@ class Visualizer(ManagerMixin):
                 value, all the lines will have the same linestyle.
                 Reference to
                 https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
-                for more details. Defaults to '-' when backend is 'matplotlib',
+                for more details when use `matplotlib` backend and
+                see 'cv::LineTypes' for mare details when use `cv2` backend.
+                Defaults to '-' when backend is 'matplotlib',
                 and 'cv2.LINE_8' when backend is 'cv2'.
             line_widths (Union[Union[int, float], List[Union[int, float]]]):
                 The linewidth of lines. ``line_widths`` can have
@@ -862,7 +873,7 @@ class Visualizer(ManagerMixin):
         face_colors: Union[str, tuple, List[Union[str, tuple]]] = 'none',
         alpha: Union[int, float] = 0.8,
     ) -> 'Visualizer':
-        """Draw single or multiple bboxes.
+        """Draw single or multiple bboxes use backend define by self.backend.
 
         Args:
             bboxes (Union[np.ndarray, torch.Tensor]): The bboxes to draw with
@@ -879,7 +890,10 @@ class Visualizer(ManagerMixin):
                 value, all the lines will have the same linestyle.
                 Reference to
                 https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
-                for more details. Defaults to '-'.
+                for more details when use `matplotlib` backend and
+                see 'cv::LineTypes' for mare details when use `cv2` backend.
+                Defaults to '-' when backend is 'matplotlib',
+                and 'cv2.LINE_8' when backend is 'cv2'.
             line_widths (Union[Union[int, float], List[Union[int, float]]]):
                 The linewidth of lines. ``line_widths`` can have
                 the same length with lines or just single value.
@@ -972,7 +986,7 @@ class Visualizer(ManagerMixin):
         face_colors: Union[str, tuple, List[Union[str, tuple]]] = 'none',
         alpha: Union[int, float] = 0.8,
     ) -> 'Visualizer':
-        """Draw single or multiple bboxes.
+        """Draw single or multiple bboxes use backend define by self.backend.
 
         Args:
             polygons (Union[Union[np.ndarray, torch.Tensor],\
@@ -990,7 +1004,10 @@ class Visualizer(ManagerMixin):
                 value, all the lines will have the same linestyle.
                 Reference to
                 https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
-                for more details. Defaults to '-'.
+                for more details when use `matplotlib` backend and
+                see 'cv::LineTypes' for mare details when use `cv2` backend.
+                Defaults to '-' when backend is 'matplotlib',
+                and 'cv2.LINE_8' when backend is 'cv2'.
             line_widths (Union[Union[int, float], List[Union[int, float]]]):
                 The linewidth of lines. ``line_widths`` can have
                 the same length with lines or just single value.
@@ -1079,7 +1096,8 @@ class Visualizer(ManagerMixin):
             binary_masks: Union[np.ndarray, torch.Tensor],
             colors: Union[str, tuple, List[str], List[tuple]] = 'g',
             alphas: Union[float, List[float]] = 0.8) -> 'Visualizer':
-        """Draw single or multiple binary masks.
+        """Draw single or multiple binary masks use backend define by
+        self.backend.
 
         Args:
             binary_masks (np.ndarray, torch.Tensor): The binary_masks to draw
@@ -1101,8 +1119,6 @@ class Visualizer(ManagerMixin):
             f'but got {binary_masks.dtype}')
         binary_masks = binary_masks.astype('uint8') * 255
         img = self.get_image()
-        if self.backend == 'cv2':
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         if binary_masks.ndim == 2:
             binary_masks = binary_masks[None]
         assert img.shape[:2] == binary_masks.shape[
