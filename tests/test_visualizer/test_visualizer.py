@@ -152,7 +152,8 @@ class TestVisualizer(TestCase):
             bboxes,
             alpha=0.5,
             edge_colors=(255, 0, 0),
-            line_styles=line_styles)
+            line_styles=line_styles,
+            line_widths=[1, 2.2])
         bboxes = bboxes.numpy()
         visualizer.draw_bboxes(bboxes)
 
@@ -287,7 +288,7 @@ class TestVisualizer(TestCase):
             y_datas=np.array([[2, 6], [4, 7]]),
             colors='r',
             line_styles=line_styles,
-            line_widths=[1, 2])
+            line_widths=[1, 2.1])
         # test out of bounds
         with pytest.warns(
                 UserWarning,
@@ -335,7 +336,7 @@ class TestVisualizer(TestCase):
             radius=torch.tensor([1, 2]),
             edge_colors=['g', 'r'],
             line_styles=line_styles,
-            line_widths=[1, 2])
+            line_widths=[1, 2.1])
 
         # test out of bounds
         with pytest.warns(
@@ -386,7 +387,7 @@ class TestVisualizer(TestCase):
             ],
             edge_colors=['r', 'g'],
             line_styles=line_styles,
-            line_widths=[2, 1])
+            line_widths=[2, 1.1])
 
         # test out of bounds
         with pytest.warns(

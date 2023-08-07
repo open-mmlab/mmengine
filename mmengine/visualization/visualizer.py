@@ -702,7 +702,8 @@ class Visualizer(ManagerMixin):
                 The linewidth of lines. ``line_widths`` can have
                 the same length with lines or just single value.
                 If ``line_widths`` is single value, all the lines will
-                have the same linewidth. Defaults to 2.
+                have the same linewidth. When use 'cv2' backend,
+                it will round value to int format. Defaults to 2.
         """
         check_type('x_datas', x_datas, (np.ndarray, torch.Tensor))
         x_datas = tensor2ndarray(x_datas)
@@ -740,17 +741,19 @@ class Visualizer(ManagerMixin):
             check_type_and_length('line_styles', line_styles, (int, list),
                                   len(lines))
             colors = color_val_opencv(colors)  # type:ignore
-            for i, line in enumerate(lines):
-                st_pos = (line[i][0], line[i][1])
-                ed_pos = (line[i][0], line[i][1])
-                cv2.line(
-                    img=self._image,
-                    pt1=st_pos,
-                    pt2=ed_pos,
-                    color=colors[i],
-                    thickness=int(line_widths[i]) if isinstance(
-                        line_widths, list) else int(line_widths),
-                    lineType=line_styles[i])
+            line_widths = value2list(line_widths, (int, float), len(lines))
+            for line, color, line_width, line_style in zip(lines, colors, line_widths, line_styles):
+                st_pos = (line[0][0], line[0][1])
+                ed_pos = (line[1][0], line[1][1])
+                kwargs = {
+                    'img': self._image,
+                    'pt1': st_pos,
+                    'pt2': ed_pos,
+                    'color': color,
+                    'thickness': int(line_width),
+                    'lineType': line_style
+                }
+                cv2.line(**kwargs)
         return self
 
     @master_only
@@ -791,7 +794,8 @@ class Visualizer(ManagerMixin):
                 The linewidth of lines. ``line_widths`` can have
                 the same length with lines or just single value.
                 If ``line_widths`` is single value, all the lines will
-                have the same linewidth. Defaults to 2.
+                have the same linewidth. When use 'cv2' backend,
+                it will round value to int format. Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
                 The face colors. Defaults to None.
             alpha (Union[int, float]): The transparency of circles.
@@ -910,7 +914,8 @@ class Visualizer(ManagerMixin):
                 The linewidth of lines. ``line_widths`` can have
                 the same length with lines or just single value.
                 If ``line_widths`` is single value, all the lines will
-                have the same linewidth. Defaults to 2.
+                have the same linewidth. When use 'cv2' backend,
+                it will round value to int format. Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
                 The face colors. Defaults to None.
             alpha (Union[int, float]): The transparency of bboxes.
@@ -981,7 +986,7 @@ class Visualizer(ManagerMixin):
                     kwargs['thickness'] = -1
                     cv2.rectangle(**kwargs)
                 kwargs['color'] = edge_color
-                kwargs['thickness'] = line_width
+                kwargs['thickness'] = int(line_width)
                 cv2.rectangle(**kwargs)
             cv2.addWeighted(self._image, alpha, overlay, 1 - alpha, 0,
                             self._image)
@@ -1024,7 +1029,8 @@ class Visualizer(ManagerMixin):
                 The linewidth of lines. ``line_widths`` can have
                 the same length with lines or just single value.
                 If ``line_widths`` is single value, all the lines will
-                have the same linewidth. Defaults to 2.
+                have the same linewidth. When use 'cv2' backend,
+                it will round value to int format. Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
                 The face colors. Defaults to None.
             alpha (Union[int, float]): The transparency of polygons.
@@ -1096,7 +1102,7 @@ class Visualizer(ManagerMixin):
                     cv2.fillPoly(**kwargs)
                 kwargs['isClosed'] = True
                 kwargs['color'] = edge_color
-                kwargs['thickness'] = line_width
+                kwargs['thickness'] = int(line_width)
                 cv2.polylines(**kwargs)
             cv2.addWeighted(self._image, alpha, overlay, 1 - alpha, 0,
                             self._image)
