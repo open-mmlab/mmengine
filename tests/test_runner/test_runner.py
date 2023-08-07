@@ -1387,7 +1387,12 @@ class TestRunner(TestCase):
 
         # input is a dict and contains type key and num_batch_per_epoch
         cfg = dict(type='ValLoop', num_batch_per_epoch=5)
-        loop = runner.build_test_loop(cfg)
+        loop = runner.build_val_loop(cfg)
+        self.assertIsInstance(loop, ValLoop)
+
+        # input is a dict and contains num_batch_per_epoch
+        cfg = dict(num_batch_per_epoch=5)
+        loop = runner.build_val_loop(cfg)
         self.assertIsInstance(loop, ValLoop)
 
     def test_build_test_loop(self):
