@@ -473,7 +473,8 @@ class Visualizer(ManagerMixin):
         colors: Union[str, tuple, List[Union[str, tuple]]] = 'g',
         vertical_alignments: Union[str, List[str]] = 'top',
         horizontal_alignments: Union[str, List[str]] = 'left',
-        font_families: Union[str, int, List[Union[str, int]]] = 'sans-serif',
+        font_families: Union[str, List[str]] = 'sans-serif',
+        font_faces: Union[int, List[int]] = cv2.FONT_HERSHEY_SIMPLEX,
         bboxes: Optional[Union[dict, List[dict]]] = None,
         font_properties: Optional[Union['FontProperties',
                                         List['FontProperties']]] = None
@@ -515,14 +516,19 @@ class Visualizer(ManagerMixin):
                 will have the same horizontalalignment. Horizontalalignment
                 can be 'center','right' or 'left'. This parameter is only valid in the `matplotlib` drawing backend. Defaults to 'left'.
             font_families (Union[str, List[str]]): The font family of
-                texts. ``font_families`` can have the same length with texts or
+                texts when use 'matplotlib' backend. ``font_families`` can have the same length with texts or
                 just single value. If ``font_families`` is single value, all
                 the texts will have the same font family.
                 font_familiy can be 'serif', 'sans-serif', 'cursive', 'fantasy'
-                or 'monospace' in `matplotlib` backend and 'cv2.FONT_HERSHEY_SIMPLEX',
+                or 'monospace'.  Defaults to 'sans-serif'.
+            font_faces (Union[int, List[int]]): The font family of
+                texts when use 'cv2' backend. ``font_face`` can have the same length with texts or
+                just single value. If ``font_face`` is single value, all
+                the texts will have the same font family.
+                font_face can be 'cv2.FONT_HERSHEY_SIMPLEX',
                 'cv2.FONT_HERSHEY_PLAIN', 'cv2.FONT_HERSHEY_DUPLEX', 'cv2.FONT_HERSHEY_COMPLEX',
                 'cv2.FONT_HERSHEY_TRIPLEX', 'cv2.FONT_HERSHEY_COMPLEX_SMALL', 'cv2.FONT_HERSHEY_SCRIPT_SIMPLEX',
-                'cv2.FONT_HERSHEY_SCRIPT_COMPLEX', 'cv2.FONT_ITALIC' or 'sans-serif' in `cv2` backend.  Defaults to 'sans-serif'.
+                'cv2.FONT_HERSHEY_SCRIPT_COMPLEX', 'cv2.FONT_ITALIC' in `cv2` backend.  Defaults to 'cv2.FONT_HERSHEY_SIMPLEX'.
             bboxes (Union[dict, List[dict]], optional): The bounding box of the
                 texts. If bboxes is None, there are no bounding box around
                 texts. ``bboxes`` can have the same length with texts or
@@ -617,43 +623,46 @@ class Visualizer(ManagerMixin):
                 'fontScale, color[, thickness[, lineType[, '
                 'bottomLeftOrigin]]])->img`, '
                 'the parameters `fontproperties`、'
-                '`vertical_alignments` and `horizontal_alignments` '
+                '`vertical_alignments`、`font_families` '
+                'and `horizontal_alignments` '
                 'will be discarded and not called.', UserWarning)
             colors = color_val_opencv(colors)  # type:ignore
-            if font_families == 'sans-serif':
-                font_families = cv2.FONT_HERSHEY_SIMPLEX
-            font_families = value2list(font_families, int, num_text)
+            font_faces = value2list(font_faces, int, num_text)
             font_sizes = [font_size / 22.0 for font_size in font_sizes]
-            for i in range(num_text):
+            for position, text, font_face, font_size, color, bbox in zip(
+                    positions, texts, font_faces, font_sizes, colors, bboxes):
                 (text_width, text_height) = cv2.getTextSize(
-                    texts[i], font_families[i], font_sizes[i], thickness=2)[0]
-                pos = (int(positions[i][0]),
-                       int(positions[i][1] + text_height))
-                cv2.putText(
-                    self._image,
-                    text=texts[i],
-                    org=pos,
-                    color=colors[i],
-                    fontFace=font_families[i],
-                    fontScale=font_sizes[i],
-                    thickness=1)
-                if bboxes[i] is not None:
-                    x1 = int(positions[i][0] - 10 * font_sizes[i])
-                    y1 = int(positions[i][1] - 10 * font_sizes[i])
-                    x2 = int(x1 + text_width + 20 * font_sizes[i])
-                    y2 = int(y1 + text_height + 20 * font_sizes[i])
-                    self.draw_bboxes(
-                        bboxes=np.array([x1, y1, x2, y2]),
-                        line_styles=bboxes[i]['linestyle']
-                        if 'linestyle' in bboxes[i] else None,
-                        line_widths=bboxes[i]['linewidth']
-                        if 'linewidth' in bboxes[i] else 2,
-                        edge_colors=bboxes[i]['edgecolor']
-                        if 'edgecolor' in bboxes[i] else 'g',
-                        face_colors=bboxes[i]['facecolor']
-                        if 'facecolor' in bboxes[i] else 'none',
-                        alpha=bboxes[i]['alpha']
-                        if 'alpha' in bboxes[i] else 1)
+                    text, font_face, font_size, thickness=2)[0]
+                pos = (int(position[0]), int(position[1] + text_height))
+                kwargs = {
+                    'img': self._image,
+                    'text': text,
+                    'org': pos,
+                    'color': color,
+                    'fontFace': font_face,
+                    'fontScale': font_size,
+                    'thickness': 1
+                }
+                cv2.putText(**kwargs)
+                if bbox is not None:
+                    x1 = int(position[0] - 10 * font_size)
+                    y1 = int(position[1] - 10 * font_size)
+                    x2 = int(x1 + text_width + 20 * font_size)
+                    y2 = int(y1 + text_height + 20 * font_size)
+                    kwargs = {
+                        'bboxes': np.array([x1, y1, x2, y2]),
+                    }
+                    if 'linestyle' in bbox:
+                        kwargs['line_styles'] = bbox['linestyle']
+                    if 'linewidth' in bbox:
+                        kwargs['line_widths'] = bbox['linewidth']
+                    if 'edgecolor' in bbox:
+                        kwargs['edge_colors'] = bbox['edgecolor']
+                    if 'facecolor' in bbox:
+                        kwargs['face_colors'] = bbox['facecolor']
+                    if 'alpha' in bbox:
+                        kwargs['alpha'] = bbox['alpha']
+                    self.draw_bboxes(**kwargs)
         return self
 
     @master_only
@@ -845,7 +854,7 @@ class Visualizer(ManagerMixin):
                     face_colors = [face_colors] * len(circles)
                 face_colors = color_val_opencv(face_colors)  # type:ignore
             else:
-                face_colors = [face_colors] * len(circles)
+                face_colors = [face_colors] * len(circles)  # type:ignore
             for ct, radiu, line_style, face_color, edge_color, line_width in \
                     zip(center, radius, line_styles,
                         face_colors, edge_colors, line_widths):
