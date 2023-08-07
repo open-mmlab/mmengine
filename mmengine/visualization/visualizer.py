@@ -418,9 +418,10 @@ class Visualizer(ManagerMixin):
             'The shape of `positions` should be (N, 2), '
             f'but got {positions.shape}')
         if self.backend == 'matplotlib':
-            assert isinstance(marker, str) or marker is None, (
-                'The type of `marker` in `matplotlib` should be str, '
-                f'but got {type(marker)}')
+            if not (isinstance(marker, str) or marker is None):
+                raise TypeError(
+                    'The type of `marker` in `matplotlib` should be str, '
+                    f'but got {type(marker)}')
             colors = color_val_matplotlib(colors)  # type: ignore
             self.ax_save.scatter(
                 positions[:, 0],
@@ -445,10 +446,10 @@ class Visualizer(ManagerMixin):
                         color=colors[i],
                         thickness=-1)
             else:
-                assert isinstance(
-                    marker,
-                    int), ('The type of `marker` in `cv2` should be int, '
-                           f'but got {type(marker)}')
+                if not isinstance(marker, int):
+                    raise TypeError(
+                        'The type of `marker` in `cv2` should be int, '
+                        f'but got {type(marker)}')
                 if sizes is None:
                     sizes = [20] * len(positions)
                 for pos, color, size in zip(positions, colors, sizes):
