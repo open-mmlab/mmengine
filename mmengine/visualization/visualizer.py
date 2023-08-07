@@ -845,7 +845,7 @@ class Visualizer(ManagerMixin):
                     face_colors = [face_colors] * len(circles)
                 face_colors = color_val_opencv(face_colors)  # type:ignore
             else:
-                face_colors = ['None'] * len(circles)
+                face_colors = [face_colors] * len(circles)
             for ct, radiu, line_style, face_color, edge_color, line_width in \
                     zip(center, radius, line_styles,
                         face_colors, edge_colors, line_widths):
@@ -855,7 +855,7 @@ class Visualizer(ManagerMixin):
                     'radius': int(radiu),
                     'lineType': int(line_style)
                 }
-                if face_color != 'None':
+                if face_color != 'none':
                     kwargs['color'] = face_color
                     kwargs['thickness'] = -1
                     cv2.circle(**kwargs)
