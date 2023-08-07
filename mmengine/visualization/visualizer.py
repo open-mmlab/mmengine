@@ -729,8 +729,8 @@ class Visualizer(ManagerMixin):
                                   len(lines))
             colors = color_val_opencv(colors)  # type:ignore
             for i, line in enumerate(lines):
-                st_pos = (line[0][0], line[0][1])
-                ed_pos = (line[1][0], line[1][1])
+                st_pos = (line[i][0], line[i][1])
+                ed_pos = (line[i][0], line[i][1])
                 cv2.line(
                     img=self._image,
                     pt1=st_pos,
