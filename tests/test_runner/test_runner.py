@@ -1943,10 +1943,10 @@ class TestRunner(TestCase):
 
         # test num_batch_per_epoch
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.val_cfg = dict(num_batch_per_epoch=2, )
+        cfg.val_cfg = dict(num_batch_per_epoch=2)
         runner = Runner.from_cfg(cfg)
         runner.val()
-        self.assertEqual(runner.iter, 3 * 2)
+        self.assertEqual(runner.val_loop.iter, 3 * 2)
 
     @skipIf(
         SKIP_TEST_COMPILE,
@@ -2030,10 +2030,10 @@ class TestRunner(TestCase):
 
         # test num_batch_per_epoch
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.test_cfg = dict(num_batch_per_epoch=2, )
+        cfg.test_cfg = dict(num_batch_per_epoch=2)
         runner = Runner.from_cfg(cfg)
         runner.test()
-        self.assertEqual(runner.iter, 3 * 2)
+        self.assertEqual(runner.test_loop.iter, 3 * 2)
 
     @skipIf(
         SKIP_TEST_COMPILE,
