@@ -2,6 +2,7 @@
 import ast
 import inspect
 import logging
+import pickle
 import textwrap
 import types
 from abc import ABCMeta, abstractmethod
@@ -12,7 +13,7 @@ from mmengine.registry import HOOKS, RECORDERS
 from . import Hook
 
 
-class AttributeRecorderAdder(ast.NodeTransformer):
+class FunctionRecorderTransformer(ast.NodeTransformer):
 
     def __init__(self, target):
         super().__init__()
@@ -40,8 +41,15 @@ class AttributeRecorderAdder(ast.NodeTransformer):
 # genertate "tmp_func_self_conv1 = self.conv1(x)"
 # and "x = tmp_func_self_conv1"
 # and "message_hub.update_info('conv1', tmp_func_conv1)"
-def get_node_name(func_name):
-    return 'tmp_func_' + func_name
+def _get_tensor_key(target, attribute=None):
+    target = target.replace('.', '_')
+    if attribute:
+        target = target + '_' + attribute
+    return target
+
+
+# def get_node_name(func_name):
+#     return 'tmp_func_' + func_name
 
 
 class FuncCallVisitor(ast.NodeTransformer):
@@ -50,10 +58,11 @@ class FuncCallVisitor(ast.NodeTransformer):
         self.func_name = func_name
         self.call_nodes = []
 
-    def is_target_call(self, call_node):
+    # judge if the ast.Call node is user wanted
+    def _is_target_call(self, call_node):
         assert isinstance(call_node, ast.Call)
-        call_node = call_node.func
         call_chain_list = self.func_name.split('.')
+        call_node = call_node.func
         if len(call_chain_list) == 1:
             return isinstance(
                 call_node.func,
@@ -70,39 +79,43 @@ class FuncCallVisitor(ast.NodeTransformer):
                               ast.Name) and call_node.id == call_chain_list[0]
 
     def visit_Call(self, node):
-        if not self.is_target_call(node):
+        if not self._is_target_call(node):
             return node
-        new_node = ast.Name(
-            id=get_node_name(self.func_name.replace('.', '_')), ctx=ast.Load())
+        new_node = ast.Name(id=_get_tensor_key(self.func_name), ctx=ast.Load())
         self.call_nodes.append(node)
         return new_node
 
 
-class FunctionRecorderAdder(ast.NodeTransformer):
+class AttributeRecorderTransformer(ast.NodeTransformer):
 
-    def __init__(self, target):
+    def __init__(self, target, attribute):
         super().__init__()
         self._target = target
+        self._attribute = attribute
         self.function_visitor = FuncCallVisitor(target)
 
     def visit_Assign(self, node):
         self.function_visitor.visit(node)
         if self.function_visitor.call_nodes:
             assign_right_node = self.function_visitor.call_nodes[0]
-            assign_node_name = get_node_name(self._target.replace('.', '_'))
+            assign_node_name = _get_tensor_key(self._target, self._attribute)
             assign_left_node = ast.Assign(
                 targets=[ast.Name(id=assign_node_name, ctx=ast.Store())],
                 value=assign_right_node)
+            if self._attribute:
+                ast_arg2 = ast.Attribute(
+                    value=ast.Name(assign_node_name, ctx=ast.Load()),
+                    attr=self._attribute,
+                    ctx=ast.Load())
+            else:
+                ast_arg2 = ast.Name(id=assign_node_name, ctx=ast.Load())
             update_messagehub_node = ast.Expr(
                 value=ast.Call(
                     func=ast.Attribute(
                         value=ast.Name(id='message_hub', ctx=ast.Load()),
                         attr='update_info',
                         ctx=ast.Load()),
-                    args=[
-                        ast.Constant(value=self._target),
-                        ast.Name(id=assign_node_name, ctx=ast.Load())
-                    ],
+                    args=[ast.Constant(value=assign_node_name), ast_arg2],
                     keywords=[]))
             self.function_visitor.call_nodes.clear()
             return [assign_left_node, update_messagehub_node, node]
@@ -111,8 +124,9 @@ class FunctionRecorderAdder(ast.NodeTransformer):
 
 class Recorder(metaclass=ABCMeta):
 
-    def __init__(self, target: str):
+    def __init__(self, target: str, saved_tensor_key: str):
         self._target = target
+        self._saved_tensor_key = saved_tensor_key
 
     @abstractmethod
     def rewrite(self, ast_tree):
@@ -120,28 +134,32 @@ class Recorder(metaclass=ABCMeta):
 
 
 @RECORDERS.register_module()
-class AttributeRecorder(Recorder):
+class FunctionRecorder(Recorder):
 
-    def __init__(self, target: str):
-        super().__init__(target)
-        self.visit_assign = self._get_adder_class()
+    def __init__(self, target: str, saved_tensor_key: str):
+        super().__init__(target, saved_tensor_key)
+        self.visit_assign = self._get_transformer_class()
 
-    def _get_adder_class(self):
-        return AttributeRecorderAdder(self._target)
+    def _get_transformer_class(self):
+        return FunctionRecorderTransformer(self._target)
 
     def rewrite(self, ast_tree):
         return self.visit_assign.visit(ast_tree)
 
 
 @RECORDERS.register_module()
-class FunctionRecorder(Recorder):
+class AttributeRecorder(Recorder):
 
-    def __init__(self, target: str):
-        super().__init__(target)
-        self.visit_assign = self._get_adder_class()
+    def __init__(self,
+                 target: str,
+                 saved_tensor_key: str,
+                 attribute: str = None):
+        super().__init__(target, saved_tensor_key)
+        self.attribute = attribute
+        self.visit_assign = self._get_transformer_class()
 
-    def _get_adder_class(self):
-        return FunctionRecorderAdder(self._target)
+    def _get_transformer_class(self):
+        return AttributeRecorderTransformer(self._target, self.attribute)
 
     def rewrite(self, ast_tree):
         return self.visit_assign.visit(ast_tree)
@@ -151,31 +169,34 @@ class FunctionRecorder(Recorder):
 class RecorderHook(Hook):
     priority = 'LOWEST'
 
-    def __init__(self,
-                 recorders: Optional[List[Dict]] = None,
-                 print_modification: bool = True,
-                 save_dir: str = ''):
+    def __init__(
+        self,
+        recorders: Optional[List[Dict]] = None,
+        print_modification: bool = True,
+        save_dir: str = None,
+        filename_tmpl: Optional[str] = None,
+    ):
         self.tensor_dict: Dict[str, Any] = {}
         self.origin_forward = None
         self._recorders: Dict[str, Recorder] = {}
-        self._print_modification = print_modification
-        if not save_dir:
-            print_log(
-                '`RecorderHook` cannot save the tensor values '
-                'because save_dir is None.',
-                logger='current',
-                level=logging.WARNING)
-        self._save_dir = save_dir
+        self.print_modification = print_modification
+        self.save_dir = save_dir  # type: ignore
 
-        if recorders is None:
+        if recorders is None or len(recorders) == 0:
             raise ValueError('recorders not initialized')
         for recorder in recorders:
-            assert recorder.get('target') is not None
-            self.tensor_dict[recorder['target']] = list()
-            self._recorders[recorder['target']] = RECORDERS.build(recorder)
+            target = recorder.get('target')
+            attribute = recorder.get('attribute')
 
-    def _get_ast(source_code):
-        return ast.parse(source_code)
+            if target is None:
+                print_log(
+                    '`RecorderHook` cannot be initialized '
+                    'because recorder has no target',
+                    logger='current',
+                    level=logging.WARNING)
+            tensor_key = _get_tensor_key(target, attribute)
+            self.tensor_dict[tensor_key] = list()
+            self._recorders[tensor_key] = RECORDERS.build(recorder)
 
     def _modify_func(self, func):
         # Gets the source code for the function
@@ -207,7 +228,7 @@ class RecorderHook(Hook):
 
         for recorder in self._recorders.values():
             tree = recorder.rewrite(tree)
-            if self._print_modification:
+            if self.print_modification:
                 new_tree = ast.fix_missing_locations(tree)
                 modified_source_code = ast.unparse(new_tree)
                 print_log(
@@ -225,11 +246,9 @@ class RecorderHook(Hook):
         return namespace[func.__name__]
 
     def before_run(self, runner) -> None:
-        """Check `stop_training` variable in `runner.train_loop`.
+        if not self.save_dir:
+            self.save_dir = runner.work_dir
 
-        Args:
-            runner (Runner): The runner of the training process.
-        """
         # get messagehub instance and store it.
         self.message_hub = MessageHub.get_current_instance()
         # get model and modify its forward function
@@ -247,6 +266,7 @@ class RecorderHook(Hook):
             self.tensor_dict[key].append(self.message_hub.get_info(key))
 
     def after_train(self, runner) -> None:
-        import pickle
+        data = pickle.dumps(self.tensor_dict)
+        print(data)
+        # use self.save_dir to save data
         runner.model.forward = self.origin_forward
-        pickle.dump(self.tensor_dict, open(self._save_dir + 'tensor', 'wb'))
