@@ -331,6 +331,8 @@ class ValLoop(BaseLoop):
         evaluator (Evaluator or dict or list): Used for computing metrics.
         fp16 (bool): Whether to enable fp16 validation. Defaults to
             False.
+        num_batch_per_epoch (int, optional): Number of batches executed
+            per epoch.Defaults to None.
     """
 
     def __init__(self,
@@ -411,6 +413,8 @@ class TestLoop(BaseLoop):
         evaluator (Evaluator or dict or list): Used for computing metrics.
         fp16 (bool): Whether to enable fp16 testing. Defaults to
             False.
+        num_batch_per_epoch (int, optional): Number of batches executed
+            per epoch.Defaults to None.
     """
 
     def __init__(self,
