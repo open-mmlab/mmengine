@@ -113,7 +113,7 @@ class EpochBasedTrainLoop(BaseLoop):
         self.runner.model.train()
         for idx, data_batch in enumerate(self.dataloader):
             if self.num_batch_per_epoch is not None:
-                if idx > self.num_batch_per_epoch:
+                if idx >= self.num_batch_per_epoch:
                     break
             self.run_iter(idx, data_batch)
 
@@ -369,7 +369,7 @@ class ValLoop(BaseLoop):
         self.runner.model.eval()
         for idx, data_batch in enumerate(self.dataloader):
             if self.num_batch_per_epoch is not None:
-                if idx > self.num_batch_per_epoch:
+                if idx >= self.num_batch_per_epoch:
                     break
             self.run_iter(idx, data_batch)
 
@@ -446,7 +446,7 @@ class TestLoop(BaseLoop):
         self.runner.model.eval()
         for idx, data_batch in enumerate(self.dataloader):
             if self.num_batch_per_epoch is not None:
-                if idx > self.num_batch_per_epoch:
+                if idx >= self.num_batch_per_epoch:
                     break
             self.run_iter(idx, data_batch)
         # compute metrics
