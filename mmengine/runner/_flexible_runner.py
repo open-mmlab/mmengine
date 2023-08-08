@@ -298,7 +298,6 @@ class FlexibleRunner:
                 f'train_dataloader={train_dataloader}, '
                 f'train_cfg={train_cfg}, '
                 f'optim_wrapper={optim_wrapper}.')
-
         self._train_dataloader = train_dataloader
         self._train_loop = train_cfg
 
