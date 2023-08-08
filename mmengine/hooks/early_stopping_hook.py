@@ -28,8 +28,8 @@ class EarlyStoppingHook(Hook):
         stopping_threshold (float, optional): Stop training immediately once
             the monitored quantity reaches this threshold. Defaults to None.
 
-       Note:
-           `New in version 0.7.0.`
+    Note:
+        `New in version 0.7.0.`
     """
     priority = 'LOWEST'
 
