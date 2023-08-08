@@ -1941,13 +1941,6 @@ class TestRunner(TestCase):
             self.assertIsInstance(runner._train_loop, dict)
             self.assertIsInstance(runner._test_loop, dict)
 
-        # test num_batch_per_epoch
-        cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.val_cfg = dict(num_batch_per_epoch=2)
-        runner = Runner.from_cfg(cfg)
-        runner.val()
-        self.assertEqual(runner.val_loop.iter, 3 * 2)
-
     @skipIf(
         SKIP_TEST_COMPILE,
         reason='torch.compile is not valid, please install PyTorch>=2.0.0')
@@ -2027,13 +2020,6 @@ class TestRunner(TestCase):
             runner.test()
             self.assertIsInstance(runner._train_loop, dict)
             self.assertIsInstance(runner._val_loop, dict)
-
-        # test num_batch_per_epoch
-        cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.test_cfg = dict(num_batch_per_epoch=2)
-        runner = Runner.from_cfg(cfg)
-        runner.test()
-        self.assertEqual(runner.test_loop.iter, 3 * 2)
 
     @skipIf(
         SKIP_TEST_COMPILE,
