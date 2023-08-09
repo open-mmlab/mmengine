@@ -263,10 +263,7 @@ class Visualizer(ManagerMixin):
                 'matplotlib'. `New in version 0.7.3.`
         """
         if backend is None:
-            if self.backend is None:
-                backend = 'matplotlib'
-            else:
-                backend = self.backend
+            backend = self.backend
         if backend == 'matplotlib':
             import matplotlib.pyplot as plt
             is_inline = 'inline' in plt.get_backend()
