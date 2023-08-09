@@ -1951,7 +1951,7 @@ class TestRunner(TestCase):
             def __init__(self):
                 self.val_iter = 0
 
-            def after_val_iter(self, runner, batch_idx):
+            def after_val_iter(self, runner, batch_idx, data_batch=None):
                 self.val_iter += 1
                 nonlocal val_result
                 val_result = self.val_iter
@@ -2052,7 +2052,7 @@ class TestRunner(TestCase):
             def __init__(self):
                 self.test_iter = 0
 
-            def after_test_iter(self, runner, batch_idx):
+            def after_test_iter(self, runner, batch_idx, data_batch=None):
                 self.test_iter += 1
                 nonlocal test_result
                 test_result = self.test_iter
