@@ -1268,7 +1268,7 @@ class FlexibleRunner:
                 try:
                     getattr(hook, fn_name)(self, **kwargs)
                 except TypeError as e:
-                    raise TypeError(f'{e} in {hook}') from None
+                    raise TypeError(f'{e} in {hook}') from e
 
     def register_hook(
         self,

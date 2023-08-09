@@ -16,3 +16,25 @@ mmengine._strategy
    DDPStrategy
    DeepSpeedStrategy
    FSDPStrategy
+
+
+.. currentmodule:: mmengine._strategy.deepspeed
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+   :template: classtemplate.rst
+
+   MMDeepSpeedEngineWrapper
+   DeepSpeedOptimWrapper
+
+
+.. currentmodule:: mmengine._strategy.colossalai
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+   :template: classtemplate.rst
+
+   CollosalAIModelWrapper
+   ColossalAIOpitmWrapper

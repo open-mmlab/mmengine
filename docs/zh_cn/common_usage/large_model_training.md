@@ -24,7 +24,7 @@ pip install deepspeed
 安装好 deepspeed 后，需配置 FlexibleRunner 的 strategy 和 optim_wrapper 参数：
 
 - strategy：指定 `type='DeepSpeedStrategy'` 并配置参数。参数的详细介绍可阅读 [DeepSpeedStrategy](mmengine._strategy.DeepSpeedStrategy)。
-- optim_wrapper：指定 `type='DeepSpeedOptimWrapper'` 并配置参数。参数的详细介绍可阅读 [DeepSpeedOptimWrapper](mmengine.optim.DeepSpeedOptimWrapper)。
+- optim_wrapper：指定 `type='DeepSpeedOptimWrapper'` 并配置参数。参数的详细介绍可阅读 [DeepSpeedOptimWrapper](mmengine._strategy.deepspeed.DeepSpeedOptimWrapper)。
 
 下面是 DeepSpeed 相关的配置：
 
