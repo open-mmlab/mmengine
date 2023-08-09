@@ -83,8 +83,8 @@ class Visualizer(ManagerMixin):
             Defaults to empty dict.
         fig_show_cfg (dict): Keyword parameters of figure for showing.
             Defaults to empty dict.
-        backend (str): Draw backend config. It can be 'matplotlib' or 'cv2'.
-            Defaults to 'matplotlib'.
+        backend (str, optional): Draw backend config.
+            It can be 'matplotlib' or 'cv2'. Defaults to 'matplotlib'.
             `New in version 0.8.5.`
 
     Examples:
@@ -247,7 +247,7 @@ class Visualizer(ManagerMixin):
              win_name: str = 'image',
              wait_time: float = 0.,
              continue_key: str = ' ',
-             backend: str = 'matplotlib') -> None:
+             backend: Optional[str] = None) -> None:
         """Show the drawn image.
 
         Args:
@@ -262,6 +262,8 @@ class Visualizer(ManagerMixin):
             backend (str): The backend to show the image. Defaults to
                 'matplotlib'. `New in version 0.7.3.`
         """
+        if backend is None:
+            backend = self.backend
         if backend == 'matplotlib':
             import matplotlib.pyplot as plt
             is_inline = 'inline' in plt.get_backend()
