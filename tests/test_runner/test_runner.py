@@ -1487,6 +1487,7 @@ class TestRunner(TestCase):
         class TestEpochHook(Hook):
 
             def before_train_epoch(self, runner):
+
                 epoch_results.append(runner.epoch)
 
             def before_train_iter(self, runner, batch_idx, data_batch=None):
@@ -1941,6 +1942,27 @@ class TestRunner(TestCase):
             self.assertIsInstance(runner._train_loop, dict)
             self.assertIsInstance(runner._test_loop, dict)
 
+        # test num_batch_per_epoch
+        val_result = 0
+
+        @HOOKS.register_module(force=True)
+        class TestIterHook(Hook):
+
+            def __init__(self):
+                self.val_iter = 0
+
+            def after_val_iter(self, runner):
+                self.val_iter += 1
+                nonlocal val_result
+                val_result = self.val_iter
+
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
+        cfg.val_cfg = dict(num_batch_per_epoch=2, )
+        runner = Runner.from_cfg(cfg)
+        runner.val()
+        self.assertEqual(val_result, 2)
+
     @skipIf(
         SKIP_TEST_COMPILE,
         reason='torch.compile is not valid, please install PyTorch>=2.0.0')
@@ -2020,6 +2042,27 @@ class TestRunner(TestCase):
             runner.test()
             self.assertIsInstance(runner._train_loop, dict)
             self.assertIsInstance(runner._val_loop, dict)
+
+        # test num_batch_per_epoch
+        test_result = 0
+
+        @HOOKS.register_module(force=True)
+        class TestIterHook(Hook):
+
+            def __init__(self):
+                self.test_iter = 0
+
+            def after_val_iter(self, runner):
+                self.test_iter += 1
+                nonlocal test_result
+                test_result = self.test_iter
+
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
+        cfg.test_cfg = dict(num_batch_per_epoch=2, )
+        runner = Runner.from_cfg(cfg)
+        runner.test()
+        self.assertEqual(test_result, 2)
 
     @skipIf(
         SKIP_TEST_COMPILE,
