@@ -83,7 +83,7 @@ class Visualizer(ManagerMixin):
             Defaults to empty dict.
         fig_show_cfg (dict): Keyword parameters of figure for showing.
             Defaults to empty dict.
-        backend (str, optional): Draw backend config.
+        backend (str): Draw backend config.
             It can be 'matplotlib' or 'cv2'. Defaults to 'matplotlib'.
             `New in version 0.8.5.`
 
