@@ -109,7 +109,7 @@ class MMDeepSpeedEngineWrapper:
     def __init__(
         self,
         *,
-        model: deepspeed.DeepSpeedEngine,
+        model: 'deepspeed.DeepSpeedEngine',
         inputs_to_half: Optional[List[Union[int, str]]] = None,
     ):
         self.model = model
