@@ -33,6 +33,7 @@ class EpochBasedTrainLoop(BaseLoop):
             corresponding milestone. Defaults to None.
         num_batch_per_epoch (int, optional): Number of batches executed
             per epoch.Defaults to None.
+            `New in version 0.8.5.`
     """
 
     def __init__(self,
@@ -333,6 +334,7 @@ class ValLoop(BaseLoop):
             False.
         num_batch_per_epoch (int, optional): Number of batches executed
             per epoch.Defaults to None.
+            `New in version 0.8.5.`
     """
 
     def __init__(self,
@@ -419,6 +421,7 @@ class TestLoop(BaseLoop):
             False.
         num_batch_per_epoch (int, optional): Number of batches executed
             per epoch.Defaults to None.
+            `New in version 0.8.5.`
     """
 
     def __init__(self,
