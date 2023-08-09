@@ -52,7 +52,6 @@ class EpochBasedTrainLoop(BaseLoop):
         self._iter = 0
         self.val_begin = val_begin
         self.val_interval = val_interval
-        self.num_batch_per_epoch = num_batch_per_epoch
         # This attribute will be updated by `EarlyStoppingHook`
         # when it is enabled.
         self.stop_training = False
@@ -70,6 +69,7 @@ class EpochBasedTrainLoop(BaseLoop):
         self.dynamic_milestones, self.dynamic_intervals = \
             calc_dynamic_intervals(
                 self.val_interval, dynamic_intervals)
+        self.num_batch_per_epoch = num_batch_per_epoch
 
     @property
     def max_epochs(self):
@@ -361,8 +361,8 @@ class ValLoop(BaseLoop):
                 'visualizer will be None.',
                 logger='current',
                 level=logging.WARNING)
-        self.num_batch_per_epoch = num_batch_per_epoch
         self.fp16 = fp16
+        self.num_batch_per_epoch = num_batch_per_epoch
 
     def run(self) -> dict:
         """Launch validation."""
@@ -376,7 +376,11 @@ class ValLoop(BaseLoop):
             self.run_iter(idx, data_batch)
 
         # compute metrics
-        metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
+        if self.num_batch_per_epoch is not None:
+            metrics = self.evaluator.evaluate(
+                len(self.dataloader) * self.num_batch_per_epoch)
+        else:
+            metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
         self.runner.call_hook('after_val_epoch', metrics=metrics)
         self.runner.call_hook('after_val')
         return metrics
@@ -440,8 +444,8 @@ class TestLoop(BaseLoop):
                 'visualizer will be None.',
                 logger='current',
                 level=logging.WARNING)
-        self.num_batch_per_epoch = num_batch_per_epoch
         self.fp16 = fp16
+        self.num_batch_per_epoch = num_batch_per_epoch
 
     def run(self) -> dict:
         """Launch test."""
@@ -453,8 +457,13 @@ class TestLoop(BaseLoop):
                 if idx >= self.num_batch_per_epoch:
                     break
             self.run_iter(idx, data_batch)
+
         # compute metrics
-        metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
+        if self.num_batch_per_epoch is not None:
+            metrics = self.evaluator.evaluate(
+                len(self.dataloader) * self.num_batch_per_epoch)
+        else:
+            metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
         self.runner.call_hook('after_test_epoch', metrics=metrics)
         self.runner.call_hook('after_test')
         return metrics
