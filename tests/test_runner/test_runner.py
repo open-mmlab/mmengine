@@ -1951,14 +1951,14 @@ class TestRunner(TestCase):
             def __init__(self):
                 self.val_iter = 0
 
-            def after_val_iter(self, runner):
+            def after_val_iter(self, runner, batch_idx):
                 self.val_iter += 1
                 nonlocal val_result
                 val_result = self.val_iter
 
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
-        cfg.val_cfg = dict(num_batch_per_epoch=2, )
+        cfg.val_cfg = dict(num_batch_per_epoch=2)
         runner = Runner.from_cfg(cfg)
         runner.val()
         self.assertEqual(val_result, 2)
@@ -2052,14 +2052,14 @@ class TestRunner(TestCase):
             def __init__(self):
                 self.test_iter = 0
 
-            def after_val_iter(self, runner):
+            def after_test_iter(self, runner, batch_idx):
                 self.test_iter += 1
                 nonlocal test_result
                 test_result = self.test_iter
 
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
-        cfg.test_cfg = dict(num_batch_per_epoch=2, )
+        cfg.test_cfg = dict(num_batch_per_epoch=2)
         runner = Runner.from_cfg(cfg)
         runner.test()
         self.assertEqual(test_result, 2)
