@@ -124,9 +124,8 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
 
 class Recorder(metaclass=ABCMeta):
 
-    def __init__(self, target: str, saved_tensor_key: str):
+    def __init__(self, target: str):
         self._target = target
-        self._saved_tensor_key = saved_tensor_key
 
     @abstractmethod
     def rewrite(self, ast_tree):
@@ -136,8 +135,8 @@ class Recorder(metaclass=ABCMeta):
 @RECORDERS.register_module()
 class FunctionRecorder(Recorder):
 
-    def __init__(self, target: str, saved_tensor_key: str):
-        super().__init__(target, saved_tensor_key)
+    def __init__(self, target: str):
+        super().__init__(target)
         self.visit_assign = self._get_transformer_class()
 
     def _get_transformer_class(self):
@@ -150,11 +149,8 @@ class FunctionRecorder(Recorder):
 @RECORDERS.register_module()
 class AttributeRecorder(Recorder):
 
-    def __init__(self,
-                 target: str,
-                 saved_tensor_key: str,
-                 attribute: str = None):
-        super().__init__(target, saved_tensor_key)
+    def __init__(self, target: str, attribute: str = None):
+        super().__init__(target)
         self.attribute = attribute
         self.visit_assign = self._get_transformer_class()
 

@@ -67,11 +67,22 @@ val_dataloader = DataLoader(
 # default_hooks = dict(logger=dict(type='LoggerHook', interval=20))
 
 runner = Runner(
-    # default_hooks=default_hooks,
+    # custom_hooks=[
+    #     dict(
+    #         type='RecorderHook',
+    #         recorders=[dict(type='FunctionRecorder', target='x')],
+    #         save_dir='./work_dir',
+    #         print_modification=True)
+    # ],
     custom_hooks=[
         dict(
             type='RecorderHook',
-            recorders=[dict(type='FunctionRecorder', target='self.resnet')],
+            recorders=[
+                dict(
+                    type='AttributeRecorder',
+                    target='self.resnet',
+                    attribute='weight')
+            ],
             save_dir='./work_dir',
             print_modification=True)
     ],
