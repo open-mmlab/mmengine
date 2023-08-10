@@ -144,7 +144,8 @@ class TestBuilder(TestCase):
                              dwconv_decay_mult=1,
                              dcn_offset_lr_mult=1,
                              flat_decay_mult=1,
-                             bypass_duplicate=False):
+                             bypass_duplicate=False,
+                             reduce_param_groups=False):
         param_groups = optimizer.param_groups
         assert isinstance(optimizer, torch.optim.SGD)
         assert optimizer.defaults['lr'] == self.base_lr
@@ -289,7 +290,8 @@ class TestBuilder(TestCase):
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1,
-            flat_decay_mult=0.3)
+            flat_decay_mult=0.3,
+            reduce_param_groups=False)
         optim_constructor_cfg = dict(
             type='DefaultOptimWrapperConstructor',
             optim_wrapper_cfg=optim_wrapper,
@@ -422,7 +424,8 @@ class TestBuilder(TestCase):
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1,
-            flat_decay_mult=0.3)
+            flat_decay_mult=0.3,
+            reduce_param_groups=False)
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
         optim_wrapper = optim_constructor(model)
@@ -462,7 +465,8 @@ class TestBuilder(TestCase):
                 norm_decay_mult=0,
                 dwconv_decay_mult=0.1,
                 dcn_offset_lr_mult=0.1,
-                flat_decay_mult=0.3)
+                flat_decay_mult=0.3,
+                reduce_param_groups=False)
             optim_constructor = DefaultOptimWrapperConstructor(
                 optim_wrapper_cfg, paramwise_cfg)
             optim_wrapper = optim_constructor(model)
@@ -518,7 +522,8 @@ class TestBuilder(TestCase):
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1,
-            flat_decay_mult=0.3)
+            flat_decay_mult=0.3,
+            reduce_param_groups=False)
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
         optim_wrapper = optim_constructor(self.model)
@@ -539,7 +544,8 @@ class TestBuilder(TestCase):
             bias_decay_mult=0.5,
             norm_decay_mult=0,
             dwconv_decay_mult=0.1,
-            dcn_offset_lr_mult=0.1)
+            dcn_offset_lr_mult=0.1,
+            reduce_param_groups=False)
 
         for param in self.model.parameters():
             param.requires_grad = False
@@ -573,7 +579,8 @@ class TestBuilder(TestCase):
             bias_lr_mult=2,
             bias_decay_mult=0.5,
             norm_decay_mult=0,
-            dwconv_decay_mult=0.1)
+            dwconv_decay_mult=0.1,
+            reduce_param_groups=False)
 
         with self.assertRaisesRegex(
                 ValueError,
@@ -589,7 +596,8 @@ class TestBuilder(TestCase):
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1,
             flat_decay_mult=0.3,
-            bypass_duplicate=True)
+            bypass_duplicate=True,
+            reduce_param_groups=False)
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
 
@@ -635,7 +643,8 @@ class TestBuilder(TestCase):
                 'sub.gn': dict(lr_mult=0.01),
                 'non_exist_key': dict(lr_mult=0.0)
             },
-            norm_decay_mult=0.5)
+            norm_decay_mult=0.5,
+            reduce_param_groups=False)
 
         with self.assertRaises(TypeError):
             # custom_keys should be a dict
@@ -722,7 +731,9 @@ class TestBuilder(TestCase):
             type='OptimWrapper',
             optimizer=dict(
                 type='SGD', lr=self.base_lr, momentum=self.momentum))
-        paramwise_cfg = dict(custom_keys={'param1': dict(lr_mult=10)})
+        paramwise_cfg = dict(
+            custom_keys={'param1': dict(lr_mult=10)},
+            reduce_param_groups=False)
 
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
@@ -766,6 +777,41 @@ class TestBuilder(TestCase):
                     for setting in settings:
                         assert param_groups[i][setting] == settings[
                             setting], f'{name} {setting}'
+
+    def test_reduce_param_groups(self):
+        # ref: https://github.com/facebookresearch/detectron2/blob/main/tests/test_solver.py  # noqa: E501
+        params = [
+            dict(params=['p1'], lr=1.0, weight_decay=4.0),
+            dict(params=['p2', 'p6'], lr=2.0, weight_decay=3.0, momentum=2.0),
+            dict(params=['p3'], lr=2.0, weight_decay=3.0, momentum=2.0),
+            dict(params=['p4'], lr=1.0, weight_decay=3.0),
+            dict(params=['p5'], lr=2.0, momentum=2.0),
+        ]
+        gt_groups = [
+            {
+                'lr': 1.0,
+                'weight_decay': 4.0,
+                'params': ['p1'],
+            },
+            {
+                'lr': 2.0,
+                'weight_decay': 3.0,
+                'momentum': 2.0,
+                'params': ['p2', 'p6', 'p3'],
+            },
+            {
+                'lr': 1.0,
+                'weight_decay': 3.0,
+                'params': ['p4'],
+            },
+            {
+                'lr': 2.0,
+                'momentum': 2.0,
+                'params': ['p5'],
+            },
+        ]
+        out = DefaultOptimWrapperConstructor.reduce_param_groups(params)
+        self.assertEqual(out, gt_groups)
 
 
 @unittest.skipIf(
