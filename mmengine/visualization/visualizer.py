@@ -1196,7 +1196,7 @@ class Visualizer(ManagerMixin):
                 extent=(0, self.width, self.height, 0),
                 interpolation='nearest')
         else:
-            colors = color_val_opencv(colors)  #type: ignore
+            colors = color_val_opencv(colors)  # type:ignore
             for binary_mask, color, alpha in zip(binary_masks, colors, alphas):
                 binary_mask_complement = cv2.bitwise_not(binary_mask)
                 bgr = np.zeros_like(img)
