@@ -287,10 +287,9 @@ class Visualizer(ManagerMixin):
             # will be updated with `win_name`.
             cv2.namedWindow(winname=f'{id(self)}')
             cv2.setWindowTitle(f'{id(self)}', win_name)
-            bgr_image = cv2.cvtColor(
-                self.get_image(),
-                cv2.COLOR_RGB2BGR) if drawn_img is None else drawn_img
-            cv2.imshow(str(id(self)), bgr_image)
+            cv2.imshow(
+                str(id(self)),
+                self.get_image() if drawn_img is None else drawn_img)
             cv2.waitKey(int(np.ceil(wait_time * 1000)))
         else:
             raise ValueError('backend should be "matplotlib" or "cv2", '
@@ -305,7 +304,6 @@ class Visualizer(ManagerMixin):
         """
         assert image is not None
         image = image.astype('uint8')
-        self._image = image
         self.width, self.height = image.shape[1], image.shape[0]
         self._default_font_size = max(
             np.sqrt(self.height * self.width) // 90, 10)
@@ -314,6 +312,7 @@ class Visualizer(ManagerMixin):
             # add a small 1e-2 to avoid precision lost due to matplotlib's
             # truncation
             # (https://github.com/matplotlib/matplotlib/issues/15363)
+            self._image = image
             self.fig_save.set_size_inches(  # type: ignore
                 (self.width + 1e-2) / self.dpi,
                 (self.height + 1e-2) / self.dpi)
@@ -324,6 +323,8 @@ class Visualizer(ManagerMixin):
                 image,
                 extent=(0, self.width, self.height, 0),
                 interpolation='none')
+        else:
+            self._image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
     @master_only
     def get_image(self) -> np.ndarray:
@@ -1146,8 +1147,8 @@ class Visualizer(ManagerMixin):
             colors (np.ndarray): The colors which binary_masks will convert to.
                 ``colors`` can have the same length with binary_masks or just
                 single value. If ``colors`` is single value, all the
-                binary_masks will convert to the same colors. The colors format
-                is RGB. Defaults to np.array([0, 255, 0]).
+                binary_masks will convert to the same colors.
+                Defaults to np.array([0, 255, 0]).
             alphas (Union[int, List[int]]): The transparency of masks.
                 Defaults to 0.8.
         """
@@ -1168,33 +1169,43 @@ class Visualizer(ManagerMixin):
         check_type_and_length('colors', colors, (str, tuple, list),
                               binary_mask_len)
         colors = value2list(colors, (str, tuple), binary_mask_len)
-        colors = [
-            color_str2rgb(color) if isinstance(color, str) else color
-            for color in colors
-        ]
-        for color in colors:
-            assert len(color) == 3
-            for channel in color:
-                assert 0 <= channel <= 255  # type: ignore
 
         if isinstance(alphas, float):
             alphas = [alphas] * binary_mask_len
 
-        for binary_mask, color, alpha in zip(binary_masks, colors, alphas):
-            binary_mask_complement = cv2.bitwise_not(binary_mask)
-            rgb = np.zeros_like(img)
-            rgb[...] = color
-            rgb = cv2.bitwise_and(rgb, rgb, mask=binary_mask)
-            img_complement = cv2.bitwise_and(
-                img, img, mask=binary_mask_complement)
-            rgb = rgb + img_complement
-            img = cv2.addWeighted(img, 1 - alpha, rgb, alpha, 0)
         if self.backend == 'matplotlib':
+            colors = [
+                color_str2rgb(color) if isinstance(color, str) else color
+                for color in colors
+            ]
+            for color in colors:
+                assert len(color) == 3
+                for channel in color:
+                    assert 0 <= channel <= 255  # type: ignore
+            for binary_mask, color, alpha in zip(binary_masks, colors, alphas):
+                binary_mask_complement = cv2.bitwise_not(binary_mask)
+                rgb = np.zeros_like(img)
+                rgb[...] = color
+                rgb = cv2.bitwise_and(rgb, rgb, mask=binary_mask)
+                img_complement = cv2.bitwise_and(
+                    img, img, mask=binary_mask_complement)
+                rgb = rgb + img_complement
+                img = cv2.addWeighted(img, 1 - alpha, rgb, alpha, 0)
             self.ax_save.imshow(
                 img,
                 extent=(0, self.width, self.height, 0),
                 interpolation='nearest')
         else:
+            colors = color_val_opencv(colors)  #type: ignore
+            for binary_mask, color, alpha in zip(binary_masks, colors, alphas):
+                binary_mask_complement = cv2.bitwise_not(binary_mask)
+                bgr = np.zeros_like(img)
+                bgr[...] = color
+                bgr = cv2.bitwise_and(bgr, bgr, mask=binary_mask)
+                img_complement = cv2.bitwise_and(
+                    img, img, mask=binary_mask_complement)
+                bgr = bgr + img_complement
+                img = cv2.addWeighted(img, 1 - alpha, bgr, alpha, 0)
             self._image = img
         return self
 

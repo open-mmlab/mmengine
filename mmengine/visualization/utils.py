@@ -132,7 +132,9 @@ def color_val_opencv(
         indicating BGR channels.
     """
     if isinstance(colors, str):
-        return color_str2rgb(colors)
+        colors = color_str2rgb(colors)
+        colors = (colors[2], colors[1], colors[0])
+        return colors
     elif isinstance(colors, tuple):
         assert len(colors) == 3
         for channel in colors:
