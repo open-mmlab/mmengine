@@ -96,6 +96,7 @@ def color_val_matplotlib(
 ) -> Union[str, tuple, List[Union[str, tuple]]]:
     """Convert various input in RGB order to normalized RGB matplotlib color
     tuples.
+
     Args:
         colors (Union[str, tuple, List[Union[str, tuple]]]): Color inputs
     Returns:
@@ -123,8 +124,8 @@ def color_val_matplotlib(
 def color_val_opencv(
     colors: Union[str, tuple, List[Union[str, tuple]]]
 ) -> Union[tuple, List[tuple]]:
-    """Convert various input in BGR order to BGR opencv color
-    tuples.
+    """Convert various input in BGR order to BGR opencv color tuples.
+
     Args:
         colors (Union[str, tuple, List[Union[str, tuple]]]): Color inputs
     Returns:
