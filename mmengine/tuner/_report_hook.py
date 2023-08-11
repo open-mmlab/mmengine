@@ -1,31 +1,34 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from mmengine.hooks import Hook
 import math
+from typing import Dict, Optional, Sequence, Union
 
-from typing import Dict, Union, Sequence, Optional, List
+from mmengine.hooks import Hook
 
 DATA_BATCH = Optional[Union[dict, tuple, list]]
+
 
 class ReportingHook(Hook):
 
     _max_history = 1024
-    
+
     def __init__(self,
-        monitor: str,
-        rule: str,
-        tuning_iter: int = 0,
-        tunning_epoch: int = 0,
-        report_op: str = 'latest'
-    ):
+                 monitor: str,
+                 rule: str,
+                 tuning_iter: int = 0,
+                 tunning_epoch: int = 0,
+                 report_op: str = 'latest'):
         assert rule in ['greater', 'less'], f'rule {rule} is not supported'
-        self.rule = rule    
-        assert (tuning_iter == 0 and tunning_epoch > 0) or (tunning_epoch == 0 and tuning_iter > 0), 'tuning_iter and tuning_epoch should be set only one'
-        assert report_op in ['latest', 'mean'], f'report_op {report_op} is not supported'
+        self.rule = rule
+        assert (tuning_iter == 0 and tunning_epoch > 0) or (
+            tunning_epoch == 0 and tuning_iter > 0
+        ), 'tuning_iter and tuning_epoch should be set only one'
+        assert report_op in ['latest',
+                             'mean'], f'report_op {report_op} is not supported'
         self.report_op = report_op
         self.tuning_iter = tuning_iter
         self.tuning_epoch = tunning_epoch
         self.enabled_by_epoch = self._tuning_epoch != 0
-        
+
         self.monitor = monitor
         self.history = []
 
@@ -34,13 +37,12 @@ class ReportingHook(Hook):
         if len(self.history) > self._max_history:
             self.history.pop(0)
 
-    def after_train_iter(
-        self,
-        runner,
-        batch_idx: int,
-        data_batch: DATA_BATCH = None,
-        outputs: Optional[Union[dict, Sequence]] = None,
-        mode: str = 'train') -> None:  
+    def after_train_iter(self,
+                         runner,
+                         batch_idx: int,
+                         data_batch: DATA_BATCH = None,
+                         outputs: Optional[Union[dict, Sequence]] = None,
+                         mode: str = 'train') -> None:
 
         tag, _ = runner.log_processor.get_log_after_iter(
             runner, batch_idx, 'train')
@@ -58,7 +60,7 @@ class ReportingHook(Hook):
         if runner.epoch + 1 == self.tuning_epoch:
             runner.train_loop.stop_training = True
 
-    def  after_val_epoch(self,
+    def after_val_epoch(self,
                         runner,
                         metrics: Optional[Dict[str, float]] = None) -> None:
         if metrics is None:

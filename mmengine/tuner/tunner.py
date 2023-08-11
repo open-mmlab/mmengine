@@ -1,27 +1,38 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
+from tying import Dict, List, Optional, Sequence, Union
 
-from mmengine.runner import Runner
 from mmengine.config import Config, ConfigDict
-from mmengine.dist import init_dist, broadcast_object_list, is_main_process
-
-from tying import Dict, Union, Sequence, Optional, List
-
-from mmengine.dist import is_distributed
-
+from mmengine.dist import (broadcast_object_list, init_dist, is_distributed,
+                           is_main_process)
+from mmengine.runner import Runner
 from ._report_hook import ReportingHook
+
 
 class Tuner:
 
-    def __init__(self, runner_cfg: Union[Dict, Config, ConfigDict], hparam_spec: Dict[str, Dict], monitor: str, rule: str, num_trials: int, tuning_iter: int = 0, tunning_epoch: int = 0, report_op: str = 'latest', searcher: str = 'nevergrad', **searcher_kwargs):
+    dist_sanity_check_interval = 10
+
+    def __init__(self,
+                 runner_cfg: Union[Dict, Config, ConfigDict],
+                 hparam_spec: Dict[str, Dict],
+                 monitor: str,
+                 rule: str,
+                 num_trials: int,
+                 tuning_iter: int = 0,
+                 tunning_epoch: int = 0,
+                 report_op: str = 'latest',
+                 searcher: str = 'nevergrad',
+                 **searcher_kwargs):
         self._runner_cfg = runner_cfg.copy()
         self._hparam_spec = hparam_spec
         self._monitor = monitor
-        assert rule in  ['greater', 'less'], f'rule {rule} is not supported'
+        assert rule in ['greater', 'less'], f'rule {rule} is not supported'
         self._rule = rule
         self._num_trials = num_trials
         self._searcher = self._build_searcher(searcher, **searcher_kwargs)
-        self._reporting_hook = ReportingHook(monitor, rule, tuning_iter, tunning_epoch, report_op)
+        self._reporting_hook = ReportingHook(monitor, rule, tuning_iter,
+                                             tunning_epoch, report_op)
         self._history = []
 
         launcher = self._runner_cfg.get('launcher', 'none')
@@ -38,17 +49,21 @@ class Tuner:
     def _build_searcher(self, searcher: str = 'nevergrad', **kwargs):
         if searcher == 'nevergrad':
             from .searcher import NevergradSearcher
-            searcher = NevergradSearcher(self._mode, self._hparam_spec, self._num_trials, **kwargs)
+            searcher = NevergradSearcher(self._mode, self._hparam_spec,
+                                         self._num_trials, **kwargs)
         elif searcher == 'skopt':
             from .searcher import SkoptSearcher
-            searcher = SkoptSearcher(self._mode, self._hparam_spec, self._num_trials, **kwargs)
+            searcher = SkoptSearcher(self._mode, self._hparam_spec,
+                                     self._num_trials, **kwargs)
         elif searcher == 'hyperopt':
             from .searcher import HyperoptSearcher
-            searcher = HyperoptSearcher(self._mode, self._hparam_spec, self._num_trials, **kwargs)
+            searcher = HyperoptSearcher(self._mode, self._hparam_spec,
+                                        self._num_trials, **kwargs)
         else:
-            raise NotImplementedError(f'searcher {searcher} is not implemented')
+            raise NotImplementedError(
+                f'searcher {searcher} is not implemented')
         return searcher
-        
+
     @staticmethod
     def inject_config(cfg, key, value):
         key = key.split('.')
@@ -60,59 +75,67 @@ class Tuner:
                 assert item in cfg, f'key {key} is not in cfg'
                 item = cfg[item]
             suffix += f'{item}.'
-        assert key[-1] in cfg, f'attribute {key[-1]} is not in cfg{suffix}' 
+        assert key[-1] in cfg, f'attribute {key[-1]} is not in cfg{suffix}'
         cfg[key[-1]] = value
         return
 
+    def _run_trial(self):
+        if is_main_process():
+            hparam = [self._searcher.suggest()]
+        else:
+            hparam = [None]
+        broadcast_object_list(hparam)
+        for k, v in hparam[0].items():
+            self.inject_config(self._runner_cfg, k, v)
+        runner = Runner.from_cfg(self._runner_cfg)
+        runner.register_hook(self._reporting_hook, priority='VERY_LOW')
+        score: float
+        try:
+            runner.train()
+            score = [self._reporting_hook.get_score()]
+        except Exception:
+            if self._rule == 'greater':
+                score = [float('-inf')]
+            else:
+                score = [float('inf')]
+        finally:
+            broadcast_object_list(score)
+            self._searcher.record(hparam[0], score[0])
+            self._history.append((hparam[0], score[0]))
+            del runner
+            torch.cuda.empty_cache()
+            self._reporting_hook.clear_history()
+
     def tune(self):
         for _ in range(self._num_trials):
-            if is_main_process():
-                hparam = [self._searcher.suggest()]
-            else:
-                hparam = [None]
-            broadcast_object_list(hparam) 
-            # Sync hparam if distributed
-            for k, v in hparam[0].items():
-                self.inject_config(self._runner_cfg, k, v)
-            runner = Runner.from_cfg(self._runner_cfg)
-            runner.register_hook(self._reporting_hook, priority='VERY_LOW')
-            score: float
-            try:
-                runner.train()
-                score = [self._reporting_hook.get_score()]
-            except Exception as e:
-                if self._rule == 'greater':
-                    score = [float('-inf')]
-                else:
-                    score = [float('inf')]
-            finally:
-                broadcast_object_list(score)
-                self._searcher.record(hparam[0], score[0])
-                runner = self.tear_down_trial(runner)
-                self._history.append((hparam[0], score[0]))
+            self._run_trial()
 
-        beset_hparam: dict
+        best_hparam: dict
+        best_score: float
         if self._rule == 'greater':
-            beset_hparam = max(self._history, key=lambda x: x[1])[0]
+            best_hparam, best_score = max(self._history, key=lambda x: x[1])[0]
         else:
-            beset_hparam = min(self._history, key=lambda x: x[1])[0]
-        return beset_hparam
-            
-    def tear_down_trial(self, runner):
-        del runner
-        torch.cuda.empty_cache()
-        self._reporting_hook.clear_history()
+            best_hparam, best_score = min(self._history, key=lambda x: x[1])[0]
+        return best_hparam, best_score
 
 
-def find_optimial_lr(
-    runner_cfg: Union[Dict, Config, ConfigDict],
-    monitor: str = 'loss',
-    rule: str = 'less',
-    num_trials: int = 32,
-    lower_lr: Optional[float] = 1e-6, upper_lr: Optional[float] = 1e-2, lr_choices : Optional[List[float]] = None, tuning_iter: int = 1e4, tunning_epoch: int = 0, report_op: str = 'latest', searcher: str = 'nevergrad', **searcher_kwargs 
-):
+def find_optimial_lr(runner_cfg: Union[Dict, Config, ConfigDict],
+                     monitor: str = 'loss',
+                     rule: str = 'less',
+                     num_trials: int = 32,
+                     lower_lr: Optional[float] = 1e-6,
+                     upper_lr: Optional[float] = 1e-2,
+                     lr_choices: Optional[List[float]] = None,
+                     tuning_iter: int = 1e4,
+                     tunning_epoch: int = 0,
+                     report_op: str = 'latest',
+                     searcher: str = 'nevergrad',
+                     **searcher_kwargs):
     is_discrete = lr_choices is not None
-    assert (lower_lr is None and upper_lr is None and lr_choices is not None) or (lower_lr is not None and upper_lr is not None and lr_choices is None), 'lower_lr and upper_lr should be set only one'
+    assert (lower_lr is None and upper_lr is None and lr_choices
+            is not None) or (lower_lr is not None and upper_lr is not None
+                             and lr_choices is None
+                             ), 'lower_lr and upper_lr should be set only one'
     hparam_spec: dict
     if is_discrete:
         hparam_spec = {
@@ -140,6 +163,5 @@ def find_optimial_lr(
         tunning_epoch=tunning_epoch,
         report_op=report_op,
         searcher=searcher,
-        **searcher_kwargs
-    )
+        **searcher_kwargs)
     return tunner.tune()
