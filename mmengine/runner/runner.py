@@ -789,7 +789,8 @@ class Runner:
                 'visualizer should be Visualizer object, a dict or None, '
                 f'but got {visualizer}')
 
-    def build_model(self, model: Union[nn.Module, Dict]) -> nn.Module:
+    @staticmethod
+    def build_model(model: Union[nn.Module, Dict]) -> nn.Module:
         """Build model.
 
         If ``model`` is a dict, it will be used to build a nn.Module object.
@@ -1259,8 +1260,8 @@ class Runner:
 
             return param_schedulers
 
-    def build_evaluator(self, evaluator: Union[Dict, List,
-                                               Evaluator]) -> Evaluator:
+    @staticmethod
+    def build_evaluator(evaluator: Union[Dict, List, Evaluator]) -> Evaluator:
         """Build evaluator.
 
         Examples of ``evaluator``::
@@ -1591,8 +1592,9 @@ class Runner:
 
         return loop  # type: ignore
 
+    @staticmethod
     def build_log_processor(
-            self, log_processor: Union[LogProcessor, Dict]) -> LogProcessor:
+            log_processor: Union[LogProcessor, Dict]) -> LogProcessor:
         """Build test log_processor.
 
         Examples of ``log_processor``:
