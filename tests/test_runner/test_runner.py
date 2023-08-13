@@ -2071,6 +2071,7 @@ class TestRunner(TestCase):
         runner = Runner.from_cfg(cfg)
         runner.test()
         self.assertEqual(test_result, 2)
+        self.assertEqual(test_result, 2)
 
     @skipIf(
         SKIP_TEST_COMPILE,
