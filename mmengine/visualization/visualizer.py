@@ -541,15 +541,6 @@ class Visualizer(ManagerMixin):
                 the texts will have the same font family.
                 font_familiy can be 'serif', 'sans-serif', 'cursive', 'fantasy'
                 or 'monospace'.  Defaults to 'sans-serif'.
-            font_faces (Union[int, List[int]]): The font family of
-                texts when use 'cv2' backend. ``font_face`` can have the same length with texts or
-                just single value. If ``font_face`` is single value, all
-                the texts will have the same font family.
-                font_face can be 'cv2.FONT_HERSHEY_SIMPLEX',
-                'cv2.FONT_HERSHEY_PLAIN', 'cv2.FONT_HERSHEY_DUPLEX', 'cv2.FONT_HERSHEY_COMPLEX',
-                'cv2.FONT_HERSHEY_TRIPLEX', 'cv2.FONT_HERSHEY_COMPLEX_SMALL', 'cv2.FONT_HERSHEY_SCRIPT_SIMPLEX',
-                'cv2.FONT_HERSHEY_SCRIPT_COMPLEX', 'cv2.FONT_ITALIC' in `cv2` backend.  Defaults to 'cv2.FONT_HERSHEY_SIMPLEX'.
-                `New in version 0.8.5.`
             bboxes (Union[dict, List[dict]], optional): The bounding box of the
                 texts. If bboxes is None, there are no bounding box around
                 texts. ``bboxes`` can have the same length with texts or
@@ -569,6 +560,15 @@ class Visualizer(ManagerMixin):
                 all the texts will have the same font properties.
                 Defaults to None. This parameter is only valid in the `matplotlib` drawing backend.
                 `New in version 0.6.0.`
+            font_faces (Union[int, List[int]]): The font family of
+                texts when use 'cv2' backend. ``font_face`` can have the same length with texts or
+                just single value. If ``font_face`` is single value, all
+                the texts will have the same font family.
+                font_face can be 'cv2.FONT_HERSHEY_SIMPLEX',
+                'cv2.FONT_HERSHEY_PLAIN', 'cv2.FONT_HERSHEY_DUPLEX', 'cv2.FONT_HERSHEY_COMPLEX',
+                'cv2.FONT_HERSHEY_TRIPLEX', 'cv2.FONT_HERSHEY_COMPLEX_SMALL', 'cv2.FONT_HERSHEY_SCRIPT_SIMPLEX',
+                'cv2.FONT_HERSHEY_SCRIPT_COMPLEX', 'cv2.FONT_ITALIC' in `cv2` backend.  Defaults to 'cv2.FONT_HERSHEY_SIMPLEX'.
+                `New in version 0.8.5.`
         """  # noqa: E501
         check_type('texts', texts, (str, list))
         if isinstance(texts, str):
