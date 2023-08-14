@@ -494,10 +494,10 @@ class Visualizer(ManagerMixin):
         vertical_alignments: Union[str, List[str]] = 'top',
         horizontal_alignments: Union[str, List[str]] = 'left',
         font_families: Union[str, List[str]] = 'sans-serif',
-        font_faces: Union[int, List[int]] = cv2.FONT_HERSHEY_SIMPLEX,
         bboxes: Optional[Union[dict, List[dict]]] = None,
         font_properties: Optional[Union['FontProperties',
-                                        List['FontProperties']]] = None
+                                        List['FontProperties']]] = None,
+        font_faces: Union[int, List[int]] = cv2.FONT_HERSHEY_SIMPLEX,
     ) -> 'Visualizer':
         """Draw single or multiple text boxes use backend define by
         self.backend.
