@@ -18,7 +18,7 @@ from mmengine.registry import VISBACKENDS, VISUALIZERS
 from mmengine.structures import BaseDataElement
 from mmengine.utils import ManagerMixin, is_seq_of
 from mmengine.visualization.utils import (check_type, check_type_and_length,
-                                          color_str2rgb, color_val_matplotlib,
+                                          color_val_matplotlib,
                                           color_val_opencv,
                                           convert_overlay_heatmap,
                                           img_from_canvas, tensor2ndarray,
@@ -649,7 +649,8 @@ class Visualizer(ManagerMixin):
             colors = color_val_opencv(colors)  # type:ignore
             font_faces = value2list(font_faces, int, num_text)
             font_sizes = [
-                font_size / self._default_font_size for font_size in font_sizes
+                font_size / self._default_cv2_fontsize
+                for font_size in font_sizes
             ]
             for position, text, font_face, font_size, color, bbox in zip(
                     positions, texts, font_faces, font_sizes, colors, bboxes):
@@ -1175,39 +1176,23 @@ class Visualizer(ManagerMixin):
         if isinstance(alphas, float):
             alphas = [alphas] * binary_mask_len
 
+        colors = color_val_opencv(colors)  # type:ignore
+        for binary_mask, color, alpha in zip(binary_masks, colors, alphas):
+            binary_mask_complement = cv2.bitwise_not(binary_mask)
+            rgb = np.zeros_like(img)
+            rgb[...] = color
+            rgb = cv2.bitwise_and(rgb, rgb, mask=binary_mask)
+            img_complement = cv2.bitwise_and(
+                img, img, mask=binary_mask_complement)
+            rgb = rgb + img_complement
+            img = cv2.addWeighted(img, 1 - alpha, rgb, alpha, 0)
+
         if self.backend == 'matplotlib':
-            colors = [
-                color_str2rgb(color) if isinstance(color, str) else color
-                for color in colors
-            ]
-            for color in colors:
-                assert len(color) == 3
-                for channel in color:
-                    assert 0 <= channel <= 255  # type: ignore
-            for binary_mask, color, alpha in zip(binary_masks, colors, alphas):
-                binary_mask_complement = cv2.bitwise_not(binary_mask)
-                rgb = np.zeros_like(img)
-                rgb[...] = color
-                rgb = cv2.bitwise_and(rgb, rgb, mask=binary_mask)
-                img_complement = cv2.bitwise_and(
-                    img, img, mask=binary_mask_complement)
-                rgb = rgb + img_complement
-                img = cv2.addWeighted(img, 1 - alpha, rgb, alpha, 0)
             self.ax_save.imshow(
                 img,
                 extent=(0, self.width, self.height, 0),
                 interpolation='nearest')
         else:
-            colors = color_val_opencv(colors)  # type:ignore
-            for binary_mask, color, alpha in zip(binary_masks, colors, alphas):
-                binary_mask_complement = cv2.bitwise_not(binary_mask)
-                bgr = np.zeros_like(img)
-                bgr[...] = color
-                bgr = cv2.bitwise_and(bgr, bgr, mask=binary_mask)
-                img_complement = cv2.bitwise_and(
-                    img, img, mask=binary_mask_complement)
-                bgr = bgr + img_complement
-                img = cv2.addWeighted(img, 1 - alpha, bgr, alpha, 0)
             self._image = img
         return self
 
