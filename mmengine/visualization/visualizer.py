@@ -228,6 +228,9 @@ class Visualizer(ManagerMixin):
 
         # When set to 20, the markers drawn by cv2 and matplotlib look similar
         self._default_cv2_markersize = 20
+        # When set to 22, the font size drawn by
+        # cv2 and matplotlib look similar
+        self._default_cv2_fontsize = 22
 
     @property  # type: ignore
     @master_only
@@ -645,7 +648,9 @@ class Visualizer(ManagerMixin):
                 'will be ignored when using cv2 backend.', UserWarning)
             colors = color_val_opencv(colors)  # type:ignore
             font_faces = value2list(font_faces, int, num_text)
-            font_sizes = [font_size / 22.0 for font_size in font_sizes]
+            font_sizes = [
+                font_size / self._default_font_size for font_size in font_sizes
+            ]
             for position, text, font_face, font_size, color, bbox in zip(
                     positions, texts, font_faces, font_sizes, colors, bboxes):
                 (text_width, text_height) = cv2.getTextSize(
