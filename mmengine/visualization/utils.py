@@ -124,17 +124,16 @@ def color_val_matplotlib(
 def color_val_opencv(
     colors: Union[str, tuple, List[Union[str, tuple]]]
 ) -> Union[tuple, List[tuple]]:
-    """Convert various input in BGR order to BGR opencv color tuples.
+    """Convert various input in RGB order to RGB color tuples.
 
     Args:
         colors (Union[str, tuple, List[Union[str, tuple]]]): Color inputs
     Returns:
         Union[str, tuple, List[Union[str, tuple]]]: A tuple of 3 ints
-        indicating BGR channels.
+        indicating RGB channels.
     """
     if isinstance(colors, str):
         colors = color_str2rgb(colors)
-        colors = (colors[2], colors[1], colors[0])
         return colors
     elif isinstance(colors, tuple):
         assert len(colors) == 3

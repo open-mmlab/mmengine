@@ -287,9 +287,10 @@ class Visualizer(ManagerMixin):
             # will be updated with `win_name`.
             cv2.namedWindow(winname=f'{id(self)}')
             cv2.setWindowTitle(f'{id(self)}', win_name)
-            cv2.imshow(
-                str(id(self)),
-                self.get_image() if drawn_img is None else drawn_img)
+            bgr_image = cv2.cvtColor(
+                self.get_image(),
+                cv2.COLOR_RGB2BGR) if drawn_img is None else drawn_img
+            cv2.imshow(str(id(self)), bgr_image)
             cv2.waitKey(int(np.ceil(wait_time * 1000)))
         else:
             raise ValueError('backend should be "matplotlib" or "cv2", '
@@ -297,7 +298,7 @@ class Visualizer(ManagerMixin):
 
     @master_only
     def set_image(self, image: np.ndarray) -> None:
-        """Set the image to draw.
+        """Set the image to draw. The format is RGB.
 
         Args:
             image (np.ndarray): The image to draw.
@@ -324,7 +325,7 @@ class Visualizer(ManagerMixin):
                 extent=(0, self.width, self.height, 0),
                 interpolation='none')
         else:
-            self._image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            self._image = image
 
     @master_only
     def get_image(self) -> np.ndarray:
@@ -417,9 +418,10 @@ class Visualizer(ManagerMixin):
         Args:
             positions (Union[np.ndarray, torch.Tensor]): Positions to draw.
             colors (Union[str, tuple, List[str], List[tuple]]): The colors
-                of points. ``colors`` can have the same length with points or
-                just single value. If ``colors`` is single value, all the
-                points will have the same colors. Reference to
+                of points which format is RGB. ``colors`` can have the same
+                length with points or just single value. If ``colors`` is
+                single value, all the points will have the same colors.
+                Reference to
                 https://matplotlib.org/stable/gallery/color/named_colors.html
                 for more details. Defaults to 'g.
             marker (str, optional): The marker style.
@@ -513,7 +515,7 @@ class Visualizer(ManagerMixin):
                 just single value. If ``font_sizes`` is single value, all the
                 texts will have the same font size. Defaults to None.
             colors (Union[str, tuple, List[str], List[tuple]]): The colors
-                of texts. ``colors`` can have the same length with texts or
+                of texts which format is RGB. ``colors`` can have the same length with texts or
                 just single value. If ``colors`` is single value, all the
                 texts will have the same colors. Reference to
                 https://matplotlib.org/stable/gallery/color/named_colors.html
@@ -704,9 +706,9 @@ class Visualizer(ManagerMixin):
             y_datas (Union[np.ndarray, torch.Tensor]): The y coordinate of
                 each line' start and end points.
             colors (Union[str, tuple, List[str], List[tuple]]): The colors of
-                lines. ``colors`` can have the same length with lines or just
-                single value. If ``colors`` is single value, all the lines
-                will have the same colors. Reference to
+                lines which format is RGB. ``colors`` can have the same length
+                with lines or just single value. If ``colors`` is single value,
+                all the lines will have the same colors. Reference to
                 https://matplotlib.org/stable/gallery/color/named_colors.html
                 for more details. Defaults to 'g'.
             line_styles (Union[str, List[str]]): The linestyle
@@ -797,9 +799,10 @@ class Visualizer(ManagerMixin):
             radius (Union[np.ndarray, torch.Tensor]): The y coordinate of
                 each line' start and end points.
             edge_colors (Union[str, tuple, List[str], List[tuple]]): The
-                colors of circles. ``colors`` can have the same length with
-                lines or just single value. If ``colors`` is single value,
-                all the lines will have the same colors. Reference to
+                colors of circles which format is RGB. ``colors`` can have
+                the same length with lines or just single value. If ``colors``
+                is single value, all the lines will have the same colors.
+                Reference to
                 https://matplotlib.org/stable/gallery/color/named_colors.html
                 for more details. Defaults to 'g.
             line_styles (Union[str, List[str]]): The linestyle
@@ -819,7 +822,7 @@ class Visualizer(ManagerMixin):
                 have the same linewidth. When use 'cv2' backend,
                 it will round value to int format. Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
-                The face colors. Defaults to None.
+                The face colors which format is RGB. Defaults to None.
             alpha (Union[int, float]): The transparency of circles.
                 Defaults to 0.8.
         """
@@ -917,11 +920,11 @@ class Visualizer(ManagerMixin):
             bboxes (Union[np.ndarray, torch.Tensor]): The bboxes to draw with
                 the format of(x1,y1,x2,y2).
             edge_colors (Union[str, tuple, List[str], List[tuple]]): The
-                colors of bboxes. ``colors`` can have the same length with
-                lines or just single value. If ``colors`` is single value, all
-                the lines will have the same colors. Refer to `matplotlib.
-                colors` for full list of formats that are accepted.
-                Defaults to 'g'.
+                colors of bboxes which format is RGB. ``colors`` can have
+                the same length with lines or just single value. If ``colors``
+                is single value, all the lines will have the same colors.
+                Refer to `matplotlib. colors` for full list of formats
+                that are accepted. Defaults to 'g'.
             line_styles (Union[str, List[str]]): The linestyle
                 of lines. ``line_styles`` can have the same length with
                 texts or just single value. If ``line_styles`` is single
@@ -939,7 +942,7 @@ class Visualizer(ManagerMixin):
                 have the same linewidth. When use 'cv2' backend,
                 it will round value to int format. Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
-                The face colors. Defaults to None.
+                The face colors which format is RGB. Defaults to None.
             alpha (Union[int, float]): The transparency of bboxes.
                 Defaults to 0.8.
         """
@@ -1032,11 +1035,11 @@ class Visualizer(ManagerMixin):
                 List[Union[np.ndarray, torch.Tensor]]]): The polygons to draw
                 with the format of (x1,y1,x2,y2,...,xn,yn).
             edge_colors (Union[str, tuple, List[str], List[tuple]]): The
-                colors of polygons. ``colors`` can have the same length with
-                lines or just single value. If ``colors`` is single value,
-                all the lines will have the same colors. Refer to
-                `matplotlib.colors` for full list of formats that are accepted.
-                Defaults to 'g.
+                colors of polygons which format is RGB. ``colors`` can
+                have the same length with lines or just single value.
+                If ``colors`` is single value, all the lines will have
+                the same colors. Refer to `matplotlib.colors` for full
+                list of formats that are accepted. Defaults to 'g.
             line_styles (Union[str, List[str]]): The linestyle
                 of lines. ``line_styles`` can have the same length with
                 texts or just single value. If ``line_styles`` is single
@@ -1054,7 +1057,7 @@ class Visualizer(ManagerMixin):
                 have the same linewidth. When use 'cv2' backend,
                 it will round value to int format. Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
-                The face colors. Defaults to None.
+                The face colors which format is RGB. Defaults to None.
             alpha (Union[int, float]): The transparency of polygons.
                 Defaults to 0.8.
         """
@@ -1144,11 +1147,11 @@ class Visualizer(ManagerMixin):
                 with of shape (N, H, W), where H is the image height and W is
                 the image width. Each value in the array is either a 0 or 1
                 value of uint8 type.
-            colors (np.ndarray): The colors which binary_masks will convert to.
-                ``colors`` can have the same length with binary_masks or just
-                single value. If ``colors`` is single value, all the
-                binary_masks will convert to the same colors.
-                Defaults to np.array([0, 255, 0]).
+            colors (np.ndarray): The colors order in RGB channel which
+                binary_masks will convert to. ``colors`` can have the same
+                length with binary_masks or just single value. If ``colors``
+                is single value, all the binary_masks will convert to
+                the same colors. Defaults to np.array([0, 255, 0]).
             alphas (Union[int, List[int]]): The transparency of masks.
                 Defaults to 0.8.
         """
