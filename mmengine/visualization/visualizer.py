@@ -424,11 +424,12 @@ class Visualizer(ManagerMixin):
                 Reference to
                 https://matplotlib.org/stable/gallery/color/named_colors.html
                 for more details. Defaults to 'g.
-            marker (str, optional): The marker style.
+            marker (Union[str, int], optional): The marker style.
                 See :mod:`matplotlib.markers` for more information about
-                marker styles in `matplotlib` backend. See: `cv::MarkerTypes`
-                for more information about marker styles in `cv2` backend.
-                Defaults to None.
+                marker styles in `matplotlib` backend, Reference to
+                https://matplotlib.org/stable/api/markers_api.html.
+                See: `cv::MarkerTypes` for more information about marker
+                styles in `cv2` backend. Defaults to None.
             sizes (Optional[Union[np.ndarray, torch.Tensor]]): The marker size.
                 Defaults to None.
         """
@@ -441,10 +442,6 @@ class Visualizer(ManagerMixin):
             'The shape of `positions` should be (N, 2), '
             f'but got {positions.shape}')
         if self.backend == 'matplotlib':
-            if not (isinstance(marker, str) or marker is None):
-                raise TypeError(
-                    'The type of `marker` in `matplotlib` should be str, '
-                    f'but got {type(marker)}')
             colors = color_val_matplotlib(colors)  # type: ignore
             self.ax_save.scatter(
                 positions[:, 0],
