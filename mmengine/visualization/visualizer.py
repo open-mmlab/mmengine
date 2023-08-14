@@ -549,6 +549,7 @@ class Visualizer(ManagerMixin):
                 'cv2.FONT_HERSHEY_PLAIN', 'cv2.FONT_HERSHEY_DUPLEX', 'cv2.FONT_HERSHEY_COMPLEX',
                 'cv2.FONT_HERSHEY_TRIPLEX', 'cv2.FONT_HERSHEY_COMPLEX_SMALL', 'cv2.FONT_HERSHEY_SCRIPT_SIMPLEX',
                 'cv2.FONT_HERSHEY_SCRIPT_COMPLEX', 'cv2.FONT_ITALIC' in `cv2` backend.  Defaults to 'cv2.FONT_HERSHEY_SIMPLEX'.
+                `New in version 0.8.5.`
             bboxes (Union[dict, List[dict]], optional): The bounding box of the
                 texts. If bboxes is None, there are no bounding box around
                 texts. ``bboxes`` can have the same length with texts or
