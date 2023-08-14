@@ -639,14 +639,10 @@ class Visualizer(ManagerMixin):
                     color=colors[i])
         else:
             warnings.warn(
-                'When using cv2 as the backend for visualizer, '
-                'because `cv.putText(img, text, org, fontFace, '
-                'fontScale, color[, thickness[, lineType[, '
-                'bottomLeftOrigin]]])->img`, '
-                'the parameters `fontproperties`、'
-                '`vertical_alignments`、`font_families` '
+                'The parameters `font_properties`, '
+                '`vertical_alignments`, `font_families` '
                 'and `horizontal_alignments` '
-                'will be discarded and not called.', UserWarning)
+                'will be ignored when using cv2 backend.', UserWarning)
             colors = color_val_opencv(colors)  # type:ignore
             font_faces = value2list(font_faces, int, num_text)
             font_sizes = [font_size / 22.0 for font_size in font_sizes]
