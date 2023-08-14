@@ -16,6 +16,7 @@ mmengine._strategy
    DDPStrategy
    DeepSpeedStrategy
    FSDPStrategy
+   ColossalAIStrategy
 
 
 .. currentmodule:: mmengine._strategy.deepspeed

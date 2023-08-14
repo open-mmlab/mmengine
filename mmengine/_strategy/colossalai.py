@@ -131,17 +131,22 @@ class CollosalAIModelWrapper:
 
 
 class ColossalAIOpitmWrapper(OptimWrapper):
-    _optims = inspect.getmembers(
-        colo_optimizer,
-        lambda x: inspect.isclass(x) and issubclass(x, torch.optim.Optimizer),
-    )
-    tab = ' ' * 4
-    space = ' '
-    _optim_names = [_optim[0] for _optim in _optims]
-    __doc__ = f'The available optimizers are:\n{tab}-{space}' + \
-              f'\n{tab}-{space}'.join(_optim_names) + \
-              'You can find more details in the `colossalai tutorial`_' + \
-              '.. _colossalai tutorial: https://github.com/hpcaitech/ColossalAI/tree/main/colossalai/nn/optimizer'  # noqa: E501
+    """OptimWrapper for ColossalAI.
+
+    The available optimizers are:
+        - CPUAdam
+        - ColossalaiOptimizer
+        - FusedAdam
+        - FusedLAMB
+        - FusedSGD
+        - HybridAdam
+        - Lamb
+        - Lars
+
+    You can find more details in the `colossalai tutorial`_
+
+    .. _colossalai tutorial: https://github.com/hpcaitech/ColossalAI/tree/main/colossalai/nn/optimizer
+    """  # noqa: E501
 
     def __init__(self, optimizer, booster: Booster):
         super().__init__(optimizer)
@@ -220,7 +225,7 @@ class ColossalAIStrategy(BaseStrategy):
         **kwargs,
     ):
         if colossalai is None:
-            raise RuntimeError(
+            raise ModuleNotFoundError(
                 'Please install colossalai by `pip install -U colossalai`')
         register_plugins()
         register_mixed_precisions()
@@ -378,7 +383,7 @@ class ColossalAIStrategy(BaseStrategy):
         # |--epoch_0.pth
         #    |---model/
         #    |---optimizer/
-        #    |---scheduler/
+        #    |---scheduler/f
         if extra_ckpt is None:
             extra_ckpt = dict()
         if 'meta' not in extra_ckpt:
