@@ -5,6 +5,8 @@ import time
 from contextlib import contextmanager
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
+from mmengine.fileio import join_path
+
 try:
     import colossalai
     import colossalai.booster.mixed_precision as colo_precision
@@ -148,6 +150,8 @@ class CollosalAIModelWrapper:
         """
         data = self.model.data_preprocessor(data, False)
         return self._run_forward(data, mode='predict')
+
+    test_step = val_step
 
     def _run_forward(self, data: Union[dict, tuple, list], mode: str) -> Any:
         """Unpacks data for :meth:`forward`
@@ -329,8 +333,7 @@ class ColossalAIStrategy(BaseStrategy):
                 model, optim_wrapper.optimizer,
                 optim_wrapper_type)  # type: ignore
         else:
-            self.model = self._wrap(model, optim_wrapper,
-                                    optim_wrapper_type)  # type: ignore
+            self.model = self._wrap(model)  # type: ignore
         # TODO: Check whether `compile` is compatible with colossalai.
         # model = self.compile_model(model, compile=compile)
 
@@ -367,10 +370,14 @@ class ColossalAIStrategy(BaseStrategy):
             filename, map_location=map_location, callback=callback)
 
         if resume_optimizer:
-            self.booster.load_optimizer(self.optim_wrapper, filename)
+            self.booster.load_optimizer(self.optim_wrapper,
+                                        join_path(filename, self.MODEL_DIR))
 
-        if resume_param_scheduler:
-            self.load_scheduler_state_dict(extra_ckpt.pop('param_schedulers'))
+        if resume_param_scheduler and is_main_process():
+            schedulers_dir = join_path(filename, self.SCHEDULER_DIR)
+            for i, scheduler in enumerate(self.param_schedulers):
+                self.booster.load_lr_scheduler(
+                    scheduler, f'{schedulers_dir}/scheduler_{i}.pth')
 
         # resume random seed
         resumed_seed = extra_ckpt['meta'].get('seed', None)
@@ -408,7 +415,8 @@ class ColossalAIStrategy(BaseStrategy):
                 ``open-mmlab://xxx``.
         """
         self.logger.info(f'Load checkpoint from {filename}')
-        self.booster.load_model(self.model, filename)
+        self.booster.load_model(self.model.model_wrapper,
+                                join_path(filename, self.MODEL_DIR))
         meta = _load_checkpoint(osp.join(filename, 'meta.pth'))
         return meta
 
@@ -435,9 +443,9 @@ class ColossalAIStrategy(BaseStrategy):
             time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
             mmengine=mmengine.__version__ + get_git_hash())
 
-        model_dir = osp.join(filename, self.MODEL_DIR)
-        optimizer_dir = osp.join(filename, self.OPTIMIZER_DIR)
-        schedulers_dir = osp.join(filename, self.SCHEDULER_DIR)
+        model_dir = join_path(filename, self.MODEL_DIR)
+        optimizer_dir = join_path(filename, self.OPTIMIZER_DIR)
+        schedulers_dir = join_path(filename, self.SCHEDULER_DIR)
         mkdir_or_exist(model_dir)
         mkdir_or_exist(optimizer_dir)
         mkdir_or_exist(schedulers_dir)
@@ -457,7 +465,7 @@ class ColossalAIStrategy(BaseStrategy):
                     self.booster.save_lr_scheduler(
                         scheduler, f'{schedulers_dir}/scheduler_{i}.pth')
 
-        save_checkpoint(extra_ckpt, osp.join(filename, 'meta.pth'))
+        save_checkpoint(extra_ckpt, join_path(filename, 'meta.pth'))
 
     def _build_plugin(self, plugin: Union[str, dict]):
         if isinstance(plugin, str):
@@ -501,8 +509,8 @@ class ColossalAIStrategy(BaseStrategy):
     def _wrap(
         self,
         model: nn.Module,
-        optimizer: torch.optim.Optimizer,
-        optim_wrapper_type: Type[ColossalAIOpitmWrapper],
+        optimizer: Optional[torch.optim.Optimizer] = None,
+        optim_wrapper_type: Optional[Type[ColossalAIOpitmWrapper]] = None,
     ) -> Union[Tuple[CollosalAIModelWrapper, ColossalAIOpitmWrapper],
                CollosalAIModelWrapper]:  # type: ignore
         """Wrap model with :class:`ModelWrapper`."""
@@ -519,7 +527,7 @@ class ColossalAIStrategy(BaseStrategy):
             if isinstance(module, BaseDataPreprocessor):
                 module.to(get_device())
 
-        if optimizer is not None:
+        if optimizer is not None and optim_wrapper_type is not None:
             # We do not pass `scheduler` and `Dataloader` here for:
             # 1. `Booster.boost` cannot accept a list of schedulers.
             # 2. `Strategy` cannot not accept dataloader now.
