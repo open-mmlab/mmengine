@@ -3,7 +3,7 @@ import inspect
 import os.path as osp
 import time
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 try:
     import colossalai
@@ -31,7 +31,7 @@ from mmengine.dist import init_dist, is_main_process
 from mmengine.model import BaseDataPreprocessor
 from mmengine.optim import BaseOptimWrapper, OptimWrapper, _ParamScheduler
 from mmengine.registry import STRATEGIES, Registry
-from mmengine.registry.root import OPTIMIZERS
+from mmengine.registry.root import MODEL_WRAPPERS, OPTIM_WRAPPERS, OPTIMIZERS
 from mmengine.runner.checkpoint import _load_checkpoint, save_checkpoint
 from mmengine.utils import get_git_hash
 
@@ -66,26 +66,75 @@ def register_mixed_precisions():
         MIXED_PRECISIONS.register_module(name=name, module=mixed_precision)
 
 
+@OPTIM_WRAPPERS.register_module()
+class ColossalAIOpitmWrapper(OptimWrapper):
+    """OptimWrapper for ColossalAI.
+
+    The available optimizers are:
+        - CPUAdam
+        - ColossalaiOptimizer
+        - FusedAdam
+        - FusedLAMB
+        - FusedSGD
+        - HybridAdam
+        - Lamb
+        - Lars
+
+    You can find more details in the `colossalai tutorial`_
+
+    .. _colossalai tutorial: https://github.com/hpcaitech/ColossalAI/tree/main/colossalai/nn/optimizer
+
+    Args:
+        optimizer (dict or collossal.booster.Booster): The optimizer to be
+            wrapped.
+        accumulative_counts (int): The number of iterations to accumulate
+            gradients. The parameters will be updated per
+            ``accumulative_counts``.
+    """  # noqa: E501
+
+    def __init__(self,
+                 optimizer: torch.optim.Optimizer,
+                 booster: Booster,
+                 accumulative_counts: int = 1):
+        super().__init__(optimizer, accumulative_counts=accumulative_counts)
+        self.booster = booster
+
+    @contextmanager
+    def optim_context(self, model: nn.Module):
+        if self.booster.plugin.support_no_sync():
+            sync_context = self.booster.no_sync(model, self.optimizer)
+        else:
+            yield
+            return
+        if not self.should_sync():
+            with sync_context:
+                yield
+
+    def backward(self, loss: torch.Tensor, **kwargs) -> None:
+        self._inner_count += 1
+        self.optimizer.backward(loss, **kwargs)
+
+
+@MODEL_WRAPPERS.register_module()
 class CollosalAIModelWrapper:
 
-    def __init__(self, wrapped_model: ModelWrapper, model: nn.Module):
-        self.wrapped_model = wrapped_model
+    def __init__(self, model_wrapper: ModelWrapper, model: nn.Module):
+        self.model_wrapper = model_wrapper
         self.model = model
 
     def __call__(self, *args, **kwargs) -> Any:
-        return self.wrapped_model(*args, **kwargs)
+        return self.model_wrapper(*args, **kwargs)
 
     def train_step(
         self,
         data: Union[dict, tuple, list],
-        optim_wrapper,
+        optim_wrapper: ColossalAIOpitmWrapper,
     ) -> Dict[str, torch.Tensor]:
         data = self.model.data_preprocessor(data, training=True)
-        losses = self._run_forward(data, mode='loss')
+        with optim_wrapper.optim_context(self.model):
+            losses = self._run_forward(data, mode='loss')
         parsed_loss, log_vars = self.model.parse_losses(losses)
-        optim_wrapper.backward(parsed_loss)
-        optim_wrapper.step()
-        optim_wrapper.zero_grad()
+        optim_wrapper.update_params(parsed_loss)
         return log_vars
 
     def val_step(self, data: Union[dict, tuple, list]) -> list:
@@ -111,60 +160,23 @@ class CollosalAIModelWrapper:
             dict or list: Results of training or testing mode.
         """
         if isinstance(data, dict):
-            results = self.wrapped_model(**data, mode=mode)
+            results = self.model_wrapper(**data, mode=mode)
         elif isinstance(data, (list, tuple)):
-            results = self.wrapped_model(*data, mode=mode)
+            results = self.model_wrapper(*data, mode=mode)
         else:
             raise TypeError('Output of `data_preprocessor` should be '
                             f'list, tuple or dict, but got {type(data)}')
         return results
 
     def __getattr__(self, name):
-        if hasattr(self.wrapped_model, name):
-            return getattr(self.wrapped_model, name)
+        if hasattr(self.model_wrapper, name):
+            return getattr(self.model_wrapper, name)
         elif hasattr(self.model, name):
             return getattr(self.model, name)
         else:
             raise AttributeError(
-                f'{self.wrapped_model} and {self.model} has no '
+                f'{self.model_wrapper} and {self.model} has no '
                 f'attribute {name}')
-
-
-class ColossalAIOpitmWrapper(OptimWrapper):
-    """OptimWrapper for ColossalAI.
-
-    The available optimizers are:
-        - CPUAdam
-        - ColossalaiOptimizer
-        - FusedAdam
-        - FusedLAMB
-        - FusedSGD
-        - HybridAdam
-        - Lamb
-        - Lars
-
-    You can find more details in the `colossalai tutorial`_
-
-    .. _colossalai tutorial: https://github.com/hpcaitech/ColossalAI/tree/main/colossalai/nn/optimizer
-    """  # noqa: E501
-
-    def __init__(self, optimizer, booster: Booster):
-        super().__init__(optimizer)
-        self.booster = booster
-
-    @contextmanager
-    def optim_context(self, model: nn.Module):
-        try:
-            sync_context = self.booster.no_sync(model)
-        except NotImplementedError:
-            yield
-            return
-        if not self.should_sync():
-            with sync_context:
-                yield
-
-    def backward(self, loss: torch.Tensor, **kwargs) -> None:
-        return self.optimizer.backward(loss, **kwargs)
 
 
 @STRATEGIES.register_module()
@@ -181,14 +193,20 @@ class ColossalAIStrategy(BaseStrategy):
             could be:
 
             - str: The available plugins are `gemini` and `lowlevel-zero`.
-                   `gemini` means a `ZeRO`_ implementation with chunk-based
-                   memory management. You could find more details in the
-                   `colossalai gemini tutorial`_. `lowlevel-zero` means a
-                   Zero-1 and Zero-2 implementation. Although gemini is more
-                   memory saving, some unexpceted error could happen for
-                   some spectial model structure. lowlevel-zero is more stable.
-            - dict: dict-type style config to build a colossalai plugin. See
-                    the `booster plugin tutorial`_ for more details.
+
+              `gemini` means a `ZeRO`_ implementation with chunk-based
+              memory management. You could find more details in the
+              `colossalai gemini tutorial`_. `lowlevel-zero` means a
+              Zero-1 and Zero-2 implementation. Although gemini is more
+              memory saving, some unexpceted error could happen for
+              some spectial model structure. lowlevel-zero is more stable.
+
+            - dict: dict-type style config to build a colossalai plugin.
+
+              See the `booster plugin tutorial`_ for more details.
+
+        model_wrapper (dict, optional): Dict for model wrapper. Defaults to
+            None.
         work_dir (str): The working directory to save checkpoints. The logs
             will be saved in the subdirectory of `work_dir` named
             :attr:`timestamp`. Defaults to 'work_dirs'.
@@ -220,8 +238,9 @@ class ColossalAIStrategy(BaseStrategy):
         self,
         *,
         config: Union[str, dict, None] = None,
-        mixed_precision: Union[str, dict] = None,
+        mixed_precision: Union[str, dict, None] = None,
         plugin: str = 'gemini',
+        model_wrapper: Optional[dict] = None,
         **kwargs,
     ):
         if colossalai is None:
@@ -239,6 +258,7 @@ class ColossalAIStrategy(BaseStrategy):
         if plugin is not None:
             plugin = self._build_plugin(plugin)
         self.booster = Booster(mixed_precision=mixed_precision, plugin=plugin)
+        self.model_wrapper = model_wrapper
 
     def prepare(
         self,
@@ -281,14 +301,36 @@ class ColossalAIStrategy(BaseStrategy):
         model = self._init_model_weights(model)
 
         # optim_wrapper is required by booster
-        if optim_wrapper is not None:
+        if optim_wrapper is not None and isinstance(optim_wrapper, dict):
+            # Do not build `ColossalAIOptimWrapper` here, but build an
+            # naive `OptimWrapper`. We will wrap the optimizer with target
+            # optim_wrapper_type('ColossalAIOptimWrapper') after wrapping the
+            # model with `self.booster`.
+            optim_wrapper_type = OPTIM_WRAPPERS.get(
+                optim_wrapper.pop('type', 'ColossalAIOpitmWrapper'))
+            if optim_wrapper_type is None:
+                raise ValueError(
+                    'Failed to find `optim_wrapper` in `OPTIM_WRAPPERS`.')
+            if 'clip_grad' in optim_wrapper:
+                raise ValueError('`Please configure `clip_grad` in `plugin`')
+            if not issubclass(optim_wrapper_type, ColossalAIOpitmWrapper):
+                raise ValueError(
+                    'The type of `optim_wrapper` must be '
+                    '`ColossalAIOptimWrapper` (or subclass), but got '
+                    f'{optim_wrapper_type}')
             optim_wrapper = self.build_optim_wrapper(optim_wrapper, model)
 
         if param_scheduler is not None:
             self.param_schedulers = self.build_param_scheduler(
                 param_scheduler, optim_wrapper)  # type: ignore
 
-        self.model, self.optim_wrapper = self._wrap(model, optim_wrapper)
+        if optim_wrapper is not None:
+            self.model, self.optim_wrapper = self._wrap(
+                model, optim_wrapper.optimizer,
+                optim_wrapper_type)  # type: ignore
+        else:
+            self.model = self._wrap(model, optim_wrapper,
+                                    optim_wrapper_type)  # type: ignore
         # TODO: Check whether `compile` is compatible with colossalai.
         # model = self.compile_model(model, compile=compile)
 
@@ -383,7 +425,7 @@ class ColossalAIStrategy(BaseStrategy):
         # |--epoch_0.pth
         #    |---model/
         #    |---optimizer/
-        #    |---scheduler/f
+        #    |---scheduler/
         if extra_ckpt is None:
             extra_ckpt = dict()
         if 'meta' not in extra_ckpt:
@@ -401,7 +443,7 @@ class ColossalAIStrategy(BaseStrategy):
         mkdir_or_exist(schedulers_dir)
 
         self.booster.save_model(
-            self.model.wrapped_model, checkpoint=model_dir, shard=True)
+            self.model.model_wrapper, checkpoint=model_dir, shard=True)
 
         if save_optimizer:
             self.booster.save_optimizer(
@@ -459,9 +501,16 @@ class ColossalAIStrategy(BaseStrategy):
     def _wrap(
         self,
         model: nn.Module,
-        optim_wrapper: Optional[BaseOptimWrapper],
-    ) -> Tuple[CollosalAIModelWrapper, ColossalAIOpitmWrapper]:
+        optimizer: torch.optim.Optimizer,
+        optim_wrapper_type: Type[ColossalAIOpitmWrapper],
+    ) -> Union[Tuple[CollosalAIModelWrapper, ColossalAIOpitmWrapper],
+               CollosalAIModelWrapper]:  # type: ignore
         """Wrap model with :class:`ModelWrapper`."""
+        if self.model_wrapper is None:
+            # set broadcast_buffers as False to keep compatibility with
+            # OpenMMLab repos
+            self.model_wrapper = {'type': 'CollosalAIModelWrapper'}
+
         # For zero series parallel, move `data_preprocessor` to current device
         # is reasonable. We need to `BaseDataPreprocessor.to` manually since
         # framework like colossalai and deepspeed could not handle it, leading
@@ -470,18 +519,23 @@ class ColossalAIStrategy(BaseStrategy):
             if isinstance(module, BaseDataPreprocessor):
                 module.to(get_device())
 
-        # We do not pass `scheduler` and `Dataloader` here for:
-        # 1. `Booster.boost` cannot accept a list of schedulers.
-        # 2. `Strategy` cannot not accept dataloader now.
-        if optim_wrapper is not None:
-            optimizer = optim_wrapper.optimizer
+        if optimizer is not None:
+            # We do not pass `scheduler` and `Dataloader` here for:
+            # 1. `Booster.boost` cannot accept a list of schedulers.
+            # 2. `Strategy` cannot not accept dataloader now.
+            model_wrapper, optim_wrapper, *_ = self.booster.boost(
+                model, optimizer)
+            default_args = {'model_wrapper': model_wrapper, 'model': model}
+            model_wrapper = MODEL_WRAPPERS.build(
+                self.model_wrapper, default_args=default_args)
+            optim_wrapper = optim_wrapper_type(optim_wrapper, self.booster)
+            return model_wrapper, optim_wrapper
         else:
-            optimizer = None
-        model_wrapper, optim_wrapper, _, _, _ = self.booster.boost(
-            model, optimizer)
-        model = CollosalAIModelWrapper(model_wrapper, model)
-        optim_wrapper = ColossalAIOpitmWrapper(optim_wrapper, self.booster)
-        return model, optim_wrapper
+            model_wrapper, *_ = self.booster.boost(model)
+            default_args = {'model_wrapper': model_wrapper, 'model': model}
+            model_wrapper = MODEL_WRAPPERS.build(
+                self.model_wrapper, default_args=default_args)
+            return model_wrapper
 
     def _setup_distributed(  # type: ignore
         self,
