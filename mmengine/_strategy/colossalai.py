@@ -3,7 +3,7 @@ import inspect
 import os.path as osp
 import time
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from mmengine.fileio import join_path
 
@@ -306,12 +306,10 @@ class ColossalAIStrategy(BaseStrategy):
 
         # optim_wrapper is required by booster
         if optim_wrapper is not None and isinstance(optim_wrapper, dict):
-            # Do not build `ColossalAIOptimWrapper` here, but build an
-            # naive `OptimWrapper`. We will wrap the optimizer with target
-            # optim_wrapper_type('ColossalAIOptimWrapper') after wrapping the
-            # model with `self.booster`.
+            optim_wrapper.setdefault('type', 'ColossalAIOpitmWrapper')
+            optim_wrapper.setdefault('booster', self.booster)
             optim_wrapper_type = OPTIM_WRAPPERS.get(
-                optim_wrapper.pop('type', 'ColossalAIOpitmWrapper'))
+                optim_wrapper.get('type', 'ColossalAIOpitmWrapper'))
             if optim_wrapper_type is None:
                 raise ValueError(
                     'Failed to find `optim_wrapper` in `OPTIM_WRAPPERS`.')
@@ -324,18 +322,16 @@ class ColossalAIStrategy(BaseStrategy):
                     f'{optim_wrapper_type}')
             optim_wrapper = self.build_optim_wrapper(optim_wrapper, model)
 
-        if param_scheduler is not None:
-            self.param_schedulers = self.build_param_scheduler(
-                param_scheduler, optim_wrapper)  # type: ignore
-
         if optim_wrapper is not None:
             self.model, self.optim_wrapper = self._wrap(
-                model, optim_wrapper.optimizer,
-                optim_wrapper_type)  # type: ignore
+                model, optim_wrapper)  # type: ignore
         else:
             self.model = self._wrap(model)  # type: ignore
         # TODO: Check whether `compile` is compatible with colossalai.
-        # model = self.compile_model(model, compile=compile)
+
+        if param_scheduler is not None:
+            self.param_schedulers = self.build_param_scheduler(
+                param_scheduler, optim_wrapper)  # type: ignore
 
         if optim_wrapper is not None:
             self._scale_lr()
@@ -370,10 +366,11 @@ class ColossalAIStrategy(BaseStrategy):
             filename, map_location=map_location, callback=callback)
 
         if resume_optimizer:
-            self.booster.load_optimizer(self.optim_wrapper,
-                                        join_path(filename, self.MODEL_DIR))
+            self.booster.load_optimizer(
+                self.optim_wrapper.optimizer,
+                join_path(filename, self.OPTIMIZER_DIR))
 
-        if resume_param_scheduler and is_main_process():
+        if resume_param_scheduler:
             schedulers_dir = join_path(filename, self.SCHEDULER_DIR)
             for i, scheduler in enumerate(self.param_schedulers):
                 self.booster.load_lr_scheduler(
@@ -509,8 +506,7 @@ class ColossalAIStrategy(BaseStrategy):
     def _wrap(
         self,
         model: nn.Module,
-        optimizer: Optional[torch.optim.Optimizer] = None,
-        optim_wrapper_type: Optional[Type[ColossalAIOpitmWrapper]] = None,
+        optim_wrapper: Optional[OptimWrapper] = None,
     ) -> Union[Tuple[CollosalAIModelWrapper, ColossalAIOpitmWrapper],
                CollosalAIModelWrapper]:  # type: ignore
         """Wrap model with :class:`ModelWrapper`."""
@@ -527,17 +523,25 @@ class ColossalAIStrategy(BaseStrategy):
             if isinstance(module, BaseDataPreprocessor):
                 module.to(get_device())
 
-        if optimizer is not None and optim_wrapper_type is not None:
+        if optim_wrapper is not None:
+            optimizer = optim_wrapper.optimizer
+            if not hasattr(optimizer, '_hook_for_profile'):
+                # PyTorch 2.0 remove the `_hook_for_profile` in
+                # `torch.optim.Optimizer`. We maintain this function here to
+                # keep compatibility.
+                # TODO: Remove this hardcode when ColossalAI support
+                # PyTorch 2.0
+                optimizer.__class__._hook_for_profile = object
+
             # We do not pass `scheduler` and `Dataloader` here for:
             # 1. `Booster.boost` cannot accept a list of schedulers.
             # 2. `Strategy` cannot not accept dataloader now.
-            model_wrapper, optim_wrapper, *_ = self.booster.boost(
-                model, optimizer)
+            model_wrapper, optimizer, *_ = self.booster.boost(model, optimizer)
+            optim_wrapper.optimizer = optimizer
             default_args = {'model_wrapper': model_wrapper, 'model': model}
             model_wrapper = MODEL_WRAPPERS.build(
                 self.model_wrapper, default_args=default_args)
-            optim_wrapper = optim_wrapper_type(optim_wrapper, self.booster)
-            return model_wrapper, optim_wrapper
+            return model_wrapper, optim_wrapper  # type: ignore
         else:
             model_wrapper, *_ = self.booster.boost(model)
             default_args = {'model_wrapper': model_wrapper, 'model': model}
