@@ -23,29 +23,29 @@ from mmengine.dataset import worker_init_fn as default_worker_init_fn
 from mmengine.device import get_device
 from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
                            is_distributed, master_only)
-from mmengine.evaluator import Evaluator
+from mmengine.evaluator import Evaluator, build_evaluator
 from mmengine.fileio import FileClient, join_path
 from mmengine.hooks import Hook
 from mmengine.logging import MessageHub, MMLogger, print_log
-from mmengine.model import (MMDistributedDataParallel, convert_sync_batchnorm,
-                            is_model_wrapper, revert_sync_batchnorm)
+from mmengine.model import (MMDistributedDataParallel, build_model,
+                            convert_sync_batchnorm, is_model_wrapper,
+                            revert_sync_batchnorm)
 from mmengine.model.efficient_conv_bn_eval import \
     turn_on_efficient_conv_bn_eval
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
-from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, FUNCTIONS,
-                               HOOKS, LOG_PROCESSORS, LOOPS, MODEL_WRAPPERS,
-                               MODELS, OPTIM_WRAPPERS, PARAM_SCHEDULERS,
-                               RUNNERS, VISUALIZERS, DefaultScope)
+from mmengine.registry import (DATA_SAMPLERS, DATASETS, FUNCTIONS, HOOKS,
+                               LOOPS, MODEL_WRAPPERS, OPTIM_WRAPPERS,
+                               PARAM_SCHEDULERS, RUNNERS, DefaultScope)
 from mmengine.utils import apply_to, digit_version, get_git_hash, is_seq_of
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
                                      set_multi_processing)
-from mmengine.visualization import Visualizer
+from mmengine.visualization import Visualizer, build_visualizer
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          find_latest_checkpoint, save_checkpoint,
                          weights_to_cpu)
-from .log_processor import LogProcessor
+from .log_processor import LogProcessor, build_log_processor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
 from .utils import set_random_seed
@@ -769,25 +769,10 @@ class Runner:
         Returns:
             Visualizer: A Visualizer object build from ``visualizer``.
         """
-        if visualizer is None:
-            visualizer = dict(
-                name=self._experiment_name,
-                vis_backends=[dict(type='LocalVisBackend')],
-                save_dir=self._log_dir)
-            return Visualizer.get_instance(**visualizer)
-
-        if isinstance(visualizer, Visualizer):
-            return visualizer
-
-        if isinstance(visualizer, dict):
-            # ensure visualizer containing name key
-            visualizer.setdefault('name', self._experiment_name)
-            visualizer.setdefault('save_dir', self._log_dir)
-            return VISUALIZERS.build(visualizer)
-        else:
-            raise TypeError(
-                'visualizer should be Visualizer object, a dict or None, '
-                f'but got {visualizer}')
+        return build_visualizer(
+            visualizer=visualizer,
+            experiment_name=self._experiment_name,
+            log_dir=self._log_dir)
 
     def build_model(self, model: Union[nn.Module, Dict]) -> nn.Module:
         """Build model.
@@ -813,14 +798,7 @@ class Runner:
         Returns:
             nn.Module: Model build from ``model``.
         """
-        if isinstance(model, nn.Module):
-            return model
-        elif isinstance(model, dict):
-            model = MODELS.build(model)
-            return model  # type: ignore
-        else:
-            raise TypeError('model should be a nn.Module object or dict, '
-                            f'but got {model}')
+        return build_model(model=model)
 
     def wrap_model(
             self, model_wrapper_cfg: Optional[Dict],
@@ -1289,23 +1267,7 @@ class Runner:
         Returns:
             Evaluator: Evaluator build from ``evaluator``.
         """
-        if isinstance(evaluator, Evaluator):
-            return evaluator
-        elif isinstance(evaluator, dict):
-            # if `metrics` in dict keys, it means to build customized evalutor
-            if 'metrics' in evaluator:
-                evaluator.setdefault('type', 'Evaluator')
-                return EVALUATOR.build(evaluator)
-            # otherwise, default evalutor will be built
-            else:
-                return Evaluator(evaluator)  # type: ignore
-        elif isinstance(evaluator, list):
-            # use the default `Evaluator`
-            return Evaluator(evaluator)  # type: ignore
-        else:
-            raise TypeError(
-                'evaluator should be one of dict, list of dict, and Evaluator'
-                f', but got {evaluator}')
+        return build_evaluator(evaluator=evaluator)
 
     @staticmethod
     def build_dataloader(dataloader: Union[DataLoader, Dict],
@@ -1612,21 +1574,7 @@ class Runner:
             :obj:`LogProcessor`: Log processor object build from
             ``log_processor_cfg``.
         """
-        if isinstance(log_processor, LogProcessor):
-            return log_processor
-        elif not isinstance(log_processor, dict):
-            raise TypeError(
-                'log processor should be a LogProcessor object or dict, but'
-                f'got {log_processor}')
-
-        log_processor_cfg = copy.deepcopy(log_processor)  # type: ignore
-
-        if 'type' in log_processor_cfg:
-            log_processor = LOG_PROCESSORS.build(log_processor_cfg)
-        else:
-            log_processor = LogProcessor(**log_processor_cfg)  # type: ignore
-
-        return log_processor  # type: ignore
+        return build_log_processor(log_processor=log_processor)
 
     def get_hooks_info(self) -> str:
         # Get hooks info in each stage

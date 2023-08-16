@@ -5,6 +5,7 @@ from .averaged_model import (BaseAveragedModel, ExponentialMovingAverage,
                              MomentumAnnealingEMA, StochasticWeightAverage)
 from .base_model import BaseDataPreprocessor, BaseModel, ImgDataPreprocessor
 from .base_module import BaseModule, ModuleDict, ModuleList, Sequential
+from .builder import build_model
 from .test_time_aug import BaseTTAModel
 from .utils import (convert_sync_batchnorm, detect_anomalous_params,
                     merge_dict, revert_sync_batchnorm, stack_batch)
@@ -30,7 +31,7 @@ __all__ = [
     'bias_init_with_prob', 'BaseInit', 'ConstantInit', 'XavierInit',
     'NormalInit', 'TruncNormalInit', 'UniformInit', 'KaimingInit',
     'Caffe2XavierInit', 'PretrainedInit', 'initialize',
-    'convert_sync_batchnorm', 'BaseTTAModel'
+    'convert_sync_batchnorm', 'BaseTTAModel', 'build_model'
 ]
 
 if digit_version(TORCH_VERSION) >= digit_version('2.0.0'):
