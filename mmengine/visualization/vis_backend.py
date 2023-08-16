@@ -1007,6 +1007,8 @@ class NeptuneVisBackend(BaseVisBackend):
             produced by the visualizer.
         init_kwargs (dict, optional): neptune initialization
             input parameters.
+            The args 'project' and 'api_token' must be given
+            otherwise the 'mode' will set to 'offline'
             See `neptune.init_run
             <https://docs.neptune.ai/api/neptune/#init_run>`_ for
             details. Defaults to None.
@@ -1029,6 +1031,8 @@ class NeptuneVisBackend(BaseVisBackend):
         except ImportError:
             raise ImportError(
                 'Please run "pip install -U neptune" to install neptune')
+        if self._init_kwargs is None:
+            self._init_kwargs = {'mode': 'offline'}
 
         run = neptune.init_run(**self._init_kwargs)
         self._neptune = run
@@ -1049,6 +1053,7 @@ class NeptuneVisBackend(BaseVisBackend):
         from neptune.types import File
         self._neptune['config'].upload(File.from_content(config.pretty_text))
 
+    @force_init_env
     def add_image(self,
                   name: str,
                   image: np.ndarray,
@@ -1069,6 +1074,7 @@ class NeptuneVisBackend(BaseVisBackend):
         self._neptune['images'].append(
             File.as_image(img), name=name, step=step)
 
+    @force_init_env
     def add_scalar(self,
                    name: str,
                    value: Union[int, float],
@@ -1083,6 +1089,7 @@ class NeptuneVisBackend(BaseVisBackend):
         """
         self._neptune[f'{name}'].append(value, step=step)
 
+    @force_init_env
     def add_scalars(self,
                     scalar_dict: dict,
                     step: int = 0,
