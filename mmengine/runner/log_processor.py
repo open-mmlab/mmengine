@@ -380,8 +380,8 @@ class LogProcessor:
             data_src = log_cfg.pop('data_src')
             log_name = log_cfg.pop('log_name', data_src)
             if reserve_prefix:
-                data_src = f"{mode}/{data_src}"
-                log_name = f"{mode}/{log_name}"
+                data_src = f'{mode}/{data_src}'
+                log_name = f'{mode}/{log_name}'
             # log item in custom_cfg could only exist in train or val
             # mode.
             if data_src in mode_history_scalars:
