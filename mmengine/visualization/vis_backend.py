@@ -986,3 +986,126 @@ class ClearMLVisBackend(BaseVisBackend):
         for file_path in file_paths:
             self._task.upload_artifact(os.path.basename(file_path), file_path)
         self._task.close()
+
+
+@VISBACKENDS.register_module()
+class NeptuneVisBackend(BaseVisBackend):
+    """Neptune visualization backend class.
+    Examples:
+        >>>from mmengine.visualization import NeptuneVisBackend
+        >>> import numpy as np
+        >>> neptune_vis_backend = NeptuneVisBackend()
+        >>> img=np.random.randint(0, 256, size=(10, 10, 3))
+        >>> neptune_vis_backend.add_image('img', img)
+        >>> neptune_vis_backend.add_scaler('mAP', 0.6)
+        >>> neptune_vis_backend.add_scalars({'loss': [1, 2, 3],'acc': 0.8})
+        >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        >>> neptune_vis_backend.add_config(cfg)
+
+    Args:
+        save_dir (str, optional): The root directory to save the files
+            produced by the visualizer.
+        init_kwargs (dict, optional): neptune initialization
+            input parameters.
+            See `neptune.init_run
+            <https://docs.neptune.ai/api/neptune/#init_run>`_ for
+            details. Defaults to None.
+            There are significant changes in Neptune,
+            please read the latest API doc for details.
+            <https://docs.neptune.ai/api/>
+
+    """
+
+    def __init__(self, save_dir: str, init_kwargs: Optional[dict] = None):
+        super().__init__(save_dir)
+        self._init_kwargs = init_kwargs
+
+    def _init_env(self):
+        """Setup env for neptune."""
+        if not os.path.exists(self._save_dir):
+            os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
+        try:
+            import neptune
+        except ImportError:
+            raise ImportError(
+                'Please run "pip install -U neptune" to install neptune')
+
+        run = neptune.init_run(**self._init_kwargs)
+        self._neptune = run
+
+    @property  # type: ignore
+    @force_init_env
+    def experiment(self):
+        """Return Neptune object."""
+        return self._neptune
+
+    @force_init_env
+    def add_config(self, config: Config, **kwargs) -> None:
+        """Record the config to neptune.
+
+        Args:
+            config (Config): The Config object
+        """
+        from neptune.types import File
+        self._neptune['config'].upload(File.from_content(config.pretty_text))
+
+    def add_image(self,
+                  name: str,
+                  image: np.ndarray,
+                  step: int = 0,
+                  **kwargs) -> None:
+        """Record the image.
+
+        Args:
+            name (str): The image identifier.
+            image (np.ndarray): The image to be saved. The format
+                should be RGB. Defaults to None.
+            step (int): Global step value to record. Defaults to 0.
+        """
+        from neptune.types import File
+
+        # values in the array need to be in the [0, 1] range
+        img = image.astype(np.float32) / 255.0
+        self._neptune['images'].append(
+            File.as_image(img), name=name, step=step)
+
+    def add_scalar(self,
+                   name: str,
+                   value: Union[int, float],
+                   step: int = 0,
+                   **kwargs) -> None:
+        """Record the scalar.
+
+        Args:
+            name (str): The scalar identifier.
+            value (int, float): Value to save.
+            step (int): Global step value to record. Defaults to 0.
+        """
+        self._neptune[f'{name}'].append(value, step=step)
+
+    def add_scalars(self,
+                    scalar_dict: dict,
+                    step: int = 0,
+                    file_path: Optional[str] = None,
+                    **kwargs) -> None:
+        """Record the scalars' data.
+
+        Args:
+            scalar_dict (dict): Key-value pair storing the tag and
+                corresponding values.
+            step (int): Global step value to record. Defaults to 0.
+            file_path (str, optional): The scalar's data will be
+                saved to the `file_path` file at the same time
+                if the `file_path` parameter is specified.
+                Defaults to None.
+        """
+        for k, v in scalar_dict.items():
+            if isinstance(v, (int, float)):
+                self._neptune[f'{k}'].append(v)
+            else:
+                self._neptune[f'{k}'].extend(v)
+
+    def close(self) -> None:
+        """close an opened object."""
+        if hasattr(self, '_neptune'):
+            self._neptune.stop()
