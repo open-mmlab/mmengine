@@ -4,7 +4,7 @@ import datetime
 import re
 from collections import OrderedDict
 from itertools import chain
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -575,3 +575,41 @@ class LogProcessor:
             int: The dataloader size of current loop.
         """
         return len(self._get_cur_loop(runner=runner, mode=mode).dataloader)
+
+
+def build_log_processor(
+        log_processor: Union[LogProcessor, Dict]) -> LogProcessor:
+    """Build test log_processor.
+
+    Examples of ``log_processor``:
+
+        # `LogProcessor` will be used
+        log_processor = dict()
+
+        # custom log_processor
+        log_processor = dict(type='CustomLogProcessor')
+
+    Args:
+        log_processor (LogProcessor or dict): A log processor or a dict
+        to build log processor. If ``log_processor`` is a log processor
+        object, just returns itself.
+
+    Returns:
+        :obj:`LogProcessor`: Log processor object build from
+        ``log_processor_cfg``.
+    """
+    if isinstance(log_processor, LogProcessor):
+        return log_processor
+    elif not isinstance(log_processor, dict):
+        raise TypeError(
+            'log processor should be a LogProcessor object or dict, but'
+            f'got {log_processor}')
+
+    log_processor_cfg = copy.deepcopy(log_processor)  # type: ignore
+
+    if 'type' in log_processor_cfg:
+        log_processor = LOG_PROCESSORS.build(log_processor_cfg)
+    else:
+        log_processor = LogProcessor(**log_processor_cfg)  # type: ignore
+
+    return log_processor  # type: ignore
