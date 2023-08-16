@@ -380,7 +380,7 @@ class TestNeptuneVisBackend:
         shutil.rmtree('temp_dir')
 
     def test_add_scalar(self):
-        neptune_vis_backend = WandbVisBackend('temp_dir')
+        neptune_vis_backend = NeptuneVisBackend('temp_dir')
         neptune_vis_backend.add_scalar('map', 0.9)
         # test append mode
         neptune_vis_backend.add_scalar('map', 0.9)
