@@ -1018,14 +1018,12 @@ class NeptuneVisBackend(BaseVisBackend):
 
     """
 
-    def __init__(self, save_dir: str, init_kwargs: Optional[dict] = None):
+    def __init__(self, save_dir: Optional[str] = None, init_kwargs: Optional[dict] = None):
         super().__init__(save_dir)
         self._init_kwargs = init_kwargs
 
     def _init_env(self):
         """Setup env for neptune."""
-        if not os.path.exists(self._save_dir):
-            os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
         try:
             import neptune
         except ImportError:
