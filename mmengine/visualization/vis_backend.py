@@ -1085,7 +1085,7 @@ class NeptuneVisBackend(BaseVisBackend):
             value (int, float): Value to save.
             step (int): Global step value to record. Defaults to 0.
         """
-        self._neptune[f'{name}'].append(value, step=step)
+        self._neptune[name].append(value, step=step)
 
     @force_init_env
     def add_scalars(self,
