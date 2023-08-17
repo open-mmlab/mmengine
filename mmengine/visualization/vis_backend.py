@@ -991,31 +991,41 @@ class ClearMLVisBackend(BaseVisBackend):
 @VISBACKENDS.register_module()
 class NeptuneVisBackend(BaseVisBackend):
     """Neptune visualization backend class.
+
     Examples:
         >>>from mmengine.visualization import NeptuneVisBackend
         >>> import numpy as np
-        >>> neptune_vis_backend = NeptuneVisBackend()
-        >>> img=np.random.randint(0, 256, size=(10, 10, 3))
+        >>> init_kwargs = {'project': 'your_project_name'}
+        >>> neptune_vis_backend = NeptuneVisBackend(init_kwargs=init_kwargs)
+        >>> img = np.random.randint(0, 256, size=(10, 10, 3))
         >>> neptune_vis_backend.add_image('img', img)
         >>> neptune_vis_backend.add_scaler('mAP', 0.6)
-        >>> neptune_vis_backend.add_scalars({'loss': [1, 2, 3],'acc': 0.8})
+        >>> neptune_vis_backend.add_scalars({'loss': 0.1, 'acc': 0.8})
         >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
         >>> neptune_vis_backend.add_config(cfg)
 
     Args:
         save_dir (str, optional): The root directory to save the files
-            produced by the visualizer.
-        init_kwargs (dict, optional): neptune initialization
-            input parameters.
-            The args 'project' and 'api_token' must be given
-            otherwise the 'mode' will set to 'offline'
+            produced by the visualizer. NeptuneVisBackend does
+            not require this argument. Defaults to None.
+        init_kwargs (dict, optional): Neptune initialization parameters.
+            Defaults to None.
+            
+            - project (str): Name of a project in a form of
+              `namespace/project_name`. If `project` is not specified,
+              the value of `NEPTUNE_PROJECT` environment variable
+              will be taken.
+            - api_token (str): User’s API token. If api_token is not api_token,
+              the value of `NEPTUNE_API_TOKEN` environment variable will
+              be taken. Note: It is strongly recommended to use
+              `NEPTUNE_API_TOKEN` environment variable rather than
+              placing your API token here.
+              
+            If 'project' and 'api_token are not specified in `init_kwargs`
+            The 'mode' will set to 'offline'.
             See `neptune.init_run
             <https://docs.neptune.ai/api/neptune/#init_run>`_ for
-            details. Defaults to None.
-            There are significant changes in Neptune,
-            please read the latest API doc for details.
-            <https://docs.neptune.ai/api/>
-
+            details.
     """
 
     def __init__(self, save_dir: Optional[str] = None, init_kwargs: Optional[dict] = None):
