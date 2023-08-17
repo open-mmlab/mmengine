@@ -994,6 +994,7 @@ class NeptuneVisBackend(BaseVisBackend):
 
     Examples:
         >>> from mmengine.visualization import NeptuneVisBackend
+        >>> from mmengine import Config
         >>> import numpy as np
         >>> init_kwargs = {'project': 'your_project_name'}
         >>> neptune_vis_backend = NeptuneVisBackend(init_kwargs=init_kwargs)
