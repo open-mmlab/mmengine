@@ -993,7 +993,7 @@ class NeptuneVisBackend(BaseVisBackend):
     """Neptune visualization backend class.
 
     Examples:
-        >>>from mmengine.visualization import NeptuneVisBackend
+        >>> from mmengine.visualization import NeptuneVisBackend
         >>> import numpy as np
         >>> init_kwargs = {'project': 'your_project_name'}
         >>> neptune_vis_backend = NeptuneVisBackend(init_kwargs=init_kwargs)
@@ -1021,8 +1021,8 @@ class NeptuneVisBackend(BaseVisBackend):
               `NEPTUNE_API_TOKEN` environment variable rather than
               placing your API token here.
 
-            If 'project' and 'api_token are not specified in `init_kwargs`
-            The 'mode' will set to 'offline'.
+            If 'project' and 'api_token are not specified in `init_kwargs`,
+            the 'mode' will be set to 'offline'.
             See `neptune.init_run
             <https://docs.neptune.ai/api/neptune/#init_run>`_ for
             details.
