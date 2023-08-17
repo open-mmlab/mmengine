@@ -9,7 +9,8 @@ DATA_BATCH = Optional[Union[dict, tuple, list]]
 
 class ReportingHook(Hook):
 
-    _max_scoreboard_len = 1024
+    max_scoreboard_len = 1024
+    rules_supported = ['greater', 'less']
 
     def __init__(self,
                  monitor: str,
@@ -17,7 +18,7 @@ class ReportingHook(Hook):
                  tuning_iter: int = 0,
                  tunning_epoch: int = 0,
                  report_op: str = 'latest'):
-        assert rule in ['greater', 'less'], f'rule {rule} is not supported'
+        assert rule in self.rules_supported, f'rule {rule} is not supported'
         self.rule = rule
         assert (tuning_iter == 0 and tunning_epoch > 0) or (
             tunning_epoch == 0 and tuning_iter > 0
@@ -34,7 +35,7 @@ class ReportingHook(Hook):
 
     def _append_score(self, score):
         self.scoreboard.append(score)
-        if len(self.scoreboard) > self._max_scoreboard_len:
+        if len(self.scoreboard) > self.max_scoreboard_len:
             self.scoreboard.pop(0)
 
     def after_train_iter(self,

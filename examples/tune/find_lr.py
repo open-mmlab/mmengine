@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
 from mmengine.registry import DATASETS, METRICS, MODELS
-from mmengine.tuner import find_optimial_lr
+from mmengine.tune import find_optimial_lr
 
 
 class ToyModel(BaseModel):

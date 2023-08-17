@@ -1,6 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from tying import Dict, Optional
 
+from mmengine.registry import HYPER_SEARCHERS
+
 try:
     import nevergard as ng
 except ImportError:
@@ -17,28 +19,25 @@ except ImportError:
     hp = None
 
 
-class Searcher:
+class _Searcher:
+
+    rules_supported = ['greater', 'less']
 
     def __init__(self, rule: str, hparam_spec: Dict[str, Dict]):
-        assert rule in ['less', 'greater'
-                        ], f"rule must be 'less' or 'greater', but got {rule}"
+        assert rule in self.rules_supported, f"rule must be 'less' or 'greater', but got {rule}"
         self._rule = rule
+        self._validate_hparam_spec(hparam_spec)
+        self._hparam_spec = hparam_spec
+
+    def _validate_hparam_spec(self, hparam_spec):
         for _, v in hparam_spec.items():
             assert v.get('type', None) in [
                 'discrete', 'continuous'
             ], f'hparam_spec must have a key "type" and its value must be "discrete" or "continuous", but got {v}'
             if v['type'] == 'discrete':
-                assert v.get(
-                    'values', None
-                ) is not None, f'if hparam_spec["type"] is "discrete", hparam_spec must have a key "values", but got {v}'
+                assert 'values' in v, f'if hparam_spec["type"] is "discrete", hparam_spec must have a key "values", but got {v}'
             else:
-                assert v.get(
-                    'lower', None
-                ) is not None, f'if hparam_spec["type"] is "continuous", hparam_spec must have a key "lower", but got {v}'
-                assert v.get(
-                    'upper', None
-                ) is not None, f'if hparam_spec["type"] is "continuous", hparam_spec must have a key "upper", but got {v}'
-        self._hparam_spec = hparam_spec
+                assert 'lower' in v and 'upper' in v, f'if hparam_spec["type"] is "continuous", hparam_spec must have keys "lower" and "upper", but got {v}'
 
     @property
     def hparam_spec(self) -> Dict[str, Dict]:
@@ -64,7 +63,8 @@ class Searcher:
         """
 
 
-class NevergradSearcher(Searcher):
+@HYPER_SEARCHERS.register_module()
+class NevergradSearcher(_Searcher):
 
     def __init__(self,
                  rule: str,
@@ -100,7 +100,8 @@ class NevergradSearcher(Searcher):
         self._optimizer.tell(hparam, score * self._rule_op)
 
 
-class SkoptSearcher(Searcher):
+@HYPER_SEARCHERS.register_module()
+class SkoptSearcher(_Searcher):
 
     def __init__(self,
                  rule: str,
@@ -158,7 +159,8 @@ class SkoptSearcher(Searcher):
         self._optimizer.tell(ordered_values, score * self._rule_op)
 
 
-class HyperoptSearcher(Searcher):
+@HYPER_SEARCHERS.register_module()
+class HyperoptSearcher(_Searcher):
 
     def __init__(self,
                  rule: str,
