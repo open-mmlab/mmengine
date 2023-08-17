@@ -13,8 +13,8 @@ from mmengine import Config
 from mmengine.fileio import load
 from mmengine.registry import VISBACKENDS
 from mmengine.visualization import (ClearMLVisBackend, LocalVisBackend,
-                                    MLflowVisBackend, TensorboardVisBackend,
-                                    WandbVisBackend)
+                                    MLflowVisBackend, NeptuneVisBackend,
+                                    TensorboardVisBackend, WandbVisBackend)
 
 
 class TestLocalVisBackend:
@@ -353,3 +353,41 @@ class TestClearMLVisBackend:
         clearml_vis_backend._init_env()
         clearml_vis_backend.add_config(cfg)
         clearml_vis_backend.close()
+
+
+class TestNeptuneVisBackend:
+
+    def test_init(self):
+        NeptuneVisBackend()
+        VISBACKENDS.build(dict(type='NeptuneVisBackend'))
+
+    def test_experiment(self):
+        neptune_vis_backend = NeptuneVisBackend()
+        assert neptune_vis_backend.experiment == neptune_vis_backend._neptune
+
+    def test_add_config(self):
+        cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        neptune_vis_backend = NeptuneVisBackend()
+        neptune_vis_backend.add_config(cfg)
+
+    def test_add_image(self):
+        image = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
+        neptune_vis_backend = NeptuneVisBackend()
+        neptune_vis_backend.add_image('img', image)
+        neptune_vis_backend.add_image('img', image, step=1)
+
+    def test_add_scalar(self):
+        neptune_vis_backend = NeptuneVisBackend()
+        neptune_vis_backend.add_scalar('map', 0.9)
+        neptune_vis_backend.add_scalar('map', 0.9, step=1)
+        neptune_vis_backend.add_scalar('map', 0.95, step=2)
+
+    def test_add_scalars(self):
+        neptune_vis_backend = NeptuneVisBackend()
+        input_dict = {'map': 0.7, 'acc': 0.9}
+        neptune_vis_backend.add_scalars(input_dict)
+
+    def test_close(self):
+        neptune_vis_backend = NeptuneVisBackend()
+        neptune_vis_backend._init_env()
+        neptune_vis_backend.close()
