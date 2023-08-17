@@ -126,7 +126,7 @@ runner.train()
 ```
 
 请注意：若未提供 `project` 和 `api_token` ，neptune 将被设置成离线模式，产生的文件将保存到本地`.neptune`文件下。
-推荐在初始化时提供`project` 和 `api_token` ，具体方法如下所示：
+推荐在初始化时提供 `project` 和 `api_token` ，具体方法如下所示：
 
 ```python
 runner = Runner(
