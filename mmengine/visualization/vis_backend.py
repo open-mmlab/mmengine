@@ -1115,10 +1115,7 @@ class NeptuneVisBackend(BaseVisBackend):
                 Defaults to None.
         """
         for k, v in scalar_dict.items():
-            if isinstance(v, (int, float)):
-                self._neptune[f'{k}'].append(v)
-            else:
-                self._neptune[f'{k}'].extend(v)
+            self._neptune[k].append(v, step=step)
 
     def close(self) -> None:
         """close an opened object."""
