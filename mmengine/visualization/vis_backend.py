@@ -1000,7 +1000,7 @@ class NeptuneVisBackend(BaseVisBackend):
         >>> neptune_vis_backend = NeptuneVisBackend(init_kwargs=init_kwargs)
         >>> img = np.random.randint(0, 256, size=(10, 10, 3))
         >>> neptune_vis_backend.add_image('img', img)
-        >>> neptune_vis_backend.add_scaler('mAP', 0.6)
+        >>> neptune_vis_backend.add_scalar('mAP', 0.6)
         >>> neptune_vis_backend.add_scalars({'loss': 0.1, 'acc': 0.8})
         >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
         >>> neptune_vis_backend.add_config(cfg)
