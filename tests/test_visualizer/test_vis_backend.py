@@ -358,8 +358,8 @@ class TestClearMLVisBackend:
 class TestNeptuneVisBackend:
 
     def test_init(self):
-        NeptuneVisBackend('temp_dir')
-        VISBACKENDS.build(dict(type='NeptuneVisBackend', save_dir='temp_dir'))
+        NeptuneVisBackend()
+        VISBACKENDS.build(dict(type='NeptuneVisBackend'))
 
     def test_experiment(self):
         neptune_vis_backend = NeptuneVisBackend('temp_dir')
