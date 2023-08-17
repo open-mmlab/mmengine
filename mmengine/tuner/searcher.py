@@ -48,7 +48,7 @@ class Searcher:
     def rule(self) -> str:
         return self._rule
 
-    def record(hparam: Dict, score: float):
+    def record(self, hparam: Dict, score: float):
         """Record hparam and score to solver.
 
         Args:
@@ -83,14 +83,14 @@ class NevergradSearcher(Searcher):
             self._rule_op = -1.0
 
     def _build_optimizer(self, solver_type: str, num_trials: int):
-        converted_hp_spec = ng.p.Dict(
+        converted_hparam_spec = ng.p.Dict(
             **{
                 k: ng.p.Scalar(lower=v['lower'], upper=v['upper'])
                 if v['type'] == 'continuous' else ng.p.Choice(v['values'])
-                for k, v in self.hp_spec.items()
+                for k, v in self.hparam_spec.items()
             })
         solver = ng.optimization.optimizerlib.registry[solver_type](
-            parametrization=converted_hp_spec, budget=num_trials)
+            parametrization=converted_hparam_spec, budget=num_trials)
         return solver
 
     def suggest(self) -> Dict:

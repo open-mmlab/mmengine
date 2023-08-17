@@ -1,16 +1,15 @@
+import argparse
+import tempfile
+
 import torch
 import torch.nn as nn
+from torch.utils.data import Dataset
 
 from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
-
+from mmengine.registry import DATASETS, METRICS, MODELS
 from mmengine.tuner import find_optimial_lr
 
-from mmengine.registry import DATASETS, METRICS, MODELS
-
-import tempfile
-
-import argparse
 
 class ToyModel(BaseModel):
 
@@ -66,6 +65,7 @@ class ToyMetric(BaseMetric):
     def compute_metrics(self, results):
         return dict(acc=1)
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Distributed Training')
     parser.add_argument(
@@ -77,6 +77,7 @@ def parse_args():
 
     args = parser.parse_args()
     return args
+
 
 def main():
     args = parse_args()
@@ -116,16 +117,17 @@ def main():
         custom_hooks=[],
         env_cfg=dict(dist_cfg=dict(backend='nccl')),
         experiment_name='test1')
-    
+
     temp_dir.cleanup()
 
     best_lr, lowest_loss = find_optimial_lr(
         runner_cfg=runner_cfg,
-        num_trials = 32,
-        tunning_epoch = 1,
+        num_trials=32,
+        tunning_epoch=1,
     )
-    print("best_lr: ", best_lr)
-    print("lowest_loss: ", lowest_loss)
+    print('best_lr: ', best_lr)
+    print('lowest_loss: ', lowest_loss)
 
-if __name__ == '_main__':
+
+if __name__ == '__main__':
     main()
