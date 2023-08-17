@@ -1010,7 +1010,7 @@ class NeptuneVisBackend(BaseVisBackend):
             not require this argument. Defaults to None.
         init_kwargs (dict, optional): Neptune initialization parameters.
             Defaults to None.
-            
+
             - project (str): Name of a project in a form of
               `namespace/project_name`. If `project` is not specified,
               the value of `NEPTUNE_PROJECT` environment variable
@@ -1020,7 +1020,7 @@ class NeptuneVisBackend(BaseVisBackend):
               be taken. Note: It is strongly recommended to use
               `NEPTUNE_API_TOKEN` environment variable rather than
               placing your API token here.
-              
+
             If 'project' and 'api_token are not specified in `init_kwargs`
             The 'mode' will set to 'offline'.
             See `neptune.init_run
@@ -1028,8 +1028,10 @@ class NeptuneVisBackend(BaseVisBackend):
             details.
     """
 
-    def __init__(self, save_dir: Optional[str] = None, init_kwargs: Optional[dict] = None):
-        super().__init__(save_dir)
+    def __init__(self,
+                 save_dir: Optional[str] = None,
+                 init_kwargs: Optional[dict] = None):
+        super().__init__(save_dir)  # type:ignore
         self._init_kwargs = init_kwargs
 
     def _init_env(self):

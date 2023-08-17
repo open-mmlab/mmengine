@@ -1,6 +1,6 @@
 # Visualize Training Logs
 
-MMEngine integrates experiment management tools such as [TensorBoard](https://www.tensorflow.org/tensorboard), [Weights & Biases (WandB)](https://docs.wandb.ai/), [MLflow](https://mlflow.org/docs/latest/index.html) and [ClearML](https://clear.ml/docs/latest/docs), making it easy to track and visualize metrics like loss and accuracy.
+MMEngine integrates experiment management tools such as [TensorBoard](https://www.tensorflow.org/tensorboard), [Weights & Biases (WandB)](https://docs.wandb.ai/), [MLflow](https://mlflow.org/docs/latest/index.html), [ClearML](https://clear.ml/docs/latest/docs) and [Neptune](https://docs.neptune.ai/), making it easy to track and visualize metrics like loss and accuracy.
 
 Below, we'll show you how to configure an experiment management tool in just one line, based on the example from [15 minutes to get started with MMEngine](../get_started/15_minutes.md).
 
@@ -99,3 +99,51 @@ runner.train()
 ```
 
 ![image](https://github.com/open-mmlab/mmengine/assets/58739961/d68e1dd2-9e82-40fb-ad81-00a647549adc)
+
+## Neptune
+
+Before using Neptune, you need to install `neptune` dependency library and refer to [Neptune.AI](https://docs.neptune.ai/) for configuration.
+
+```bash
+pip install neptune
+```
+
+Configure the `Runner` in the initialization parameters of the Runner, and set `vis_backends` to `NeptuneVisBackend`.
+
+```python
+runner = Runner(
+    model=MMResNet50(),
+    work_dir='./work_dir',
+    train_dataloader=train_dataloader,
+    optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+    train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
+    val_dataloader=val_dataloader,
+    val_cfg=dict(),
+    val_evaluator=dict(type=Accuracy),
+    visualizer=dict(type='Visualizer', vis_backends=[dict(type='NeptuneVisBackend')]),
+)
+runner.train()
+```
+
+Please note: If the `project` and `api_token` are not specified, neptune will be set to offline mode and the generated files will be saved to the local `.neptune` file.
+It is recommended to specify the `project` and `api_token` during initialization as shown below.
+
+```python
+runner = Runner(
+    ...
+    visualizer=dict(
+        type='Visualizer',
+        vis_backends=[
+            dict(
+                type='NeptuneVisBackend',
+                init_kwargs=dict(project='workspace-name/project-name',
+                                 api_token='your api token')
+            ),
+        ],
+    ),
+    ...
+)
+runner.train()
+```
+
+More initialization configuration parameters are available at [neptune.init_run API](https://docs.neptune.ai/api/neptune/#init_run).
