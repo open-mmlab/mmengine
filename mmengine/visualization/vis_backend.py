@@ -1042,8 +1042,7 @@ class NeptuneVisBackend(BaseVisBackend):
         if self._init_kwargs is None:
             self._init_kwargs = {'mode': 'offline'}
 
-        run = neptune.init_run(**self._init_kwargs)
-        self._neptune = run
+        self._neptune = neptune.init_run(**self._init_kwargs)
 
     @property  # type: ignore
     @force_init_env
