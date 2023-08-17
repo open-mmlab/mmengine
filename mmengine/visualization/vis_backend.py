@@ -1113,6 +1113,10 @@ class NeptuneVisBackend(BaseVisBackend):
                 if the `file_path` parameter is specified.
                 Defaults to None.
         """
+        assert isinstance(scalar_dict, dict)
+        assert 'step' not in scalar_dict, 'Please set it directly ' \
+                                          'through the step parameter'
+
         for k, v in scalar_dict.items():
             self._neptune[k].append(v, step=step)
 
