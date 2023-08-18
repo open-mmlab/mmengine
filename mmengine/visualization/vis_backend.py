@@ -1005,6 +1005,9 @@ class NeptuneVisBackend(BaseVisBackend):
         >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
         >>> neptune_vis_backend.add_config(cfg)
 
+    Note:
+        `New in version 0.8.5.`
+
     Args:
         save_dir (str, optional): The root directory to save the files
             produced by the visualizer. NeptuneVisBackend does
@@ -1016,7 +1019,7 @@ class NeptuneVisBackend(BaseVisBackend):
               `namespace/project_name`. If `project` is not specified,
               the value of `NEPTUNE_PROJECT` environment variable
               will be taken.
-            - api_token (str): User’s API token. If api_token is not api_token,
+            - api_token (str): User's API token. If api_token is not api_token,
               the value of `NEPTUNE_API_TOKEN` environment variable will
               be taken. Note: It is strongly recommended to use
               `NEPTUNE_API_TOKEN` environment variable rather than
