@@ -118,8 +118,6 @@ def main():
         env_cfg=dict(dist_cfg=dict(backend='nccl')),
         experiment_name='test1')
 
-    temp_dir.cleanup()
-
     result = find_optimial_lr(
         runner_cfg=runner_cfg,
         num_trials=32,

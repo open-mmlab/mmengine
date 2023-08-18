@@ -18,10 +18,12 @@ def find_optimial_lr(runner_cfg: Union[Dict, Config, ConfigDict],
                      searcher: str = 'nevergrad',
                      **searcher_kwargs) -> Dict[str, Union[dict, float]]:
     is_discrete = lr_choices is not None
-    assert (lower_lr is None and upper_lr is None and lr_choices
-            is not None) or (lower_lr is not None and upper_lr is not None
-                             and lr_choices is None
-                             ), 'lower_lr and upper_lr should be set only one'
+    if is_discrete:
+        assert lower_lr is None and upper_lr is None, \
+            'lower_lr and upper_lr should be None if lr_choices is not None'
+    else:
+        assert lower_lr is not None and upper_lr is not None, \
+            'lower_lr and upper_lr should set if lr_choices is None'
     hparam_spec: dict
     if is_discrete:
         hparam_spec = {

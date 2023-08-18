@@ -24,7 +24,8 @@ class _Searcher:
     rules_supported = ['greater', 'less']
 
     def __init__(self, rule: str, hparam_spec: Dict[str, Dict]):
-        assert rule in self.rules_supported, f"rule must be 'less' or 'greater', but got {rule}"
+        assert rule in self.rules_supported, \
+            f"rule must be 'less' or 'greater', but got {rule}"
         self._rule = rule
         self._validate_hparam_spec(hparam_spec)
         self._hparam_spec = hparam_spec
@@ -33,11 +34,18 @@ class _Searcher:
         for _, v in hparam_spec.items():
             assert v.get('type', None) in [
                 'discrete', 'continuous'
-            ], f'hparam_spec must have a key "type" and its value must be "discrete" or "continuous", but got {v}'
+            ], \
+                'hparam_spec must have a key "type" and ' \
+                f'its value must be "discrete" or "continuous", but got {v}'
             if v['type'] == 'discrete':
-                assert 'values' in v, f'if hparam_spec["type"] is "discrete", hparam_spec must have a key "values", but got {v}'
+                assert 'values' in v, \
+                    'if hparam_spec["type"] is "discrete", ' +\
+                    f'hparam_spec must have a key "values", but got {v}'
             else:
-                assert 'lower' in v and 'upper' in v, f'if hparam_spec["type"] is "continuous", hparam_spec must have keys "lower" and "upper", but got {v}'
+                assert 'lower' in v and 'upper' in v, \
+                    'if hparam_spec["type"] is "continuous", ' +\
+                    'hparam_spec must have keys "lower" and "upper", ' +\
+                    f'but got {v}'
 
     @property
     def hparam_spec(self) -> Dict[str, Dict]:
@@ -212,7 +220,6 @@ class HyperoptSearcher(_Searcher):
         return suggested_params
 
     def record(self, hparam: Dict, score: float):
-        # Hyperopt requires loss (lower is better), so we should adjust our score if in "greater" rule.
         self._trials.insert_trial_docs([{
             'tid': len(self._trials.trials),
             'book_time': hp.utils.coarse_utcnow(),
