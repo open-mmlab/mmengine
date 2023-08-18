@@ -1919,7 +1919,11 @@ class TestRunner(TestCase):
             def __init__(self):
                 self.val_iter = 0
 
-            def after_val_iter(self, runner):
+            def after_val_iter(self,
+                               runner,
+                               batch_idx,
+                               data_batch=None,
+                               outputs=None):
                 self.val_iter += 1
                 nonlocal val_result
                 val_result = self.val_iter
@@ -2020,7 +2024,11 @@ class TestRunner(TestCase):
             def __init__(self):
                 self.test_iter = 0
 
-            def after_test_iter(self, runner):
+            def after_test_iter(self,
+                                runner,
+                                batch_idx,
+                                data_batch=None,
+                                outputs=None):
                 self.test_iter += 1
                 nonlocal test_result
                 test_result = self.test_iter
@@ -2029,7 +2037,7 @@ class TestRunner(TestCase):
         cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
         cfg.test_dataloader['num_batch_per_epoch'] = 2
         runner = Runner.from_cfg(cfg)
-        runner.val()
+        runner.test()
         self.assertEqual(test_result, 2)
 
     @skipIf(
