@@ -122,13 +122,13 @@ def main():
         from colossalai.tensor.op_wrapper import colo_op_impl
 
         # ColossalAI overwrite some torch ops with their custom op to
-        # make it compatible with `ColoTensor`. However, an backward error
-        # are more likely to happen if there are inplace operation in the
+        # make it compatible with `ColoTensor`. However, a backward error
+        # is more likely to happen if there are inplace operation in the
         # model.
         # For example, layers like `conv` + `bn` + `relu` is OK when `relu` is
         # inplace since PyTorch builtin ops `batch_norm` could handle it.
         # However, if `relu` is an `inplaced` op while `batch_norm` is an
-        # custom op, an error will be raised since PyTorch think the custom op
+        # custom op, an error will be raised since PyTorch thinks the custom op
         # could not handle the backward graph modification caused by inplace
         # op.
         # In this example, the inplace op `add_` in resnet could raise an error

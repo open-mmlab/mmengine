@@ -185,7 +185,7 @@ torchrun --nproc-per-node 2 examples/distributed_training_with_flexible_runner.p
 
 ## ColossalAI
 
-[ColossalAI](https://colossalai.org/) is a comprehensive large-scale model training system that utilizes efficient parallelization techniques. Starting from MMEngine v0.8.4, it supports training models using optimization strategies from the ZeRO series in ColossalAI.
+[ColossalAI](https://colossalai.org/) is a comprehensive large-scale model training system that utilizes efficient parallelization techniques. Starting from MMEngine v0.8.5, it supports training models using optimization strategies from the ZeRO series in ColossalAI.
 
 Install ColossalAI with a version greater than v0.3.1. This version requirement is due to a [bug](https://github.com/hpcaitech/ColossalAI/issues/4393) in v0.3.1 that causes some program blocking, which has been fixed in later versions. If the highest available version of ColossalAI is still v0.3.1, it is recommended to install ColossalAI from the source code on the main branch.
 
@@ -213,10 +213,8 @@ Here's the configuration related to ColossalAI:
 ```python
 from mmengine.runner._flexible_runner import FlexibleRunner
 
-strategy = dict(
-            type='ColossalAIStrategy')
-optim_wrapper = dict(
-            optimizer=dict(type='HybridAdam', lr=1e-3))
+strategy = dict(type='ColossalAIStrategy')
+optim_wrapper = dict(optimizer=dict(type='HybridAdam', lr=1e-3))
 
 # Initialize FlexibleRunner
 runner = FlexibleRunner(
