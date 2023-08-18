@@ -306,8 +306,7 @@ class ColossalAIStrategy(BaseStrategy):
         if optim_wrapper is not None and isinstance(optim_wrapper, dict):
             optim_wrapper.setdefault('type', 'ColossalAIOpitmWrapper')
             optim_wrapper.setdefault('booster', self.booster)
-            optim_wrapper_type = OPTIM_WRAPPERS.get(
-                optim_wrapper.get('type', 'ColossalAIOpitmWrapper'))
+            optim_wrapper_type = OPTIM_WRAPPERS.get(optim_wrapper['type'])
             if optim_wrapper_type is None:
                 raise ValueError(
                     'Failed to find `optim_wrapper` in `OPTIM_WRAPPERS`.')
@@ -454,11 +453,10 @@ class ColossalAIStrategy(BaseStrategy):
                 checkpoint=optimizer_dir,
                 shard=True)
 
-        if is_main_process():
-            if save_param_scheduler:
-                for i, scheduler in enumerate(self.param_schedulers):
-                    self.booster.save_lr_scheduler(
-                        scheduler, f'{schedulers_dir}/scheduler_{i}.pth')
+        if is_main_process() and save_param_scheduler:
+            for i, scheduler in enumerate(self.param_schedulers):
+                self.booster.save_lr_scheduler(
+                    scheduler, f'{schedulers_dir}/scheduler_{i}.pth')
 
         save_checkpoint(extra_ckpt, join_path(filename, 'meta.pth'))
 
@@ -522,10 +520,10 @@ class ColossalAIStrategy(BaseStrategy):
         if optim_wrapper is not None:
             optimizer = optim_wrapper.optimizer
             if not hasattr(optimizer, '_hook_for_profile'):
-                # PyTorch 2.0 remove the `_hook_for_profile` in
+                # PyTorch 2.0 removes the `_hook_for_profile` in
                 # `torch.optim.Optimizer`. We maintain this function here to
                 # keep compatibility.
-                # TODO: Remove this hardcode when ColossalAI support
+                # TODO: Remove this hardcode when ColossalAI supports
                 # PyTorch 2.0
                 optimizer.__class__._hook_for_profile = object
 
