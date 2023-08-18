@@ -72,17 +72,15 @@ class ColossalAIOpitmWrapper(OptimWrapper):
     """OptimWrapper for ColossalAI.
 
     The available optimizers are:
-        - CPUAdam
-        - FusedAdam
-        - FusedLAMB
-        - FusedSGD
-        - HybridAdam
-        - Lamb
-        - Lars
+      - CPUAdam
+      - FusedAdam
+      - FusedLAMB
+      - FusedSGD
+      - HybridAdam
+      - Lamb
+      - Lars
 
     You can find more details in the `colossalai tutorial`_
-
-    .. _colossalai tutorial: https://github.com/hpcaitech/ColossalAI/tree/main/colossalai/nn/optimizer
 
     Args:
         optimizer (dict or collossal.booster.Booster): The optimizer to be
@@ -90,6 +88,8 @@ class ColossalAIOpitmWrapper(OptimWrapper):
         accumulative_counts (int): The number of iterations to accumulate
             gradients. The parameters will be updated per
             ``accumulative_counts``.
+
+    .. _colossalai tutorial: https://github.com/hpcaitech/ColossalAI/tree/main/colossalai/nn/optimizer
     """  # noqa: E501
 
     def __init__(self,
@@ -309,7 +309,7 @@ class ColossalAIStrategy(BaseStrategy):
             optim_wrapper_type = OPTIM_WRAPPERS.get(optim_wrapper['type'])
             if optim_wrapper_type is None:
                 raise ValueError(
-                    'Failed to find `optim_wrapper` in `OPTIM_WRAPPERS`.')
+                    f'Failed to find {optim_wrapper["type"]} in `OPTIM_WRAPPERS`.')
             if 'clip_grad' in optim_wrapper:
                 raise ValueError('`Please configure `clip_grad` in `plugin`')
             if not issubclass(optim_wrapper_type, ColossalAIOpitmWrapper):
