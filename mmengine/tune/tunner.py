@@ -109,7 +109,7 @@ class Tuner:
                         searcher_type: str = 'nevergrad',
                         **kwargs) -> _Searcher:
         self._logger.info(f'Building searcher of type: {searcher_type}')
-        build_config = dict(type=searcher_type)
+        build_config = dict(type=searcher_type, num_trials=self._num_trials)
         build_config.update(kwargs)
         return HYPER_SEARCHERS.build(build_config)
 
