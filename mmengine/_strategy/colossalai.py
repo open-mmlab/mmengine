@@ -309,7 +309,8 @@ class ColossalAIStrategy(BaseStrategy):
             optim_wrapper_type = OPTIM_WRAPPERS.get(optim_wrapper['type'])
             if optim_wrapper_type is None:
                 raise ValueError(
-                    f'Failed to find {optim_wrapper["type"]} in `OPTIM_WRAPPERS`.')
+                    f'Failed to find {optim_wrapper["type"]} in '
+                    '`OPTIM_WRAPPERS`.')
             if 'clip_grad' in optim_wrapper:
                 raise ValueError('`Please configure `clip_grad` in `plugin`')
             if not issubclass(optim_wrapper_type, ColossalAIOpitmWrapper):
