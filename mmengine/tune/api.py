@@ -2,7 +2,7 @@
 from typing import Dict, List, Optional, Union
 
 from mmengine.config import Config, ConfigDict
-from .tunner import Tuner
+from .tuner import Tuner
 
 
 def find_optimial_lr(runner_cfg: Union[Dict, Config, ConfigDict],
@@ -15,7 +15,7 @@ def find_optimial_lr(runner_cfg: Union[Dict, Config, ConfigDict],
                      tuning_iter: int = 0,
                      tunning_epoch: int = 0,
                      report_op: str = 'latest',
-                     searcher: str = 'nevergrad',
+                     searcher_type: str = 'nevergrad',
                      **searcher_kwargs) -> Dict[str, Union[dict, float]]:
     is_discrete = lr_choices is not None
     if is_discrete:
@@ -41,7 +41,7 @@ def find_optimial_lr(runner_cfg: Union[Dict, Config, ConfigDict],
             }
         }
 
-    tunner = Tuner(
+    tuner = Tuner(
         runner_cfg,
         hparam_spec=hparam_spec,
         monitor=monitor,
@@ -50,6 +50,6 @@ def find_optimial_lr(runner_cfg: Union[Dict, Config, ConfigDict],
         tuning_iter=tuning_iter,
         tunning_epoch=tunning_epoch,
         report_op=report_op,
-        searcher=searcher,
+        searcher_type=searcher_type,
         **searcher_kwargs)
-    return tunner.tune()
+    return tuner.tune()

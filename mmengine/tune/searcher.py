@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from tying import Dict, Optional
+from typing import Dict, Optional
 
 from mmengine.registry import HYPER_SEARCHERS
 

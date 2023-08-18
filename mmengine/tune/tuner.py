@@ -46,7 +46,6 @@ class Tuner:
         self._tuning_iter = tuning_iter
         self._tuning_epoch = tunning_epoch
         self._reporting_op = report_op
-        self._searcher = self._build_searcher(searcher_type, **searcher_kwargs)
         self._history: List[Tuple[Dict, float]] = []
 
         launcher = self._runner_cfg.get('launcher', 'none')
@@ -59,6 +58,7 @@ class Tuner:
         self._logger = MMLogger.get_instance('Tuner', log_level='INFO')
         self._logger.info(
             f'Tuner initialized with rule: {rule} and monitor: {monitor}')
+        self._searcher = self._build_searcher(searcher_type, **searcher_kwargs)
 
     @property
     def hparam_spec(self) -> Dict[str, Dict]:
