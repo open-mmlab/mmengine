@@ -94,7 +94,7 @@ def main():
         val_cfg=dict(),
         val_evaluator=dict(type=Accuracy),
         launcher=args.launcher,
-        log_processor=dict(log_with_hierarchy=True))
+    )
     runner.train()
 
 
