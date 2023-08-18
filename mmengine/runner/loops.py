@@ -31,19 +31,16 @@ class EpochBasedTrainLoop(BaseLoop):
             first element in the tuple is a milestone and the second
             element is a interval. The interval is used after the
             corresponding milestone. Defaults to None.
-        num_batch_per_epoch (int, optional): Number of batches executed
-            per epoch.Defaults to None.
-            `New in version 0.8.5.`
     """
 
-    def __init__(self,
-                 runner,
-                 dataloader: Union[DataLoader, Dict],
-                 max_epochs: int,
-                 val_begin: int = 1,
-                 val_interval: int = 1,
-                 dynamic_intervals: Optional[List[Tuple[int, int]]] = None,
-                 num_batch_per_epoch: Optional[int] = None) -> None:
+    def __init__(
+            self,
+            runner,
+            dataloader: Union[DataLoader, Dict],
+            max_epochs: int,
+            val_begin: int = 1,
+            val_interval: int = 1,
+            dynamic_intervals: Optional[List[Tuple[int, int]]] = None) -> None:
         super().__init__(runner, dataloader)
         self._max_epochs = int(max_epochs)
         assert self._max_epochs == max_epochs, \
@@ -70,7 +67,6 @@ class EpochBasedTrainLoop(BaseLoop):
         self.dynamic_milestones, self.dynamic_intervals = \
             calc_dynamic_intervals(
                 self.val_interval, dynamic_intervals)
-        self.num_batch_per_epoch = num_batch_per_epoch
 
     @property
     def max_epochs(self):
@@ -113,9 +109,6 @@ class EpochBasedTrainLoop(BaseLoop):
         self.runner.call_hook('before_train_epoch')
         self.runner.model.train()
         for idx, data_batch in enumerate(self.dataloader):
-            if self.num_batch_per_epoch is not None:
-                if idx >= self.num_batch_per_epoch:
-                    break
             self.run_iter(idx, data_batch)
 
         self.runner.call_hook('after_train_epoch')
@@ -332,17 +325,13 @@ class ValLoop(BaseLoop):
         evaluator (Evaluator or dict or list): Used for computing metrics.
         fp16 (bool): Whether to enable fp16 validation. Defaults to
             False.
-        num_batch_per_epoch (int, optional): Number of batches executed
-            per epoch.Defaults to None.
-            `New in version 0.8.5.`
     """
 
     def __init__(self,
                  runner,
                  dataloader: Union[DataLoader, Dict],
                  evaluator: Union[Evaluator, Dict, List],
-                 fp16: bool = False,
-                 num_batch_per_epoch: Optional[int] = None) -> None:
+                 fp16: bool = False) -> None:
         super().__init__(runner, dataloader)
 
         if isinstance(evaluator, (dict, list)):
@@ -364,7 +353,6 @@ class ValLoop(BaseLoop):
                 logger='current',
                 level=logging.WARNING)
         self.fp16 = fp16
-        self.num_batch_per_epoch = num_batch_per_epoch
 
     def run(self) -> dict:
         """Launch validation."""
@@ -372,17 +360,10 @@ class ValLoop(BaseLoop):
         self.runner.call_hook('before_val_epoch')
         self.runner.model.eval()
         for idx, data_batch in enumerate(self.dataloader):
-            if self.num_batch_per_epoch is not None:
-                if idx >= self.num_batch_per_epoch:
-                    break
             self.run_iter(idx, data_batch)
 
         # compute metrics
-        if self.num_batch_per_epoch is not None:
-            metrics = self.evaluator.evaluate(
-                len(self.dataloader) * self.num_batch_per_epoch)
-        else:
-            metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
+        metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
         self.runner.call_hook('after_val_epoch', metrics=metrics)
         self.runner.call_hook('after_val')
         return metrics
@@ -419,17 +400,13 @@ class TestLoop(BaseLoop):
         evaluator (Evaluator or dict or list): Used for computing metrics.
         fp16 (bool): Whether to enable fp16 testing. Defaults to
             False.
-        num_batch_per_epoch (int, optional): Number of batches executed
-            per epoch.Defaults to None.
-            `New in version 0.8.5.`
     """
 
     def __init__(self,
                  runner,
                  dataloader: Union[DataLoader, Dict],
                  evaluator: Union[Evaluator, Dict, List],
-                 fp16: bool = False,
-                 num_batch_per_epoch: Optional[int] = None):
+                 fp16: bool = False):
         super().__init__(runner, dataloader)
 
         if isinstance(evaluator, dict) or isinstance(evaluator, list):
@@ -448,7 +425,6 @@ class TestLoop(BaseLoop):
                 logger='current',
                 level=logging.WARNING)
         self.fp16 = fp16
-        self.num_batch_per_epoch = num_batch_per_epoch
 
     def run(self) -> dict:
         """Launch test."""
@@ -456,17 +432,10 @@ class TestLoop(BaseLoop):
         self.runner.call_hook('before_test_epoch')
         self.runner.model.eval()
         for idx, data_batch in enumerate(self.dataloader):
-            if self.num_batch_per_epoch is not None:
-                if idx >= self.num_batch_per_epoch:
-                    break
             self.run_iter(idx, data_batch)
 
         # compute metrics
-        if self.num_batch_per_epoch is not None:
-            metrics = self.evaluator.evaluate(
-                len(self.dataloader) * self.num_batch_per_epoch)
-        else:
-            metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
+        metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
         self.runner.call_hook('after_test_epoch', metrics=metrics)
         self.runner.call_hook('after_test')
         return metrics

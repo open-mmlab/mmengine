@@ -1943,29 +1943,11 @@ class TestRunner(TestCase):
             self.assertIsInstance(runner._test_loop, dict)
 
         # test num_batch_per_epoch
-        val_result = 0
-
-        @HOOKS.register_module(force=True)
-        class TestIterHook(Hook):
-
-            def __init__(self):
-                self.val_iter = 0
-
-            def after_val_iter(self,
-                               runner,
-                               batch_idx,
-                               data_batch=None,
-                               outputs=None):
-                self.val_iter += 1
-                nonlocal val_result
-                val_result = self.val_iter
-
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
-        cfg.val_cfg = dict(num_batch_per_epoch=2)
+        cfg.test_dataloader['num_batch_per_epoch'] = 2
         runner = Runner.from_cfg(cfg)
         runner.val()
-        self.assertEqual(val_result, 2)
+        self.assertEqual(runner.iter, 2)
 
     @skipIf(
         SKIP_TEST_COMPILE,
@@ -2066,11 +2048,10 @@ class TestRunner(TestCase):
                 test_result = self.test_iter
 
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
-        cfg.test_cfg = dict(num_batch_per_epoch=2)
+        cfg.test_dataloader['num_batch_per_epoch'] = 2
         runner = Runner.from_cfg(cfg)
         runner.test()
-        self.assertEqual(test_result, 2)
+        self.assertEqual(runner.iter, 2)
 
     @skipIf(
         SKIP_TEST_COMPILE,

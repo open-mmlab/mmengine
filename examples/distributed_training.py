@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
+import os
 
 import torch.nn.functional as F
 import torchvision
@@ -9,6 +10,8 @@ from torch.optim import SGD
 from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
 from mmengine.runner import Runner
+
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 
 class MMResNet50(BaseModel):
@@ -77,12 +80,14 @@ def main():
         batch_size=32,
         dataset=train_set,
         sampler=dict(type='DefaultSampler', shuffle=True),
-        collate_fn=dict(type='default_collate'))
+        collate_fn=dict(type='default_collate'),
+        num_batch_per_epoch=5)
     val_dataloader = dict(
         batch_size=32,
         dataset=valid_set,
         sampler=dict(type='DefaultSampler', shuffle=False),
-        collate_fn=dict(type='default_collate'))
+        collate_fn=dict(type='default_collate'),
+        num_batch_per_epoch=5)
     runner = Runner(
         model=MMResNet50(),
         work_dir='./work_dir',
