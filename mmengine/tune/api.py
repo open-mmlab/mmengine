@@ -1,9 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from .tunner import Tuner
-
-from typing import Dict, List, Optional, Union, Tuple
+from typing import Dict, List, Optional, Union
 
 from mmengine.config import Config, ConfigDict
+from .tunner import Tuner
 
 
 def find_optimial_lr(runner_cfg: Union[Dict, Config, ConfigDict],
@@ -17,7 +16,7 @@ def find_optimial_lr(runner_cfg: Union[Dict, Config, ConfigDict],
                      tunning_epoch: int = 0,
                      report_op: str = 'latest',
                      searcher: str = 'nevergrad',
-                     **searcher_kwargs) -> Tuple[dict, float]:
+                     **searcher_kwargs) -> Dict[str, Union[dict, float]]:
     is_discrete = lr_choices is not None
     assert (lower_lr is None and upper_lr is None and lr_choices
             is not None) or (lower_lr is not None and upper_lr is not None

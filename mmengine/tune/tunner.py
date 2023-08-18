@@ -10,6 +10,7 @@ from torch.distributed.rpc import TensorPipeRpcBackendOptions, is_available
 from mmengine.config import Config, ConfigDict
 from mmengine.dist import (broadcast_object_list, get_rank, get_world_size,
                            init_dist, is_distributed, is_main_process)
+from mmengine.logging import MMLogger
 from mmengine.registry import HYPER_SEARCHERS
 from mmengine.runner import Runner
 from ._report_hook import ReportingHook
@@ -55,6 +56,45 @@ class Tuner:
             dist_cfg = env_cfg.get('dist_cfg', {})
             init_dist(launcher, **dist_cfg)
         self._rpc_port = rpc_port
+        self._logger = MMLogger.get_instance('Tuner', log_level='INFO')
+        self._logger.info(
+            f'Tuner initialized with rule: {rule} and monitor: {monitor}')
+
+    @property
+    def hparam_spec(self) -> Dict[str, Dict]:
+        return self._hparam_spec
+
+    @property
+    def monitor(self) -> str:
+        return self._monitor
+
+    @property
+    def rule(self) -> str:
+        return self._rule
+
+    @property
+    def num_trials(self) -> int:
+        return self._num_trials
+
+    @property
+    def tuning_iter(self) -> int:
+        return self._tuning_iter
+
+    @property
+    def tuning_epoch(self) -> int:
+        return self._tuning_epoch
+
+    @property
+    def reporting_op(self) -> str:
+        return self._reporting_op
+
+    @property
+    def history(self) -> List[Tuple[Dict, float]]:
+        return self._history
+
+    @property
+    def rpc_port(self) -> int:
+        return self._rpc_port
 
     def _init_rpc(self, rpc_port: int):
         rpc_backend_options = TensorPipeRpcBackendOptions()
@@ -68,6 +108,7 @@ class Tuner:
     def _build_searcher(self,
                         searcher_type: str = 'nevergrad',
                         **kwargs) -> _Searcher:
+        self._logger.info(f'Building searcher of type: {searcher_type}')
         build_config = dict(type=searcher_type)
         build_config.update(kwargs)
         return HYPER_SEARCHERS.build(build_config)
@@ -122,6 +163,7 @@ class Tuner:
                           self._reporting_op))
                 futs.append(fut)
             score = self._get_score_from_futures(futs)
+            self._logger.info(f'Trial completed with score: {score}')
             self._searcher.record(hparam, score)
             temp_dir.cleanup()
         else:
@@ -130,7 +172,8 @@ class Tuner:
         self._history.append((hparam, score))
         rpc.shutdown()
 
-    def tune(self) -> Tuple[dict, float]:
+    def tune(self) -> Dict[str, Union[dict, float]]:
+        self._logger.info(f'Starting tuning for {self._num_trials} trials...')
         for _ in range(self._num_trials):
             self._submit()
 
@@ -140,4 +183,7 @@ class Tuner:
             best_hparam, best_score = max(self._history, key=lambda x: x[1])
         else:
             best_hparam, best_score = min(self._history, key=lambda x: x[1])
-        return best_hparam, best_score
+        self._logger.info(f'Best hyperparameters obtained: {best_hparam}')
+        self._logger.info(f'Best score obtained: {best_score}')
+        self._logger.info('Tuning completed.')
+        return dict(hparam=best_hparam, score=best_score)

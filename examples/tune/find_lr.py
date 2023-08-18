@@ -120,13 +120,13 @@ def main():
 
     temp_dir.cleanup()
 
-    best_lr, lowest_loss = find_optimial_lr(
+    result = find_optimial_lr(
         runner_cfg=runner_cfg,
         num_trials=32,
         tunning_epoch=1,
     )
-    print('best_lr: ', best_lr)
-    print('lowest_loss: ', lowest_loss)
+    print('best_lr: ', result.get('hparam'))
+    print('lowest_loss: ', result.get('score'))
 
 
 if __name__ == '__main__':
