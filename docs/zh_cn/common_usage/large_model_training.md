@@ -184,9 +184,9 @@ torchrun --nproc-per-node 2 examples/distributed_training_with_flexible_runner.p
 
 ## ColossalAI
 
-[ColossalAI](https://colossalai.org/) 是一个具有高效并行化技术的综合大规模模型训练系统。MMEngine 自 v0.8.4 开始，支持使用 ColossalAI 中，ZeRO 系列优化策略训练模型。
+[ColossalAI](https://colossalai.org/) 是一个具有高效并行化技术的综合大规模模型训练系统。MMEngine 自 v0.8.5 开始，支持使用 ColossalAI 中的 ZeRO 系列优化策略训练模型。
 
-安装版本大于 v0.3.1 的 ColossalAI。这个版本限制是由于 v0.3.1 存在一些程序阻塞的 [Bug](https://github.com/hpcaitech/ColossalAI/issues/4393)，而该 Bug 在之后的版本中已经修复。如果目前 ColossalAI 的最高版本仍为 v0.3.1，建议从源码安装主分支的 ColossalAI
+安装版本大于 v0.3.1 的 ColossalAI。这个版本限制是由于 v0.3.1 存在一些程序阻塞的 [Bug](https://github.com/hpcaitech/ColossalAI/issues/4393)，而该 Bug 在之后的版本中已经修复。如果目前 ColossalAI 的最高版本仍为 v0.3.1，建议从源码安装主分支的 ColossalAI。
 
 ```{note}
 需要注意的是，如果你的 PyTorch 版本高于 2.0，并遇到了 `nvcc fatal : Unsupported gpu architecture 'compute_90'` 类似的编译错误，则需要 git clone 源码，参考该 [PR](https://github.com/hpcaitech/ColossalAI/pull/4357) 进行修改源码，再进行安装
@@ -212,10 +212,8 @@ pip install colossalai
 ```python
 from mmengine.runner._flexible_runner import FlexibleRunner
 
-strategy = dict(
-            type='ColossalAIStrategy')
-        optim_wrapper = dict(
-            optimizer=dict(type='HybridAdam', lr=1e-3))
+strategy = dict(type='ColossalAIStrategy')
+optim_wrapper = dict(optimizer=dict(type='HybridAdam', lr=1e-3))
 
 # 初始化 FlexibleRunner
 runner = FlexibleRunner(
