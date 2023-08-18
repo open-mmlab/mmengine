@@ -2,7 +2,9 @@
 import json
 import os.path as osp
 import time
-from typing import Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
+
+import torch
 
 try:
     import deepspeed
@@ -13,11 +15,195 @@ import torch.nn as nn
 
 import mmengine
 from mmengine.dist import init_dist
-from mmengine.model.wrappers._deepspeed import MMDeepSpeedEngineWrapper
 from mmengine.optim import BaseOptimWrapper, _ParamScheduler
-from mmengine.registry import STRATEGIES
+from mmengine.registry import (MODEL_WRAPPERS, OPTIM_WRAPPERS, OPTIMIZERS,
+                               STRATEGIES)
 from mmengine.utils import get_git_hash
 from .base import BaseStrategy
+
+
+def register_deepspeed_optimizers() -> List[str]:
+    """Register optimizers in ``deepspeed`` to the ``OPTIMIZERS`` registry.
+
+    Returns:
+        List[str]: A list of registered optimizers' name.
+    """
+    deepspeed_optimizers = []
+    try:
+        import deepspeed  # noqa: F401
+    except ImportError:
+        pass
+    else:
+        from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
+        from deepspeed.ops.lamb import FusedLamb
+        from deepspeed.runtime.fp16.onebit import (OnebitAdam, OnebitLamb,
+                                                   ZeroOneAdam)
+
+        OPTIMIZERS.register_module(module=DeepSpeedCPUAdam)
+        deepspeed_optimizers.append('DeepSpeedCPUAdam')
+        OPTIMIZERS.register_module(module=FusedAdam)
+        deepspeed_optimizers.append('FusedAdam')
+        OPTIMIZERS.register_module(module=FusedLamb)
+        deepspeed_optimizers.append('FusedLamb')
+        OPTIMIZERS.register_module(module=OnebitAdam)
+        deepspeed_optimizers.append('OnebitAdam')
+        OPTIMIZERS.register_module(module=OnebitLamb)
+        deepspeed_optimizers.append('OnebitLamb')
+        OPTIMIZERS.register_module(module=ZeroOneAdam)
+        deepspeed_optimizers.append('ZeroOneAdam')
+
+    return deepspeed_optimizers
+
+
+@OPTIM_WRAPPERS.register_module()
+class DeepSpeedOptimWrapper(BaseOptimWrapper):
+
+    def __init__(self, optimizer):
+        super().__init__(optimizer)
+        self._model = None
+
+    @property
+    def model(self):
+        if self._model is None:
+            raise ValueError('model attribute should be set before accessing.')
+        return self._model
+
+    @model.setter
+    def model(self, value):
+        self._model = value
+
+    def update_params(self, loss) -> None:  # type: ignore
+        """Update parameters in :attr:`optimizer`."""
+        self.backward(loss)
+        self.step()
+
+    def backward(self, loss: torch.Tensor, **kwargs) -> None:
+        """"Perform gradient back propagation."""
+        self.model.backward(loss)
+
+    def zero_grad(self, **kwargs) -> None:
+        raise NotImplementedError(
+            'DeepSpeedOptimWrapper does not support zero_grad method '
+            'currently.')
+
+    def step(self, **kwargs):
+        self.model.step()
+
+    def state_dict(self) -> dict:
+        state_dict = {}
+        if self.base_param_settings is not None:
+            state_dict['base_param_settings'] = self.base_param_settings
+
+        return state_dict
+
+    def load_state_dict(self, state_dict: dict) -> None:
+        base_param_settings = state_dict.pop('base_param_settings', None)
+
+        if base_param_settings is not None:
+            self.base_param_settings = base_param_settings
+
+
+@MODEL_WRAPPERS.register_module()
+class MMDeepSpeedEngineWrapper:
+
+    def __init__(
+        self,
+        *,
+        model: 'deepspeed.DeepSpeedEngine',
+        inputs_to_half: Optional[List[Union[int, str]]] = None,
+    ):
+        self.model = model
+        self._inputs_to_half = inputs_to_half
+
+    def __getattr__(self, name):
+        return getattr(self.model, name)
+
+    def train_step(
+        self,
+        data: Union[dict, tuple, list],
+        optim_wrapper: DeepSpeedOptimWrapper,
+    ) -> Dict[str, torch.Tensor]:
+        data = self.model.module.data_preprocessor(data, training=True)
+        data = self._cast_inputs_half(data)
+        losses = self._run_forward(data, mode='loss')
+        parsed_loss, log_vars = self.model.module.parse_losses(losses)
+        optim_wrapper.update_params(parsed_loss)
+
+        return log_vars
+
+    def val_step(self, data: Union[dict, tuple, list]) -> list:
+        """Gets the prediction of module during validation process.
+
+        Args:
+            data (dict or tuple or list): Data sampled from dataset.
+
+        Returns:
+            list: The predictions of given data.
+        """
+        data = self.model.module.data_preprocessor(data, False)
+        data = self._cast_inputs_half(data)
+        return self._run_forward(data, mode='predict')
+
+    def test_step(self, data: Union[dict, tuple, list]) -> list:
+        """Gets the predictions of module during testing process.
+
+        Args:
+            data (dict or tuple or list): Data sampled from dataset.
+
+        Returns:
+            list: The predictions of given data.
+        """
+        data = self.model.module.data_preprocessor(data, False)
+        data = self._cast_inputs_half(data)
+        return self._run_forward(data, mode='predict')
+
+    def _run_forward(self, data: Union[dict, tuple, list], mode: str) -> Any:
+        """Unpacks data for :meth:`forward`
+
+        Args:
+            data (dict or tuple or list): Data sampled from dataset.
+            mode (str): Mode of forward.
+
+        Returns:
+            dict or list: Results of training or testing mode.
+        """
+        if isinstance(data, dict):
+            results = self.model(**data, mode=mode)
+        elif isinstance(data, (list, tuple)):
+            results = self.model(*data, mode=mode)
+        else:
+            raise TypeError('Output of `data_preprocessor` should be '
+                            f'list, tuple or dict, but got {type(data)}')
+        return results
+
+    def _cast_inputs_half(self, inputs: Union[list, tuple, dict, None]):
+        """Cast inputs to half precision if needed.
+
+        Args:
+            inputs (list or tuple or dict or None): Inputs to be casted.
+
+        Returns:
+            list or tuple or dict or None: Casted inputs.
+        """
+        if self._inputs_to_half is None:
+            return inputs
+
+        if isinstance(inputs, (list, tuple)):
+            new_inputs = []
+            for i, v in enumerate(inputs):
+                if i in self._inputs_to_half:
+                    new_inputs.append(v.half())
+                else:
+                    new_inputs.append(v)
+            return inputs.__class__(new_inputs)
+        elif isinstance(inputs, dict):
+            for k, v in inputs.items():
+                if k in self._inputs_to_half:
+                    inputs[k] = v.half()
+            return inputs
+        else:
+            raise TypeError('inputs should be list, tuple or dict, '
+                            f'but got {type(inputs)}')
 
 
 @STRATEGIES.register_module()
@@ -112,6 +298,8 @@ class DeepSpeedStrategy(BaseStrategy):
             gradient_accumulation_steps
         self.config['steps_per_print'] = steps_per_print
         self._inputs_to_half = inputs_to_half
+
+        register_deepspeed_optimizers()
 
     def _parse_config(self, config):
         if config is None:
