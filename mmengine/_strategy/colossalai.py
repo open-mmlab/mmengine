@@ -194,16 +194,16 @@ class ColossalAIStrategy(BaseStrategy):
         plugin (Plugin): The plugin to run the training. The type of `plugin`
             could be:
 
-            - str: The available plugins are `gemini` and `lowlevel-zero`.
+            - str: The available plugins are ``gemini`` and ``lowlevel-zero``.
 
-              `gemini` means a `ZeRO`_ implementation with chunk-based
+              ``gemini`` means a `ZeRO`_ implementation with chunk-based
               memory management. You could find more details in the
-              `colossalai gemini tutorial`_. `lowlevel-zero` means a
+              `colossalai gemini tutorial`_. ``lowlevel-zero`` means a
               Zero-1 and Zero-2 implementation. Although gemini is more
               memory saving, some unexpceted error could happen for
               some spectial model structure. lowlevel-zero is more stable.
 
-            - dict: dict-type style config to build a colossalai plugin.
+            - dict: **dict-type style config to build a colossalai plugin**.
 
               See the `booster plugin tutorial`_ for more details.
 
