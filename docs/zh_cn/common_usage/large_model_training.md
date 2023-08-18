@@ -181,3 +181,87 @@ torchrun --nproc-per-node 2 examples/distributed_training_with_flexible_runner.p
 ```
 
 </details>
+
+## ColossalAI
+
+[ColossalAI](https://colossalai.org/) 是一个具有高效并行化技术的综合大规模模型训练系统。MMEngine 自 v0.8.4 开始，支持使用 ColossalAI 中，ZeRO 系列优化策略训练模型。
+
+安装版本大于 v0.3.1 的 ColossalAI。这个版本限制是由于 v0.3.1 存在一些程序阻塞的 [Bug](https://github.com/hpcaitech/ColossalAI/issues/4393)，而该 Bug 在之后的版本中已经修复。如果目前 ColossalAI 的最高版本仍为 v0.3.1，建议从源码安装主分支的 ColossalAI
+
+```{note}
+需要注意的是，如果你的 PyTorch 版本高于 2.0，并遇到了 `nvcc fatal : Unsupported gpu architecture 'compute_90'` 类似的编译错误，则需要 git clone 源码，参考该 [PR](https://github.com/hpcaitech/ColossalAI/pull/4357) 进行修改源码，再进行安装
+```
+
+```bash
+pip install git+https://github.com/hpcaitech/ColossalAI
+```
+
+如果 ColossalAI 的最新版本大于 v0.3.1，可以直接使用 pip 安装：
+
+```bash
+pip install colossalai
+```
+
+安装好 ColossalAI 后，需配置 FlexibleRunner 的 strategy 和 optim_wrapper 参数：
+
+- strategy：指定 `type='ColossalAIStrategy'` 并配置参数。参数的详细介绍可阅读 [ColossalAIStrategy](mmengine._strategy.ColossalAI)。
+- optim_wrapper：缺省 `type` 参数，或指定 `type=ColossalAIOpitmWrapper`，优化器类型时建议选择 `HybridAdam`。其他可配置类型可阅读 [ColossalAIOptimWrapper](mmengine._strategy.ColossalAIOptimWrapper)。
+
+下面是 ColossalAI 相关的配置：
+
+```python
+from mmengine.runner._flexible_runner import FlexibleRunner
+
+strategy = dict(
+            type='ColossalAIStrategy')
+        optim_wrapper = dict(
+            optimizer=dict(type='HybridAdam', lr=1e-3))
+
+# 初始化 FlexibleRunner
+runner = FlexibleRunner(
+    model=MMResNet50(),
+    work_dir='./work_dirs',
+    strategy=strategy,
+    train_dataloader=train_dataloader,
+    optim_wrapper=optim_wrapper,
+    param_scheduler=dict(type='LinearLR'),
+    train_cfg=dict(by_epoch=True, max_epochs=10, val_interval=1),
+    val_dataloader=val_dataloader,
+    val_cfg=dict(),
+    val_evaluator=dict(type=Accuracy))
+
+# 开始训练
+runner.train()
+```
+
+使用两张卡启动分布式训练：
+
+```bash
+torchrun --nproc-per-node 2 examples/distributed_training_with_flexible_runner.py --use-colossalai
+```
+
+<details>
+<summary>训练日志</summary>
+
+```
+08/18 11:56:34 - mmengine - INFO - Epoch(train)  [1][ 10/196]  lr: 3.3333e-04  eta: 0:10:31  time: 0.3238  data_time: 0.0344  memory: 597  loss: 3.8766
+08/18 11:56:35 - mmengine - INFO - Epoch(train)  [1][ 20/196]  lr: 3.3333e-04  eta: 0:06:56  time: 0.1057  data_time: 0.0338  memory: 597  loss: 2.3797
+08/18 11:56:36 - mmengine - INFO - Epoch(train)  [1][ 30/196]  lr: 3.3333e-04  eta: 0:05:45  time: 0.1068  data_time: 0.0342  memory: 597  loss: 2.3219
+08/18 11:56:37 - mmengine - INFO - Epoch(train)  [1][ 40/196]  lr: 3.3333e-04  eta: 0:05:08  time: 0.1059  data_time: 0.0337  memory: 597  loss: 2.2641
+08/18 11:56:38 - mmengine - INFO - Epoch(train)  [1][ 50/196]  lr: 3.3333e-04  eta: 0:04:45  time: 0.1062  data_time: 0.0338  memory: 597  loss: 2.2250
+08/18 11:56:40 - mmengine - INFO - Epoch(train)  [1][ 60/196]  lr: 3.3333e-04  eta: 0:04:31  time: 0.1097  data_time: 0.0339  memory: 597  loss: 2.1672
+08/18 11:56:41 - mmengine - INFO - Epoch(train)  [1][ 70/196]  lr: 3.3333e-04  eta: 0:04:21  time: 0.1096  data_time: 0.0340  memory: 597  loss: 2.1688
+08/18 11:56:42 - mmengine - INFO - Epoch(train)  [1][ 80/196]  lr: 3.3333e-04  eta: 0:04:13  time: 0.1098  data_time: 0.0338  memory: 597  loss: 2.1781
+08/18 11:56:43 - mmengine - INFO - Epoch(train)  [1][ 90/196]  lr: 3.3333e-04  eta: 0:04:06  time: 0.1097  data_time: 0.0338  memory: 597  loss: 2.0938
+08/18 11:56:44 - mmengine - INFO - Epoch(train)  [1][100/196]  lr: 3.3333e-04  eta: 0:04:01  time: 0.1097  data_time: 0.0339  memory: 597  loss: 2.1078
+08/18 11:56:45 - mmengine - INFO - Epoch(train)  [1][110/196]  lr: 3.3333e-04  eta: 0:04:01  time: 0.1395  data_time: 0.0340  memory: 597  loss: 2.0141
+08/18 11:56:46 - mmengine - INFO - Epoch(train)  [1][120/196]  lr: 3.3333e-04  eta: 0:03:56  time: 0.1090  data_time: 0.0338  memory: 597  loss: 2.0273
+08/18 11:56:48 - mmengine - INFO - Epoch(train)  [1][130/196]  lr: 3.3333e-04  eta: 0:03:52  time: 0.1096  data_time: 0.0339  memory: 597  loss: 2.0086
+08/18 11:56:49 - mmengine - INFO - Epoch(train)  [1][140/196]  lr: 3.3333e-04  eta: 0:03:49  time: 0.1096  data_time: 0.0339  memory: 597  loss: 1.9180
+08/18 11:56:50 - mmengine - INFO - Epoch(train)  [1][150/196]  lr: 3.3333e-04  eta: 0:03:46  time: 0.1092  data_time: 0.0339  memory: 597  loss: 1.9578
+08/18 11:56:51 - mmengine - INFO - Epoch(train)  [1][160/196]  lr: 3.3333e-04  eta: 0:03:43  time: 0.1097  data_time: 0.0339  memory: 597  loss: 1.9375
+08/18 11:56:52 - mmengine - INFO - Epoch(train)  [1][170/196]  lr: 3.3333e-04  eta: 0:03:40  time: 0.1092  data_time: 0.0339  memory: 597  loss: 1.9312
+08/18 11:56:53 - mmengine - INFO - Epoch(train)  [1][180/196]  lr: 3.3333e-04  eta: 0:03:37  time: 0.1070  data_time: 0.0339  memory: 597  loss: 1.9078
+```
+
+</details>

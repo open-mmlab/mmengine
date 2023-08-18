@@ -5,8 +5,6 @@ import time
 from contextlib import contextmanager
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from mmengine.fileio import join_path
-
 try:
     import colossalai
     import colossalai.booster.mixed_precision as colo_precision
@@ -30,6 +28,7 @@ from mmengine import mkdir_or_exist
 from mmengine._strategy import BaseStrategy
 from mmengine.device import get_device
 from mmengine.dist import init_dist, is_main_process
+from mmengine.fileio import join_path
 from mmengine.model import BaseDataPreprocessor
 from mmengine.optim import BaseOptimWrapper, OptimWrapper, _ParamScheduler
 from mmengine.registry import STRATEGIES, Registry
@@ -74,7 +73,6 @@ class ColossalAIOpitmWrapper(OptimWrapper):
 
     The available optimizers are:
         - CPUAdam
-        - ColossalaiOptimizer
         - FusedAdam
         - FusedLAMB
         - FusedSGD
@@ -511,8 +509,6 @@ class ColossalAIStrategy(BaseStrategy):
                CollosalAIModelWrapper]:  # type: ignore
         """Wrap model with :class:`ModelWrapper`."""
         if self.model_wrapper is None:
-            # set broadcast_buffers as False to keep compatibility with
-            # OpenMMLab repos
             self.model_wrapper = {'type': 'CollosalAIModelWrapper'}
 
         # For zero series parallel, move `data_preprocessor` to current device
@@ -555,14 +551,5 @@ class ColossalAIStrategy(BaseStrategy):
         backend: str = 'nccl',
         **kwargs,
     ):
-        """Setup distributed environment.
-
-        Args:
-            launcher (str, optional): Way to launch multi processes.
-                DeepSpeedStrategy does not support the launcher argument.
-            backend (str): Communication Backends. Supported backends are
-                'nccl', 'gloo' and 'mpi'. Defaults to 'nccl'.
-            **kwargs: Other arguments for :func:`deepspeed.init_distributed`.
-        """
         init_dist(
             launcher, backend, init_backend='colossalai', config=self.config)
