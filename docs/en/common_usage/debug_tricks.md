@@ -136,17 +136,17 @@ runner = FlexibleRunner(
 runner.train()
 ```
 
-Fast debugging is achieved by adding the `num_batch_per_epoch` parameter to `train_cfg` and `val_cfg`.
+Fast debugging is achieved by adding the `num_batch_per_epoch` parameter to `train_dataloader` and `val_dataloader`.
 
-Run the training script. You can see that after running each epoch run 10 batch is over. Compared to the original, debugging is faster and more flexible.
+Run the training script. You can see that after running each epoch run 5 batch is over. Compared to the original, debugging is faster and more flexible.
 
 ```
-08/07 16:35:45 - mmengine - INFO - Epoch(train) [1][  10/1563]  lr: 1.0000e-03  eta: 1:15:03  time: 0.5770  data_time: 0.0075  memory: 477  loss: 5.0847
-08/07 16:35:45 - mmengine - INFO - Saving checkpoint at 1 epochs
-08/07 16:35:46 - mmengine - INFO - Epoch(val) [1][ 10/313]    eta: 0:00:03  time: 0.0131  data_time: 0.0037  memory: 477
-08/07 16:35:46 - mmengine - INFO - Epoch(val) [1][313/313]    accuracy: 13.0682  data_time: 0.0038  time: 0.0130
-08/07 16:35:46 - mmengine - INFO - Epoch(train) [2][  10/1563]  lr: 1.0000e-03  eta: 0:38:13  time: 0.0360  data_time: 0.0066  memory: 477  loss: 2.7406
-08/07 16:35:46 - mmengine - INFO - Saving checkpoint at 2 epochs
-08/07 16:35:47 - mmengine - INFO - Epoch(val) [2][ 10/313]    eta: 0:00:03  time: 0.0104  data_time: 0.0036  memory: 477
-08/07 16:35:47 - mmengine - INFO - Epoch(val) [2][313/313]    accuracy: 12.5000  data_time: 0.0036  time: 0.0117
+08/18 20:27:22 - mmengine - INFO - Epoch(train) [1][5/5]  lr: 1.0000e-03  eta: 0:00:02  time: 0.4566  data_time: 0.0074  memory: 477  loss: 6.7576
+08/18 20:27:22 - mmengine - INFO - Saving checkpoint at 1 epochs
+08/18 20:27:22 - mmengine - WARNING - `save_param_scheduler` is True but `self.param_schedulers` is None, so skip saving parameter schedulers
+08/18 20:27:23 - mmengine - INFO - Epoch(val) [1][5/5]    accuracy: 7.5000  data_time: 0.0044  time: 0.0146
+08/18 20:27:23 - mmengine - INFO - Exp name: 20230818_202715
+08/18 20:27:23 - mmengine - INFO - Epoch(train) [2][5/5]  lr: 1.0000e-03  eta: 0:00:00  time: 0.2501  data_time: 0.0077  memory: 477  loss: 5.3044
+08/18 20:27:23 - mmengine - INFO - Saving checkpoint at 2 epochs
+08/18 20:27:24 - mmengine - INFO - Epoch(val) [2][5/5]    accuracy: 12.5000  data_time: 0.0058  time: 0.0175
 ```

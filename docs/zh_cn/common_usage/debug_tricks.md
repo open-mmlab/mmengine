@@ -58,20 +58,24 @@ python tools/train.py configs/resnet/resnet18_8xb16_cifar10.py
 训练脚本示例
 
 ```python
+# Copyright (c) OpenMMLab. All rights reserved.
+import argparse
 import os
-os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+
 import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
 from torch.optim import SGD
-from torch.utils.data import DataLoader
 
 from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
-from mmengine.runner import FlexibleRunner
+from mmengine.runner import Runner
+
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 
 class MMResNet50(BaseModel):
+
     def __init__(self):
         super().__init__()
         self.resnet = torchvision.models.resnet50()
@@ -85,6 +89,7 @@ class MMResNet50(BaseModel):
 
 
 class Accuracy(BaseMetric):
+
     def process(self, data_batch, data_samples):
         score, gt = data_samples
         self.results.append({
@@ -98,55 +103,81 @@ class Accuracy(BaseMetric):
         return dict(accuracy=100 * total_correct / total_size)
 
 
-norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
-train_dataloader = DataLoader(batch_size=32,
-                              shuffle=True,
-                              dataset=torchvision.datasets.CIFAR10(
-                                  'data/cifar10',
-                                  train=True,
-                                  download=True,
-                                  transform=transforms.Compose([
-                                      transforms.RandomCrop(32, padding=4),
-                                      transforms.RandomHorizontalFlip(),
-                                      transforms.ToTensor(),
-                                      transforms.Normalize(**norm_cfg)
-                                  ])))
+def parse_args():
+    parser = argparse.ArgumentParser(description='Distributed Training')
+    parser.add_argument(
+        '--launcher',
+        choices=['none', 'pytorch', 'slurm', 'mpi'],
+        default='none',
+        help='job launcher')
+    parser.add_argument('--local_rank', type=int, default=0)
 
-val_dataloader = DataLoader(batch_size=32,
-                            shuffle=False,
-                            dataset=torchvision.datasets.CIFAR10(
-                                'data/cifar10',
-                                train=False,
-                                download=True,
-                                transform=transforms.Compose([
-                                    transforms.ToTensor(),
-                                    transforms.Normalize(**norm_cfg)
-                                ])))
+    args = parser.parse_args()
+    return args
 
-runner = FlexibleRunner(
-    model=MMResNet50(),
-    work_dir='./work_dir',
-    train_dataloader=train_dataloader,
-    optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
-    train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1, num_batch_per_epoch=10),
-    val_dataloader=val_dataloader,
-    val_cfg=dict(num_batch_per_epoch=10),
-    val_evaluator=dict(type=Accuracy)
-)
-runner.train()
+
+def main():
+    args = parse_args()
+    norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
+    train_set = torchvision.datasets.CIFAR10(
+        'data/cifar10',
+        train=True,
+        download=True,
+        transform=transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(**norm_cfg)
+        ]))
+    valid_set = torchvision.datasets.CIFAR10(
+        'data/cifar10',
+        train=False,
+        download=True,
+        transform=transforms.Compose(
+            [transforms.ToTensor(),
+             transforms.Normalize(**norm_cfg)]))
+    train_dataloader = dict(
+        batch_size=32,
+        dataset=train_set,
+        sampler=dict(type='DefaultSampler', shuffle=True),
+        collate_fn=dict(type='default_collate'),
+        num_batch_per_epoch=5)
+    val_dataloader = dict(
+        batch_size=32,
+        dataset=valid_set,
+        sampler=dict(type='DefaultSampler', shuffle=False),
+        collate_fn=dict(type='default_collate'),
+        num_batch_per_epoch=5)
+    runner = Runner(
+        model=MMResNet50(),
+        work_dir='./work_dir',
+        train_dataloader=train_dataloader,
+        optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+        train_cfg=dict(by_epoch=True, max_epochs=2, val_interval=1),
+        val_dataloader=val_dataloader,
+        val_cfg=dict(),
+        val_evaluator=dict(type=Accuracy),
+        launcher=args.launcher,
+    )
+    runner.train()
+
+
+if __name__ == '__main__':
+    main()
+
 ```
 
-通过在`train_cfg`和`val_cfg`新增`num_batch_per_epoch`参数实现快速调试。
+通过在`train_dataloader`和`val_dataloader`新增`num_batch_per_epoch`参数实现快速调试。
 
-运行训练脚本。可以看到跑完每个epoch跑完10个batch就结束了。相比原来，调试更加快速和灵活。
+运行训练脚本。可以看到跑完每个epoch跑完5个batch就结束了。相比原来，调试更加快速和灵活。
 
 ```
-08/07 16:35:45 - mmengine - INFO - Epoch(train) [1][  10/1563]  lr: 1.0000e-03  eta: 1:15:03  time: 0.5770  data_time: 0.0075  memory: 477  loss: 5.0847
-08/07 16:35:45 - mmengine - INFO - Saving checkpoint at 1 epochs
-08/07 16:35:46 - mmengine - INFO - Epoch(val) [1][ 10/313]    eta: 0:00:03  time: 0.0131  data_time: 0.0037  memory: 477
-08/07 16:35:46 - mmengine - INFO - Epoch(val) [1][313/313]    accuracy: 13.0682  data_time: 0.0038  time: 0.0130
-08/07 16:35:46 - mmengine - INFO - Epoch(train) [2][  10/1563]  lr: 1.0000e-03  eta: 0:38:13  time: 0.0360  data_time: 0.0066  memory: 477  loss: 2.7406
-08/07 16:35:46 - mmengine - INFO - Saving checkpoint at 2 epochs
-08/07 16:35:47 - mmengine - INFO - Epoch(val) [2][ 10/313]    eta: 0:00:03  time: 0.0104  data_time: 0.0036  memory: 477
-08/07 16:35:47 - mmengine - INFO - Epoch(val) [2][313/313]    accuracy: 12.5000  data_time: 0.0036  time: 0.0117
+08/18 20:27:22 - mmengine - INFO - Epoch(train) [1][5/5]  lr: 1.0000e-03  eta: 0:00:02  time: 0.4566  data_time: 0.0074  memory: 477  loss: 6.7576
+08/18 20:27:22 - mmengine - INFO - Saving checkpoint at 1 epochs
+08/18 20:27:22 - mmengine - WARNING - `save_param_scheduler` is True but `self.param_schedulers` is None, so skip saving parameter schedulers
+08/18 20:27:23 - mmengine - INFO - Epoch(val) [1][5/5]    accuracy: 7.5000  data_time: 0.0044  time: 0.0146
+08/18 20:27:23 - mmengine - INFO - Exp name: 20230818_202715
+08/18 20:27:23 - mmengine - INFO - Epoch(train) [2][5/5]  lr: 1.0000e-03  eta: 0:00:00  time: 0.2501  data_time: 0.0077  memory: 477  loss: 5.3044
+08/18 20:27:23 - mmengine - INFO - Saving checkpoint at 2 epochs
+08/18 20:27:24 - mmengine - INFO - Epoch(val) [2][5/5]    accuracy: 12.5000  data_time: 0.0058  time: 0.0175
 ```
