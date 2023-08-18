@@ -1347,17 +1347,6 @@ class TestRunner(TestCase):
         loop = runner.build_train_loop(cfg)
         self.assertIsInstance(loop, CustomTrainLoop)
 
-        # input is a dict and contains num_batch_per_epoch
-        cfg = dict(
-            type='EpochBasedTrainLoop', max_epochs=3, num_batch_per_epoch=5)
-        loop = runner.build_train_loop(cfg)
-        self.assertIsInstance(loop, EpochBasedTrainLoop)
-
-        # input is a dict and does not contain type key
-        cfg = dict(by_epoch=True, max_epochs=3, num_batch_per_epoch=5)
-        loop = runner.build_train_loop(cfg)
-        self.assertIsInstance(loop, EpochBasedTrainLoop)
-
     def test_build_val_loop(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_val_loop'
@@ -1385,16 +1374,6 @@ class TestRunner(TestCase):
         loop = runner.build_val_loop(cfg)
         self.assertIsInstance(loop, CustomValLoop)
 
-        # input is a dict and contains type key and num_batch_per_epoch
-        cfg = dict(type='ValLoop', num_batch_per_epoch=5)
-        loop = runner.build_val_loop(cfg)
-        self.assertIsInstance(loop, ValLoop)
-
-        # input is a dict and contains num_batch_per_epoch
-        cfg = dict(num_batch_per_epoch=5)
-        loop = runner.build_val_loop(cfg)
-        self.assertIsInstance(loop, ValLoop)
-
     def test_build_test_loop(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_test_loop'
@@ -1421,16 +1400,6 @@ class TestRunner(TestCase):
         cfg = dict(type='CustomTestLoop')
         loop = runner.build_val_loop(cfg)
         self.assertIsInstance(loop, CustomTestLoop)
-
-        # input is a dict and contains type key and num_batch_per_epoch
-        cfg = dict(type='TestLoop', num_batch_per_epoch=5)
-        loop = runner.build_test_loop(cfg)
-        self.assertIsInstance(loop, TestLoop)
-
-        # input is a dict and contains num_batch_per_epoch
-        cfg = dict(num_batch_per_epoch=5)
-        loop = runner.build_test_loop(cfg)
-        self.assertIsInstance(loop, TestLoop)
 
     def test_build_log_processor(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1846,10 +1815,10 @@ class TestRunner(TestCase):
 
         # 15 test num_batch_per_epoch
         cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.train_dataloader['num_batch_per_epoch'] = 2
         cfg.train_cfg = dict(
             by_epoch=True,
             max_epochs=3,
-            num_batch_per_epoch=2,
         )
         runner = Runner.from_cfg(cfg)
         runner.train()
