@@ -1456,7 +1456,6 @@ class TestRunner(TestCase):
         class TestEpochHook(Hook):
 
             def before_train_epoch(self, runner):
-
                 epoch_results.append(runner.epoch)
 
             def before_train_iter(self, runner, batch_idx, data_batch=None):
@@ -1999,23 +1998,6 @@ class TestRunner(TestCase):
             self.assertIsInstance(runner._val_loop, dict)
 
         # test num_batch_per_epoch
-        test_result = 0
-
-        @HOOKS.register_module(force=True)
-        class TestIterHook(Hook):
-
-            def __init__(self):
-                self.test_iter = 0
-
-            def after_test_iter(self,
-                                runner,
-                                batch_idx,
-                                data_batch=None,
-                                outputs=None):
-                self.test_iter += 1
-                nonlocal test_result
-                test_result = self.test_iter
-
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.test_dataloader['num_batch_per_epoch'] = 2
         runner = Runner.from_cfg(cfg)
