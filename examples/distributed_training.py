@@ -77,7 +77,8 @@ def main():
         batch_size=32,
         dataset=train_set,
         sampler=dict(type='DefaultSampler', shuffle=True),
-        collate_fn=dict(type='default_collate'))
+        collate_fn=dict(type='default_collate'),
+        num_batch=100)
     val_dataloader = dict(
         batch_size=32,
         dataset=valid_set,
@@ -93,7 +94,7 @@ def main():
         val_cfg=dict(),
         val_evaluator=dict(type=Accuracy),
         launcher=args.launcher,
-    )
+        log_processor=dict(log_with_hierarchy=True))
     runner.train()
 
 
