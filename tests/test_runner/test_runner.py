@@ -1301,6 +1301,17 @@ class TestRunner(TestCase):
             dataloader = runner.build_dataloader(cfg)
             self.assertIsInstance(dataloader.collate_fn, partial)
 
+        # num_batch_per_epoch is not None
+        cfg = dict(
+            dataset=dict(type='ToyDataset'),
+            sampler=dict(type='DefaultSampler', shuffle=True),
+            collate_fn=dict(type='default_collate'),
+            batch_size=3,
+            num_workers=2,
+            num_batch_per_epoch=2)
+        dataloader = runner.build_dataloader(cfg)
+        self.assertEqual(len(dataloader.dataset), 2)
+
     def test_build_train_loop(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_train_loop'

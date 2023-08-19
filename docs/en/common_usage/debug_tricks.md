@@ -58,20 +58,24 @@ Take `MMEngine` as an example（Refer to the [documentation](https://mmengine.re
 Example of a training script
 
 ```python
+# Copyright (c) OpenMMLab. All rights reserved.
+import argparse
 import os
-os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+
 import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
 from torch.optim import SGD
-from torch.utils.data import DataLoader
 
 from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
-from mmengine.runner import FlexibleRunner
+from mmengine.runner import Runner
+
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 
 class MMResNet50(BaseModel):
+
     def __init__(self):
         super().__init__()
         self.resnet = torchvision.models.resnet50()
@@ -85,6 +89,7 @@ class MMResNet50(BaseModel):
 
 
 class Accuracy(BaseMetric):
+
     def process(self, data_batch, data_samples):
         score, gt = data_samples
         self.results.append({
@@ -98,42 +103,68 @@ class Accuracy(BaseMetric):
         return dict(accuracy=100 * total_correct / total_size)
 
 
-norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
-train_dataloader = DataLoader(batch_size=32,
-                              shuffle=True,
-                              dataset=torchvision.datasets.CIFAR10(
-                                  'data/cifar10',
-                                  train=True,
-                                  download=True,
-                                  transform=transforms.Compose([
-                                      transforms.RandomCrop(32, padding=4),
-                                      transforms.RandomHorizontalFlip(),
-                                      transforms.ToTensor(),
-                                      transforms.Normalize(**norm_cfg)
-                                  ])))
+def parse_args():
+    parser = argparse.ArgumentParser(description='Distributed Training')
+    parser.add_argument(
+        '--launcher',
+        choices=['none', 'pytorch', 'slurm', 'mpi'],
+        default='none',
+        help='job launcher')
+    parser.add_argument('--local_rank', type=int, default=0)
 
-val_dataloader = DataLoader(batch_size=32,
-                            shuffle=False,
-                            dataset=torchvision.datasets.CIFAR10(
-                                'data/cifar10',
-                                train=False,
-                                download=True,
-                                transform=transforms.Compose([
-                                    transforms.ToTensor(),
-                                    transforms.Normalize(**norm_cfg)
-                                ])))
+    args = parser.parse_args()
+    return args
 
-runner = FlexibleRunner(
-    model=MMResNet50(),
-    work_dir='./work_dir',
-    train_dataloader=train_dataloader,
-    optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
-    train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1, num_batch_per_epoch=10),
-    val_dataloader=val_dataloader,
-    val_cfg=dict(num_batch_per_epoch=10),
-    val_evaluator=dict(type=Accuracy)
-)
-runner.train()
+
+def main():
+    args = parse_args()
+    norm_cfg = dict(mean=[0.491, 0.482, 0.447], std=[0.202, 0.199, 0.201])
+    train_set = torchvision.datasets.CIFAR10(
+        'data/cifar10',
+        train=True,
+        download=True,
+        transform=transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(**norm_cfg)
+        ]))
+    valid_set = torchvision.datasets.CIFAR10(
+        'data/cifar10',
+        train=False,
+        download=True,
+        transform=transforms.Compose(
+            [transforms.ToTensor(),
+             transforms.Normalize(**norm_cfg)]))
+    train_dataloader = dict(
+        batch_size=32,
+        dataset=train_set,
+        sampler=dict(type='DefaultSampler', shuffle=True),
+        collate_fn=dict(type='default_collate'),
+        num_batch_per_epoch=5)
+    val_dataloader = dict(
+        batch_size=32,
+        dataset=valid_set,
+        sampler=dict(type='DefaultSampler', shuffle=False),
+        collate_fn=dict(type='default_collate'),
+        num_batch_per_epoch=5)
+    runner = Runner(
+        model=MMResNet50(),
+        work_dir='./work_dir',
+        train_dataloader=train_dataloader,
+        optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+        train_cfg=dict(by_epoch=True, max_epochs=2, val_interval=1),
+        val_dataloader=val_dataloader,
+        val_cfg=dict(),
+        val_evaluator=dict(type=Accuracy),
+        launcher=args.launcher,
+    )
+    runner.train()
+
+
+if __name__ == '__main__':
+    main()
+
 ```
 
 Fast debugging is achieved by adding the `num_batch_per_epoch` parameter to `train_dataloader` and `val_dataloader`.
