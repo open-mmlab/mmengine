@@ -1310,7 +1310,7 @@ class TestRunner(TestCase):
             num_workers=2,
             num_batch_per_epoch=2)
         dataloader = runner.build_dataloader(cfg)
-        self.assertEqual(len(dataloader.dataset), 2)
+        self.assertEqual(len(dataloader.dataset), 6)
 
     def test_build_train_loop(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
