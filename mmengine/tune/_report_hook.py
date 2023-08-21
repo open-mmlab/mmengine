@@ -88,6 +88,8 @@ class ReportingHook(Hook):
                     score = float('inf')
             else:
                 score = sum(self.scoreboard) / len(self.scoreboard)
+        else:
+            raise NotImplementedError
         return score
 
     def clear_scoreboard(self):

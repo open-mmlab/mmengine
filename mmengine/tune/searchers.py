@@ -4,7 +4,7 @@ from typing import Dict, Optional
 from mmengine.registry import Registry
 
 try:
-    import nevergard as ng
+    import nevergrad as ng
 except ImportError:
     ng = None
 
@@ -18,8 +18,8 @@ try:
 except ImportError:
     hp = None
 
-
 HYPER_SEARCHERS = Registry('hyper parameter searcher')
+
 
 class _Searcher:
 
@@ -86,6 +86,7 @@ class NevergradSearcher(_Searcher):
         super().__init__(rule, hparam_spec)
         assert ng is not None, 'nevergrad is not installed'
         self._optimizer = self._build_optimizer(solver_type, num_trials)
+        self._latest_candidate = None
 
         if self.rule == 'less':
             self._rule_op = 1.0
@@ -104,10 +105,13 @@ class NevergradSearcher(_Searcher):
         return solver
 
     def suggest(self) -> Dict:
-        return self._optimizer.ask()
+        self._latest_candidate = self._optimizer.ask()
+        return self._latest_candidate.value
 
     def record(self, hparam: Dict, score: float):
-        self._optimizer.tell(hparam, score * self._rule_op)
+        assert self._latest_candidate is not None, \
+            'suggest must be called before record'
+        self._optimizer.tell(self._latest_candidate, score * self._rule_op)
 
 
 @HYPER_SEARCHERS.register_module()

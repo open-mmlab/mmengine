@@ -15,7 +15,7 @@ def find_optimial_lr(runner_cfg: Union[Dict, Config, ConfigDict],
                      tuning_iter: int = 0,
                      tunning_epoch: int = 0,
                      report_op: str = 'latest',
-                     searcher_type: str = 'nevergrad',
+                     searcher_type: str = 'NevergradSearcher',
                      **searcher_kwargs) -> Dict[str, Union[dict, float]]:
     is_discrete = lr_choices is not None
     if is_discrete:
@@ -27,14 +27,14 @@ def find_optimial_lr(runner_cfg: Union[Dict, Config, ConfigDict],
     hparam_spec: dict
     if is_discrete:
         hparam_spec = {
-            'optimizer.lr': {
+            'optim_wrapper.optimizer.lr': {
                 'type': 'discrete',
                 'values': lr_choices
             }
         }
     else:
         hparam_spec = {
-            'optimizer.lr': {
+            'optim_wrapper.optimizer.lr': {
                 'type': 'continuous',
                 'lower': lower_lr,
                 'upper': upper_lr

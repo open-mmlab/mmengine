@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import os
 import tempfile
 from typing import Dict, List, Sequence, Tuple, Union
 
@@ -18,6 +17,7 @@ from .searchers import HYPER_SEARCHERS, _Searcher
 
 class Tuner:
     rules_supported = ['greater', 'less']
+    rpc_worker_name = 'RPC_WORKER_{}'
 
     def __init__(self,
                  runner_cfg: Union[Dict, Config, ConfigDict],
@@ -28,7 +28,7 @@ class Tuner:
                  tuning_iter: int = 0,
                  tunning_epoch: int = 0,
                  report_op: str = 'latest',
-                 searcher_type: str = 'nevergrad',
+                 searcher_type: str = 'NevergradSearcher',
                  rpc_port: int = 29501,
                  **searcher_kwargs):
         assert is_available(), 'torch.distributed.rpc is not available.'
@@ -53,6 +53,7 @@ class Tuner:
             env_cfg = runner_cfg.get('env_cfg', {})
             dist_cfg = env_cfg.get('dist_cfg', {})
             init_dist(launcher, **dist_cfg)
+        self._init_rpc(rpc_port)
         self._rpc_port = rpc_port
         self._logger = MMLogger.get_instance('Tuner', log_level='INFO')
         self._logger.info(
@@ -91,26 +92,9 @@ class Tuner:
     def history(self) -> List[Tuple[Dict, float]]:
         return self._history
 
-    @property
-    def rpc_port(self) -> int:
-        return self._rpc_port
-
-    def _init_rpc(self, rpc_port: int):
-        rpc_backend_options = TensorPipeRpcBackendOptions()
-        master_addr = os.environ.get('MASTER_ADDR'
-                                     'localhost')
-        rpc_backend_options.init_method = f'tcp://{master_addr}:{rpc_port}'
-        rank = get_rank()
-        world_size = get_world_size()
-        rpc.init_rpc(f'worker{rank}', rank=rank, world_size=world_size)
-
-    def _build_searcher(self,
-                        searcher_type: str = 'nevergrad',
-                        **kwargs) -> _Searcher:
-        self._logger.info(f'Building searcher of type: {searcher_type}')
-        build_config = dict(type=searcher_type, num_trials=self._num_trials)
-        build_config.update(kwargs)
-        return HYPER_SEARCHERS.build(build_config)
+    @staticmethod
+    def get_rpc_worker_name(rank) -> str:
+        return Tuner.rpc_worker_name.format(rank)
 
     @staticmethod
     def inject_config(cfg, key, value):
@@ -118,23 +102,61 @@ class Tuner:
         suffix = ''
         for item in key[:-1]:
             if isinstance(cfg, Sequence) and not isinstance(cfg, str):
-                item = cfg[int(item)]
+                cfg = cfg[int(item)]
             else:
-                assert item in cfg, f'key {key} is not in cfg'
-                item = cfg[item]
+                assert item in cfg, f'key {item} is not in {cfg}'
+                cfg = cfg[item]
             suffix += f'{item}.'
         assert key[-1] in cfg, f'attribute {key[-1]} is not in cfg{suffix}'
         cfg[key[-1]] = value
         return
 
-    def _run_trial(self, runner_cfg, monitor, rule, tuning_iter, tunning_epoch,
-                   report_op):
+    @staticmethod
+    def run_trial(runner_cfg, monitor, rule, tuning_iter, tunning_epoch,
+                  report_op):
         runner = Runner.from_cfg(runner_cfg)
         report_hook = ReportingHook(monitor, rule, tuning_iter, tunning_epoch,
                                     report_op)
         runner.register_hook(report_hook, priority='VERY_LOW')
         runner.train()
-        return report_hook.get_score()
+        return report_hook.report_score()
+
+    def _init_rpc(self, rpc_port: int):
+        rank = get_rank()
+        world_size = get_world_size()
+        rpc_init_method: str
+        if self._distributed:
+            rpc_init_method = 'env://'
+        else:
+            rpc_init_method = f'tcp://localhost:{rpc_port}'
+        rpc_backend_options = TensorPipeRpcBackendOptions(
+            init_method=rpc_init_method,
+            devices=[rank],
+        )
+
+        for other in range(world_size):
+            if other == rank:
+                continue
+            rpc_backend_options.set_device_map(
+                Tuner.get_rpc_worker_name(other), {rank: other})
+
+        rpc.init_rpc(
+            Tuner.get_rpc_worker_name(rank),
+            rank=rank,
+            world_size=world_size,
+            rpc_backend_options=rpc_backend_options)
+
+    def _build_searcher(self,
+                        searcher_type: str = 'nevergrad',
+                        **kwargs) -> _Searcher:
+        self._logger.info(f'Building searcher of type: {searcher_type}')
+        build_config = dict(
+            type=searcher_type,
+            rule=self.rule,
+            hparam_spec=self.hparam_spec,
+            num_trials=self._num_trials)
+        build_config.update(kwargs)
+        return HYPER_SEARCHERS.build(build_config)
 
     def _get_score_from_futures(self, futs) -> float:
         try:
@@ -143,7 +165,6 @@ class Tuner:
             return float('-inf') if self._rule == 'greater' else float('inf')
 
     def _submit(self):
-        self._init_rpc(self._rpc_port)
 
         if is_main_process():
             hparam = self._searcher.suggest()
@@ -155,8 +176,8 @@ class Tuner:
             futs = []
             for rank in range(get_world_size()):
                 fut = rpc.rpc_async(
-                    f'worker{rank}',
-                    self._run_trial,
+                    Tuner.get_rpc_worker_name(rank),
+                    Tuner.run_trial,
                     args=(self._runner_cfg, self._monitor, self._rule,
                           self._tuning_iter, self._tuning_epoch,
                           self._reporting_op))
@@ -166,10 +187,10 @@ class Tuner:
             self._searcher.record(hparam, score)
             temp_dir.cleanup()
         else:
+            hparam = None
             score = None
-        broadcast_object_list([score], src=0)
+        broadcast_object_list([hparam, score], src=0)
         self._history.append((hparam, score))
-        rpc.shutdown()
 
     def tune(self) -> Dict[str, Union[dict, float]]:
         self._logger.info(f'Starting tuning for {self._num_trials} trials...')
