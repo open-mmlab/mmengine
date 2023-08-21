@@ -65,6 +65,3 @@ INFERENCERS = Registry('inferencer')
 
 # manage function
 FUNCTIONS = Registry('function')
-
-# hyper parameter searcher
-HYPER_SEARCHERS = Registry('hyper parameter searcher')

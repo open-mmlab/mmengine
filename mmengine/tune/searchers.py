@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Dict, Optional
 
-from mmengine.registry import HYPER_SEARCHERS
+from mmengine.registry import Registry
 
 try:
     import nevergard as ng
@@ -18,6 +18,8 @@ try:
 except ImportError:
     hp = None
 
+
+HYPER_SEARCHERS = Registry('hyper parameter searcher')
 
 class _Searcher:
 

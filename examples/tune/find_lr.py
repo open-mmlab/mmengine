@@ -67,7 +67,7 @@ class ToyMetric(BaseMetric):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Distributed Training')
+    parser = argparse.ArgumentParser(description='Distributed Tuning')
     parser.add_argument(
         '--launcher',
         choices=['none', 'pytorch', 'slurm', 'mpi'],

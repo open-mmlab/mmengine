@@ -11,10 +11,9 @@ from mmengine.config import Config, ConfigDict
 from mmengine.dist import (broadcast_object_list, get_rank, get_world_size,
                            init_dist, is_distributed, is_main_process)
 from mmengine.logging import MMLogger
-from mmengine.registry import HYPER_SEARCHERS
 from mmengine.runner import Runner
 from ._report_hook import ReportingHook
-from .searcher import _Searcher
+from .searchers import HYPER_SEARCHERS, _Searcher
 
 
 class Tuner:
