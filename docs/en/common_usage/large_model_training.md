@@ -205,8 +205,8 @@ pip install colossalai
 
 Once ColossalAI is installed, configure the `strategy` and `optim_wrapper` parameters for FlexibleRunner:
 
-- `strategy`: Specify `type='ColossalAIStrategy'` and configure the parameters. Detailed parameter descriptions can be found in [ColossalAIStrategy](mmengine._strategy.ColossalAI).
-- `optim_wrapper`: Default to no `type` parameter or specify `type=ColossalAIOpitmWrapper`. It is recommended to choose `HybridAdam` as the optimizer type. Other configurable types are listed in [ColossalAIOptimWrapper](mmengine._strategy.ColossalAIOptimWrapper).
+- `strategy`: Specify `type='ColossalAIStrategy'` and configure the parameters. Detailed parameter descriptions can be found in [ColossalAIStrategy](mmengine._strategy.ColossalAIStrategy).
+- `optim_wrapper`: Default to no `type` parameter or specify `type=ColossalAIOptimWrapper`. It is recommended to choose `HybridAdam` as the optimizer type. Other configurable types are listed in [ColossalAIOptimWrapper](mmengine._strategy.ColossalAIOptimWrapper).
 
 Here's the configuration related to ColossalAI:
 
@@ -253,6 +253,6 @@ torchrun --nproc-per-node 2 examples/distributed_training_with_flexible_runner.p
 08/18 11:56:42 - mmengine - INFO - Epoch(train)  [1][ 80/196]  lr: 3.3333e-04  eta: 0:04:13  time: 0.1098  data_time: 0.0338  memory: 597  loss: 2.1781
 08/18 11:56:43 - mmengine - INFO - Epoch(train)  [1][ 90/196]  lr: 3.3333e-04  eta: 0:04:06  time: 0.1097  data_time: 0.0338  memory: 597  loss: 2.0938
 08/18 11:56:44 - mmengine - INFO - Epoch(train)  [1][100/196]  lr: 3.3333e-04  eta: 0:04:01  time: 0.1097  data_time: 0.0339  memory: 597  loss: 2.1078
-08/18 11:56:45 - mmengine - INFO - Epoch(train)  [1][110/196]  lr: 3.3333e-04  eta: 0:04:01  time: 0.1395  data_time: 0.0340  memory: 597  loss: 2.0141
 08/18 11:56:46 - mmengine - INFO - Epoch(train)  [1][120/196]  lr: 3.3333
+08/18 11:56:45 - mmengine - INFO - Epoch(train)  [1][110/196]  lr: 3.3333e-04  eta: 0:04:01  time: 0.1395  data_time: 0.0340  memory: 597  loss: 2.0141
 ```

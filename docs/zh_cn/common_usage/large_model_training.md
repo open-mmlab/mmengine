@@ -204,8 +204,8 @@ pip install colossalai
 
 安装好 ColossalAI 后，需配置 FlexibleRunner 的 strategy 和 optim_wrapper 参数：
 
-- strategy：指定 `type='ColossalAIStrategy'` 并配置参数。参数的详细介绍可阅读 [ColossalAIStrategy](mmengine._strategy.ColossalAI)。
-- optim_wrapper：缺省 `type` 参数，或指定 `type=ColossalAIOpitmWrapper`，优化器类型时建议选择 `HybridAdam`。其他可配置类型可阅读 [ColossalAIOptimWrapper](mmengine._strategy.ColossalAIOptimWrapper)。
+- strategy：指定 `type='ColossalAIStrategy'` 并配置参数。参数的详细介绍可阅读 [ColossalAIStrategy](mmengine._strategy.ColossalAIStrategy)。
+- optim_wrapper：缺省 `type` 参数，或指定 `type=ColossalAIOptimWrapper`，优化器类型建议选择 `HybridAdam`。其他可配置类型可阅读 [ColossalAIOptimWrapper](mmengine._strategy.ColossalAIOptimWrapper)。
 
 下面是 ColossalAI 相关的配置：
 

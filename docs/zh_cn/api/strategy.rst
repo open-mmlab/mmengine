@@ -38,4 +38,4 @@ mmengine._strategy
    :template: classtemplate.rst
 
    CollosalAIModelWrapper
-   ColossalAIOpitmWrapper
+   ColossalAIOptimWrapper
