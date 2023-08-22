@@ -925,12 +925,9 @@ def collect_results(results: list,
         raise NotImplementedError(
             f"device must be 'cpu' , 'gpu' or 'npu', but got {device}")
 
-    if device == 'gpu':
-        assert tmpdir is None, 'tmpdir should be None when device is "gpu"'
-        return collect_results_gpu(results, size)
-    elif device == 'npu':
-        assert tmpdir is None, 'tmpdir should be None when device is "npu"'
-        return collect_results_npu(results, size)
+    if device == 'gpu' or device == 'npu':
+        assert tmpdir is None, f'tmpdir should be None when device is {device}'
+        return _collect_results_device(results, size)
     else:
         return collect_results_cpu(results, size, tmpdir)
 
@@ -1022,7 +1019,7 @@ def collect_results_cpu(result_part: list,
         return ordered_results
 
 
-def collect_results_device(result_part: list, size: int) -> Optional[list]:
+def _collect_results_device(result_part: list, size: int) -> Optional[list]:
     """Collect results under gpu or npu mode."""
     rank, world_size = get_dist_info()
     if world_size == 1:
@@ -1074,41 +1071,7 @@ def collect_results_gpu(result_part: list, size: int) -> Optional[list]:
         ['foo', 24, {1: 2}, {'a': 'b'}]  # rank 0
         None  # rank 1
     """
-    return collect_results_device(result_part, size)
-
-
-def collect_results_npu(result_part: list, size: int) -> Optional[list]:
-    """Collect results under npu mode.
-
-    On npu mode, this function will encode results to npu tensors and use npu
-    communication for results collection.
-
-    Args:
-        result_part (list[object]): Result list containing result parts
-            to be collected. Each item of ``result_part`` should be a picklable
-            object.
-        size (int): Size of the results, commonly equal to length of
-            the results.
-
-    Returns:
-        list or None: The collected results.
-
-    Examples:
-        >>> # distributed environment
-        >>> # We have 2 process groups, 2 ranks.
-        >>> import mmengine.dist as dist
-        >>> if dist.get_rank() == 0:
-                data = ['foo', {1: 2}]
-            else:
-                data = [24, {'a': 'b'}]
-        >>> size = 4
-        >>> output = dist.collect_results_npu(data, size)
-        >>> output
-        ['foo', 24, {1: 2}, {'a': 'b'}]  # rank 0
-        None  # rank 1
-    """
-
-    return collect_results_device(result_part, size)
+    return _collect_results_device(result_part, size)
 
 
 def _all_reduce_coalesced(tensors: List[torch.Tensor],
