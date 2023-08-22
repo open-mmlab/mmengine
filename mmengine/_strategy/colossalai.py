@@ -83,7 +83,7 @@ class ColossalAIOptimWrapper(OptimWrapper):
     You can find more details in the `colossalai tutorial`_
 
     Args:
-        optimizer (dict or collossal.booster.Booster): The optimizer to be
+        optimizer (dict or torch.optim.Optimizer): The optimizer to be
             wrapped.
         accumulative_counts (int): The number of iterations to accumulate
             gradients. The parameters will be updated per
