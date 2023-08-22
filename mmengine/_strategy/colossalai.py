@@ -68,7 +68,7 @@ def register_mixed_precisions():
 
 
 @OPTIM_WRAPPERS.register_module()
-class ColossalAIOpitmWrapper(OptimWrapper):
+class ColossalAIOptimWrapper(OptimWrapper):
     """OptimWrapper for ColossalAI.
 
     The available optimizers are:
@@ -83,7 +83,7 @@ class ColossalAIOpitmWrapper(OptimWrapper):
     You can find more details in the `colossalai tutorial`_
 
     Args:
-        optimizer (dict or collossal.booster.Booster): The optimizer to be
+        optimizer (dict or torch.optim.Optimizer): The optimizer to be
             wrapped.
         accumulative_counts (int): The number of iterations to accumulate
             gradients. The parameters will be updated per
@@ -128,7 +128,7 @@ class CollosalAIModelWrapper:
     def train_step(
         self,
         data: Union[dict, tuple, list],
-        optim_wrapper: ColossalAIOpitmWrapper,
+        optim_wrapper: ColossalAIOptimWrapper,
     ) -> Dict[str, torch.Tensor]:
         data = self.model.data_preprocessor(data, training=True)
         with optim_wrapper.optim_context(self.model):
@@ -234,7 +234,7 @@ class ColossalAIStrategy(BaseStrategy):
     MODEL_DIR = 'model'  # directory to save model
     SCHEDULER_DIR = 'scheduler'  # directory to save scheduelrs
     model: CollosalAIModelWrapper  # type: ignore
-    optim_wrapper: ColossalAIOpitmWrapper  # type: ignore
+    optim_wrapper: ColossalAIOptimWrapper  # type: ignore
 
     def __init__(
         self,
@@ -304,7 +304,7 @@ class ColossalAIStrategy(BaseStrategy):
 
         # optim_wrapper is required by booster
         if optim_wrapper is not None and isinstance(optim_wrapper, dict):
-            optim_wrapper.setdefault('type', 'ColossalAIOpitmWrapper')
+            optim_wrapper.setdefault('type', 'ColossalAIOptimWrapper')
             optim_wrapper.setdefault('booster', self.booster)
             optim_wrapper_type = OPTIM_WRAPPERS.get(optim_wrapper['type'])
             if optim_wrapper_type is None:
@@ -312,7 +312,7 @@ class ColossalAIStrategy(BaseStrategy):
                                  '`OPTIM_WRAPPERS`.')
             if 'clip_grad' in optim_wrapper:
                 raise ValueError('`Please configure `clip_grad` in `plugin`')
-            if not issubclass(optim_wrapper_type, ColossalAIOpitmWrapper):
+            if not issubclass(optim_wrapper_type, ColossalAIOptimWrapper):
                 raise ValueError(
                     'The type of `optim_wrapper` must be '
                     '`ColossalAIOptimWrapper` (or subclass), but got '
@@ -503,7 +503,7 @@ class ColossalAIStrategy(BaseStrategy):
         self,
         model: nn.Module,
         optim_wrapper: Optional[OptimWrapper] = None,
-    ) -> Union[Tuple[CollosalAIModelWrapper, ColossalAIOpitmWrapper],
+    ) -> Union[Tuple[CollosalAIModelWrapper, ColossalAIOptimWrapper],
                CollosalAIModelWrapper]:  # type: ignore
         """Wrap model with :class:`ModelWrapper`."""
         if self.model_wrapper is None:
