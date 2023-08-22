@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import os
 import tempfile
 from typing import Dict, List, Sequence, Tuple, Union
 
@@ -17,7 +18,7 @@ from .searchers import HYPER_SEARCHERS, _Searcher
 
 class Tuner:
     rules_supported = ['greater', 'less']
-    rpc_worker_name = 'RPC_WORKER_{}'
+    rpc_worker_name = 'RPC_WORKER{}'
 
     def __init__(self,
                  runner_cfg: Union[Dict, Config, ConfigDict],
@@ -114,6 +115,7 @@ class Tuner:
     @staticmethod
     def run_trial(runner_cfg, monitor, rule, tuning_iter, tunning_epoch,
                   report_op):
+        os.environ['LOCAL_RANK'] = '0'
         runner = Runner.from_cfg(runner_cfg)
         report_hook = ReportingHook(monitor, rule, tuning_iter, tunning_epoch,
                                     report_op)
@@ -131,14 +133,8 @@ class Tuner:
             rpc_init_method = f'tcp://localhost:{rpc_port}'
         rpc_backend_options = TensorPipeRpcBackendOptions(
             init_method=rpc_init_method,
-            devices=[rank],
+            devices=[int(os.environ.get('LOCAL_RANK', rank))],
         )
-
-        for other in range(world_size):
-            if other == rank:
-                continue
-            rpc_backend_options.set_device_map(
-                Tuner.get_rpc_worker_name(other), {rank: other})
 
         rpc.init_rpc(
             Tuner.get_rpc_worker_name(rank),
