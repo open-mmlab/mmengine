@@ -243,7 +243,7 @@ torchrun --nproc-per-node 2 examples/distributed_training_with_flexible_runner.p
 <summary>Training Logs</summary>
 
 ```
-08/18 11:56:34 - mmengine - INFO - Epoch(train)  [1][ 10/196]  lr: 3.3333e-04  eta: 0:10:31  time: 0.3238  data_time: 0.0344  memory: 597  loss: 3.8766
+data_time: 0.0344  memory: 597  loss: 3.8766
 08/18 11:56:35 - mmengine - INFO - Epoch(train)  [1][ 20/196]  lr: 3.3333e-04  eta: 0:06:56  time: 0.1057  data_time: 0.0338  memory: 597  loss: 2.3797
 08/18 11:56:36 - mmengine - INFO - Epoch(train)  [1][ 30/196]  lr: 3.3333e-04  eta: 0:05:45  time: 0.1068  data_time: 0.0342  memory: 597  loss: 2.3219
 08/18 11:56:37 - mmengine - INFO - Epoch(train)  [1][ 40/196]  lr: 3.3333e-04  eta: 0:05:08  time: 0.1059  data_time: 0.0337  memory: 597  loss: 2.2641
@@ -253,6 +253,6 @@ torchrun --nproc-per-node 2 examples/distributed_training_with_flexible_runner.p
 08/18 11:56:42 - mmengine - INFO - Epoch(train)  [1][ 80/196]  lr: 3.3333e-04  eta: 0:04:13  time: 0.1098  data_time: 0.0338  memory: 597  loss: 2.1781
 08/18 11:56:43 - mmengine - INFO - Epoch(train)  [1][ 90/196]  lr: 3.3333e-04  eta: 0:04:06  time: 0.1097  data_time: 0.0338  memory: 597  loss: 2.0938
 08/18 11:56:44 - mmengine - INFO - Epoch(train)  [1][100/196]  lr: 3.3333e-04  eta: 0:04:01  time: 0.1097  data_time: 0.0339  memory: 597  loss: 2.1078
-08/18 11:56:46 - mmengine - INFO - Epoch(train)  [1][120/196]  lr: 3.3333
 08/18 11:56:45 - mmengine - INFO - Epoch(train)  [1][110/196]  lr: 3.3333e-04  eta: 0:04:01  time: 0.1395  data_time: 0.0340  memory: 597  loss: 2.0141
+08/18 11:56:46 - mmengine - INFO - Epoch(train)  [1][120/196]  lr: 3.3333
 ```
