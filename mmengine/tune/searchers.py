@@ -8,7 +8,7 @@ from mmengine.registry import Registry
 try:
     import nevergrad as ng
 except ImportError:
-    ng = None
+    ng = None  # type: ignore
 
 HYPER_SEARCHERS = Registry('hyper parameter searcher')
 

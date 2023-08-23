@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import math
 from typing import Dict, List, Sequence, Tuple, Union
 
 from mmengine.config import Config, ConfigDict
@@ -114,20 +115,22 @@ class Tuner:
         if is_main_process():
             hparams_to_broadcast = [self._searcher.suggest()]
         else:
-            hparams_to_broadcast = [None]
+            hparams_to_broadcast = [None]  # type: ignore
         broadcast_object_list(hparams_to_broadcast, src=0)
         hparam = hparams_to_broadcast[0]
         for k, v in hparam.items():
             self.inject_config(self._runner_cfg, k, v)
         runner = Runner.from_cfg(self._runner_cfg)
-        report_hook = ReportingHook(self._monitor, self._rule,
-                                    self._tuning_iter, self._tuning_epoch,
-                                    self._reporting_op)
+        report_hook = ReportingHook(self._monitor, self._tuning_iter,
+                                    self._tuning_epoch, self._reporting_op)
         runner.register_hook(report_hook, priority='VERY_LOW')
         default_score = float('inf') if self._rule == 'less' else -float('inf')
         try:
             runner.train()
-            scores_to_broadcast = [report_hook.report_score()]
+            score = report_hook.report_score()
+            if score is None or math.isnan(score) or math.isinf(score):
+                score = default_score
+            scores_to_broadcast = [score]
         except Exception:
             scores_to_broadcast = [default_score]
         broadcast_object_list(scores_to_broadcast, src=0)
