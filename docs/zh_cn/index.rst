@@ -9,6 +9,7 @@
    get_started/introduction.md
    get_started/installation.md
    get_started/15_minutes.md
+   examples/faq.md
 
 .. toctree::
    :maxdepth: 1
@@ -16,7 +17,6 @@
 
    examples/train_a_gan.md
    examples/train_seg.md
-   examples/faq.md
 
 .. toctree::
    :maxdepth: 1
