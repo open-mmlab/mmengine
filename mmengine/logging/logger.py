@@ -248,6 +248,7 @@ class MMLogger(Logger, ManagerMixin):
                     if file_handler_type in file_handlers_map:
                         file_handler_cls = file_handlers_map[file_handler_type]
                         file_handler_cfg.setdefault('mode', file_mode)
+                        file_handler_cfg.setdefault('filename', log_file)
                         file_handler = file_handler_cls(
                             filename=log_file, **file_handler_cfg)
                     else:
@@ -260,9 +261,10 @@ class MMLogger(Logger, ManagerMixin):
                     # `FileHandler` is not supported to have colors,
                     # otherwise it will appear garbled.
                     file_handler = logging.FileHandler(log_file, file_mode)
-                    # `StreamHandler` record year, month, day hour, minute,
-                    # and second timestamp. file_handler will only record logs
-                    # without color to avoid garbled code saved in files.
+
+                # `StreamHandler` record year, month, day hour, minute,
+                # and second timestamp. file_handler will only record logs
+                # without color to avoid garbled code saved in files.
                 file_handler.setFormatter(
                     MMFormatter(color=False, datefmt='%Y/%m/%d %H:%M:%S'))
                 file_handler.setLevel(log_level)
