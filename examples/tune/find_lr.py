@@ -43,8 +43,7 @@ class ToyModel(BaseModel):
 class ToyDataset(Dataset):
     METAINFO = dict()  # type: ignore
     num_samples = 1000
-    data = torch.rand(num_samples, 2) * 10  # Random numbers between 0 and 10
-    # Let's assume y = 3*x1 + 4*x2 + noise
+    data = torch.rand(num_samples, 2) * 10
     label = 3 * data[:, 0] + 4 * data[:, 1] + torch.randn(num_samples) * 0.1
 
     @property
@@ -94,8 +93,8 @@ def find_optimial_lr(runner_cfg: Union[Dict, Config, ConfigDict],
                      lower_lr: Optional[float] = 1e-5,
                      upper_lr: Optional[float] = 1e-3,
                      tuning_iter: int = 0,
-                     tunning_epoch: int = 0,
-                     report_op: str = 'mean',
+                     tuning_epoch: int = 0,
+                     report_op: str = 'latest',
                      searcher_type: str = 'NevergradSearcher',
                      **searcher_kwargs) -> Dict[str, Union[dict, float]]:
     hparam_spec = {
@@ -113,7 +112,7 @@ def find_optimial_lr(runner_cfg: Union[Dict, Config, ConfigDict],
         rule=rule,
         num_trials=num_trials,
         tuning_iter=tuning_iter,
-        tunning_epoch=tunning_epoch,
+        tuning_epoch=tuning_epoch,
         report_op=report_op,
         searcher_type=searcher_type,
         **searcher_kwargs)
@@ -162,10 +161,11 @@ def main():
     result = find_optimial_lr(
         runner_cfg=runner_cfg,
         num_trials=32,
-        tunning_epoch=3,
+        tuning_epoch=3,
     )
     print('best_lr: ', result.get('hparam'))
     print('lowest_loss: ', result.get('score'))
+    temp_dir.cleanup()
 
 
 if __name__ == '__main__':

@@ -21,7 +21,7 @@ class Tuner:
                  rule: str,
                  num_trials: int,
                  tuning_iter: int = 0,
-                 tunning_epoch: int = 0,
+                 tuning_epoch: int = 0,
                  report_op: str = 'latest',
                  searcher_type: str = 'NevergradSearcher',
                  **searcher_kwargs):
@@ -36,7 +36,7 @@ class Tuner:
 
         self._num_trials = num_trials
         self._tuning_iter = tuning_iter
-        self._tuning_epoch = tunning_epoch
+        self._tuning_epoch = tuning_epoch
         self._reporting_op = report_op
         self._history: List[Tuple[Dict, float]] = []
 
