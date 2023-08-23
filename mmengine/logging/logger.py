@@ -171,28 +171,25 @@ class MMLogger(Logger, ManagerMixin):
         log_level (str): The log level of the handler. Defaults to
             'INFO'. If log level is 'DEBUG', distributed logs will be saved
             during distributed training.
-        file_handler_cfg (dict, optional): The cfg dict of file handler that
-            rotate log files at a certain point. If `file_handler_cfg=None`,
-            a ``logging.FileHandler`` that does not rotate log file would
-            be added to the logger. The file_handler_cfg can support the
-            type keyword with the value of
-            `BaseRotatingHandler`、`RotatingFileHandler`、
-            `TimedRotatingFileHandler` or `WatchedFileHandler`.
-            And the remaining key pairs are the parameters required by
-            ``logging.handlers.BaseRotatingHandler``、
-            ``logging.handlers.RotatingFileHandler``、
-            ``logging.handlers.TimedRotatingFileHandler``、
-            or ``logging.handlers.WatchedFileHandler``. Like:
+        file_mode (str): The file mode used to open log file. Defaults to 'w'.
+        distributed (bool): Whether to save distributed logs, Defaults to
+            false.
+        file_handler_cfg (dict, optional): Dict to configure file handler.
+            Defaults to None. If ``file_handler_cfg`` is not specified,
+            ``logging.FileHandler`` will be used by default. If it is specified,
+            the ``type`` key should be set. It can be 'RotatingFileHandler',
+            'TimedRotatingFileHandler', 'WatchedFileHandler' or other file
+            handler. And the remaining key pairs are passed in the constructor
+            of the handler.
+
             Examples:
                 >>> file_handler_cfg = dict(
                 >>>    type='TimedRotatingFileHandler',
                 >>>    when='MIDNIGHT',
                 >>>    interval=1,
                 >>>    backupCount=365)
-            Defaults to None.
-        file_mode (str): The file mode used to open log file. Defaults to 'w'.
-        distributed (bool): Whether to save distributed logs, Defaults to
-            false.
+                
+            `New in version 0.8.5.`
     """
 
     def __init__(self,
@@ -200,9 +197,9 @@ class MMLogger(Logger, ManagerMixin):
                  logger_name='mmengine',
                  log_file: Optional[str] = None,
                  log_level: Union[int, str] = 'INFO',
-                 file_handler_cfg: Optional[dict] = None,
                  file_mode: str = 'w',
-                 distributed=False):
+                 distributed=False,
+                 file_handler_cfg: Optional[dict] = None):
         Logger.__init__(self, logger_name)
         ManagerMixin.__init__(self, name)
         # Get rank in DDP mode.
@@ -245,24 +242,21 @@ class MMLogger(Logger, ManagerMixin):
             # will always be saved.
             if global_rank == 0 or is_distributed:
                 if file_handler_cfg is not None:
-                    assert 'type' in file_handler_cfg, \
-                        'You should specify `type` keyword '
-                    'in file_handler_cfg.'
+                    assert 'type' in file_handler_cfg
                     file_handler_type = file_handler_cfg.pop('type')
-                    logging_file_handlers_map = \
-                        self._get_logging_file_handlers()
-                    if logging_file_handlers_map.get(file_handler_type,
-                                                     None) is not None:
-                        file_handler = logging_file_handlers_map[
-                            file_handler_type](
-                                filename=log_file, **file_handler_cfg)
+                    file_handlers_map = _get_logging_file_handlers()
+                    if file_handler_type in file_handlers_map:
+                        file_handler_cls = file_handlers_map[file_handler_type]
+                        file_handler_cfg.setdefault('mode', file_mode)
+                        file_handler = file_handler_cls(
+                            filename=log_file, **file_handler_cfg)
                     else:
                         raise ValueError('`logging.handlers` does not '
-                                         f'exist {file_handler_type}')
+                                         f'contain {file_handler_type}')
                 else:
-                    # Here, the default behaviour of the official
+                    # Here, the default behavior of the official
                     # logger is 'a'. Thus, we provide an interface to
-                    # change the file mode to the default behaviour.
+                    # change the file mode to the default behavior.
                     # `FileHandler` is not supported to have colors,
                     # otherwise it will appear garbled.
                     file_handler = logging.FileHandler(log_file, file_mode)
@@ -275,21 +269,6 @@ class MMLogger(Logger, ManagerMixin):
                 file_handler.addFilter(FilterDuplicateWarning(logger_name))
                 self.handlers.append(file_handler)
         self._log_file = log_file
-
-    def _get_logging_file_handlers(self) -> Dict:
-        """Get additional file_handlers in ``logging.handlers``.
-
-        Returns:
-            Dict: A map of file_handlers.
-        """
-        file_handlers_map = {}
-        for module_name in dir(handlers):
-            if module_name.startswith('__'):
-                continue
-            _fh = getattr(handlers, module_name)
-            if inspect.isclass(_fh) and issubclass(_fh, logging.FileHandler):
-                file_handlers_map[module_name] = _fh
-        return file_handlers_map
 
     @property
     def log_file(self):
@@ -450,3 +429,18 @@ def _get_host_info() -> str:
         warnings.warn(f'Host or user not found: {str(e)}')
     finally:
         return host
+
+def _get_logging_file_handlers(self) -> Dict:
+    """Get additional file_handlers in ``logging.handlers``.
+
+    Returns:
+        Dict: A map of file_handlers.
+    """
+    file_handlers_map = {}
+    for module_name in dir(handlers):
+        if module_name.startswith('__'):
+            continue
+        _fh = getattr(handlers, module_name)
+        if inspect.isclass(_fh) and issubclass(_fh, logging.FileHandler):
+            file_handlers_map[module_name] = _fh
+    return file_handlers_map
