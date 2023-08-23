@@ -45,6 +45,7 @@ from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          find_latest_checkpoint, save_checkpoint,
                          weights_to_cpu)
+from .gradient_checkpoint import set_gredient_checkpoint
 from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
@@ -1684,6 +1685,11 @@ class Runner:
             ori_model = self.model.module
         else:
             ori_model = self.model
+
+        # try to enable gredient_checkpoint feature
+        if self.cfg.get('gredient_checkpoint', None):
+            ori_model.backbone = set_gredient_checkpoint(ori_model.backbone)
+
         assert hasattr(ori_model, 'train_step'), (
             'If you want to train your model, please make sure your model '
             'has implemented `train_step`.')

@@ -7,6 +7,7 @@ from .checkpoint import (CheckpointLoader, find_latest_checkpoint,
                          get_mmcls_models, get_state_dict,
                          get_torchvision_models, load_checkpoint,
                          load_state_dict, save_checkpoint, weights_to_cpu)
+from .gradient_checkpoint import set_gredient_checkpoint
 from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
@@ -19,5 +20,6 @@ __all__ = [
     'CheckpointLoader', 'load_checkpoint', 'weights_to_cpu', 'get_state_dict',
     'save_checkpoint', 'EpochBasedTrainLoop', 'IterBasedTrainLoop', 'ValLoop',
     'TestLoop', 'Runner', 'get_priority', 'Priority', 'find_latest_checkpoint',
-    'autocast', 'LogProcessor', 'set_random_seed', 'FlexibleRunner'
+    'autocast', 'LogProcessor', 'set_random_seed', 'FlexibleRunner',
+    'set_gredient_checkpoint'
 ]
