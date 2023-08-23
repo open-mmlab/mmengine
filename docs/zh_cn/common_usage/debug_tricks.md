@@ -50,7 +50,7 @@ python tools/train.py configs/resnet/resnet18_8xb16_cifar10.py
 02/20 14:45:01 - mmengine - INFO - Epoch(train)   [1][300/313]  lr: 1.0000e-01  eta: 0:20:39  time: 0.0143  data_time: 0.0003  memory: 214  loss: 1.814
 ```
 
-## 增加cfg参数
+## 固定训练的迭代次数(基于epoch的训练)
 
 在调试代码的过程中，有时需要训练几个 epoch，例如调试验证过程或者权重的保存是否符合期望。然而如果数据集太大，需要花费较长时间才能训完一个 epoch，这种情况下可以增加cfg参数。
 以 `MMEngine` 为例（参考[文档](https://mmengine.readthedocs.io/zh_CN/latest/get_started/installation.html)安装 MMEngine）。

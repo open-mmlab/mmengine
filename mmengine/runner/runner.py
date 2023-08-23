@@ -56,33 +56,32 @@ ParamSchedulerType = Union[List[_ParamScheduler], Dict[str,
 OptimWrapperType = Union[OptimWrapper, OptimWrapperDict]
 
 
-class SlicedDataset:
+class _SlicedDataset:
 
     def __init__(self, dataset, length) -> None:
-        self.dataset = dataset
-        self.length = length
-        assert self.length <= len(self.dataset)
-        self.count = 0
-        self.dataset_iter = None
+        self._dataset = dataset
+        self._length = length
+        self._count = 0
+        self._dataset_iter = None
 
     def __getattr__(self, name):
-        return getattr(self.dataset, name)
+        return getattr(self._dataset, name)
 
     def __iter__(self):
-        self.dataset_iter = iter(self.dataset)
+        self._dataset_iter = iter(self._dataset)
         return self
 
     def __getitem__(self, idx):
-        return self.dataset[idx]
+        return self._dataset[idx]
 
     def __len__(self):
-        return self.length
+        return self._length
 
     def __next__(self):
-        self.count += 1
-        if self.count > self.length:
+        self._count += 1
+        if self._count > self._length:
             raise StopIteration
-        return next(self.dataset_iter)
+        return next(self._dataset_iter)
 
 
 @RUNNERS.register_module()
@@ -1392,7 +1391,7 @@ class Runner:
             world_size = get_world_size()
             num_samples = num_batch_per_epoch * dataloader_cfg.get(
                 'batch_size', 1) * world_size
-            dataset = SlicedDataset(dataset, num_samples)
+            dataset = _SlicedDataset(dataset, num_samples)
 
         # build sampler
         sampler_cfg = dataloader_cfg.pop('sampler')
