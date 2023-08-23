@@ -17,8 +17,9 @@ class ToyModel(BaseModel):
 
     def __init__(self, data_preprocessor=None):
         super().__init__(data_preprocessor=data_preprocessor)
-        self.linear1 = nn.Linear(2, 2)
-        self.linear2 = nn.Linear(2, 1)
+        self.linear1 = nn.Linear(2, 32)
+        self.linear2 = nn.Linear(32, 64)
+        self.linear3 = nn.Linear(64, 1)
 
     def forward(self, inputs, data_samples=None, mode='tensor'):
         if isinstance(inputs, list):
@@ -27,11 +28,12 @@ class ToyModel(BaseModel):
             data_samples = torch.stack(data_samples)
         outputs = self.linear1(inputs)
         outputs = self.linear2(outputs)
+        outputs = self.linear3(outputs)
 
         if mode == 'tensor':
             return outputs
         elif mode == 'loss':
-            loss = (data_samples - outputs).sum()
+            loss = ((data_samples - outputs)**2).mean()
             outputs = dict(loss=loss)
             return outputs
         elif mode == 'predict':
@@ -64,12 +66,12 @@ class ToyMetric(BaseMetric):
 
     def process(self, data_batch, predictions):
         true_values = data_batch['data_samples']
-        squared_error = (true_values - predictions.squeeze())**2
-        self.results.extend(squared_error.tolist())
+        sqe = [(t - p)**2 for t, p in zip(true_values, predictions)]
+        self.results.extend(sqe)
 
     def compute_metrics(self, results=None):
         mse = torch.tensor(self.results).mean().item()
-        return dict(MSE=mse)
+        return dict(mse=mse)
 
 
 def parse_args():
@@ -89,11 +91,11 @@ def find_optimial_lr(runner_cfg: Union[Dict, Config, ConfigDict],
                      monitor: str = 'loss',
                      rule: str = 'less',
                      num_trials: int = 32,
-                     lower_lr: Optional[float] = 1e-6,
-                     upper_lr: Optional[float] = 1e-2,
+                     lower_lr: Optional[float] = 1e-5,
+                     upper_lr: Optional[float] = 1e-3,
                      tuning_iter: int = 0,
                      tunning_epoch: int = 0,
-                     report_op: str = 'latest',
+                     report_op: str = 'mean',
                      searcher_type: str = 'NevergradSearcher',
                      **searcher_kwargs) -> Dict[str, Union[dict, float]]:
     hparam_spec = {

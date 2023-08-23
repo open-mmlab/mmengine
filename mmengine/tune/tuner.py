@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import tempfile
 from typing import Dict, List, Sequence, Tuple, Union
 
 from mmengine.config import Config, ConfigDict
@@ -46,7 +45,8 @@ class Tuner:
             env_cfg = runner_cfg.get('env_cfg', {})
             dist_cfg = env_cfg.get('dist_cfg', {})
             init_dist(launcher, **dist_cfg)
-        self._logger = MMLogger.get_instance('Tuner', log_level='INFO')
+        self._logger = MMLogger.get_instance(
+            'Tuner', log_level='INFO', distributed=self._distributed)
         self._logger.info(
             f'Tuner initialized with rule: {rule} and monitor: {monitor}')
         self._searcher = self._build_searcher(searcher_type, **searcher_kwargs)
@@ -112,34 +112,34 @@ class Tuner:
 
     def _run_trial(self) -> Tuple[Dict, float]:
         if is_main_process():
-            hparam = self._searcher.suggest()
+            hparams_to_broadcast = [self._searcher.suggest()]
         else:
-            hparam = None
-        broadcast_object_list([hparam], src=0)
+            hparams_to_broadcast = [None]
+        broadcast_object_list(hparams_to_broadcast, src=0)
+        hparam = hparams_to_broadcast[0]
         for k, v in hparam.items():
             self.inject_config(self._runner_cfg, k, v)
-        temp_dir = tempfile.TemporaryDirectory()
-        self._runner_cfg['work_dir'] = temp_dir.name
         runner = Runner.from_cfg(self._runner_cfg)
         report_hook = ReportingHook(self._monitor, self._rule,
                                     self._tuning_iter, self._tuning_epoch,
                                     self._reporting_op)
         runner.register_hook(report_hook, priority='VERY_LOW')
-        score: float
+        default_score = float('inf') if self._rule == 'less' else -float('inf')
         try:
             runner.train()
-            score = report_hook.report_score()
+            scores_to_broadcast = [report_hook.report_score()]
         except Exception:
-            score = float('inf') if self._rule == 'less' else -float('inf')
-        broadcast_object_list([score], src=0)
-        temp_dir.cleanup()
+            scores_to_broadcast = [default_score]
+        broadcast_object_list(scores_to_broadcast, src=0)
+        score = scores_to_broadcast[0]
+        if is_main_process():
+            self._searcher.record(hparam, score)
         return hparam, score
 
     def tune(self) -> Dict[str, Union[dict, float]]:
         self._logger.info(f'Starting tuning for {self._num_trials} trials...')
         for trail_idx in range(self._num_trials):
             hparam, score = self._run_trial()
-            self._searcher.record(hparam, score)
             self._history.append((hparam, score))
             self._logger.info(
                 f'Trial [{trail_idx + 1}/{self._num_trials}] finished.' +

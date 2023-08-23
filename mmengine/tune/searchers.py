@@ -1,4 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import hashlib
+import json
 from typing import Dict
 
 from mmengine.registry import Registry
@@ -94,12 +96,19 @@ class NevergradSearcher(_Searcher):
             parametrization=converted_hparam_spec, budget=num_trials)
         return solver
 
+    def _hash_dict(self, d: dict) -> str:
+        serialized_data = json.dumps(d, sort_keys=True).encode()
+        hashed = hashlib.md5(serialized_data).hexdigest()
+        return hashed
+
     def suggest(self) -> Dict:
         hparam = self._optimizer.ask()
-        self._records[hparam.value] = hparam
+        hash_key = self._hash_dict(hparam.value)
+        self._records[hash_key] = hparam
         return hparam.value
 
     def record(self, hparam: Dict, score: float):
-        assert hparam in self._records, \
+        hash_key = self._hash_dict(hparam)
+        assert hash_key in self._records, \
             f'hparam {hparam} is not in the record'
-        self._optimizer.tell(self._records[hparam], score * self._rule_op)
+        self._optimizer.tell(self._records[hash_key], score * self._rule_op)
