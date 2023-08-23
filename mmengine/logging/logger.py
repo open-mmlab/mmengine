@@ -432,7 +432,7 @@ def _get_host_info() -> str:
     finally:
         return host
 
-def _get_logging_file_handlers(self) -> Dict:
+def _get_logging_file_handlers() -> Dict:
     """Get additional file_handlers in ``logging.handlers``.
 
     Returns:
