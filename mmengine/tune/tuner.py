@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import os
 import tempfile
 from typing import Dict, List, Sequence, Tuple, Union
 
@@ -61,6 +60,9 @@ class Tuner:
             f'Tuner initialized with rule: {rule} and monitor: {monitor}')
         self._searcher = self._build_searcher(searcher_type, **searcher_kwargs)
 
+    def __del__(self):
+        rpc.shutdown()
+
     @property
     def hparam_spec(self) -> Dict[str, Dict]:
         return self._hparam_spec
@@ -115,7 +117,6 @@ class Tuner:
     @staticmethod
     def run_trial(runner_cfg, monitor, rule, tuning_iter, tunning_epoch,
                   report_op):
-        os.environ['LOCAL_RANK'] = '0'
         runner = Runner.from_cfg(runner_cfg)
         report_hook = ReportingHook(monitor, rule, tuning_iter, tunning_epoch,
                                     report_op)
@@ -132,9 +133,12 @@ class Tuner:
         else:
             rpc_init_method = f'tcp://localhost:{rpc_port}'
         rpc_backend_options = TensorPipeRpcBackendOptions(
-            init_method=rpc_init_method,
-            devices=[int(os.environ.get('LOCAL_RANK', rank))],
-        )
+            init_method=rpc_init_method, )
+        for other in range(world_size):
+            if other == rank:
+                continue
+            rpc_backend_options.set_device_map(
+                Tuner.get_rpc_worker_name(other), {rank: other})
 
         rpc.init_rpc(
             Tuner.get_rpc_worker_name(rank),
