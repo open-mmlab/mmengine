@@ -1,14 +1,16 @@
 import argparse
 import tempfile
+from typing import Dict, Optional, Union
 
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
 
+from mmengine.config import Config, ConfigDict
 from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
 from mmengine.registry import DATASETS, METRICS, MODELS
-from mmengine.tune import find_optimial_lr
+from mmengine.tune import Tuner
 
 
 class ToyModel(BaseModel):
@@ -38,15 +40,17 @@ class ToyModel(BaseModel):
 
 class ToyDataset(Dataset):
     METAINFO = dict()  # type: ignore
-    data = torch.randn(12, 2)
-    label = torch.ones(12)
+    num_samples = 1000
+    data = torch.rand(num_samples, 2) * 10  # Random numbers between 0 and 10
+    # Let's assume y = 3*x1 + 4*x2 + noise
+    label = 3 * data[:, 0] + 4 * data[:, 1] + torch.randn(num_samples) * 0.1
 
     @property
     def metainfo(self):
         return self.METAINFO
 
     def __len__(self):
-        return self.data.size(0)
+        return len(self.data)
 
     def __getitem__(self, index):
         return dict(inputs=self.data[index], data_samples=self.label[index])
@@ -54,16 +58,18 @@ class ToyDataset(Dataset):
 
 class ToyMetric(BaseMetric):
 
-    def __init__(self, collect_device='cpu', dummy_metrics=None):
+    def __init__(self, collect_device='cpu'):
         super().__init__(collect_device=collect_device)
-        self.dummy_metrics = dummy_metrics
+        self.results = []
 
     def process(self, data_batch, predictions):
-        result = {'acc': 1}
-        self.results.append(result)
+        true_values = data_batch['data_samples']
+        squared_error = (true_values - predictions.squeeze())**2
+        self.results.extend(squared_error.tolist())
 
-    def compute_metrics(self, results):
-        return dict(acc=1)
+    def compute_metrics(self, results=None):
+        mse = torch.tensor(self.results).mean().item()
+        return dict(MSE=mse)
 
 
 def parse_args():
@@ -77,6 +83,39 @@ def parse_args():
 
     args = parser.parse_args()
     return args
+
+
+def find_optimial_lr(runner_cfg: Union[Dict, Config, ConfigDict],
+                     monitor: str = 'loss',
+                     rule: str = 'less',
+                     num_trials: int = 32,
+                     lower_lr: Optional[float] = 1e-6,
+                     upper_lr: Optional[float] = 1e-2,
+                     tuning_iter: int = 0,
+                     tunning_epoch: int = 0,
+                     report_op: str = 'latest',
+                     searcher_type: str = 'NevergradSearcher',
+                     **searcher_kwargs) -> Dict[str, Union[dict, float]]:
+    hparam_spec = {
+        'optim_wrapper.optimizer.lr': {
+            'type': 'continuous',
+            'lower': lower_lr,
+            'upper': upper_lr
+        }
+    }
+
+    tuner = Tuner(
+        runner_cfg,
+        hparam_spec=hparam_spec,
+        monitor=monitor,
+        rule=rule,
+        num_trials=num_trials,
+        tuning_iter=tuning_iter,
+        tunning_epoch=tunning_epoch,
+        report_op=report_op,
+        searcher_type=searcher_type,
+        **searcher_kwargs)
+    return tuner.tune()
 
 
 def main():
@@ -109,7 +148,7 @@ def main():
             num_workers=0),
         test_evaluator=[dict(type='ToyMetric')],
         optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.1)),
-        train_cfg=dict(by_epoch=True, max_epochs=2, val_interval=1),
+        train_cfg=dict(by_epoch=True, max_epochs=10, val_interval=1),
         val_cfg=dict(),
         test_cfg=dict(),
         launcher=args.launcher,
@@ -121,7 +160,7 @@ def main():
     result = find_optimial_lr(
         runner_cfg=runner_cfg,
         num_trials=32,
-        tunning_epoch=1,
+        tunning_epoch=3,
     )
     print('best_lr: ', result.get('hparam'))
     print('lowest_loss: ', result.get('score'))

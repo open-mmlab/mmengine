@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Dict, Optional
+from typing import Dict
 
 from mmengine.registry import Registry
 
@@ -7,16 +7,6 @@ try:
     import nevergrad as ng
 except ImportError:
     ng = None
-
-try:
-    import skopt
-except ImportError:
-    skopt = None
-
-try:
-    import hyperopt as hp
-except ImportError:
-    hp = None
 
 HYPER_SEARCHERS = Registry('hyper parameter searcher')
 
@@ -86,7 +76,7 @@ class NevergradSearcher(_Searcher):
         super().__init__(rule, hparam_spec)
         assert ng is not None, 'nevergrad is not installed'
         self._optimizer = self._build_optimizer(solver_type, num_trials)
-        self._latest_candidate = None
+        self._records = dict()  # type: ignore
 
         if self.rule == 'less':
             self._rule_op = 1.0
@@ -105,141 +95,11 @@ class NevergradSearcher(_Searcher):
         return solver
 
     def suggest(self) -> Dict:
-        self._latest_candidate = self._optimizer.ask()
-        return self._latest_candidate.value
+        hparam = self._optimizer.ask()
+        self._records[hparam.value] = hparam
+        return hparam.value
 
     def record(self, hparam: Dict, score: float):
-        assert self._latest_candidate is not None, \
-            'suggest must be called before record'
-        self._optimizer.tell(self._latest_candidate, score * self._rule_op)
-
-
-@HYPER_SEARCHERS.register_module()
-class SkoptSearcher(_Searcher):
-
-    def __init__(self,
-                 rule: str,
-                 hparam_spec: Dict[str, Dict],
-                 base_estimator: str = 'gp',
-                 n_initial_points: int = 10,
-                 initial_point_generator: str = 'random',
-                 acq_func: str = 'gp_hedge',
-                 acq_optimizer: str = 'auto',
-                 *args,
-                 **kwargs):
-        super().__init__(rule, hparam_spec)
-
-        # Ensure that skopt is installed
-        assert skopt is not None, 'Scikit-Optimize (skopt) is not installed'
-
-        self._optimizer = self._build_optimizer(base_estimator,
-                                                n_initial_points,
-                                                initial_point_generator,
-                                                acq_func, acq_optimizer)
-        if self.rule == 'less':
-            self._rule_op = 1.0
-        else:
-            self._rule_op = -1.0
-
-    def _build_optimizer(self, base_estimator: str, n_initial_points: int,
-                         initial_point_generator: str, acq_func: str,
-                         acq_optimizer: str):
-        space = []
-        for k, v in self.hparam_spec.items():
-            if v['type'] == 'continuous':
-                space.append(skopt.space.Real(v['lower'], v['upper'], name=k))
-            elif v['type'] == 'discrete':
-                space.append(skopt.space.Categorical(v['values'], name=k))
-
-        return skopt.Optimizer(
-            dimensions=space,
-            base_estimator=base_estimator,
-            n_initial_points=n_initial_points,
-            initial_point_generator=initial_point_generator,
-            acq_func=acq_func,
-            acq_optimizer=acq_optimizer)
-
-    def suggest(self) -> Dict:
-        x = self._optimizer.ask()
-        return {
-            dim.name: val
-            for dim, val in zip(self._optimizer.space.dimensions, x)
-        }
-
-    def record(self, hparam: Dict, score: float):
-        ordered_values = [
-            hparam[dim.name] for dim in self._optimizer.space.dimensions
-        ]
-        self._optimizer.tell(ordered_values, score * self._rule_op)
-
-
-@HYPER_SEARCHERS.register_module()
-class HyperoptSearcher(_Searcher):
-
-    def __init__(self,
-                 rule: str,
-                 hparam_spec: Dict[str, Dict],
-                 num_trials: int,
-                 n_initial_points: int = 20,
-                 random_state_seed: Optional[int] = None,
-                 gamma: float = 0.25,
-                 *args,
-                 **kwargs):
-        super().__init__(rule, hparam_spec)
-
-        # Ensure that hyperopt is installed
-        assert hp is not None, 'hyperopt is not installed'
-
-        self._space = self._build_space()
-        self._trials = hp.Trials()
-        self._num_trials = num_trials
-        self._n_initial_points = n_initial_points
-        self._random_state_seed = random_state_seed
-        self._gamma = gamma
-
-        if self.rule == 'less':
-            self._rule_op = 1.0
-        else:
-            self._rule_op = -1.0
-
-    def _build_space(self):
-        space = {}
-        for k, v in self.hparam_spec.items():
-            if v['type'] == 'continuous':
-                space[k] = hp.hp.uniform(k, v['lower'], v['upper'])
-            elif v['type'] == 'discrete':
-                space[k] = hp.hp.choice(k, v['values'])
-        return space
-
-    def suggest(self) -> Dict:
-        suggested_params = hp.fless(
-            fn=lambda x:
-            0,  # Dummy objective, we'll replace it with `record` later
-            space=self._space,
-            algo=hp.partial(hp.tpe.suggest, gamma=self._gamma),
-            greater_evals=self._n_initial_points + len(self._trials.trials),
-            trials=self._trials,
-            rstate=hp.pyll.stochastic.RandomState(
-                self._random_state_seed),  # Seeded random state
-            return_argless=True,
-            verbose=0)  # Not verbose
-        return suggested_params
-
-    def record(self, hparam: Dict, score: float):
-        self._trials.insert_trial_docs([{
-            'tid': len(self._trials.trials),
-            'book_time': hp.utils.coarse_utcnow(),
-            'misc': {
-                'tid': len(self._trials.trials),
-                'cmd': ('domain_attachment', 'FlessIter_Domain'),
-                'vals': hparam,
-                'idxs': {k: [len(self._trials.trials)]
-                         for k in hparam}
-            },
-            'state': 2,  # 2 is the state for "ok" in hyperopt
-            'result': {
-                'loss': score * self._rule_op,
-                'status': 'ok'
-            }
-        }])
-        self._trials.refresh()
+        assert hparam in self._records, \
+            f'hparam {hparam} is not in the record'
+        self._optimizer.tell(self._records[hparam], score * self._rule_op)
