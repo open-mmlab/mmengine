@@ -249,8 +249,7 @@ class MMLogger(Logger, ManagerMixin):
                         file_handler_cls = file_handlers_map[file_handler_type]
                         file_handler_cfg.setdefault('mode', file_mode)
                         file_handler_cfg.setdefault('filename', log_file)
-                        file_handler = file_handler_cls(
-                            filename=log_file, **file_handler_cfg)
+                        file_handler = file_handler_cls(**file_handler_cfg)
                     else:
                         raise ValueError('`logging.handlers` does not '
                                          f'contain {file_handler_type}')
