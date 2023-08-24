@@ -73,8 +73,6 @@ class LazyObject:
             return str(self.source) + '.' + self.name
         return self.name
 
-    __repr__ = __str__
-
     def __repr__(self) -> str:
         return f"<Lazy '{str(self)}'>"
 
@@ -136,3 +134,21 @@ class LazyImportContext:
 
     def __repr__(self):
         return f'<LazyImportContext (enable={self.enable})>'
+
+
+def recover_lazy_field(cfg):
+
+    if isinstance(cfg, dict):
+        for k, v in cfg.items():
+            cfg[k] = recover_lazy_field(v)
+        return cfg
+    elif isinstance(cfg, (tuple, list)):
+        container_type = type(cfg)
+        cfg = list(cfg)
+        for i, v in enumerate(cfg):
+            cfg[i] = recover_lazy_field(v)
+        return container_type(cfg)
+    elif isinstance(cfg, str):
+        recover = LazyObject.from_str(cfg)
+        return recover if recover is not None else cfg
+    return cfg

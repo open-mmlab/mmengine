@@ -18,6 +18,7 @@ from mmengine.logging import print_log
 from mmengine.utils import (check_file_exist, get_installed_path,
                             import_modules_from_strings, is_installed)
 from .config import BASE_KEY, Config, ConfigDict
+from .lazy import recover_lazy_field
 from .utils import (ConfigParsingError, RemoveAssignFromAST,
                     _get_external_cfg_base_path, _get_external_cfg_path,
                     _get_package_and_cfg_path)
@@ -91,6 +92,9 @@ class ConfigV1(Config):
 
         if not isinstance(cfg_dict, ConfigDict):
             cfg_dict = ConfigDict(cfg_dict)
+        # Recover dumped lazy object like '<torch.nn.Linear>' from string
+        cfg_dict = recover_lazy_field(cfg_dict)
+
         super(Config, self).__setattr__('_cfg_dict', cfg_dict)
         super(Config, self).__setattr__('_filename', filename)
         super(Config, self).__setattr__('_format_python_code',
@@ -108,11 +112,13 @@ class ConfigV1(Config):
         super(Config, self).__setattr__('_env_variables', env_variables)
 
     @staticmethod
-    def fromfile(filename: Union[str, Path],
-                 use_predefined_variables: bool = True,
-                 import_custom_modules: bool = True,
-                 use_environment_variables: bool = True,
-                 format_python_code: bool = True) -> 'ConfigV1':
+    def fromfile(  # type: ignore
+        filename: Union[str, Path],
+        use_predefined_variables: bool = True,
+        import_custom_modules: bool = True,
+        use_environment_variables: bool = True,
+        format_python_code: bool = True,
+    ) -> 'ConfigV1':
         """Build a Config instance from config file.
 
         Args:
@@ -668,13 +674,16 @@ class ConfigV1(Config):
         return self._env_variables
 
     def __getstate__(
-            self) -> Tuple[dict, Optional[str], Optional[str], dict, bool]:
+        self
+    ) -> Tuple[dict, Optional[str], Optional[str], dict, bool]:  # type: ignore
         state = (self._cfg_dict, self._filename, self._text,
                  self._env_variables, self._format_python_code)
         return state
 
-    def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str],
-                                        dict, bool]):
+    def __setstate__(  # type: ignore
+        self,
+        state: Tuple[dict, Optional[str], Optional[str], dict, bool],
+    ):
         super(Config, self).__setattr__('_cfg_dict', state[0])
         super(Config, self).__setattr__('_filename', state[1])
         super(Config, self).__setattr__('_text', state[2])

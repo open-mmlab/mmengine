@@ -13,7 +13,7 @@ from typing import Optional, Tuple, Union
 from yapf.yapflib.yapf_api import FormatCode
 
 from .config import Config, ConfigDict
-from .lazy import LazyImportContext, LazyObject
+from .lazy import LazyImportContext, LazyObject, recover_lazy_field
 
 RESERVED_KEYS = ['filename', 'text', 'pretty_text']
 _CFG_UID = 0
@@ -29,24 +29,6 @@ def format_inpsect(obj):
     lines, lineno = inspect.getsourcelines(obj)
     msg = f'File "{file}", line {lineno}\n--> {lines[0]}'
     return msg
-
-
-def recover_lazy_field(cfg):
-
-    if isinstance(cfg, dict):
-        for k, v in cfg.items():
-            cfg[k] = recover_lazy_field(v)
-        return cfg
-    elif isinstance(cfg, (tuple, list)):
-        container_type = type(cfg)
-        cfg = list(cfg)
-        for i, v in enumerate(cfg):
-            cfg[i] = recover_lazy_field(v)
-        return container_type(cfg)
-    elif isinstance(cfg, str):
-        recover = LazyObject.from_str(cfg)
-        return recover if recover is not None else cfg
-    return cfg
 
 
 def dump_extra_type(value):
@@ -136,6 +118,9 @@ class ConfigV2(Config):
 
         if not isinstance(cfg_dict, ConfigDict):
             cfg_dict = ConfigDict(cfg_dict)
+        # Recover dumped lazy object like '<torch.nn.Linear>' from string
+        cfg_dict = recover_lazy_field(cfg_dict)
+
         super(Config, self).__setattr__('_cfg_dict', cfg_dict)
         super(Config, self).__setattr__('_filename', filename)
         super(Config, self).__setattr__('_format_python_code',
@@ -169,9 +154,10 @@ class ConfigV2(Config):
                 raise ValueError(msg)
 
     @staticmethod
-    def fromfile(filename: Union[str, Path],
-                 keep_imported: bool = False,
-                 format_python_code: bool = True) -> 'ConfigV2':
+    def fromfile(  # type: ignore
+            filename: Union[str, Path],
+            keep_imported: bool = False,
+            format_python_code: bool = True) -> 'ConfigV2':
         """Build a Config instance from config file.
 
         Args:
@@ -202,8 +188,6 @@ class ConfigV2(Config):
                 module_dict = dict(filter(filter_imports, module_dict.items()))
 
             cfg_dict = ConfigDict(module_dict)
-            # Recover dumped lazy object like '<torch.nn.Linear>' from string
-            cfg_dict = recover_lazy_field(cfg_dict)
 
             cfg = ConfigV2(
                 cfg_dict,
@@ -232,7 +216,7 @@ class ConfigV2(Config):
         with LazyImportContext():
             spec = importlib.util.spec_from_file_location(fullname, file)
             module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
+            spec.loader.exec_module(module)  # type: ignore
             sys.modules[fullname] = module
 
         return module
@@ -345,12 +329,16 @@ class ConfigV2(Config):
 
         return text
 
-    def __getstate__(self) -> Tuple[dict, Optional[str], Optional[str], bool]:
+    def __getstate__(
+        self
+    ) -> Tuple[dict, Optional[str], Optional[str], bool]:  # type: ignore
         return (self._cfg_dict, self._filename, self._text,
                 self._format_python_code)
 
-    def __setstate__(self, state: Tuple[dict, Optional[str], Optional[str],
-                                        bool]):
+    def __setstate__(  # type: ignore
+        self,
+        state: Tuple[dict, Optional[str], Optional[str], bool],
+    ):
         super(Config, self).__setattr__('_cfg_dict', state[0])
         super(Config, self).__setattr__('_filename', state[1])
         super(Config, self).__setattr__('_text', state[2])
