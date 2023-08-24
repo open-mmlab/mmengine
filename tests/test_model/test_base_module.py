@@ -4,7 +4,7 @@ import logging
 import os.path as osp
 import tempfile
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import torch
 from torch import nn
@@ -237,6 +237,30 @@ class TestBaseModule(TestCase):
             model.init_weights()
             self.assertTrue((model.ddp.module.linear.weight == 1).all())
             self.assertTrue((model.ddp.module.linear.bias == 2).all())
+
+        # Test submodule.init_weights will be skipped if `is_init` is set
+        # to True in root model
+        model: FooModel = FOOMODELS.build(copy.deepcopy(self.model_cfg))
+        for child in model.children():
+            child.init_weights = Mock()
+        model.is_init = True
+        model.init_weights()
+        for child in model.children():
+            child.init_weights.assert_not_called()
+
+        # Test submodule.init_weights will be skipped if submodule's `is_init`
+        # is set to True
+        model: FooModel = FOOMODELS.build(copy.deepcopy(self.model_cfg))
+        for child in model.children():
+            child.init_weights = Mock()
+        model.component1.is_init = True
+        model.reg.is_init = True
+        model.init_weights()
+        model.component1.init_weights.assert_not_called()
+        model.component2.init_weights.assert_called_once()
+        model.component3.init_weights.assert_called_once()
+        model.component4.init_weights.assert_called_once()
+        model.reg.init_weights.assert_not_called()
 
     def test_dump_init_info(self):
         import os

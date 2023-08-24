@@ -59,6 +59,10 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
     def is_init(self):
         return self._is_init
 
+    @is_init.setter
+    def is_init(self, value):
+        self._is_init = value
+
     def init_weights(self):
         """Initialize the weights."""
 
@@ -127,7 +131,8 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
             for m in self.children():
                 if is_model_wrapper(m) and not hasattr(m, 'init_weights'):
                     m = m.module
-                if hasattr(m, 'init_weights'):
+                if hasattr(m, 'init_weights') and not getattr(
+                        m, 'is_init', False):
                     m.init_weights()
                     # users may overload the `init_weights`
                     update_init_info(

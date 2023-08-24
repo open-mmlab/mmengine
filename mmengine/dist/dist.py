@@ -898,10 +898,11 @@ def collect_results(results: list,
             object.
         size (int): Size of the results, commonly equal to length of
             the results.
-        device (str): Device name. Optional values are 'cpu' and 'gpu'.
+        device (str): Device name. Optional values are 'cpu', 'gpu' or 'npu'.
         tmpdir (str | None): Temporal directory for collected results to
             store. If set to None, it will create a temporal directory for it.
-            ``tmpdir`` should be None when device is 'gpu'. Defaults to None.
+            ``tmpdir`` should be None when device is 'gpu' or 'npu'.
+            Defaults to None.
 
     Returns:
         list or None: The collected results.
@@ -920,13 +921,13 @@ def collect_results(results: list,
         ['foo', 24, {1: 2}, {'a': 'b'}]  # rank 0
         None  # rank 1
     """
-    if device not in ['gpu', 'cpu']:
+    if device not in ['gpu', 'cpu', 'npu']:
         raise NotImplementedError(
-            f"device must be 'cpu' or 'gpu', but got {device}")
+            f"device must be 'cpu' , 'gpu' or 'npu', but got {device}")
 
-    if device == 'gpu':
-        assert tmpdir is None, 'tmpdir should be None when device is "gpu"'
-        return collect_results_gpu(results, size)
+    if device == 'gpu' or device == 'npu':
+        assert tmpdir is None, f'tmpdir should be None when device is {device}'
+        return _collect_results_device(results, size)
     else:
         return collect_results_cpu(results, size, tmpdir)
 
@@ -1018,6 +1019,28 @@ def collect_results_cpu(result_part: list,
         return ordered_results
 
 
+def _collect_results_device(result_part: list, size: int) -> Optional[list]:
+    """Collect results under gpu or npu mode."""
+    rank, world_size = get_dist_info()
+    if world_size == 1:
+        return result_part[:size]
+
+    # gather all result part. Note that NCCL does not support gather so use
+    # all_gather_object instead.
+    part_list = all_gather_object(result_part)
+
+    if rank == 0:
+        # sort the results
+        ordered_results = []
+        for res in zip(*part_list):
+            ordered_results.extend(list(res))
+        # the dataloader may pad some samples
+        ordered_results = ordered_results[:size]
+        return ordered_results
+    else:
+        return None
+
+
 def collect_results_gpu(result_part: list, size: int) -> Optional[list]:
     """Collect results under gpu mode.
 
@@ -1048,24 +1071,7 @@ def collect_results_gpu(result_part: list, size: int) -> Optional[list]:
         ['foo', 24, {1: 2}, {'a': 'b'}]  # rank 0
         None  # rank 1
     """
-    rank, world_size = get_dist_info()
-    if world_size == 1:
-        return result_part[:size]
-
-    # gather all result part. Note that NCCL does not support gather so use
-    # all_gather_object instead.
-    part_list = all_gather_object(result_part)
-
-    if rank == 0:
-        # sort the results
-        ordered_results = []
-        for res in zip(*part_list):
-            ordered_results.extend(list(res))
-        # the dataloader may pad some samples
-        ordered_results = ordered_results[:size]
-        return ordered_results
-    else:
-        return None
+    return _collect_results_device(result_part, size)
 
 
 def _all_reduce_coalesced(tensors: List[torch.Tensor],

@@ -58,9 +58,13 @@
 
 ## 最近进展
 
-最新版本 v0.8.0 在 2023.06.30 发布。
+最新版本 v0.8.4 在 2023.08.03 发布。
 
 亮点：
+
+- 支持使用 `efficient_conv_bn_eval` 参数开启更高效的 `ConvBN` 推理模式。详见[节省显存文档](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/save_gpu_memory.html)
+
+- 新增微调 Llama2 的[示例](./examples/llama2/)。
 
 - 支持使用 [FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp) 和 [DeepSpeed](https://www.deepspeed.ai/) 进行训练。可阅读[大模型训练](https://mmengine.readthedocs.io/zh_cn/latest/common_usage/large_model_training.html)了解用法。
 
@@ -76,7 +80,7 @@
 
   ![new-config-zh_cn](https://github.com/open-mmlab/mmengine/assets/57566630/c2da9a73-c911-4f78-8253-e3f29496d9f8)
 
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v080-06302023)
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v083-08032023)
 
 ## 目录
 
@@ -112,6 +116,8 @@ MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的�
    - 定义了“乐高”式的训练流程。
    - 提供了丰富的组件和策略。
    - 使用不同等级的 API 控制训练过程。
+
+![mmengine_dataflow](https://github.com/open-mmlab/mmengine/assets/58739961/267db9cb-72e4-4af2-a58b-877b30091acc)
 
 ## 安装
 
@@ -356,6 +362,7 @@ runner.train()
 ## 生态项目
 
 - [APES: Attention-based Point Cloud Edge Sampling](https://github.com/JunweiZheng93/APES)
+- [DiffEngine: diffusers training toolbox with mmengine](https://github.com/okotaku/diffengine)
 
 ## OpenMMLab 的其他项目
 

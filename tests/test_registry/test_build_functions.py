@@ -64,7 +64,10 @@ def test_build_from_cfg(cfg_type):
     assert model.depth == 50 and model.stages == 4
 
     # non-registered class
-    with pytest.raises(KeyError, match='VGG is not in the backbone registry'):
+    with pytest.raises(
+            KeyError,
+            match='VGG is not in the test_build_functions::backbone registry',
+    ):
         cfg = cfg_type(dict(type='VGG'))
         model = build_from_cfg(cfg, BACKBONES)
 

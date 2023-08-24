@@ -92,6 +92,11 @@ class CheckpointHook(Hook):
             publish model with keys in the list after training.
             Defaults to None.
             `New in version 0.7.1.`
+        save_begin (int): Control the epoch number or iteration number
+            at which checkpoint saving begins. Defaults to 0, which means
+            saving at the beginning.
+            `New in version 0.8.3.`
+
     Examples:
         >>> # Save best based on single metric
         >>> CheckpointHook(interval=2, by_epoch=True, save_best='acc',
@@ -139,6 +144,7 @@ class CheckpointHook(Hook):
                  filename_tmpl: Optional[str] = None,
                  backend_args: Optional[dict] = None,
                  published_keys: Union[str, List[str], None] = None,
+                 save_begin: int = 0,
                  **kwargs) -> None:
         self.interval = interval
         self.by_epoch = by_epoch
@@ -244,6 +250,10 @@ class CheckpointHook(Hook):
         self.published_keys = published_keys
 
         self.last_ckpt = None
+        if save_begin < 0:
+            raise ValueError(
+                'save_begin should not be less than 0, but got {save_begin}')
+        self.save_begin = save_begin
 
     def before_train(self, runner) -> None:
         """Finish all operations, related to checkpoint.
@@ -326,9 +336,9 @@ class CheckpointHook(Hook):
             return
 
         # save checkpoint for following cases:
-        # 1. every ``self.interval`` epochs
+        # 1. every ``self.interval`` epochs which start at ``self.save_begin``
         # 2. reach the last epoch of training
-        if self.every_n_epochs(runner, self.interval) or (
+        if self.every_n_epochs(runner, self.interval, self.save_begin) or (
                 self.save_last and self.is_last_train_epoch(runner)):
             runner.logger.info(
                 f'Saving checkpoint at {runner.epoch + 1} epochs')
@@ -644,8 +654,10 @@ class CheckpointHook(Hook):
 
         # save checkpoint for following cases:
         # 1. every ``self.interval`` iterations
+        #       which start at ``self.save_begin``
         # 2. reach the last iteration of training
-        if self.every_n_train_iters(runner, self.interval) or \
+        if self.every_n_train_iters(runner, self.interval,
+                                    self.save_begin) or \
                 (self.save_last and
                  self.is_last_train_iter(runner)):
             runner.logger.info(

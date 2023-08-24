@@ -15,6 +15,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    :caption: Examples
 
    examples/train_a_gan.md
+   examples/train_seg.md
 
 .. toctree::
    :maxdepth: 1

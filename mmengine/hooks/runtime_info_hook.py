@@ -54,12 +54,15 @@ class RuntimeInfoHook(Hook):
             mmengine_version=__version__ + get_git_hash())
         runner.message_hub.update_info_dict(metainfo)
 
+        self.last_loop_stage = None
+
     def before_train(self, runner) -> None:
         """Update resumed training state.
 
         Args:
             runner (Runner): The runner of the training process.
         """
+        runner.message_hub.update_info('loop_stage', 'train')
         runner.message_hub.update_info('epoch', runner.epoch)
         runner.message_hub.update_info('iter', runner.iter)
         runner.message_hub.update_info('max_epochs', runner.max_epochs)
@@ -67,6 +70,9 @@ class RuntimeInfoHook(Hook):
         if hasattr(runner.train_dataloader.dataset, 'metainfo'):
             runner.message_hub.update_info(
                 'dataset_meta', runner.train_dataloader.dataset.metainfo)
+
+    def after_train(self, runner) -> None:
+        runner.message_hub.pop_info('loop_stage')
 
     def before_train_epoch(self, runner) -> None:
         """Update current epoch information before every epoch.
@@ -119,6 +125,10 @@ class RuntimeInfoHook(Hook):
             for key, value in outputs.items():
                 runner.message_hub.update_scalar(f'train/{key}', value)
 
+    def before_val(self, runner) -> None:
+        self.last_loop_stage = runner.message_hub.get_info('loop_stage')
+        runner.message_hub.update_info('loop_stage', 'val')
+
     def after_val_epoch(self,
                         runner,
                         metrics: Optional[Dict[str, float]] = None) -> None:
@@ -137,6 +147,22 @@ class RuntimeInfoHook(Hook):
                     runner.message_hub.update_scalar(f'val/{key}', value)
                 else:
                     runner.message_hub.update_info(f'val/{key}', value)
+
+    def after_val(self, runner) -> None:
+        # ValLoop may be called within the TrainLoop, so we need to reset
+        # the loop_stage
+        # workflow: before_train -> before_val -> after_val -> after_train
+        if self.last_loop_stage == 'train':
+            runner.message_hub.update_info('loop_stage', self.last_loop_stage)
+            self.last_loop_stage = None
+        else:
+            runner.message_hub.pop_info('loop_stage')
+
+    def before_test(self, runner) -> None:
+        runner.message_hub.update_info('loop_stage', 'test')
+
+    def after_test(self, runner) -> None:
+        runner.message_hub.pop_info('loop_stage')
 
     def after_test_epoch(self,
                          runner,

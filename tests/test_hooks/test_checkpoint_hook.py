@@ -622,7 +622,7 @@ class TestCheckpointHook(RunnerTestCase):
             self.assertEqual(best_ckpt['meta']['epoch'], 0)
             self.assertEqual(best_ckpt['meta']['iter'], 5)
 
-        # test save published keys
+        # Test save published keys
         cfg = copy.deepcopy(common_cfg)
         cfg.default_hooks.checkpoint.published_keys = ['meta', 'state_dict']
         runner = self.build_runner(cfg)
@@ -631,4 +631,60 @@ class TestCheckpointHook(RunnerTestCase):
         self.assertTrue(
             any(re.findall(r'-[\d\w]{8}\.pth', file) for file in ckpt_files))
 
+        self.clear_work_dir()
+
+        # Test save_begin with interval=2, save_begin=5
+        cfg = copy.deepcopy(common_cfg)
+        cfg.default_hooks.checkpoint.interval = 2
+        cfg.default_hooks.checkpoint.save_begin = 5
+        runner = self.build_runner(cfg)
+        runner.train()
+
+        for i in range(5):
+            self.assertFalse(
+                osp.isfile(osp.join(cfg.work_dir, f'{training_type}_{i}.pth')))
+        for i in range(5, 11):
+            if (i - 5) % 2 == 1:
+                self.assertFalse(
+                    osp.isfile(
+                        osp.join(cfg.work_dir, f'{training_type}_{i}.pth')))
+            else:
+                self.assertTrue(
+                    osp.isfile(
+                        osp.join(cfg.work_dir, f'{training_type}_{i}.pth')))
+        self.clear_work_dir()
+
+        # Test save_begin with interval=2, save_begin=0
+        cfg = copy.deepcopy(common_cfg)
+        cfg.default_hooks.checkpoint.interval = 2
+        runner = self.build_runner(cfg)
+        runner.train()
+
+        for i in range(1, 11):
+            if i % 2 == 1:
+                self.assertFalse(
+                    osp.isfile(
+                        osp.join(cfg.work_dir, f'{training_type}_{i}.pth')))
+            else:
+                self.assertTrue(
+                    osp.isfile(
+                        osp.join(cfg.work_dir, f'{training_type}_{i}.pth')))
+        self.clear_work_dir()
+
+        # Test save_begin with interval=2, save_begin=1
+        cfg = copy.deepcopy(common_cfg)
+        cfg.default_hooks.checkpoint.interval = 2
+        cfg.default_hooks.checkpoint.save_begin = 1
+        runner = self.build_runner(cfg)
+        runner.train()
+
+        for i in range(1, 11):
+            if i % 2 == 1:
+                self.assertTrue(
+                    osp.isfile(
+                        osp.join(cfg.work_dir, f'{training_type}_{i}.pth')))
+            else:
+                self.assertFalse(
+                    osp.isfile(
+                        osp.join(cfg.work_dir, f'{training_type}_{i}.pth')))
         self.clear_work_dir()

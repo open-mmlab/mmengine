@@ -1,5 +1,61 @@
 # Changelog of v0.x
 
+## v0.8.4 (03/08/2023)
+
+### New Features & Enhancements
+
+- Support callable `collate_fn` for FlexibleRunner by [@LZHgrla](https://github.com/LZHgrla) in https://github.com/open-mmlab/mmengine/pull/1284
+
+### Bug fixes
+
+- Skip adding `vis_backends` when `save_dir` is not set by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1289
+- Fix dumping pure python style config in colab by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1290
+
+### Docs
+
+- Find unused parameters by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1288
+
+### Contributors
+
+A total of 3 developers contributed to this release. Thanks [@HAOCHENYE](https://github.com/HAOCHENYE), [@zhouzaida](https://github.com/zhouzaida), [@LZHgrla](https://github.com/LZHgrla)
+
+## v0.8.3 (31/07/2023)
+
+### Highlights
+
+- Support enabling `efficient_conv_bn_eval` for efficient convolution and batch normalization. See [save memory on gpu](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#save-memory-on-gpu) for more details
+- Add [Llama2 finetune example](https://github.com/open-mmlab/mmengine/tree/main/examples/llama2)
+- Support multi-node distributed training with MLU backend
+
+### New Features & Enhancements
+
+- Enable `efficient_conv_bn_eval` for memory saving convolution and batch normalization by [@youkaichao](https://github.com/youkaichao) in https://github.com/open-mmlab/mmengine/pull/1202, https://github.com/open-mmlab/mmengine/pull/1251 and https://github.com/open-mmlab/mmengine/pull/1259
+- Add Llama2 example by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1264
+- Compare the difference of two configs by [@gachiemchiep](https://github.com/gachiemchiep) in https://github.com/open-mmlab/mmengine/pull/1260
+- Enable explicit error for deepspeed not installed by [@Li-Qingyun](https://github.com/Li-Qingyun) in https://github.com/open-mmlab/mmengine/pull/1240
+- Support skipping initialization in `BaseModule` by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1263
+- Add parameter `save_begin` to control when to save checkpoints by [@KerwinKai](https://github.com/KerwinKai) in https://github.com/open-mmlab/mmengine/pull/1271
+- Support multi-node distributed training with MLU backend by [@josh6688](https://github.com/josh6688) in https://github.com/open-mmlab/mmengine/pull/1266
+- Enhance error message thrown by Config, build function and `ConfigDict.items` by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1272, https://github.com/open-mmlab/mmengine/pull/1270 and https://github.com/open-mmlab/mmengine/pull/1088
+- Add the `loop_stage` runtime information in `message_hub` by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1277
+- Fix Visualizer that built `vis_backends` will not be used when `save_dir` is `None` by [@Xinyu302](https://github.com/Xinyu302) in https://github.com/open-mmlab/mmengine/pull/1275
+
+### Bug fixes
+
+- Fix scalar check in RuntimeInfoHook by [@i-aki-y](https://github.com/i-aki-y) in https://github.com/open-mmlab/mmengine/pull/1250
+- Move data preprocessor to target device in FSDPStrategy by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1261
+
+### Docs
+
+- Add ecosystem in README by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1247
+- Add short explanation about registry scope by [@mmeendez8](https://github.com/mmeendez8) in https://github.com/open-mmlab/mmengine/pull/1114
+- Add the data flow of Runner in README by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1257
+- Introduce how to customize distributed training settings by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1279
+
+### Contributors
+
+A total of 9 developers contributed to this release. Thanks [@HAOCHENYE](https://github.com/HAOCHENYE), [@youkaichao](https://github.com/youkaichao), [@josh6688](https://github.com/josh6688), [@i-aki-y](https://github.com/i-aki-y), [@mmeendez8](https://github.com/mmeendez8), [@zhouzaida](https://github.com/zhouzaida), [@gachiemchiep](https://github.com/gachiemchiep), [@KerwinKai](https://github.com/KerwinKai), [@Li-Qingyun](https://github.com/Li-Qingyun)
+
 ## v0.8.2 (07/12/2023)
 
 ### Bug fixes
