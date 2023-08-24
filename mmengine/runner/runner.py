@@ -45,7 +45,7 @@ from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          find_latest_checkpoint, save_checkpoint,
                          weights_to_cpu)
-from .gradient_checkpoint import set_gredient_checkpoint
+from .gradient_checkpoint import turn_on_gredient_checkpoint
 from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
@@ -1686,10 +1686,6 @@ class Runner:
         else:
             ori_model = self.model
 
-        # try to enable gredient_checkpoint feature
-        if self.cfg.get('gredient_checkpoint', None):
-            ori_model.backbone = set_gredient_checkpoint(ori_model.backbone)
-
         assert hasattr(ori_model, 'train_step'), (
             'If you want to train your model, please make sure your model '
             'has implemented `train_step`.')
@@ -1727,6 +1723,17 @@ class Runner:
 
         # initialize the model weights
         self._init_model_weights()
+
+        # try to enable gredient_checkpoint feature
+        modules = self.cfg.get('gredient_checkpoint', None)
+        if modules is not None:
+            self.logger.info(f'Enabling the "gredient_checkpoint" feature'
+                             f'for sub-modules: {modules}')
+            for module in modules:
+                assert hasattr(
+                    ori_model,
+                    module), (f'Your model does not have {module} module')
+                turn_on_gredient_checkpoint(getattr(ori_model, module))
 
         # try to enable efficient_conv_bn_eval feature
         modules = self.cfg.get('efficient_conv_bn_eval', None)

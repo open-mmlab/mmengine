@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-
-import torch
 import torch.nn as nn
+from torch.utils.checkpoint import checkpoint, checkpoint_sequential
 
 
 class CheckpointWrapper(nn.Module):
@@ -11,13 +10,15 @@ class CheckpointWrapper(nn.Module):
         self.module = module
 
     def forward(self, x):
-        return torch.utils.checkpoint.checkpoint_sequential(
-            self.module, len(self.module), x)
+        if isinstance(self.module, nn.Module):
+            return checkpoint(self.module, x)
+        elif isinstance(self.module, nn.Sequential):
+            return checkpoint_sequential(self.module, len(self.module), x)
+        else:
+            return self.module(x)
 
 
-def set_gredient_checkpoint(model):
+def turn_on_gredient_checkpoint(model):
     for name, child in model.named_children():
-        if isinstance(child, nn.Sequential):
-            new_child = CheckpointWrapper(child)
-            setattr(model, name, new_child)
-    return model
+        new_child = CheckpointWrapper(child)
+        setattr(model, name, new_child)
