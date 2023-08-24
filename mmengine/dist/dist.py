@@ -416,7 +416,7 @@ def _broadcast_object_list(object_list: List[Any],
     is_hccl_backend = group_backend == 'hccl'
     is_cncl_backend = group_backend == 'cncl'
     if is_hccl_backend:
-        current_device = torch.npu.current_device()
+        current_device = torch.device('npu', torch.npu.current_device())
         object_sizes_tensor = object_sizes_tensor.to(current_device)
     elif is_cncl_backend:
         current_device = torch.device('mlu', torch.mlu.current_device())
