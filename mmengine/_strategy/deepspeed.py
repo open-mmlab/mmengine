@@ -298,6 +298,8 @@ class DeepSpeedStrategy(BaseStrategy):
         if gradient_accumulation_steps is not None:
             self.config['gradient_accumulation_steps'] = \
                 gradient_accumulation_steps
+        else:
+            self.config.setdefault('gradient_accumulation_steps', 1)
         self.config['steps_per_print'] = steps_per_print
         self._inputs_to_half = inputs_to_half
 
