@@ -291,10 +291,6 @@ class DeepSpeedStrategy(BaseStrategy):
         if train_micro_batch_size_per_gpu is not None:
             self.config['train_micro_batch_size_per_gpu'] = \
                 train_micro_batch_size_per_gpu
-        assert ('train_micro_batch_size_per_gpu' in self.config
-                or 'train_batch_size' in self.config), (
-                    '`train_micro_batch_size_per_gpu` or `train_batch_size` '
-                    'should be set in deepspeed config!')
         if gradient_accumulation_steps is not None:
             self.config['gradient_accumulation_steps'] = \
                 gradient_accumulation_steps
