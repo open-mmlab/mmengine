@@ -12,6 +12,7 @@ on:
       - "CONTRIBUTING_zh-CN.md"
       - ".pre-commit-config.yaml"
       - ".pre-commit-config-zh-cn.yaml"
+      - "examples/**"
     branches:
       - main
 

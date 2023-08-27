@@ -152,6 +152,7 @@ cfg = dict(
 只应在调试时设置 `find_unused_parameters=True` 和 `detect_anomalous_params=True`。
 ```
 
+
 ## 固定训练的迭代次数(基于epoch的训练)
 
 在调试代码的过程中，有时需要训练几个 epoch，例如调试验证过程或者权重的保存是否符合期望。然而如果数据集太大，需要花费较长时间才能训完一个 epoch，这种情况下可以增加cfg参数。
@@ -283,3 +284,5 @@ if __name__ == '__main__':
 08/18 20:27:23 - mmengine - INFO - Saving checkpoint at 2 epochs
 08/18 20:27:24 - mmengine - INFO - Epoch(val) [2][5/5]    accuracy: 12.5000  data_time: 0.0058  time: 0.0175
 ```
+
+

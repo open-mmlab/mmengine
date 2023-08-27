@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
 
+import torch
 import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
@@ -44,6 +45,7 @@ def parse_args():
     parser.add_argument('--local_rank', '--local-rank', type=int, default=0)
     parser.add_argument('--use-fsdp', action='store_true')
     parser.add_argument('--use-deepspeed', action='store_true')
+    parser.add_argument('--use-colossalai', action='store_true')
     args = parser.parse_args()
     return args
 
@@ -116,6 +118,25 @@ def main():
             model_wrapper=dict(auto_wrap_policy=size_based_auto_wrap_policy))
         optim_wrapper = dict(
             type='AmpOptimWrapper', optimizer=dict(type='AdamW', lr=1e-3))
+    elif args.use_colossalai:
+        from colossalai.tensor.op_wrapper import colo_op_impl
+
+        # ColossalAI overwrite some torch ops with their custom op to
+        # make it compatible with `ColoTensor`. However, a backward error
+        # is more likely to happen if there are inplace operation in the
+        # model.
+        # For example, layers like `conv` + `bn` + `relu` is OK when `relu` is
+        # inplace since PyTorch builtin ops `batch_norm` could handle it.
+        # However, if `relu` is an `inplaced` op while `batch_norm` is an
+        # custom op, an error will be raised since PyTorch thinks the custom op
+        # could not handle the backward graph modification caused by inplace
+        # op.
+        # In this example, the inplace op `add_` in resnet could raise an error
+        # since PyTorch consider the custom op before it could not handle the
+        # backward graph modification
+        colo_op_impl(torch.Tensor.add_)(torch.add)
+        strategy = dict(type='ColossalAIStrategy')
+        optim_wrapper = dict(optimizer=dict(type='HybridAdam', lr=1e-3))
     else:
         strategy = None
         optim_wrapper = dict(

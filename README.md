@@ -58,7 +58,11 @@ English | [简体中文](README_zh-CN.md)
 
 ## What's New
 
+v0.8.4 was released on 2023-08-03.
+
 Highlights:
+
+- Support enabling `efficient_conv_bn_eval` for efficient convolution and batch normalization. See [save memory on gpu](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#save-memory-on-gpu) for more details
 
 - Add an [example](./examples/llama2/) to finetune Llama2.
 
@@ -76,7 +80,7 @@ Highlights:
 
   ![new-config-en](https://github.com/open-mmlab/mmengine/assets/57566630/7eb41748-9374-488f-901e-fcd7f0d3c8a1)
 
-Read [Changelog](./docs/en/notes/changelog.md#v080-06302023) for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v083-08032023) for more details.
 
 ## Table of Contents
 
@@ -357,6 +361,7 @@ This project is released under the [Apache 2.0 license](LICENSE).
 ## Ecosystem
 
 - [APES: Attention-based Point Cloud Edge Sampling](https://github.com/JunweiZheng93/APES)
+- [DiffEngine: diffusers training toolbox with mmengine](https://github.com/okotaku/diffengine)
 
 ## Projects in OpenMMLab
 

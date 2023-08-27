@@ -129,42 +129,6 @@ def register_sophia_optimizers() -> List[str]:
 SOPHIA_OPTIMIZERS = register_sophia_optimizers()
 
 
-def register_deepspeed_optimizers() -> List[str]:
-    """Register optimizers in ``deepspeed`` to the ``OPTIMIZERS`` registry.
-
-    Returns:
-        List[str]: A list of registered optimizers' name.
-    """
-    deepspeed_optimizers = []
-    try:
-        import deepspeed  # noqa: F401
-    except ImportError:
-        pass
-    else:
-        from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
-        from deepspeed.ops.lamb import FusedLamb
-        from deepspeed.runtime.fp16.onebit import (OnebitAdam, OnebitLamb,
-                                                   ZeroOneAdam)
-
-        OPTIMIZERS.register_module(module=DeepSpeedCPUAdam)
-        deepspeed_optimizers.append('DeepSpeedCPUAdam')
-        OPTIMIZERS.register_module(module=FusedAdam)
-        deepspeed_optimizers.append('FusedAdam')
-        OPTIMIZERS.register_module(module=FusedLamb)
-        deepspeed_optimizers.append('FusedLamb')
-        OPTIMIZERS.register_module(module=OnebitAdam)
-        deepspeed_optimizers.append('OnebitAdam')
-        OPTIMIZERS.register_module(module=OnebitLamb)
-        deepspeed_optimizers.append('OnebitLamb')
-        OPTIMIZERS.register_module(module=ZeroOneAdam)
-        deepspeed_optimizers.append('ZeroOneAdam')
-
-    return deepspeed_optimizers
-
-
-DEEPSPEED_OPTIMIZERS = register_deepspeed_optimizers()
-
-
 def build_optim_wrapper(model: nn.Module,
                         cfg: Union[dict, Config, ConfigDict]) -> OptimWrapper:
     """Build function of OptimWrapper.

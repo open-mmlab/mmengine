@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import inspect
 import logging
 from typing import List, Optional, Union
 
@@ -293,15 +294,23 @@ class DefaultOptimWrapperConstructor:
         optim_wrapper_cfg = self.optim_wrapper_cfg.copy()
         optim_wrapper_cfg.setdefault('type', 'OptimWrapper')
         optimizer_cfg = self.optimizer_cfg.copy()
+        optimizer_cls = self.optimizer_cfg['type']
+        # Optimizer like HybridAdam in colossalai requires the argument name
+        # `model_params` rather than `params`. Here we get the first argument
+        # name and fill it with the model parameters.
+        if isinstance(optimizer_cls, str):
+            optimizer_cls = OPTIMIZERS.get(self.optimizer_cfg['type'])
+        fisrt_arg_name = next(
+            iter(inspect.signature(optimizer_cls).parameters))
         # if no paramwise option is specified, just use the global setting
         if not self.paramwise_cfg:
-            optimizer_cfg['params'] = model.parameters()
+            optimizer_cfg[fisrt_arg_name] = model.parameters()
             optimizer = OPTIMIZERS.build(optimizer_cfg)
         else:
             # set param-wise lr and weight decay recursively
             params: List = []
             self.add_params(params, model)
-            optimizer_cfg['params'] = params
+            optimizer_cfg[fisrt_arg_name] = params
             optimizer = OPTIMIZERS.build(optimizer_cfg)
         optim_wrapper = OPTIM_WRAPPERS.build(
             optim_wrapper_cfg, default_args=dict(optimizer=optimizer))

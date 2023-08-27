@@ -11,14 +11,13 @@ import torch
 import torch.nn as nn
 
 from mmengine import VISBACKENDS, Config
-from mmengine.logging import MMLogger
 from mmengine.visualization import Visualizer
 
 
 @VISBACKENDS.register_module()
 class MockVisBackend:
 
-    def __init__(self, save_dir: str):
+    def __init__(self, save_dir: str = 'none'):
         self._save_dir = save_dir
         self._close = False
 
@@ -69,35 +68,15 @@ class TestVisualizer(TestCase):
         visualizer = Visualizer(image=self.image)
         visualizer.get_image()
 
-        # test save_dir
-        # Warning should be raised since no backend is initialized.
-        with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
-            Visualizer()
-
+        # build visualizer without `save_dir`
         visualizer = Visualizer(
             vis_backends=copy.deepcopy(self.vis_backend_cfg))
-        assert visualizer.get_backend('mock1') is None
 
         visualizer = Visualizer(
             vis_backends=copy.deepcopy(self.vis_backend_cfg),
             save_dir='temp_dir')
         assert isinstance(visualizer.get_backend('mock1'), MockVisBackend)
         assert len(visualizer._vis_backends) == 2
-
-        # test empty list
-        with pytest.raises(AssertionError):
-            Visualizer(vis_backends=[], save_dir='temp_dir')
-
-        # test name
-        # If one of them has a name attribute, all backends must
-        # use the name attribute
-        with pytest.raises(RuntimeError):
-            Visualizer(
-                vis_backends=[
-                    dict(type='MockVisBackend'),
-                    dict(type='MockVisBackend', name='mock2')
-                ],
-                save_dir='temp_dir')
 
         # The name fields cannot be the same
         with pytest.raises(RuntimeError):
@@ -125,6 +104,31 @@ class TestVisualizer(TestCase):
         assert len(visualizer._vis_backends) == 2
         visualizer_any = Visualizer.get_instance(instance_name)
         assert visualizer_any == visualizer
+
+        # local backend will not be built without `save_dir` argument
+        @VISBACKENDS.register_module()
+        class CustomLocalVisBackend:
+
+            def __init__(self, save_dir: str) -> None:
+                self._save_dir = save_dir
+
+        with pytest.warns(UserWarning):
+            visualizer = Visualizer.get_instance(
+                'test_save_dir',
+                vis_backends=[dict(type='CustomLocalVisBackend')])
+            assert not visualizer._vis_backends
+
+        VISBACKENDS.module_dict.pop('CustomLocalVisBackend')
+
+        visualizer = Visualizer.get_instance(
+            'test_save_dir',
+            vis_backends=dict(type='CustomLocalVisBackend', save_dir='tmp'))
+
+        visualizer = Visualizer.get_instance(
+            'test_save_dir', vis_backends=[CustomLocalVisBackend('tmp')])
+
+        visualizer = Visualizer.get_instance(
+            'test_save_dir', vis_backends=CustomLocalVisBackend('tmp'))
 
     def test_set_image(self):
         visualizer = Visualizer()

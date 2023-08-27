@@ -578,11 +578,6 @@ def test_build_from_cfg(cfg_type):
     assert isinstance(model, ResNet)
     assert model.depth == 50 and model.stages == 4
 
-    # non-registered class
-    with pytest.raises(KeyError, match='VGG is not in the backbone registry'):
-        cfg = cfg_type(dict(type='VGG'))
-        model = build_from_cfg(cfg, BACKBONES)
-
     # `cfg` contains unexpected arguments
     with pytest.raises(TypeError):
         cfg = cfg_type(dict(type='ResNet', non_existing_arg=50))

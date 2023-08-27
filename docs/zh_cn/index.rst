@@ -15,6 +15,7 @@
    :caption: 示例
 
    examples/train_a_gan.md
+   examples/train_seg.md
 
 .. toctree::
    :maxdepth: 1
