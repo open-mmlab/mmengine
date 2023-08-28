@@ -13,6 +13,19 @@ except ImportError:
 
 @HYPER_SEARCHERS.register_module()
 class NevergradSearcher(Searcher):
+    """Support hyper parameter searchering with nevergrad.
+
+    Note:
+        The detailed usage of nevergrad can be found at
+        https://facebookresearch.github.io/nevergrad/.
+
+    Args:
+        rule (str): The rule to compare the score.
+            Options are 'greater', 'less'.
+        hparam_spec (Dict[str, Dict]): The hyper parameter specification.
+        num_trials (int): The number of trials.
+        solver_type (str): The type of solver.
+    """
 
     def __init__(self,
                  rule: str,
@@ -32,6 +45,12 @@ class NevergradSearcher(Searcher):
             self._rule_op = -1.0
 
     def _build_solver(self, solver_type: str, num_trials: int):
+        """Build the solver of nevergrad.
+
+        Args:
+            solver_type (str): The type of solver.
+            num_trials (int): The number of trials.
+        """
         converted_hparam_spec = ng.p.Dict(
             **{
                 k: ng.p.Scalar(lower=v['lower'], upper=v['upper'])
@@ -43,18 +62,37 @@ class NevergradSearcher(Searcher):
         return solver
 
     def _hash_dict(self, d: dict) -> str:
+        """Hash the dict.
+
+        Args:
+            d (dict): The dict to be hashed.
+
+        Returns:
+            str: The hashed string.
+        """
         serialized_data = json.dumps(d, sort_keys=True).encode()
         hashed = hashlib.md5(serialized_data).hexdigest()
         return hashed
 
-    def suggest(self) -> Dict:
-        hparam = self._solver.ask()
-        hash_key = self._hash_dict(hparam.value)
-        self._records[hash_key] = hparam
-        return hparam.value
-
     def record(self, hparam: Dict, score: float):
+        """Record hparam and score to solver.
+
+        Args:
+            hparam (Dict): The hparam to be updated
+            score (float): The score to be updated
+        """
         hash_key = self._hash_dict(hparam)
         assert hash_key in self._records, \
             f'hparam {hparam} is not in the record'
         self._solver.tell(self._records[hash_key], score * self._rule_op)
+
+    def suggest(self) -> Dict:
+        """Suggest a new hparam based on solver's strategy.
+
+        Returns:
+            Dict: suggested hparam
+        """
+        hparam = self._solver.ask()
+        hash_key = self._hash_dict(hparam.value)
+        self._records[hash_key] = hparam
+        return hparam.value

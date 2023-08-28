@@ -22,7 +22,31 @@ class Searcher:
         self._validate_hparam_spec(hparam_spec)
         self._hparam_spec = hparam_spec
 
-    def _validate_hparam_spec(self, hparam_spec):
+    def _validate_hparam_spec(self, hparam_spec: Dict[str, Dict]):
+        """Validate hparam_spec.
+
+        An example of hparam_spec:
+
+            1. discrete:
+            hparam_spec = {
+                'lr': {
+                    'type': 'discrete',
+                    'values': [0.01, 0.02, 0.03]
+                }
+            }
+
+            2. continuous:
+            hparam_spec = {
+                'lr': {
+                    'type': 'continuous',
+                    'lower': 0.01,
+                    'upper': 0.1
+                }
+            }
+
+        Args:
+            hparam_spec (Dict[str, Dict]): The hyper parameter specification.
+        """
         for _, v in hparam_spec.items():
             assert v.get('type', None) in [
                 'discrete', 'continuous'
@@ -41,10 +65,12 @@ class Searcher:
 
     @property
     def hparam_spec(self) -> Dict[str, Dict]:
+        """Dict: The hyper parameter specification."""
         return self._hparam_spec
 
     @property
     def rule(self) -> str:
+        """str: The rule of the searcher, 'less' or 'greater'."""
         return self._rule
 
     def record(self, hparam: Dict, score: float):
