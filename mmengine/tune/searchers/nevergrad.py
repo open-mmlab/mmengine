@@ -23,7 +23,7 @@ class NevergradSearcher(Searcher):
                  **kwargs):
         super().__init__(rule, hparam_spec)
         assert ng is not None, 'nevergrad is not installed'
-        self._optimizer = self._build_optimizer(solver_type, num_trials)
+        self._solver = self._build_solver(solver_type, num_trials)
         self._records = dict()  # type: ignore
 
         if self.rule == 'less':
@@ -31,14 +31,14 @@ class NevergradSearcher(Searcher):
         else:
             self._rule_op = -1.0
 
-    def _build_optimizer(self, solver_type: str, num_trials: int):
+    def _build_solver(self, solver_type: str, num_trials: int):
         converted_hparam_spec = ng.p.Dict(
             **{
                 k: ng.p.Scalar(lower=v['lower'], upper=v['upper'])
                 if v['type'] == 'continuous' else ng.p.Choice(v['values'])
                 for k, v in self.hparam_spec.items()
             })
-        solver = ng.optimization.optimizerlib.registry[solver_type](
+        solver = ng.optimization.solverlib.registry[solver_type](
             parametrization=converted_hparam_spec, budget=num_trials)
         return solver
 
@@ -48,7 +48,7 @@ class NevergradSearcher(Searcher):
         return hashed
 
     def suggest(self) -> Dict:
-        hparam = self._optimizer.ask()
+        hparam = self._solver.ask()
         hash_key = self._hash_dict(hparam.value)
         self._records[hash_key] = hparam
         return hparam.value
@@ -57,4 +57,4 @@ class NevergradSearcher(Searcher):
         hash_key = self._hash_dict(hparam)
         assert hash_key in self._records, \
             f'hparam {hparam} is not in the record'
-        self._optimizer.tell(self._records[hash_key], score * self._rule_op)
+        self._solver.tell(self._records[hash_key], score * self._rule_op)
