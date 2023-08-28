@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from .searcher import Searcher, HYPER_SEARCHERS
 from .nevergrad import NevergradSearcher
+from .searcher import HYPER_SEARCHERS, Searcher
 
 __all__ = ['Searcher', 'HYPER_SEARCHERS', 'NevergradSearcher']

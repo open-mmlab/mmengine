@@ -9,7 +9,7 @@ HYPER_SEARCHERS = Registry('hyper parameter searcher')
 
 class Searcher:
     """Base hyper parameter searcher class.
-    
+
     All hyper parameter searchers inherit from this class.
     """
 
@@ -61,6 +61,3 @@ class Searcher:
         Returns:
             Dict: suggested hparam
         """
-
-
-

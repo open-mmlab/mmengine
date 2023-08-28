@@ -2,7 +2,8 @@
 import hashlib
 import json
 from typing import Dict
-from .searcher import Searcher, HYPER_SEARCHERS
+
+from .searcher import HYPER_SEARCHERS, Searcher
 
 try:
     import nevergrad as ng
