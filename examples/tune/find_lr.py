@@ -86,17 +86,18 @@ def parse_args():
     return args
 
 
-def find_optimial_lr(runner_cfg: Union[Dict, Config, ConfigDict],
-                     monitor: str = 'loss',
-                     rule: str = 'less',
-                     num_trials: int = 32,
-                     lower_lr: Optional[float] = 1e-5,
-                     upper_lr: Optional[float] = 1e-3,
-                     tuning_iter: int = 0,
-                     tuning_epoch: int = 0,
-                     report_op: str = 'latest',
-                     searcher_type: str = 'NevergradSearcher',
-                     **searcher_kwargs) -> Dict[str, Union[dict, float]]:
+def find_optimial_lr(
+    runner_cfg: Union[Dict, Config, ConfigDict],
+    monitor: str = 'loss',
+    rule: str = 'less',
+    num_trials: int = 32,
+    lower_lr: Optional[float] = 1e-5,
+    upper_lr: Optional[float] = 1e-3,
+    tuning_iter: int = 0,
+    tuning_epoch: int = 0,
+    report_op: str = 'latest',
+    searcher_cfg: Dict = dict(type='NevergradSearcher'),
+) -> Dict[str, Union[dict, float]]:
     hparam_spec = {
         'optim_wrapper.optimizer.lr': {
             'type': 'continuous',
@@ -114,8 +115,7 @@ def find_optimial_lr(runner_cfg: Union[Dict, Config, ConfigDict],
         tuning_iter=tuning_iter,
         tuning_epoch=tuning_epoch,
         report_op=report_op,
-        searcher_type=searcher_type,
-        **searcher_kwargs)
+        searcher_cfg=searcher_cfg)
     return tuner.tune()
 
 

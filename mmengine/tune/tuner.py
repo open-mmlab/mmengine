@@ -8,7 +8,7 @@ from mmengine.dist import (broadcast_object_list, init_dist, is_distributed,
 from mmengine.logging import MMLogger
 from mmengine.runner import Runner
 from ._report_hook import ReportingHook
-from .searchers import HYPER_SEARCHERS, _Searcher
+from .searchers import HYPER_SEARCHERS, Searcher
 
 
 class Tuner:
@@ -23,8 +23,7 @@ class Tuner:
                  tuning_iter: int = 0,
                  tuning_epoch: int = 0,
                  report_op: str = 'latest',
-                 searcher_type: str = 'NevergradSearcher',
-                 **searcher_kwargs):
+                 searcher_cfg: Dict = dict(type='NevergradSearcher')):
 
         self._runner_cfg = runner_cfg.copy()
         self._hparam_spec = hparam_spec
@@ -50,7 +49,7 @@ class Tuner:
             'Tuner', log_level='INFO', distributed=self._distributed)
         self._logger.info(
             f'Tuner initialized with rule: {rule} and monitor: {monitor}')
-        self._searcher = self._build_searcher(searcher_type, **searcher_kwargs)
+        self._searcher = self._build_searcher(searcher_cfg)
 
     @property
     def hparam_spec(self) -> Dict[str, Dict]:
@@ -99,17 +98,15 @@ class Tuner:
         cfg[key[-1]] = value
         return
 
-    def _build_searcher(self,
-                        searcher_type: str = 'nevergrad',
-                        **kwargs) -> _Searcher:
-        self._logger.info(f'Building searcher of type: {searcher_type}')
-        build_config = dict(
-            type=searcher_type,
-            rule=self.rule,
-            hparam_spec=self.hparam_spec,
-            num_trials=self._num_trials)
-        build_config.update(kwargs)
-        return HYPER_SEARCHERS.build(build_config)
+    def _build_searcher(self, searcher_cfg: Dict) -> Searcher:
+        searcher_cfg = searcher_cfg.copy()
+        self._logger.info(f'Building searcher of type: {searcher_cfg["type"]}')
+        searcher_cfg.update(
+            dict(
+                rule=self.rule,
+                hparam_spec=self.hparam_spec,
+                num_trials=self._num_trials))
+        return HYPER_SEARCHERS.build(searcher_cfg)
 
     def _run_trial(self) -> Tuple[Dict, float]:
         if is_main_process():
