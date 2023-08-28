@@ -38,7 +38,7 @@ class NevergradSearcher(Searcher):
                 if v['type'] == 'continuous' else ng.p.Choice(v['values'])
                 for k, v in self.hparam_spec.items()
             })
-        solver = ng.optimization.solverlib.registry[solver_type](
+        solver = ng.optimization.optimizerlib.registry[solver_type](
             parametrization=converted_hparam_spec, budget=num_trials)
         return solver
 
