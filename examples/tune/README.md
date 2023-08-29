@@ -2,7 +2,7 @@
 
 ## Install external dependencies
 
-First, you should install ``nevergrad`` for tuning.
+First, you should install `nevergrad` for tuning.
 
 ```bash
 pip install nevergrad

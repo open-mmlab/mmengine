@@ -215,13 +215,15 @@ class Tuner:
                 num_trials=self._num_trials))
         return HYPER_SEARCHERS.build(searcher_cfg)
 
-    def _run_trial(self) -> Tuple[Dict, float]:
+    def _run_trial(self) -> Tuple[Dict, float, Optional[Exception]]:
         """Retrieve hyperparameters from searcher and run a trial."""
 
-        # Retrieve hyperparameters from searcher.
-        # The hyperparameters are broadcasted to all processes.
-        # To avoid integrity, the searching process is only executed
-        # on the main process.
+        # Retrieve hyperparameters for the trial:
+        # 1. Only the main process executes the searcher to avoid any conflicts
+        #   and ensure integrity.
+        # 2. Once retrieved, the hyperparameters are broadcasted to all other
+        #   processes ensuring every process has the same set of
+        #   hyperparameters for this trial.
         if is_main_process():
             hparams_to_broadcast = [self._searcher.suggest()]
         else:
@@ -241,21 +243,23 @@ class Tuner:
         # Run a trial.
         # If an exception occurs during the trial, the score is set
         # to default_score.
+        error = None
         try:
             runner.train()
             score = report_hook.report_score()
             if score is None or math.isnan(score) or math.isinf(score):
                 score = default_score
             scores_to_broadcast = [score]
-        except Exception:
+        except Exception as e:
             scores_to_broadcast = [default_score]
+            error = e
 
         # Store the score between processes.
         broadcast_object_list(scores_to_broadcast, src=0)
         score = scores_to_broadcast[0]
         if is_main_process():
             self._searcher.record(hparam, score)
-        return hparam, score
+        return hparam, score, error
 
     def tune(self) -> Dict[str, Union[dict, float]]:
         """Launch tuning.
@@ -266,12 +270,15 @@ class Tuner:
         """
         self._logger.info(f'Starting tuning for {self._num_trials} trials...')
         for trail_idx in range(self._num_trials):
-            hparam, score = self._run_trial()
+            hparam, score, error = self._run_trial()
+            log_msg = f'Trial [{trail_idx + 1}/{self._num_trials}]'
+            if error is not None:
+                log_msg += f' failed. Error: {error}'
+            else:
+                log_msg += f' finished. Score obtained: {score}'
+            log_msg += f' Hyperparameters used: {hparam}'
+            self._logger.info(log_msg)
             self._history.append((hparam, score))
-            self._logger.info(
-                f'Trial [{trail_idx + 1}/{self._num_trials}] finished.' +
-                f' Score obtained: {score}' +
-                f' Hyperparameters used: {hparam}')
 
         best_hparam: dict
         best_score: float
