@@ -35,13 +35,13 @@ def dump_extra_type(value):
     if isinstance(value, LazyObject):
         return value.dump_str
     if isinstance(value, (type, FunctionType, BuiltinFunctionType)):
-        return '<' + value.__module__ + '.' + value.__name__ + '>'
+        return LazyObject(value.__name__, value.__module__).dump_str
     if isinstance(value, ModuleType):
-        return f'<{value.__name__}>'
+        return LazyObject(value.__name__).dump_str
 
     typename = type(value).__module__ + type(value).__name__
     if typename == 'torch.dtype':
-        return '<' + str(value) + '>'
+        return LazyObject(str(value)).dump_str
 
     return None
 
@@ -393,6 +393,13 @@ class BaseImportContext():
         old_import = builtins.__import__
 
         def new_import(name, globals=None, locals=None, fromlist=(), level=0):
+            # For relative import, the new import allows import from files
+            # which are not in a package.
+            # For absolute import, the new import will try to find the python
+            # file according to the module name literally, it's used to handle
+            # importing from installed packages, like
+            # `mmpretrain.configs.resnet.resnet18_8xb32_in1k`.
+
             cur_file = None
 
             # Try to import the base config source file

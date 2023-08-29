@@ -2,8 +2,8 @@
 import importlib
 import re
 import sys
-from importlib.util import spec_from_loader
-from typing import Any
+from importlib.util import find_spec, spec_from_loader
+from typing import Any, Optional
 
 
 class LazyObject:
@@ -16,30 +16,27 @@ class LazyObject:
         >>> import torch.nn as nn
         >>> from mmdet.models import RetinaNet
         >>> import mmcls.models
-        >>> import mmcls.datasets
-        >>> import mmcls
 
     Will be parsed as:
 
     Examples:
         >>> # import torch.nn as nn
-        >>> nn = lazyObject('torch.nn')
+        >>> nn = LazyObject('torch.nn')
         >>> # from mmdet.models import RetinaNet
-        >>> RetinaNet = lazyObject('mmdet.models', 'RetinaNet')
-        >>> # import mmcls.models; import mmcls.datasets; import mmcls
-        >>> mmcls = lazyObject(['mmcls', 'mmcls.datasets', 'mmcls.models'])
+        >>> RetinaNet = LazyObject('RetinaNet', LazyObject('mmdet.models'))
+        >>> # import mmcls.models
+        >>> mmcls = LazyObject('mmcls.models')
 
     ``LazyObject`` records all module information and will be further
     referenced by the configuration file.
 
     Args:
-        module (str or list or tuple): The module name to be imported.
-        imported (str, optional): The imported module name. Defaults to None.
-        location (str, optional): The filename and line number of the imported
-            module statement happened.
+        name (str): The name of a module or attribution.
+        source (LazyObject, optional): The source of the lazy object.
+            Defaults to None.
     """
 
-    def __init__(self, name: str, source: 'LazyObject' = None):
+    def __init__(self, name: str, source: Optional['LazyObject'] = None):
         self.name = name
         self.source = source
 
@@ -58,9 +55,20 @@ class LazyObject:
                     f'Failed to import {self.name} from {self.source}')
         else:
             try:
-                return importlib.import_module(self.name)
-            except Exception as e:
-                raise type(e)(f'Failed to import {self.name} for {e}')
+                for idx in range(self.name.count('.') + 1):
+                    module, *attrs = self.name.rsplit('.', idx)
+                    try:
+                        spec = find_spec(module)
+                    except ImportError:
+                        spec = None
+                    if spec is not None:
+                        res = importlib.import_module(module)
+                        for attr in attrs:
+                            res = getattr(res, attr)
+                        return res
+                raise ImportError(f'No module named `{module}`.')
+            except (ImportError, AttributeError) as e:
+                raise ImportError(f'Failed to import {self.name} for {e}')
 
     def __deepcopy__(self, memo):
         return LazyObject(self.name, self.source)
@@ -74,10 +82,13 @@ class LazyObject:
         return self.name
 
     def __repr__(self) -> str:
-        return f"<Lazy '{str(self)}'>"
+        arg = f'name={repr(self.name)}'
+        if self.source is not None:
+            arg += f', source={repr(self.source)}'
+        return f'LazyObject({arg})'
 
     @property
-    def dump_str(self):
+    def dump_str(self) -> str:
         return f'<{str(self)}>'
 
     @classmethod
@@ -130,6 +141,10 @@ class LazyImportContext:
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.meta_path.remove(self)
         for name in self.lazy_modules:
+            if '.' in name:
+                parent_module, _, child_name = name.rpartition('.')
+                if parent_module in sys.modules:
+                    delattr(sys.modules[parent_module], child_name)
             sys.modules.pop(name, None)
 
     def __repr__(self):
