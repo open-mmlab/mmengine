@@ -174,7 +174,7 @@ class MMLogger(Logger, ManagerMixin):
         file_mode (str): The file mode used to open log file. Defaults to 'w'.
         distributed (bool): Whether to save distributed logs, Defaults to
             false.
-        file_handler_cfg (dict, optional): Dict to configure file handler.
+        file_handler_cfg (dict, optional): Configuration of file handler.
             Defaults to None. If ``file_handler_cfg`` is not specified,
             ``logging.FileHandler`` will be used by default. If it is
             specified, the ``type`` key should be set. It can be
