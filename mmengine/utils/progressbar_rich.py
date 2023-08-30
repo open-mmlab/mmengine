@@ -15,12 +15,10 @@ class _Worker:
 
     def __call__(self, inputs):
         inputs, idx = inputs
-        if not isinstance(inputs, (list, tuple, dict)):
+        if not isinstance(inputs, (tuple, list)):
             inputs = (inputs, )
-        if isinstance(inputs, (tuple, list)):
-            return self.func(*inputs), idx
-        if isinstance(inputs, dict):
-            return self.func(**inputs), idx
+
+        return self.func(*inputs), idx
 
 
 class _SkipFirstTimeRemainingColumn(TimeRemainingColumn):
@@ -52,11 +50,12 @@ def track_progress_rich(func: Callable,
                         task_num: int = None,
                         nproc: int = 1,
                         chunksize: int = 1,
-                        description: str = 'Process...',
+                        description: str = 'Processing',
                         color: str = 'blue') -> list:
-    """Track the progress of parallel task execution with a progress bar.
-    The built-in :mod:`multiprocessing` module is used for process pools and
-    tasks are done with :func:`Pool.map` or :func:`Pool.imap_unordered`.
+    """Track the progress of parallel task execution with a progress bar. The
+    built-in :mod:`multiprocessing` module is used for process pools and tasks
+    are done with :func:`Pool.map` or :func:`Pool.imap_unordered`.
+
     Args:
         func (callable): The function to be applied to each task.
         tasks (Iterable or Sized): A tuple of tasks. There are several cases
@@ -80,6 +79,15 @@ def track_progress_rich(func: Callable,
         description (str): The description of progress bar.
             Defaults to "Process".
         color (str): The color of progress bar. Defaults to "blue".
+
+    Examples:
+        >>> import time
+
+        >>> def func(x):
+        ...    time.sleep(1)
+        ...    return x**2
+        >>> track_progress_rich(func, range(10), nproc=2)
+
     Returns:
         list: The task results.
     """
@@ -88,17 +96,17 @@ def track_progress_rich(func: Callable,
     if not isinstance(tasks, Iterable):
         raise TypeError(
             f'tasks must be an iterable object, but got {type(tasks)}')
-    if not isinstance(tasks, Sized):
-        task_num = None or task_num
-    elif len(tasks) == 0 and task_num is None:
-        raise ValueError('If tasks is an empty iterable, '
-                         'task_num must be set')
-    elif len(tasks) == 0:
-        tasks = tuple(tuple() for _ in range(10))
-    else:
-        if task_num is not None and task_num != len(tasks):
-            raise ValueError('task_num does not match the length of tasks')
-        task_num = len(tasks)
+    if isinstance(tasks, Sized):
+        if len(tasks) == 0:
+            if task_num is None:
+                raise ValueError('If tasks is an empty iterable, '
+                                 'task_num must be set')
+            else:
+                tasks = tuple(tuple() for _ in range(task_num))
+        else:
+            if task_num is not None and task_num != len(tasks):
+                raise ValueError('task_num does not match the length of tasks')
+            task_num = len(tasks)
 
     if nproc <= 0:
         raise ValueError('nproc must be a positive number')

@@ -16,10 +16,6 @@ def foo2(x, y):
     return x, y
 
 
-def foo3(*, x, y):
-    return x, y
-
-
 def test_progressbar_rich_exception():
     tasks = [1] * 10
     # Valid func
@@ -55,8 +51,3 @@ def test_progressbar_rich(nproc):
     for tasks in (tasks_, iter(tasks_)):
         results = track_progress_rich(foo2, tasks, nproc=nproc)
         assert results == tasks_
-    # foo3
-    tasks_ = [{'x': i, 'y': i} for i in range(10)]
-    for tasks in (tasks_, iter(tasks_)):
-        results = track_progress_rich(foo3, tasks, nproc=nproc)
-        assert results == [(i, i) for i in range(10)]
