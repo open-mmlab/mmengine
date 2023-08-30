@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
-import os
 
 import torch.nn.functional as F
 import torchvision
@@ -10,8 +9,6 @@ from torch.optim import SGD
 from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
 from mmengine.runner import Runner
-
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 
 class MMResNet50(BaseModel):

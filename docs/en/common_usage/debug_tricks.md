@@ -155,15 +155,8 @@ Once these parameters are found, we can analyze why they did not participate in 
 
 ## Training for a fixed number of iterations (epoch-based training)
 
-During the process of debugging code, sometimes it is necessary to train for several epochs, such as debugging the validation process or checking whether the checkpoint saving meets expectations. However, if the dataset is too large, it may take a long time to complete one epoch, in which case the cfg parameter can be added.
-Take `MMEngine` as an example（Refer to the [documentation](https://mmengine.readthedocs.io/zh_CN/latest/get_started/installation.html)for installing MMEngine）。
-
-Example of a training script
-
 ```python
-# Copyright (c) OpenMMLab. All rights reserved.
 import argparse
-import os
 
 import torch.nn.functional as F
 import torchvision
@@ -174,7 +167,6 @@ from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
 from mmengine.runner import Runner
 
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 
 class MMResNet50(BaseModel):
@@ -270,9 +262,7 @@ if __name__ == '__main__':
 
 ```
 
-Fast debugging is achieved by adding the `num_batch_per_epoch` parameter to `train_dataloader` and `val_dataloader`.
-
-Run the training script. You can see that after running each epoch run 5 batch is over. Compared to the original, debugging is faster and more flexible.
+Fast debugging is achieved by configuring the `num_batch_per_epoch` in `train_dataloader` and `val_dataloader`. You can quickly debug the code of the validation after just 5 training iterations.
 
 ```
 08/18 20:27:22 - mmengine - INFO - Epoch(train) [1][5/5]  lr: 1.0000e-03  eta: 0:00:02  time: 0.4566  data_time: 0.0074  memory: 477  loss: 6.7576

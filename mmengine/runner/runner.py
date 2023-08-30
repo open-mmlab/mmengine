@@ -1389,8 +1389,9 @@ class Runner:
         num_batch_per_epoch = dataloader_cfg.pop('num_batch_per_epoch', None)
         if num_batch_per_epoch is not None:
             world_size = get_world_size()
-            num_samples = num_batch_per_epoch * dataloader_cfg.get(
-                'batch_size', 1) * world_size
+            num_samples = (
+                num_batch_per_epoch * _get_batch_size(dataloader_cfg) *
+                world_size)
             dataset = _SlicedDataset(dataset, num_samples)
 
         # build sampler
@@ -2414,3 +2415,20 @@ class Runner:
         setattr(self.model, target, compiled_func)
         self.logger.info('Model has been "compiled". The first few iterations'
                          ' will be slow, please be patient.')
+
+
+def _get_batch_size(dataloader):
+    if isinstance(dataloader, dict):
+        if 'batch_size' in dataloader:
+            return dataloader['batch_size']
+        elif ('batch_sampler' in dataloader
+              and 'batch_size' in dataloader['batch_sampler']):
+            return dataloader['batch_sampler']['batch_size']
+        else:
+            raise ValueError('Please set batch_size in `Dataloader` or '
+                             '`batch_sampler`')
+    elif isinstance(dataloader, DataLoader):
+        return dataloader.batch_sampler.batch_size
+    else:
+        raise ValueError('dataloader should be a dict or a Dataloader '
+                         f'instance, but got {type(dataloader)}')

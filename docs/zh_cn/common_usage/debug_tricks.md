@@ -154,15 +154,10 @@ cfg = dict(
 
 ## 固定训练的迭代次数(基于epoch的训练)
 
-在调试代码的过程中，有时需要训练几个 epoch，例如调试验证过程或者权重的保存是否符合期望。然而如果数据集太大，需要花费较长时间才能训完一个 epoch，这种情况下可以增加cfg参数。
-以 `MMEngine` 为例（参考[文档](https://mmengine.readthedocs.io/zh_CN/latest/get_started/installation.html)安装 MMEngine）。
-
-训练脚本示例
+在调试代码的过程中，有时需要训练几个 epoch，例如调试验证过程或者权重的保存是否符合期望。然而如果数据集太大，需要花费较长时间才能训完一个 epoch，在这种情况下，可以配置`num_batch_per_epoch`：
 
 ```python
-# Copyright (c) OpenMMLab. All rights reserved.
 import argparse
-import os
 
 import torch.nn.functional as F
 import torchvision
@@ -173,7 +168,6 @@ from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
 from mmengine.runner import Runner
 
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 
 class MMResNet50(BaseModel):
@@ -269,9 +263,7 @@ if __name__ == '__main__':
 
 ```
 
-通过在`train_dataloader`和`val_dataloader`新增`num_batch_per_epoch`参数实现快速调试。
-
-运行训练脚本。可以看到跑完每个epoch跑完5个batch就结束了。相比原来，调试更加快速和灵活。
+通过在 `train_dataloader` 和 `val_dataloader` 中配置 `num_batch_per_epoch` 可以实现快速调试。只需5次训练迭代，就能快速调试验证代码、
 
 ```
 08/18 20:27:22 - mmengine - INFO - Epoch(train) [1][5/5]  lr: 1.0000e-03  eta: 0:00:02  time: 0.4566  data_time: 0.0074  memory: 477  loss: 6.7576
