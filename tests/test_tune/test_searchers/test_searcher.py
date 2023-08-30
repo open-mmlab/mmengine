@@ -3,6 +3,7 @@ from unittest import TestCase
 
 from mmengine.tune.searchers import Searcher
 
+
 class TestSearcher(TestCase):
 
     def test_rule(self):
@@ -29,13 +30,8 @@ class TestSearcher(TestCase):
         with self.assertRaises(AssertionError):
             Searcher(rule='greater', hparam_spec=invalid_hparam_spec_1)
 
-        # Missing keys in continuous hparam_spec 
-        invalid_hparam_spec_2 = {
-            'lr': {
-                'type': 'continuous',
-                'lower': 0.01
-            }
-        }
+        # Missing keys in continuous hparam_spec
+        invalid_hparam_spec_2 = {'lr': {'type': 'continuous', 'lower': 0.01}}
         with self.assertRaises(AssertionError):
             Searcher(rule='less', hparam_spec=invalid_hparam_spec_2)
 
@@ -70,7 +66,7 @@ class TestSearcher(TestCase):
         }
         with self.assertRaises(AssertionError):
             Searcher(rule='less', hparam_spec=invalid_hparam_spec_5)
-    
+
     def test_hparam_spec_property(self):
         hparam_spec = {
             'lr': {

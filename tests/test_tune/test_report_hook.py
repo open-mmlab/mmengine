@@ -1,9 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from mmengine.testing import RunnerTestCase
-from mmengine.tune._report_hook import ReportingHook
 from unittest.mock import MagicMock
 
+from mmengine.testing import RunnerTestCase
+from mmengine.tune._report_hook import ReportingHook
+
+
 class TestReportingHook(RunnerTestCase):
+
     def test_append_score(self):
         hook = ReportingHook(monitor='acc', max_scoreboard_len=3)
 
@@ -53,8 +56,11 @@ class TestReportingHook(RunnerTestCase):
 
     def test_after_train_iter(self):
         runner = MagicMock(iter=3, epoch=1)
-        runner.log_processor.get_log_after_iter = MagicMock(return_value=({'acc': 0.9}, 'log_str'))
-        
+        runner.log_processor.get_log_after_iter = MagicMock(
+            return_value=({
+                'acc': 0.9
+            }, 'log_str'))
+
         # Check if the monitored score gets appended correctly
         hook = ReportingHook(monitor='acc')
         hook.after_train_iter(runner, 0)
@@ -64,7 +70,7 @@ class TestReportingHook(RunnerTestCase):
         hook2 = ReportingHook(monitor='non_existent')
         hook2.after_train_iter(runner, 0)
         self.assertEqual(len(hook2.scoreboard), 0)
-        
+
         # Check that training stops if tuning_iter is reached
         runner.iter = 5
         hook3 = ReportingHook(monitor='acc', tuning_iter=5)
