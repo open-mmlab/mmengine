@@ -167,8 +167,6 @@ from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
 from mmengine.runner import Runner
 
-
-
 class MMResNet50(BaseModel):
 
     def __init__(self):
