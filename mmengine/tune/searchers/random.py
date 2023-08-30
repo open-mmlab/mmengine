@@ -4,12 +4,11 @@ from typing import Dict
 
 from .searcher import HYPER_SEARCHERS, Searcher
 
+
 @HYPER_SEARCHERS.register_module()
 class RandomSearcher(Searcher):
-    def __init__(self,
-                 rule: str,
-                 hparam_spec: Dict[str, Dict],
-                 *args,
+
+    def __init__(self, rule: str, hparam_spec: Dict[str, Dict], *args,
                  **kwargs):
         super().__init__(rule, hparam_spec)
 

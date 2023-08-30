@@ -42,6 +42,7 @@ class TestTuner(RunnerTestCase):
                 hparam_spec=dict(),
                 monitor='loss',
                 rule='invalid_rule',
+                num_trials=2,
                 searcher_cfg=dict(type='ToySearcher'))
 
         # Initializing with correct parameters
@@ -206,7 +207,7 @@ class TestTuner(RunnerTestCase):
             num_trials=2,
             searcher_cfg=dict(type='ToySearcher'))
 
-        tuner.history.append({'optim_wrapper.optimizer.lr': 0.1}, 0.05)
+        tuner.history.append(({'optim_wrapper.optimizer.lr': 0.1}, 0.05))
         tuner.clear()
         self.assertEqual(tuner.history, [])
 

@@ -15,7 +15,8 @@ class Searcher:
 
     rules_supported = ['greater', 'less']
 
-    def __init__(self, rule: str, hparam_spec: Dict[str, Dict]):
+    def __init__(self, rule: str, hparam_spec: Dict[str, Dict], *args,
+                 **kwargs):
         assert rule in self.rules_supported, \
             f"rule must be 'less' or 'greater', but got {rule}"
         self._rule = rule

@@ -94,7 +94,7 @@ class TestReportingHook(RunnerTestCase):
 
     def test_with_runner(self):
         runner = self.build_runner(self.epoch_based_cfg)
-        acc_hook = ReportingHook(monitor='test/acc', tuning_epoch=1)
+        acc_hook = ReportingHook(monitor='acc', tuning_epoch=1)
         runner.register_hook(acc_hook, priority='VERY_LOW')
         runner.train()
         self.assertEqual(runner.epoch, 1)

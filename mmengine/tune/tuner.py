@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import math
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from mmengine.config import Config, ConfigDict
 from mmengine.dist import (broadcast_object_list, init_dist, is_distributed,
@@ -168,6 +168,11 @@ class Tuner:
         scores."""
         return self._history
 
+    @property
+    def searcher(self) -> Searcher:
+        """Searcher: The searcher used for hyperparameter tuning."""
+        return self._searcher
+
     @staticmethod
     def inject_config(cfg: Dict, key: str, value: Any):
         """Inject a value into a config.
@@ -179,18 +184,24 @@ class Tuner:
             key (str): The key of the value to be injected.
             value (Any): The value to be injected.
         """
-        splitted_key = key.split('.')
-        suffix = ''
-        for item in splitted_key[:-1]:
-            if isinstance(cfg, Sequence) and not isinstance(cfg, str):
-                cfg = cfg[int(item)]
-            else:
-                assert item in cfg, f'key {item} is not in {cfg}'
-                cfg = cfg[item]
-            suffix += f'{item}.'
-        assert splitted_key[
-            -1] in cfg, f'attribute {splitted_key[-1]} is not in cfg{suffix}'
-        cfg[splitted_key[-1]] = value
+        keys = key.split('.')
+        for k in keys[:-1]:
+            if isinstance(cfg, list):
+                k = int(k)
+                if k >= len(cfg) or k < 0:
+                    raise KeyError(f'Index {k} is out of range in {cfg}')
+            elif k not in cfg:
+                raise KeyError(f"Key '{k}' not found in {cfg}")
+            cfg = cfg[k]
+        if isinstance(cfg, list):
+            k = int(keys[-1])
+            if k >= len(cfg) or k < 0:
+                raise KeyError(f'Index {k} is out of range in {cfg}')
+            cfg[k] = value
+        elif keys[-1] not in cfg:
+            raise KeyError(f"Key '{keys[-1]}' not found in {cfg}")
+        else:
+            cfg[keys[-1]] = value
         return
 
     def _build_searcher(self, searcher_cfg: Dict) -> Searcher:

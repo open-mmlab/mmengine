@@ -5,6 +5,7 @@ from mmengine.tune.searchers import RandomSearcher
 
 
 class TestRandomSearcher(TestCase):
+
     def test_suggest(self):
         searcher = RandomSearcher(
             rule='greater',
@@ -19,7 +20,7 @@ class TestRandomSearcher(TestCase):
                     'upper': 0.1
                 }
             })
-        
+
         for _ in range(100):
             hparam = searcher.suggest()
             self.assertTrue(hparam['x1'] in [0.01, 0.02, 0.03])
