@@ -9,7 +9,7 @@ Take MMPretrain as an example (Refer to the [documentation](https://mmpretrain.r
 Launch training
 
 ```bash
-python tools/train.py configs/resnet/resnet18_8xb16_cifar10.py1
+python tools/train.py configs/resnet/resnet18_8xb16_cifar10.py
 ```
 
 Here is part of the training log, where `3125` represents the number of iterations to be performed.
