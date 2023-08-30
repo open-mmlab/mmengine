@@ -97,9 +97,9 @@ class CheckpointHook(Hook):
             at which checkpoint saving begins. Defaults to 0, which means
             saving at the beginning.
             `New in version 0.8.3.`
-        create_symlink (bool, optional): Whether to create a symlink
-                "latest.pth" to point to the latest checkpoint.
-                Defaults to True.
+        create_symlink (bool, optional): Whether to create a symbolic
+            link pointing to the latest checkpoint named 'latest.pth'.
+            Defaults to False. `New in version 0.8.5.`
 
     Examples:
         >>> # Save best based on single metric
@@ -149,7 +149,7 @@ class CheckpointHook(Hook):
                  backend_args: Optional[dict] = None,
                  published_keys: Union[str, List[str], None] = None,
                  save_begin: int = 0,
-                 creat_symlink: Optional[bool] = True,
+                 creat_symlink: Optional[bool] = False,
                  **kwargs) -> None:
         self.interval = interval
         self.by_epoch = by_epoch
@@ -472,12 +472,10 @@ class CheckpointHook(Hook):
             dst_file = osp.join(runner.work_dir, 'latest.pth')
             try:
                 symlink(ckpt_filename, dst_file)
-            except SystemError:
+            except SystemError as err:
                 print_log(
-                    'create_symlink is set as False because creating symbolic '
-                    f'link is not allowed in {self.file_client.name}',
-                    logger='current',
-                    level=logging.WARNING)
+                    'create_symlink is set as False because failed to create a symbolic '
+                    f'link for {err}', logger='current', level=logging.WARNING)
                 self.create_symlink = False
 
     def _save_checkpoint(self, runner) -> None:
