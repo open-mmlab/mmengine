@@ -12,6 +12,7 @@ on:
       - "CONTRIBUTING_zh-CN.md"
       - ".pre-commit-config.yaml"
       - ".pre-commit-config-zh-cn.yaml"
+      - "examples/**"
     branches:
       - main
 
@@ -45,7 +46,7 @@ jobs:
         run: |
           pip install -r requirements/tests.txt
           pip install openmim
-          mim install 'mmcv>=2.0.0rc1'
+          mim install mmcv
       - name: Run unittests and generate coverage report
         run: |
           coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist
@@ -95,8 +96,11 @@ jobs:
       - name: Install unit tests dependencies
         run: |
           pip install -r requirements/tests.txt
+      - name: Install mmcv
+        run: |
           pip install openmim
-          mim install 'mmcv>=2.0.0rc1'
+          mim install mmcv
+        if: ${{ matrix.torch > '1.8.0' || matrix.torch == '1.8.0' }}
       - name: Run unittests and generate coverage report
         run: |
           coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist
@@ -143,7 +147,7 @@ jobs:
         run: |
           pip install -r requirements/tests.txt
           pip install openmim
-          mim install 'mmcv>=2.0.0rc1'
+          mim install mmcv
       - name: Run unittests and generate coverage report
         run: |
           coverage run --branch --source mmengine -m pytest tests/ --ignore tests/test_dist
@@ -177,7 +181,7 @@ jobs:
         run: |
           pip install -r requirements/tests.txt
           pip install openmim
-          mim install 'mmcv>=2.0.0rc1'
+          mim install mmcv
       # Distributed related unit test may randomly error in PyTorch 1.13.0
       - name: Run unittests and generate coverage report
         run: |
@@ -212,7 +216,7 @@ jobs:
         run: |
           pip install -r requirements/tests.txt
           pip install openmim
-          mim install 'mmcv>=2.0.0rc1'
+          mim install mmcv
       # Distributed related unit test may randomly error in PyTorch 1.13.0
       - name: Run unittests and generate coverage report
         run: |
@@ -250,8 +254,11 @@ jobs:
       - name: Install unit tests dependencies
         run: |
           pip install -r requirements/tests.txt
+      - name: Install mmcv
+        run: |
           pip install openmim
-          mim install 'mmcv>=2.0.0rc1'
+          mim install mmcv
+        if: ${{ matrix.torch > '1.8.0' || matrix.torch == '1.8.0' }}
       # Distributed-related unit tests may fail in macOS
       # Skip testing setup_env since it does not work in the current CI environment # TODO
       - name: Run unittests and generate coverage report
@@ -290,7 +297,7 @@ jobs:
         run: |
           pip install -r requirements/tests.txt
           pip install openmim
-          mim install 'mmcv>=2.0.0rc1'
+          mim install mmcv
       - name: Run CPU unittests
         run: pytest tests/  --ignore tests/test_dist
         if: ${{ matrix.platform == 'cpu' }}

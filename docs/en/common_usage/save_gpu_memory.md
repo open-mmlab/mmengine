@@ -2,6 +2,10 @@
 
 Memory capacity is critical in deep learning training and inference and determines whether the model can run successfully. Common memory saving approaches include:
 
+- Enable Efficient Conv BN Eval Feature (Experimental)
+
+  We've recently [introduced](https://github.com/open-mmlab/mmcv/pull/2807) an experimental feature in MMCV: the Efficient Conv BN Eval, based on the concepts discussed in [this paper](https://arxiv.org/abs/2305.11624). This feature has been designed with the aim of reducing memory footprint during network training without hurting performance. If your network architecture contains a series of consecutive Conv+BN blocks, and these normalization layers are maintained in `eval` mode during the training process (a common occurrence when training object detectors with [MMDetection](https://github.com/open-mmlab/mmdetection)), this feature could reduce memory consumption by more than $20%$. To enable the Efficient Conv BN Eval feature, simply add the following command-line arguments: `--cfg-options efficient_conv_bn_eval="[backbone]"`. When you see `Enabling the "efficient_conv_bn_eval" feature for these modules ...` in the output log, the feature is successfully enabled. As this is currently in an experimental phase, we are eagerly looking forward to hearing about your experience with it. Please share your usage reports, observations, and suggestions at [this discussion thread](https://github.com/open-mmlab/mmengine/discussions/1252). Your feedback is crucial for further development and for determining whether this feature should be integrated into the stable release.
+
 - Gradient Accumulation
 
   Gradient accumulation is the mechanism that runs at a configured number of steps accumulating the gradients instead of updating parameters, after which the network parameters are updated and the gradients are cleared. With this technique of delayed parameter update, the result is similar to those scenarios using a large batch size, while the memory of activation can be saved. However, it should be noted that if the model contains a batch normalization layer, using gradient accumulation will impact performance.
@@ -65,6 +69,10 @@ runner.train()
 ```
 
 ## Large Model Training
+
+```{warning}
+If you have the requirement to train large models, we recommend reading [Traning Big Models](./large_model_training.md).
+```
 
 `FSDP` is officially supported from PyTorch 1.11. The config can be written in this way:
 

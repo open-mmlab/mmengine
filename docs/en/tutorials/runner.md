@@ -228,7 +228,7 @@ class MyAwesomeModel(BaseModel): # your custom model
     def __init__(self, layers=18, activation='silu'):
         ...
 
-# An example of manual construction
+# An example of construction via registry
 runner = Runner(
     model=dict(
         type='MyAwesomeModel',
@@ -237,7 +237,7 @@ runner = Runner(
     ...
 )
 
-# An example of construction via registry
+# An example of manual construction
 model = MyAwesomeModel(layers=18, activation='relu')
 runner = Runner(
     model=model,

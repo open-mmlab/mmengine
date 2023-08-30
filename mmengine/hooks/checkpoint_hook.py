@@ -3,6 +3,7 @@ import hashlib
 import logging
 import os.path as osp
 import pickle
+from collections import deque
 from math import inf
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Union
@@ -91,6 +92,11 @@ class CheckpointHook(Hook):
             publish model with keys in the list after training.
             Defaults to None.
             `New in version 0.7.1.`
+        save_begin (int): Control the epoch number or iteration number
+            at which checkpoint saving begins. Defaults to 0, which means
+            saving at the beginning.
+            `New in version 0.8.3.`
+
     Examples:
         >>> # Save best based on single metric
         >>> CheckpointHook(interval=2, by_epoch=True, save_best='acc',
@@ -138,6 +144,7 @@ class CheckpointHook(Hook):
                  filename_tmpl: Optional[str] = None,
                  backend_args: Optional[dict] = None,
                  published_keys: Union[str, List[str], None] = None,
+                 save_begin: int = 0,
                  **kwargs) -> None:
         self.interval = interval
         self.by_epoch = by_epoch
@@ -242,6 +249,12 @@ class CheckpointHook(Hook):
                 'Find duplicate elements in "published_keys".')
         self.published_keys = published_keys
 
+        self.last_ckpt = None
+        if save_begin < 0:
+            raise ValueError(
+                'save_begin should not be less than 0, but got {save_begin}')
+        self.save_begin = save_begin
+
     def before_train(self, runner) -> None:
         """Finish all operations, related to checkpoint.
 
@@ -294,6 +307,25 @@ class CheckpointHook(Hook):
                             key_indicator] = runner.message_hub.get_info(
                                 best_ckpt_name)
 
+        if self.max_keep_ckpts > 0:
+            keep_ckpt_ids = []
+            if 'keep_ckpt_ids' in runner.message_hub.runtime_info:
+                keep_ckpt_ids = runner.message_hub.get_info('keep_ckpt_ids')
+
+                while len(keep_ckpt_ids) > self.max_keep_ckpts:
+                    step = keep_ckpt_ids.pop(0)
+                    if is_main_process():
+                        path = self.file_backend.join_path(
+                            self.out_dir, self.filename_tmpl.format(step))
+                        if self.file_backend.isfile(path):
+                            self.file_backend.remove(path)
+                        elif self.file_backend.isdir(path):
+                            # checkpoints saved by deepspeed are directories
+                            self.file_backend.rmtree(path)
+
+            self.keep_ckpt_ids: deque = deque(keep_ckpt_ids,
+                                              self.max_keep_ckpts)
+
     def after_train_epoch(self, runner) -> None:
         """Save the checkpoint and synchronize buffers after each epoch.
 
@@ -304,9 +336,9 @@ class CheckpointHook(Hook):
             return
 
         # save checkpoint for following cases:
-        # 1. every ``self.interval`` epochs
+        # 1. every ``self.interval`` epochs which start at ``self.save_begin``
         # 2. reach the last epoch of training
-        if self.every_n_epochs(runner, self.interval) or (
+        if self.every_n_epochs(runner, self.interval, self.save_begin) or (
                 self.save_last and self.is_last_train_epoch(runner)):
             runner.logger.info(
                 f'Saving checkpoint at {runner.epoch + 1} epochs')
@@ -337,14 +369,13 @@ class CheckpointHook(Hook):
         if self.published_keys is None:
             return
 
-        if self.save_last and 'last_ckpt' in runner.message_hub.runtime_info:
-            last_ckpt = runner.message_hub.get_info('last_ckpt')
-            self._publish_model(runner, last_ckpt)
+        if self.save_last and self.last_ckpt is not None:
+            self._publish_model(runner, self.last_ckpt)
 
         if getattr(self, 'best_ckpt_path', None) is not None:
             self._publish_model(runner, str(self.best_ckpt_path))
         if getattr(self, 'best_ckpt_path_dict', None) is not None:
-            for key, best_ckpt in self.best_ckpt_path_dict.items():
+            for best_ckpt in self.best_ckpt_path_dict.values():
                 self._publish_model(runner, best_ckpt)
 
     @master_only
@@ -379,16 +410,35 @@ class CheckpointHook(Hook):
             f'{final_path}.',
             logger='current')
 
-    def _save_checkpoint(self, runner) -> None:
-        """Save the current checkpoint and delete outdated checkpoint.
+    def _save_checkpoint_with_step(self, runner, step, meta):
+        # remove other checkpoints before save checkpoint to make the
+        # self.keep_ckpt_ids are saved as expected
+        if self.max_keep_ckpts > 0:
+            # _save_checkpoint and _save_best_checkpoint may call this
+            # _save_checkpoint_with_step in one epoch
+            if len(self.keep_ckpt_ids) > 0 and self.keep_ckpt_ids[-1] == step:
+                pass
+            else:
+                if len(self.keep_ckpt_ids) == self.max_keep_ckpts:
+                    _step = self.keep_ckpt_ids.popleft()
+                    if is_main_process():
+                        ckpt_path = self.file_backend.join_path(
+                            self.out_dir, self.filename_tmpl.format(_step))
 
-        Args:
-            runner (Runner): The runner of the training process.
-        """
-        if self.by_epoch:
-            ckpt_filename = self.filename_tmpl.format(runner.epoch + 1)
-        else:
-            ckpt_filename = self.filename_tmpl.format(runner.iter + 1)
+                        if self.file_backend.isfile(ckpt_path):
+                            self.file_backend.remove(ckpt_path)
+                        elif self.file_backend.isdir(ckpt_path):
+                            # checkpoints saved by deepspeed are directories
+                            self.file_backend.rmtree(ckpt_path)
+
+                self.keep_ckpt_ids.append(step)
+                runner.message_hub.update_info('keep_ckpt_ids',
+                                               list(self.keep_ckpt_ids))
+
+        ckpt_filename = self.filename_tmpl.format(step)
+        self.last_ckpt = self.file_backend.join_path(self.out_dir,
+                                                     ckpt_filename)
+        runner.message_hub.update_info('last_ckpt', self.last_ckpt)
 
         runner.save_checkpoint(
             self.out_dir,
@@ -396,6 +446,7 @@ class CheckpointHook(Hook):
             self.file_client_args,
             save_optimizer=self.save_optimizer,
             save_param_scheduler=self.save_param_scheduler,
+            meta=meta,
             by_epoch=self.by_epoch,
             backend_args=self.backend_args,
             **self.args)
@@ -405,31 +456,24 @@ class CheckpointHook(Hook):
         if not is_main_process():
             return
 
-        runner.message_hub.update_info(
-            'last_ckpt',
-            self.file_backend.join_path(self.out_dir, ckpt_filename))
-
-        # remove other checkpoints
-        if self.max_keep_ckpts > 0:
-            if self.by_epoch:
-                current_ckpt = runner.epoch + 1
-            else:
-                current_ckpt = runner.iter + 1
-            redundant_ckpts = range(
-                current_ckpt - self.max_keep_ckpts * self.interval, 0,
-                -self.interval)
-            for _step in redundant_ckpts:
-                ckpt_path = self.file_backend.join_path(
-                    self.out_dir, self.filename_tmpl.format(_step))
-                if self.file_backend.isfile(ckpt_path):
-                    self.file_backend.remove(ckpt_path)
-                else:
-                    break
-
         save_file = osp.join(runner.work_dir, 'last_checkpoint')
-        filepath = self.file_backend.join_path(self.out_dir, ckpt_filename)
         with open(save_file, 'w') as f:
-            f.write(filepath)
+            f.write(self.last_ckpt)  # type: ignore
+
+    def _save_checkpoint(self, runner) -> None:
+        """Save the current checkpoint and delete outdated checkpoint.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
+        if self.by_epoch:
+            step = runner.epoch + 1
+            meta = dict(epoch=step, iter=runner.iter)
+        else:
+            step = runner.iter + 1
+            meta = dict(epoch=runner.epoch, iter=step)
+
+        self._save_checkpoint_with_step(runner, step, meta=meta)
 
     def _save_best_checkpoint(self, runner, metrics) -> None:
         """Save the current checkpoint and delete outdated checkpoint.
@@ -448,10 +492,13 @@ class CheckpointHook(Hook):
             ckpt_filename = self.filename_tmpl.format(runner.iter)
             cur_type, cur_time = 'iter', runner.iter
 
+        meta = dict(epoch=runner.epoch, iter=runner.iter)
+
         # handle auto in self.key_indicators and self.rules before the loop
         if 'auto' in self.key_indicators:
             self._init_rule(self.rules, [list(metrics.keys())[0]])
 
+        best_ckpt_updated = False
         # save best logic
         # get score from messagehub
         for key_indicator, rule in zip(self.key_indicators, self.rules):
@@ -475,16 +522,25 @@ class CheckpointHook(Hook):
                     key_score, best_score):
                 continue
 
+            best_ckpt_updated = True
+
             best_score = key_score
             runner.message_hub.update_info(best_score_key, best_score)
 
-            if best_ckpt_path and \
-               self.file_backend.isfile(best_ckpt_path) and \
-               is_main_process():
-                self.file_backend.remove(best_ckpt_path)
-                runner.logger.info(
-                    f'The previous best checkpoint {best_ckpt_path} '
-                    'is removed')
+            if best_ckpt_path and is_main_process():
+                is_removed = False
+                if self.file_backend.isfile(best_ckpt_path):
+                    self.file_backend.remove(best_ckpt_path)
+                    is_removed = True
+                elif self.file_backend.isdir(best_ckpt_path):
+                    # checkpoints saved by deepspeed are directories
+                    self.file_backend.rmtree(best_ckpt_path)
+                    is_removed = True
+
+                if is_removed:
+                    runner.logger.info(
+                        f'The previous best checkpoint {best_ckpt_path} '
+                        'is removed')
 
             best_ckpt_name = f'best_{key_indicator}_{ckpt_filename}'
             # Replace illegal characters for filename with `_`
@@ -507,11 +563,20 @@ class CheckpointHook(Hook):
                 file_client_args=self.file_client_args,
                 save_optimizer=False,
                 save_param_scheduler=False,
+                meta=meta,
                 by_epoch=False,
                 backend_args=self.backend_args)
             runner.logger.info(
                 f'The best checkpoint with {best_score:0.4f} {key_indicator} '
                 f'at {cur_time} {cur_type} is saved to {best_ckpt_name}.')
+
+        # save checkpoint again to update the best_score and best_ckpt stored
+        # in message_hub because the checkpoint saved in `after_train_epoch`
+        # or `after_train_iter` stage only keep the previous best checkpoint
+        # not the current best checkpoint which causes the current best
+        # checkpoint can not be removed when resuming training.
+        if best_ckpt_updated and self.last_ckpt is not None:
+            self._save_checkpoint_with_step(runner, cur_time, meta)
 
     def _init_rule(self, rules, key_indicators) -> None:
         """Initialize rule, key_indicator, comparison_func, and best score. If
@@ -589,8 +654,10 @@ class CheckpointHook(Hook):
 
         # save checkpoint for following cases:
         # 1. every ``self.interval`` iterations
+        #       which start at ``self.save_begin``
         # 2. reach the last iteration of training
-        if self.every_n_train_iters(runner, self.interval) or \
+        if self.every_n_train_iters(runner, self.interval,
+                                    self.save_begin) or \
                 (self.save_last and
                  self.is_last_train_iter(runner)):
             runner.logger.info(

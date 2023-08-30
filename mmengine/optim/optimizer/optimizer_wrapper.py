@@ -10,10 +10,11 @@ from torch.optim import Optimizer
 from mmengine.logging import MessageHub, print_log
 from mmengine.registry import OPTIM_WRAPPERS
 from mmengine.utils.dl_utils import has_batch_norm
+from .base import BaseOptimWrapper
 
 
 @OPTIM_WRAPPERS.register_module()
-class OptimWrapper:
+class OptimWrapper(BaseOptimWrapper):
     """Optimizer wrapper provides a common interface for updating parameters.
 
     Optimizer wrapper provides a unified interface for single precision
@@ -121,10 +122,6 @@ class OptimWrapper:
         assert accumulative_counts > 0, (
             '_accumulative_counts at least greater than or equal to 1')
         self._accumulative_counts = accumulative_counts
-
-        assert isinstance(optimizer, Optimizer), (
-            'optimizer must be a `torch.optim.Optimizer` instance, but got '
-            f'{type(optimizer)}')
         self.optimizer = optimizer
 
         if clip_grad is not None:
@@ -161,10 +158,25 @@ class OptimWrapper:
         # the loss factor will always be the same as `_accumulative_counts`.
         self._remainder_counts = -1
 
-    def update_params(self,
-                      loss: torch.Tensor,
-                      step_kwargs: Optional[Dict] = None,
-                      zero_kwargs: Optional[Dict] = None) -> None:
+        # The Following code is used to initialize `base_param_settings`.
+        # `base_param_settings` is used to store the parameters that are not
+        # updated by the optimizer.
+        # The `base_param_settings` used for tracking the base learning in the
+        # optimizer. If the optimizer has multiple parameter groups, this
+        # params will not be scaled by the loss factor.
+        if len(optimizer.param_groups) > 1:
+            self.base_param_settings = {
+                'params': torch.tensor([0.0], dtype=torch.float)
+            }
+            self.base_param_settings.update(**self.optimizer.defaults)
+        else:
+            self.base_param_settings = None  # type: ignore
+
+    def update_params(  # type: ignore
+            self,
+            loss: torch.Tensor,
+            step_kwargs: Optional[Dict] = None,
+            zero_kwargs: Optional[Dict] = None) -> None:
         """Update parameters in :attr:`optimizer`.
 
         Args:
@@ -239,86 +251,6 @@ class OptimWrapper:
         if self.clip_grad_kwargs:
             self._clip_grad()
         self.optimizer.step(**kwargs)
-
-    def state_dict(self) -> dict:
-        """A wrapper of ``Optimizer.state_dict``.
-
-        Provide unified ``state_dict`` interface compatible with automatic
-        mixed precision training. Subclass can overload this method to
-        implement the required logic. For example, the state dictionary of
-        GradScaler should be saved when training with ``torch.cuda.amp``.
-
-        Returns:
-            dict: The state dictionary of :attr:`optimizer`.
-        """
-        return self.optimizer.state_dict()
-
-    def load_state_dict(self, state_dict: dict) -> None:
-        """A wrapper of ``Optimizer.load_state_dict``. load the state dict of
-        :attr:`optimizer`.
-
-        Provide unified ``load_state_dict`` interface compatible with automatic
-        mixed precision training. Subclass can overload this method to
-        implement the required logic. For example, the state dictionary of
-        GradScaler should be loaded when training with ``torch.cuda.amp``.
-
-        Args:
-            state_dict (dict): The state dictionary of :attr:`optimizer`.
-        """
-        self.optimizer.load_state_dict(state_dict)
-
-    @property
-    def param_groups(self) -> List[dict]:
-        """A wrapper of ``Optimizer.param_groups``.
-
-        Make OptimizeWrapper compatible with :class:`_ParamScheduler`.
-
-        Returns:
-             dict: the ``param_groups`` of :attr:`optimizer`.
-        """
-        return self.optimizer.param_groups
-
-    @property
-    def defaults(self) -> dict:
-        """A wrapper of ``Optimizer.defaults``.
-
-        Make OptimizeWrapper compatible with :class:`_ParamScheduler`.
-
-        Returns:
-             dict: the ``param_groups`` of :attr:`optimizer`.
-        """
-        return self.optimizer.defaults
-
-    def get_lr(self) -> Dict[str, List[float]]:
-        """Get the learning rate of the optimizer.
-
-        Provide unified interface to get learning rate of optimizer.
-
-        Returns:
-            Dict[str, List[float]]: Learning rate of the optimizer.
-        """
-        lr = [group['lr'] for group in self.param_groups]
-        return dict(lr=lr)
-
-    def get_momentum(self) -> Dict[str, List[float]]:
-        """Get the momentum of the optimizer.
-
-        Provide unified interface to get momentum of optimizer.
-
-        Returns:
-            Dict[str, List[float]]: Momentum of the optimizer.
-        """
-        momentum = []
-        for group in self.param_groups:
-            # Get momentum of SGD.
-            if 'momentum' in group.keys():
-                momentum.append(group['momentum'])
-            # Get momentum of Adam.
-            elif 'betas' in group.keys():
-                momentum.append(group['betas'][0])
-            else:
-                momentum.append(0)
-        return dict(momentum=momentum)
 
     @contextmanager
     def optim_context(self, model: nn.Module):

@@ -34,3 +34,5 @@ visualization Backend
    MLflowVisBackend
    TensorboardVisBackend
    WandbVisBackend
+   ClearMLVisBackend
+   NeptuneVisBackend

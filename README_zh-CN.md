@@ -56,6 +56,45 @@
     <img src="https://user-images.githubusercontent.com/25839884/219026120-ba71e48b-6e94-4bd4-b4e9-b7d175b5e362.png" width="3%" alt="" /></a>
 </div>
 
+## 最近进展
+
+最新版本 v0.8.4 在 2023.08.03 发布。
+
+亮点：
+
+- 支持使用 `efficient_conv_bn_eval` 参数开启更高效的 `ConvBN` 推理模式。详见[节省显存文档](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/save_gpu_memory.html)
+
+- 新增微调 Llama2 的[示例](./examples/llama2/)。
+
+- 支持使用 [FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp) 和 [DeepSpeed](https://www.deepspeed.ai/) 进行训练。可阅读[大模型训练](https://mmengine.readthedocs.io/zh_cn/latest/common_usage/large_model_training.html)了解用法。
+
+- 引入纯 Python 风格的配置文件：
+
+  - 支持在 IDE 中导航到基础配置文件
+  - 支持在 IDE 中导航到基础变量
+  - 支持在 IDE 中导航到类的源代码
+  - 支持继承包含相同字段的两个配置文件
+  - 在加载配置文件时不需要其他第三方依赖
+
+  请参考[教程](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/config.html#python-beta)以获取更详细的用法说明。
+
+  ![new-config-zh_cn](https://github.com/open-mmlab/mmengine/assets/57566630/c2da9a73-c911-4f78-8253-e3f29496d9f8)
+
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v083-08032023)
+
+## 目录
+
+- [简介](#简介)
+- [安装](#安装)
+- [快速上手](#快速上手)
+- [了解更多](#了解更多)
+- [贡献指南](#贡献指南)
+- [引用](#引用)
+- [开源许可证](#开源许可证)
+- [生态项目](#生态项目)
+- [OpenMMLab 的其他项目](#openmmlab-的其他项目)
+- [欢迎加入 OpenMMLab 社区](#欢迎加入-openmmlab-社区)
+
 ## 简介
 
 MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的基础库。它为开发人员提供了坚实的工程基础，以此避免在工作流上编写冗余代码。作为 OpenMMLab 所有代码库的训练引擎，其在不同研究领域支持了上百个算法。此外，MMEngine 也可以用于非 OpenMMLab 项目中。
@@ -78,16 +117,7 @@ MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的�
    - 提供了丰富的组件和策略。
    - 使用不同等级的 API 控制训练过程。
 
-## 最近进展
-
-最新版本 v0.7.3 在 2023.04.28 发布。
-
-亮点：
-
-- 支持使用 MLflow 记录实验数据
-- 支持往注册器里注册任何 callable 对象
-
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v073-04282023)
+![mmengine_dataflow](https://github.com/open-mmlab/mmengine/assets/58739961/267db9cb-72e4-4af2-a58b-877b30091acc)
 
 ## 安装
 
@@ -329,6 +359,11 @@ runner.train()
 
 该项目采用 [Apache 2.0 license](LICENSE) 开源许可证。
 
+## 生态项目
+
+- [APES: Attention-based Point Cloud Edge Sampling](https://github.com/JunweiZheng93/APES)
+- [DiffEngine: diffusers training toolbox with mmengine](https://github.com/okotaku/diffengine)
+
 ## OpenMMLab 的其他项目
 
 - [MIM](https://github.com/open-mmlab/mim): MIM 是 OpenMMLab 项目、算法、模型的统一入口
@@ -355,10 +390,10 @@ runner.train()
 
 ## 欢迎加入 OpenMMLab 社区
 
-扫描下方的二维码可关注 OpenMMLab 团队的 [知乎官方账号](https://www.zhihu.com/people/openmmlab)，加入 OpenMMLab 团队的 [官方交流 QQ 群](https://jq.qq.com/?_wv=1027&k=K0QI8ByU)，或通过添加微信“Open小喵Lab”加入官方交流微信群。
+扫描下方的二维码可关注 OpenMMLab 团队的 [知乎官方账号](https://www.zhihu.com/people/openmmlab)，扫描下方微信二维码添加喵喵好友，进入 MMEngine 微信交流社群。【加好友申请格式：研究方向+地区+学校/公司+姓名】
 
 <div align="center">
-<img src="https://user-images.githubusercontent.com/58739961/187154320-f3312cdf-31f2-4316-9dbb-8d7b0e1b7e08.jpg" height="400" />  <img src="https://user-images.githubusercontent.com/25839884/203904835-62392033-02d4-4c73-a68c-c9e4c1e2b07f.jpg" height="400" />  <img src="https://user-images.githubusercontent.com/58739961/187151778-d17c1368-125f-4fde-adbe-38cc6eb3be98.jpg" height="400" />
+<img src="https://user-images.githubusercontent.com/58739961/187154320-f3312cdf-31f2-4316-9dbb-8d7b0e1b7e08.jpg" height="400" />  <img src="https://github.com/open-mmlab/mmengine/assets/62195058/bd482538-1b1a-4130-af1b-ed788b6cafa8" height="400" />
 </div>
 
 我们会在 OpenMMLab 社区为大家

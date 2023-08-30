@@ -334,7 +334,7 @@ class ValLoop(BaseLoop):
                  fp16: bool = False) -> None:
         super().__init__(runner, dataloader)
 
-        if isinstance(evaluator, dict) or isinstance(evaluator, list):
+        if isinstance(evaluator, (dict, list)):
             self.evaluator = runner.build_evaluator(evaluator)  # type: ignore
         else:
             assert isinstance(evaluator, Evaluator), (

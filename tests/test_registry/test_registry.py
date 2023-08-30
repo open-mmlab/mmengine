@@ -228,6 +228,10 @@ class TestRegistry:
         DOGS, HOUNDS, LITTLE_HOUNDS = registries[:3]
         MID_HOUNDS, SAMOYEDS, LITTLE_SAMOYEDS = registries[3:]
 
+        # error type of key
+        with pytest.raises(TypeError):
+            MID_HOUNDS.get(None)
+
         @DOGS.register_module()
         def bark(word, times):
             return [word] * times
@@ -317,6 +321,14 @@ class TestRegistry:
         # at SAMOYEDS modules
         assert DOGS.get('samoyed.LittlePedigreeSamoyed') is None
         assert LITTLE_HOUNDS.get('mid_hound.PedigreeSamoyedddddd') is None
+
+        # Get mmengine.utils by string
+        utils = LITTLE_HOUNDS.get('mmengine.utils')
+        import mmengine.utils
+        assert utils is mmengine.utils
+
+        unknown = LITTLE_HOUNDS.get('mmengine.unknown')
+        assert unknown is None
 
     def test__search_child(self):
         #        Hierarchical Registry
@@ -565,11 +577,6 @@ def test_build_from_cfg(cfg_type):
     model = build_from_cfg(cfg, BACKBONES)
     assert isinstance(model, ResNet)
     assert model.depth == 50 and model.stages == 4
-
-    # non-registered class
-    with pytest.raises(KeyError, match='VGG is not in the backbone registry'):
-        cfg = cfg_type(dict(type='VGG'))
-        model = build_from_cfg(cfg, BACKBONES)
 
     # `cfg` contains unexpected arguments
     with pytest.raises(TypeError):

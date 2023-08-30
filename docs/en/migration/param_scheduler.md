@@ -186,7 +186,7 @@ lr_config = dict(
 ```python
 param_scheduler = [
     dict(type='MultiStepLR',
-         milestone=[8, 11],
+         milestones=[8, 11],
          gamma=0.1,
          by_epoch=True)
 ]

@@ -3,16 +3,20 @@ import argparse
 import copy
 import os
 import os.path as osp
+import pickle
 import platform
 import sys
 import tempfile
 from importlib import import_module
 from pathlib import Path
+from unittest import TestCase
 from unittest.mock import patch
 
 import pytest
 
+import mmengine
 from mmengine import Config, ConfigDict, DictAction
+from mmengine.config.lazy import LazyObject
 from mmengine.fileio import dump, load
 from mmengine.registry import MODELS, DefaultScope, Registry
 from mmengine.utils import is_installed
@@ -178,6 +182,23 @@ class TestConfig:
         input_options = {'item.2.a': 1}
         with pytest.raises(KeyError):
             cfg.merge_from_dict(input_options, allow_list_keys=True)
+
+    def test_diff(self):
+        cfg1 = Config(dict(a=1, b=2))
+        cfg2 = Config(dict(a=1, b=3))
+
+        diff_str = \
+            '--- \n\n+++ \n\n@@ -1,3 +1,3 @@\n\n a = 1\n-b = 2\n+b = 3\n \n\n'
+
+        assert Config.diff(cfg1, cfg2) == diff_str
+
+        cfg1_file = osp.join(self.data_path, 'config/py_config/test_diff_1.py')
+        cfg1 = Config.fromfile(cfg1_file)
+
+        cfg2_file = osp.join(self.data_path, 'config/py_config/test_diff_2.py')
+        cfg2 = Config.fromfile(cfg2_file)
+
+        assert Config.diff(cfg1, cfg2) == diff_str
 
     def test_auto_argparser(self):
         # Temporarily make sys.argv only has one argument and keep backups
@@ -883,7 +904,12 @@ class TestConfig:
 
         assert isinstance(new_cfg, Config)
         assert new_cfg._cfg_dict == cfg._cfg_dict
-        assert new_cfg._cfg_dict is cfg._cfg_dict
+        assert new_cfg._filename == cfg._filename
+        assert new_cfg._text == cfg._text
+
+        new_cfg = cfg.copy()
+        assert isinstance(new_cfg, Config)
+        assert new_cfg._cfg_dict == cfg._cfg_dict
         assert new_cfg._filename == cfg._filename
         assert new_cfg._text == cfg._text
 
@@ -942,3 +968,244 @@ class TestConfig:
         assert model.backbone.style == 'pytorch'
         assert isinstance(model.roi_head.bbox_head.loss_cls, ToyLoss)
         DefaultScope._instance_dict.pop('test1')
+
+    def test_pickle(self):
+        # Text style config
+        cfg_path = osp.join(self.data_path, 'config/py_config/test_py_base.py')
+        cfg = Config.fromfile(cfg_path)
+        pickled = pickle.loads(pickle.dumps(cfg))
+        assert pickled.__dict__ == cfg.__dict__
+
+        cfg_path = osp.join(self.data_path,
+                            'config/lazy_module_config/toy_model.py')
+        cfg = Config.fromfile(cfg_path)
+        pickled = pickle.loads(pickle.dumps(cfg))
+        assert pickled.__dict__ == cfg.__dict__
+
+    def test_lazy_import(self, tmp_path):
+        lazy_import_cfg_path = osp.join(
+            self.data_path, 'config/lazy_module_config/toy_model.py')
+        cfg = Config.fromfile(lazy_import_cfg_path)
+        cfg_dict = cfg.to_dict()
+        assert (cfg_dict['train_dataloader']['dataset']['type'] ==
+                'mmengine.testing.runner_test_case.ToyDataset')
+        assert (
+            cfg_dict['custom_hooks'][0]['type'] == 'mmengine.hooks.EMAHook')
+        # Dumped config
+        dumped_cfg_path = tmp_path / 'test_dump_lazy.py'
+        cfg.dump(dumped_cfg_path)
+        dumped_cfg = Config.fromfile(dumped_cfg_path)
+
+        copied_cfg_path = tmp_path / 'test_dump_copied_lazy.py'
+        cfg_copy = cfg.copy()
+        cfg_copy.dump(copied_cfg_path)
+        copied_cfg = Config.fromfile(copied_cfg_path)
+
+        def _compare_dict(a, b):
+            if isinstance(a, dict):
+                assert len(a) == len(b)
+                for k, v in a.items():
+                    _compare_dict(v, b[k])
+            elif isinstance(a, list):
+                assert len(a) == len(b)
+                for item_a, item_b in zip(a, b):
+                    _compare_dict(item_a, item_b)
+            else:
+                assert str(a) == str(b)
+
+        _compare_dict(cfg.to_dict(), dumped_cfg.to_dict())
+        _compare_dict(cfg.to_dict(), copied_cfg.to_dict())
+
+        # TODO reimplement this part of unit test when mmdetection adds the
+        # new config.
+        # if find_spec('mmdet') is not None:
+        #     cfg = Config.fromfile(
+        #         osp.join(self.data_path,
+        #                  'config/lazy_module_config/load_mmdet_config.py'))
+        #     assert cfg.model.backbone.depth == 101
+        #     cfg.work_dir = str(tmp_path)
+        # else:
+        #     pytest.skip('skip testing loading config from mmdet since mmdet '
+        #                 'is not installed or mmdet version is too low')
+
+        # catch import error correctly
+        error_obj = tmp_path / 'error_obj.py'
+        error_obj.write_text("""from mmengine.fileio import error_obj""")
+        # match pattern should be double escaped
+        match = str(error_obj).encode('unicode_escape').decode()
+        with pytest.raises(ImportError, match=match):
+            cfg = Config.fromfile(str(error_obj))
+            cfg.error_obj
+
+        error_attr = tmp_path / 'error_attr.py'
+        error_attr.write_text("""
+import mmengine
+error_attr = mmengine.error_attr
+""")  # noqa: E122
+        match = str(error_attr).encode('unicode_escape').decode()
+        with pytest.raises(ImportError, match=match):
+            cfg = Config.fromfile(str(error_attr))
+            cfg.error_attr
+
+        error_module = tmp_path / 'error_module.py'
+        error_module.write_text("""import error_module""")
+        match = str(error_module).encode('unicode_escape').decode()
+        with pytest.raises(ImportError, match=match):
+            cfg = Config.fromfile(str(error_module))
+            cfg.error_module
+
+        # lazy-import and non-lazy-import should not be used mixed.
+        # current text config, base lazy-import config
+        with pytest.raises(RuntimeError, match='with read_base()'):
+            Config.fromfile(
+                osp.join(self.data_path,
+                         'config/lazy_module_config/error_mix_using1.py'))
+
+        # Force to import in non-lazy-import mode
+        Config.fromfile(
+            osp.join(self.data_path,
+                     'config/lazy_module_config/error_mix_using1.py'),
+            lazy_import=False)
+
+        # current lazy-import config, base text config
+        with pytest.raises(RuntimeError, match='_base_ ='):
+            Config.fromfile(
+                osp.join(self.data_path,
+                         'config/lazy_module_config/error_mix_using2.py'))
+
+        cfg = Config.fromfile(
+            osp.join(self.data_path,
+                     'config/lazy_module_config/test_mix_builtin.py'))
+        assert cfg.path == osp.join('a', 'b')
+        assert cfg.name == 'a/b'
+        assert cfg.suffix == '.py'
+        assert cfg.chained == [1, 2, 3, 4]
+        assert cfg.existed
+        assert cfg.cfgname == 'test_mix_builtin.py'
+
+        cfg_dict = cfg.to_dict()
+        dumped_cfg_path = tmp_path / 'test_dump_lazy.py'
+        cfg.dump(dumped_cfg_path)
+        dumped_cfg = Config.fromfile(dumped_cfg_path)
+
+        assert set(dumped_cfg.keys()) == {
+            'path', 'name', 'suffix', 'chained', 'existed', 'cfgname'
+        }
+        assert dumped_cfg.to_dict() == cfg.to_dict()
+
+
+class TestConfigDict(TestCase):
+
+    def test_keep_custom_dict(self):
+
+        class CustomDict(dict):
+            ...
+
+        cfg_dict = ConfigDict(dict(a=CustomDict(b=1)))
+        self.assertIsInstance(cfg_dict.a, CustomDict)
+        self.assertIsInstance(cfg_dict['a'], CustomDict)
+        self.assertIsInstance(cfg_dict.values()[0], CustomDict)
+        self.assertIsInstance(cfg_dict.items()[0][1], CustomDict)
+
+    def test_build_lazy(self):
+        # This unit test are divide into two parts:
+        # I. ConfigDict will never return a `LazyObject` instance. Only the
+        #    built will be returned. The `LazyObject` can be accessed after
+        #    `to_dict` is called.
+
+        # II. LazyObject will always be kept in the ConfigDict no matter what
+        #    operation is performed, such as ``update``, ``setitem``, or
+        #    building another ConfigDict from the current one. The updated
+        #    ConfigDict also follow the rule of Part I
+
+        # Part I
+        # Keep key-value the same
+        raw = dict(a=1, b=dict(c=2, e=[dict(f=(2, ))]))
+        cfg_dict = ConfigDict(raw)
+
+        assert len(cfg_dict) == 2
+        assert len(cfg_dict.items()) == 2
+        assert len(cfg_dict.keys()) == 2
+        assert len(cfg_dict.values()) == 2
+
+        self.assertDictEqual(cfg_dict, raw)
+
+        # Check `items` and `values` will only return the build object
+        raw = dict(
+            a=LazyObject('mmengine'),
+            b=dict(
+                c=2,
+                e=[
+                    dict(
+                        f=dict(h=LazyObject('mmengine')),
+                        g=LazyObject('mmengine'))
+                ]))
+        cfg_dict = ConfigDict(raw)
+        # check `items` and values
+        self.assertDictEqual(cfg_dict._to_lazy_dict(), raw)
+        self._check(cfg_dict)
+
+        # check getattr
+        self.assertIs(cfg_dict.a, mmengine)
+        self.assertIs(cfg_dict.b.e[0].f.h, mmengine)
+        self.assertIs(cfg_dict.b.e[0].g, mmengine)
+
+        # check get
+        self.assertIs(cfg_dict.get('a'), mmengine)
+        self.assertIs(
+            cfg_dict.get('b').get('e')[0].get('f').get('h'), mmengine)
+        self.assertIs(cfg_dict.get('b').get('e')[0].get('g'), mmengine)
+
+        # check pop
+        a = cfg_dict.pop('a')
+        b = cfg_dict.pop('b')
+        e = b.pop('e')
+        h = e[0].pop('f')['h']
+        g = e[0].pop('g')
+        self.assertIs(a, mmengine)
+        self.assertIs(h, mmengine)
+        self.assertIs(g, mmengine)
+        self.assertEqual(cfg_dict, {})
+        self.assertEqual(b, {'c': 2})
+
+        # Part II
+        # check update with dict and ConfigDict
+        for dict_type in (dict, ConfigDict):
+            cfg_dict = ConfigDict(x=LazyObject('mmengine'))
+            cfg_dict.update(dict_type(raw))
+            self._check(cfg_dict)
+
+        # Create a new ConfigDict
+        new_dict = ConfigDict(cfg_dict)
+        self._check(new_dict)
+
+        # Update the ConfigDict by __setitem__ and __setattr__
+        new_dict['b']['h'] = LazyObject('mmengine')
+        new_dict['b']['k'] = dict(l=dict(n=LazyObject('mmengine')))
+        new_dict.b.e[0].i = LazyObject('mmengine')
+        new_dict.b.e[0].j = dict(l=dict(n=LazyObject('mmengine')))
+        self._check(new_dict)
+
+    def _check(self, cfg_dict):
+        self._recursive_check_lazy(cfg_dict,
+                                   lambda x: not isinstance(x, LazyObject))
+        self._recursive_check_lazy(cfg_dict._to_lazy_dict(),
+                                   lambda x: x is not mmengine)
+        self._recursive_check_lazy(
+            cfg_dict._to_lazy_dict(), lambda x: not isinstance(x, ConfigDict)
+            if isinstance(x, dict) else True)
+        self._recursive_check_lazy(
+            cfg_dict, lambda x: isinstance(x, ConfigDict)
+            if isinstance(x, dict) else True)
+
+    def _recursive_check_lazy(self, cfg, expr):
+        if isinstance(cfg, dict):
+            {
+                key: self._recursive_check_lazy(value, expr)
+                for key, value in cfg.items()
+            }
+            [self._recursive_check_lazy(value, expr) for value in cfg.values()]
+        elif isinstance(cfg, (tuple, list)):
+            [self._recursive_check_lazy(value, expr) for value in cfg]
+        else:
+            self.assertTrue(expr(cfg))

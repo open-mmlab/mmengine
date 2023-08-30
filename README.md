@@ -56,6 +56,44 @@ English | [简体中文](README_zh-CN.md)
     <img src="https://user-images.githubusercontent.com/25839884/219026120-ba71e48b-6e94-4bd4-b4e9-b7d175b5e362.png" width="3%" alt="" /></a>
 </div>
 
+## What's New
+
+v0.8.4 was released on 2023-08-03.
+
+Highlights:
+
+- Support enabling `efficient_conv_bn_eval` for efficient convolution and batch normalization. See [save memory on gpu](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#save-memory-on-gpu) for more details
+
+- Add an [example](./examples/llama2/) to finetune Llama2.
+
+- Support training with [FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp) and [DeepSpeed](https://www.deepspeed.ai/). Refer to the [Training Large Models](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html) for more detailed usages.
+
+- Introduce the pure Python style configuration file:
+
+  - Support navigating to base configuration file in IDE
+  - Support navigating to base variable in IDE
+  - Support navigating to source code of class in IDE
+  - Support inheriting two configuration files containing the same field
+  - Load the configuration file without other third-party requirements
+
+  Refer to the [tutorial](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#a-pure-python-style-configuration-file-beta) for more detailed usages.
+
+  ![new-config-en](https://github.com/open-mmlab/mmengine/assets/57566630/7eb41748-9374-488f-901e-fcd7f0d3c8a1)
+
+Read [Changelog](./docs/en/notes/changelog.md#v083-08032023) for more details.
+
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Installation](#installation)
+- [Get Started](#get-started)
+- [Learn More](#learn-more)
+- [Contributing](#contributing)
+- [Citation](#citation)
+- [License](#license)
+- [Ecosystem](#ecosystem)
+- [Projects in OpenMMLab](#projects-in-openmmlab)
+
 ## Introduction
 
 MMEngine is a foundational library for training deep learning models based on PyTorch. It provides a solid engineering foundation and frees developers from writing redundant codes on workflows. It serves as the training engine of all OpenMMLab codebases, which support hundreds of algorithms in various research areas. Moreover, MMEngine is also generic to be applied to non-OpenMMLab projects.
@@ -78,16 +116,7 @@ Major features:
    - Provides rich components and strategies.
    - Complete controls on the training process with different levels of APIs.
 
-## What's New
-
-v0.7.3 was released on 2023-04-28.
-
-### Highlights
-
-- Support using MLflow to record experiment data
-- Support registering callable objects to the registry
-
-Read [Changelog](./docs/en/notes/changelog.md#v073-04282023) for more details.
+![mmengine_dataflow](https://github.com/open-mmlab/mmengine/assets/58739961/267db9cb-72e4-4af2-a58b-877b30091acc)
 
 ## Installation
 
@@ -328,6 +357,11 @@ If you find this project useful in your research, please consider cite:
 ## License
 
 This project is released under the [Apache 2.0 license](LICENSE).
+
+## Ecosystem
+
+- [APES: Attention-based Point Cloud Edge Sampling](https://github.com/JunweiZheng93/APES)
+- [DiffEngine: diffusers training toolbox with mmengine](https://github.com/okotaku/diffengine)
 
 ## Projects in OpenMMLab
 

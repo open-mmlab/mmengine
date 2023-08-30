@@ -272,6 +272,38 @@ output = model(input)
 print(output)
 ```
 
+### How does the parent node know about child registry?
+
+When working in our `MMAlpha` it might be necessary to use the `Runner` class defined in MMENGINE. This class is in charge of building most of the objects. If these objects are added to the child registry (`MMAlpha`), how is  `MMEngine` able to find them? It cannot, `MMEngine` needs to switch to the Registry from `MMEngine` to `MMAlpha` according to the scope which is defined in default_runtime.py for searching the target class.
+
+We can also init the scope accordingly, see example below:
+
+```python
+from mmalpha.registry import MODELS
+from mmengine.registry import MODELS as MMENGINE_MODELS
+from mmengine.registry import init_default_scope
+import torch.nn as nn
+
+@MODELS.register_module()
+class LogSoftmax(nn.Module):
+    def __init__(self, dim=None):
+        super().__init__()
+
+    def forward(self, x):
+        print('call LogSoftmax.forward')
+        return x
+
+# Works because we are using mmalpha registry
+MODELS.build(dict(type="LogSoftmax"))
+
+# Fails because mmengine registry does not know about stuff registered in mmalpha
+MMENGINE_MODELS.build(dict(type="LogSoftmax"))
+
+# Works because we are using mmalpha registry
+init_default_scope('mmalpha')
+MMENGINE_MODELS.build(dict(type="LogSoftmax"))
+```
+
 ### Use the module of a sibling node
 
 In addition to using the module of the parent nodes, users can also call the module of a sibling node.

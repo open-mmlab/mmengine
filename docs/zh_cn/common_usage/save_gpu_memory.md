@@ -2,6 +2,10 @@
 
 在深度学习训练推理过程中显存容量至关重要，其决定了模型是否能成功运行。常见的节省显存办法包括：
 
+- 启用高效卷积BN评估功能（实验性）
+
+  基于在[这篇论文](https://arxiv.org/abs/2305.11624)中讨论的概念，我们最近在MMCV中[引入](https://github.com/open-mmlab/mmcv/pull/2807)了一个实验性功能：高效卷积BN评估。这个功能的设计目标是在不损害性能的情况下减少网络训练过程中的显存占用。如果你的网络架构包含了一系列连续的Conv+BN模块，而且这些BN层在训练过程中保持在 `eval` 模式（在使用 [MMDetection](https://github.com/open-mmlab/mmdetection)训练对象检测器时很常见），这个功能可以将显存消耗减少超过 $20%$。要启用高效卷积BN评估功能，只需添加以下命令行参数：`--cfg-options efficient_conv_bn_eval="[backbone]"`。当你在输出日志中看到 `Enabling the "efficient_conv_bn_eval" feature for these modules ...`时，意味着功能已成功启用。由于这仍处于实验阶段，我们非常期待听到你对它的使用体验。请在[这个讨论线程](https://github.com/open-mmlab/mmengine/discussions/1252)分享你的使用报告、观察和建议。你的反馈对于进一步的开发和确定是否应将此功能集成到稳定版中至关重要。
+
 - 梯度累加
 
   梯度累加是指在每计算一个批次的梯度后，不进行清零而是进行梯度累加，当累加到一定的次数之后，再更新网络参数和梯度清零。 通过这种参数延迟更新的手段，实现与采用大 batch 尺寸相近的效果，达到节省显存的目的。但是需要注意如果模型中包含 batch normalization 层，使用梯度累加会对性能有一定影响。
@@ -65,6 +69,10 @@ runner.train()
 ```
 
 ## 大模型训练
+
+```{warning}
+如果你有训练大模型的需求，推荐阅读[大模型训练](./large_model_training.md)。
+```
 
 PyTorch 1.11 中已经原生支持了 FSDP 技术。配置写法如下所示：
 

@@ -1,5 +1,30 @@
 # 配置（Config）
 
+- [配置（Config）](#配置config)
+  - [配置文件读取](#配置文件读取)
+  - [配置文件的使用](#配置文件的使用)
+  - [配置文件的继承](#配置文件的继承)
+    - [继承机制概述](#继承机制概述)
+    - [修改继承字段](#修改继承字段)
+    - [删除字典中的 key](#删除字典中的-key)
+    - [引用被继承文件中的变量](#引用被继承文件中的变量)
+  - [配置文件的导出](#配置文件的导出)
+  - [其他进阶用法](#其他进阶用法)
+    - [预定义字段](#预定义字段)
+    - [命令行修改配置](#命令行修改配置)
+    - [使用环境变量替换配置](#使用环境变量替换配置)
+    - [导入自定义 Python 模块](#导入自定义-python-模块)
+    - [跨项目继承配置文件](#跨项目继承配置文件)
+    - [跨项目获取配置文件](#跨项目获取配置文件)
+  - [纯 Python 风格的配置文件（Beta）](#纯-python-风格的配置文件beta)
+    - [基本语法](#基本语法)
+      - [模块构建](#模块构建)
+      - [继承](#继承)
+      - [配置文件的导出](#配置文件的导出-1)
+    - [什么是 lazy import](#什么是-lazy-import)
+    - [功能限制](#功能限制)
+    - [迁移指南](#迁移指南)
+
 MMEngine 实现了抽象的配置类（Config），为用户提供统一的配置访问接口。配置类能够支持不同格式的配置文件，包括 `python`，`json`，`yaml`，用户可以根据需求选择自己偏好的格式。配置类提供了类似字典或者 Python 对象属性的访问接口，用户可以十分自然地进行配置字段的读取和修改。为了方便算法框架管理配置文件，配置类也实现了一些特性，例如配置文件的字段继承等。
 
 在开始教程之前，我们先将教程中需要用到的配置文件下载到本地（建议在临时目录下执行，方便后续删除示例配置文件）：
@@ -23,6 +48,10 @@ wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/c
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/runtime_cfg.py
 wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/modify_base_var.py
+```
+
+```{note}
+配置类支持两种风格的配置文件，即纯文本风格的配置文件和纯 Python 风格的配置文件（v0.8.0 的新特性），二者在调用接口统一的前提下各有特色。对于尚且不了解配置类基本用法用户，建议从[配置文件读取](#配置文件读取) 一节开始阅读，以了解配置类的功能和纯文本配置文件的语法。在一些情况下，纯文本风格的配置文件写法更加简洁，语法兼容性更好（`json`、`yaml` 通用）。如果你希望配置文件的写法可以更加灵活，建议阅读并使用[纯 Python 风格的配置文件](#纯-python-风格的配置文件beta)（beta）
 ```
 
 ## 配置文件读取
@@ -368,7 +397,15 @@ b=2
 
 这里介绍一下配置类的进阶用法，这些小技巧可能使用户开发和使用算法库更简单方便。
 
+```{note}
+需要注意的是，如果你用的是纯 Python 风格的配置文件，只有“命令行修改配置”一节中提到功能是有效的。
+```
+
 ### 预定义字段
+
+```{note}
+该用法仅适用于非 `lazy_import` 模式，具体见纯 Python 风格的配置文件一节
+```
 
 有时候我们希望配置文件中的一些字段和当前路径或者文件名等相关，这里举一个典型使用场景的例子。在训练模型时，我们会在配置文件中定义一个工作目录，存放这组实验配置的模型和日志，那么对于不同的配置文件，我们期望定义不同的工作目录。用户的一种常见选择是，直接使用配置文件名作为工作目录名的一部分，例如对于配置文件 `predefined_var.py`，工作目录就是 `./work_dir/predefined_var`。
 
@@ -698,3 +735,440 @@ print(cfg.model_path)
 ```
 https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth
 ```
+
+## 纯 Python 风格的配置文件（Beta）
+
+在之前的教程里，我们介绍了如何使用配置文件，搭配注册器来构建模块；如何使用 `_base_` 来继承配置文件。这些纯文本风格的配置文件固然能够满足我们平时开发的大部分需求，并且一些模块的 alias 也大大简化了配置文件（例如 `ResNet` 就能指代 `mmcls.models.ResNet`）。但是也存在一些弊端：
+
+1. 配置文件中，type 字段是通过字符串来指定的，在 IDE 中无法直接跳转到对应的类定义处，不利于代码阅读和跳转
+2. 配置文件的继承，也是通过字符串来指定的，IDE 无法直接跳转到被继承的文件中，当配置文件继承结构复杂时，不利于配置文件的阅读和跳转
+3. 继承规则较为隐式，初学者很难理解配置文件是如何对相同字段的变量进行融合，且衍生出 `_delete_` 这类特殊语法，学习成本较高
+4. 用户忘记注册模块时，容易发生 module not found 的 error
+5. 在尚且没有提到的跨库继承中，scope 的引入导致配置文件的继承规则更加复杂，初学者很难理解
+
+综上所述，尽管纯文本风格的配置文件能够为 `python`、`json`、`yaml` 格式的配置提供相同的语法规则，但是当配置文件变得复杂时，纯文本风格的配置文件会显得力不从心。为此，我们提供了纯 Python 风格的配置文件，即 `lazy import` 模式，它能够充分利用 Python 的语法规则，解决上述问题。与此同时，纯 Python 风格的配置文件也支持导出成 `json` 和 `yaml` 格式。
+
+### 基本语法
+
+之前的教程分别介绍了基于纯文本风格配置文件的模块构建、继承和导出，本节将基于这三个方面来介绍纯 Python 风格的配置文件。
+
+#### 模块构建
+
+我们通过一个简单的例子来对比纯 Python 风格和纯文本风格的配置文件：
+
+```{eval-rst}
+.. tabs::
+    .. tabs::
+
+        .. code-tab:: python 纯 Python 风格
+
+            # 无需注册
+
+        .. code-tab:: python 纯文本风格
+
+            # 注册流程
+            from torch.optim import SGD
+            from mmengine.registry import OPTIMIZERS
+
+            OPTIMIZERS.register_module(module=SGD, name='SGD')
+
+    .. tabs::
+
+        .. code-tab:: python 纯 Python 风格
+
+            # 配置文件写法
+            from torch.optim import SGD
+
+
+            optimizer = dict(type=SGD, lr=0.1)
+
+        .. code-tab:: python 纯文本风格
+
+            # 配置文件写法
+            optimizer = dict(type='SGD', lr=0.1)
+
+    .. tabs::
+
+        .. code-tab:: python 纯 Python 风格
+
+            # 构建流程完全一致
+            import torch.nn as nn
+            from mmengine.registry import OPTIMIZERS
+
+
+            cfg = Config.fromfile('optimizer.py')
+            model = nn.Conv2d(1, 1, 1)
+            cfg.optimizer.params = model.parameters()
+            optimizer = OPTIMIZERS.build(cfg.optimizer)
+
+        .. code-tab:: python 纯文本风格
+
+            # 构建流程完全一致
+            import torch.nn as nn
+            from mmengine.registry import OPTIMIZERS
+
+
+            cfg = Config.fromfile('optimizer.py')
+            model = nn.Conv2d(1, 1, 1)
+            cfg.optimizer.params = model.parameters()
+            optimizer = OPTIMIZERS.build(cfg.optimizer)
+```
+
+从上面的例子可以看出，纯 Python 风格的配置文件和纯文本风格的配置文件的区别在于：
+
+1. 纯 Python 风格的配置文件无需注册模块
+2. 纯 Python 风格的配置文件中，type 字段不再是字符串，而是直接指代模块。相应的配置文件需要多出 import 语法
+
+需要注意的是，OpenMMLab 系列算法库在新增模块时仍会保留注册过程，用户基于 MMEngine 构建自己的项目时，如果使用纯 Python 风格的配置文件，则无需注册。看到这你会或许会好奇，这样没有安装 PyTorch 的环境不就没法解析样例配置文件了么，这样的配置文件还叫配置文件么？不要着急，这部分的内容我们会在后面介绍。
+
+#### 继承
+
+纯 Python 风格的配置文件继承语法有所不同：
+
+```{eval-rst}
+.. tabs::
+
+    .. code-tab:: python 纯 Python 风格继承
+
+        from mmengine.config import read_base
+
+
+        with read_base():
+            from .optimizer import *
+
+    .. code-tab:: python 纯文本风格继承
+
+        _base_ = [./optimizer.py]
+
+```
+
+纯 Python 风格的配置文件通过 import 语法来实现继承，这样做的好处是，我们可以直接跳转到被继承的配置文件中，方便阅读和跳转。变量的继承规则（增删改查）完全对齐 Python 语法，例如我想修改 base 配置文件中 optimizer 的学习率：
+
+```python
+from mmengine.config import read_base
+
+
+with read_base():
+    from .optimizer import *
+
+# optimizer 为 base 配置文件定义的变量
+optimizer.update(
+    lr=0.01,
+)
+```
+
+当然了，如果你已经习惯了纯文本风格的继承规则，且该变量在 _base_ 配置文件中为 `dict` 类型，也可以通过 merge 语法来实现和纯文本风格配置文件一致的继承规则：
+
+```python
+from mmengine.config import read_base
+
+
+with read_base():
+    from .optimizer import *
+
+# optimizer 为 base 配置文件定义的变量
+optimizer.merge(
+    _delete_=True,
+    lr=0.01,
+    type='SGD'
+)
+
+# 等价的 python 风格写法如下，与 Python 的 import 规则完全一致
+# optimizer = dict(
+#     lr=0.01,
+#     type='SGD'
+# )
+```
+
+````{note}
+需要注意的是，纯 Python 风格的配置文件中，字典的 `update` 方法与 `dict.update` 稍有不同。纯 Python 风格的 update 会递归地去更新字典中的内容，例如：
+
+```python
+x = dict(a=1, b=dict(c=2, d=3))
+
+x.update(dict(b=dict(d=4)))
+# 配置文件中的 update 规则：
+# {a: 1, b: {c: 2, d: 4}}
+# 普通 dict 的 update 规则：
+# {a: 1, b: {d: 4}}
+```
+
+可见在配置文件中使用 update 方法会递归地去更新字段，而不是简单的覆盖。
+````
+
+与纯文本风格的配置文件相比，纯 Python 风格的配置文件的继承规则完全对齐 import 语法，更容易理解，且支持配置文件之间的跳转。你或许会好奇既然继承和模块的导入都使用了 import 语法，为什么继承配置文件还需要额外的 `with read_base():`  这个上下文管理器呢？一方面这样可以提升配置文件的可读性，可以让继承的配置文件更加突出，另一方面也是受限于 lazy_import 的规则，这个会在后面讲到。
+
+#### 配置文件的导出
+
+纯 python 风格配置文件也通过 dump 接口导出，使用上没有任何区别，但是导出的内容会有所不同：
+
+```{eval-rst}
+.. tabs::
+
+    .. tabs::
+
+        .. code-tab:: python 纯 Python 风格导出
+
+            optimizer = dict(type='torch.optim.SGD', lr=0.1)
+
+        .. code-tab:: python 纯文本风格导出
+
+            optimizer = dict(type='SGD', lr=0.1)
+
+    .. tabs::
+
+        .. code-tab:: yaml 纯 Python 风格导出
+
+            optimizer:
+                type: torch.optim.SGD
+                lr: 0.1
+
+        .. code-tab:: yaml 纯文本风格导出
+
+            optimizer:
+                type: SGD
+                lr: 0.1
+
+    .. tabs::
+
+        .. code-tab:: json 纯 Python 风格导出
+
+            {"optimizer": "torch.optim.SGD", "lr": 0.1}
+
+        .. code-tab:: json 纯文本风格导出
+
+            {"optimizer": "SGD", "lr": 0.1}
+```
+
+可以看到，纯 Python 风格导出的 type 字段会包含模块的全量信息。导出的配置文件也可以被直接加载，通过注册器来构建实例。
+
+### 什么是 lazy import
+
+看到这你可能会吐槽，这纯 Python 风格的配置文件感觉就像是用纯 Python 语法来组织配置文件嘛。这样我哪还需要配置类，直接用 Python 语法来导入配置文件不就好了。如果你有这样的感受，那真是一件值得庆祝的事，因为这正是我们想要的效果。
+
+正如前面所提到的，解析配置文件需要依赖配置文件中引用的三方库，这其实是一件非常不合理的事。例如我基于 MMagic 训练了一个模型，想使用 MMDeploy 的 onnxruntime 后端部署。由于部署环境中没有 torch，而配置文件解析过程中需要 torch，这就导致了我无法直接使用 MMagic 的配置文件作为部署的配置，这是非常不方便的。为了解决这个问题，我们引入了 lazy_import 的概念。
+
+要聊 lazy_import 的具体实现是一件比较复杂的事，在此我们仅对其功能做简要介绍。lazy_import 的核心思想是，将配置文件中的 import 语句延迟到配置文件被解析时才执行，这样就可以避免配置文件中的 import 语句导致的三方库依赖问题。配置文件解析过程时，Python 解释器实际执行的等效代码如下
+
+```{eval-rst}
+.. tabs::
+    .. code-tab:: python 原始配置文件
+
+        from torch.optim import SGD
+
+
+        optimizer = dict(type=SGD)
+
+    .. code-tab:: python 通过配置类，Python 解释器实际执行的代码
+
+        lazy_obj = LazyObject('torch.optim', 'SGD')
+
+        optimizer = dict(type=lazy_obj)
+```
+
+LazyObject 作为 `Config` 模块的內部类型，无法被用户直接访问。用户在访问 type 字段时，会经过一系列的转换，将 `LazyObject` 转化成真正的 `torch.optim.SGD` 类型。这样一来，配置文件的解析不会触发三方库的导入，而用户使用配置文件时，又可以正常访问三方库的类型。
+
+要想访问 `LazyObject` 的内部类型，可以通过 `Config.to_dict` 接口：
+
+```python
+cfg = Config.fromfile('optimizer.py').to_dict()
+print(type(cfg['optimizer']['type']))
+# mmengine.config.lazy.LazyObject
+```
+
+此时得到的 type 就是 `LazyObject` 类型。
+
+然而对于 base 文件的继承（导入，import），我们不能够采取 lazy import 的策略，这是因为我们希望解析后的配置文件能够包含 base 配置文件定义的字段，需要真正的触发 import。因此我们对 base 文件的导入加了一层限制，即必须在 `with read_base()'` 的上下文中导入。
+
+### 功能限制
+
+1. 不能在配置文件中定义函数、类等
+2. 配置文件名必须符合 Python 模块名的命名规范，即只能包含字母、数字、下划线，且不能以数字开头
+3. 导入 base 配置文件中的变量时，例如 `from ._base_.alpha import beta`，此处的 `alpha` 必须是模块（module）名，即 Python 文件，而不能是含有 `__init__.py` 的包（package）名
+4. 不支持在 absolute import 语句中同时导入多个变量，例如 `import torch, numpy, os`。需要通过多个 import 语句来实现，例如 `import torch; import numpy; import os`
+
+### 迁移指南
+
+从纯文本风格的配置文件迁移到纯 Python 风格的配置文件，需要遵守以下规则：
+
+1. type 从字符串替换成具体的类：
+
+   - 代码不依赖 type 字段是字符串，且没有对 type 字段做特殊处理，则可以将字符串类型的 type 替换成具体的类，并在配置文件的开头导入该类
+   - 代码依赖 type 字段是字符串，则需要修改代码，或保持原有的字符串格式的 type
+
+2. 重命名配置文件，配置文件命名需要符合 Python 模块名的命名规范，即只能包含字母、数字、下划线，且不能以数字开头
+
+3. 删除 scope 相关配置。纯 Python 风格的配置文件不再需要通过 scope 来跨库调用模块，直接通过 import 导入即可。出于兼容性方面的考虑，我们仍然让 Runner 的 default_scope 参数为 `mmengine`，用户需要将其手动设置为 `None`
+
+4. 对于注册器中存在别名的（alias）的模块，将其别名替换成其对应的真实模块即可，以下是常用的别名替换表：
+
+   <table class="docutils">
+    <thead>
+    <tr>
+        <th>模块</th>
+        <th>别名</th>
+        <th>注意事项</th>
+    <thead>
+    <tbody>
+    <tr>
+        <th>nearest</th>
+        <th>torch.nn.modules.upsampling.Upsample</th>
+        <th>将 type 替换成 Upsample 后，需要额外将 mode 参数指定为 'nearest'</th>
+    </tr>
+    <tr>
+        <th>bilinear</th>
+        <th>torch.nn.modules.upsampling.Upsample</th>
+        <th>将 type 替换成 Upsample 后，需要额外将 mode 参数指定为 'bilinear'</th>
+    </tr>
+    <tr>
+        <th>Clip</th>
+        <th>mmcv.cnn.bricks.activation.Clamp</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>Conv</th>
+        <th>mmcv.cnn.bricks.wrappers.Conv2d</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>BN</th>
+        <th>torch.nn.modules.batchnorm.BatchNorm2d</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>BN1d</th>
+        <th>torch.nn.modules.batchnorm.BatchNorm1d</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>BN2d</th>
+        <th>torch.nn.modules.batchnorm.BatchNorm2d</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>BN3d</th>
+        <th>torch.nn.modules.batchnorm.BatchNorm3d</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>SyncBN</th>
+        <th>torch.nn.SyncBatchNorm</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>GN</th>
+        <th>torch.nn.modules.normalization.GroupNorm</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>LN</th>
+        <th>torch.nn.modules.normalization.LayerNorm</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>IN</th>
+        <th>torch.nn.modules.instancenorm.InstanceNorm2d</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>IN1d</th>
+        <th>torch.nn.modules.instancenorm.InstanceNorm1d</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>IN2d</th>
+        <th>torch.nn.modules.instancenorm.InstanceNorm2d</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>IN3d</th>
+        <th>torch.nn.modules.instancenorm.InstanceNorm3d</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>zero</th>
+        <th>torch.nn.modules.padding.ZeroPad2d</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>reflect</th>
+        <th>torch.nn.modules.padding.ReflectionPad2d</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>replicate</th>
+        <th>torch.nn.modules.padding.ReplicationPad2d</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>ConvWS</th>
+        <th>mmcv.cnn.bricks.conv_ws.ConvWS2d</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>ConvAWS</th>
+        <th>mmcv.cnn.bricks.conv_ws.ConvAWS2d</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>HSwish</th>
+        <th>torch.nn.modules.activation.Hardswish</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>pixel_shuffle</th>
+        <th>mmcv.cnn.bricks.upsample.PixelShufflePack</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>deconv</th>
+        <th>mmcv.cnn.bricks.wrappers.ConvTranspose2d</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>deconv3d</th>
+        <th>mmcv.cnn.bricks.wrappers.ConvTranspose3d</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>Constant</th>
+        <th>mmengine.model.weight_init.ConstantInit</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>Xavier</th>
+        <th>mmengine.model.weight_init.XavierInit</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>Normal</th>
+        <th>mmengine.model.weight_init.NormalInit</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>TruncNormal</th>
+        <th>mmengine.model.weight_init.TruncNormalInit</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>Uniform</th>
+        <th>mmengine.model.weight_init.UniformInit</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>Kaiming</th>
+        <th>mmengine.model.weight_init.KaimingInit</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>Caffe2Xavier</th>
+        <th>mmengine.model.weight_init.Caffe2XavierInit</th>
+        <th>无</th>
+    </tr>
+    <tr>
+        <th>Pretrained</th>
+        <th>mmengine.model.weight_init.PretrainedInit</th>
+        <th>无</th>
+    </tr>
+    </tbody>
+    </table>

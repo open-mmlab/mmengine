@@ -48,6 +48,10 @@ class AmpOptimWrapper(OptimWrapper):
             `'float64'`. If set to ``None``, the default data type will be used.
             Defaults to None.
             `New in version 0.6.1.`
+        use_fsdp (bool): Using ``ShardedGradScaler`` when it is True. It should
+            be enabled when using ``FullyShardedDataParallel``.
+            Defaults to False.
+            `New in version 0.8.0.`
         **kwargs: Keyword arguments passed to OptimWrapper.
 
     Warnings:
@@ -65,6 +69,7 @@ class AmpOptimWrapper(OptimWrapper):
     def __init__(self,
                  loss_scale: str = 'dynamic',
                  dtype: Union[str, torch.dtype] = None,
+                 use_fsdp: bool = False,
                  **kwargs):
         assert digit_version(TORCH_VERSION) >= digit_version('1.6.0'), (
             '`torch.cuda.amp` is only available when pytorch version >= 1.6')
@@ -73,17 +78,29 @@ class AmpOptimWrapper(OptimWrapper):
             'on gpu, npu or mlu')
         super().__init__(**kwargs)
         self._scale_update_param = None
+
+        if use_fsdp:
+            if digit_version(torch.__version__) >= digit_version('2.0.0'):
+                from torch.distributed.fsdp.sharded_grad_scaler import \
+                    ShardedGradScaler
+                scaler_type = ShardedGradScaler
+            else:
+                raise RuntimeError(
+                    'PyTorch>=2.0.0 is required when sets `use_fsdp=True`')
+        else:
+            scaler_type = GradScaler
+
         if loss_scale == 'dynamic':
             #  If loss_scale is a string, it must be 'dynamic', then dynamic
             #  loss scaling will be used.
-            self.loss_scaler = GradScaler()
+            self.loss_scaler = scaler_type()
         elif isinstance(loss_scale, float):
             # Static loss scaling
             self._scale_update_param = loss_scale
-            self.loss_scaler = GradScaler(init_scale=loss_scale)
+            self.loss_scaler = scaler_type(init_scale=loss_scale)
         elif isinstance(loss_scale, dict):
             # More specific configuration.
-            self.loss_scaler = GradScaler(**loss_scale)
+            self.loss_scaler = scaler_type(**loss_scale)
         else:
             raise TypeError('loss_scale must be of type float, dict, or '
                             f'"dynamic", but got {loss_scale}')
@@ -133,7 +150,7 @@ class AmpOptimWrapper(OptimWrapper):
             :attr:`optimizer`.
         """
         # save state_dict of loss_scaler
-        state_dict = self.optimizer.state_dict()
+        state_dict = super().state_dict()
         state_dict['loss_scaler'] = self.loss_scaler.state_dict()
         return state_dict
 
@@ -151,6 +168,11 @@ class AmpOptimWrapper(OptimWrapper):
         """
         if 'loss_scaler' in state_dict:
             self.loss_scaler.load_state_dict(state_dict.pop('loss_scaler'))
+
+        if 'base_param_settings' in state_dict:
+            self.base_param_settings = state_dict.pop('base_param_settings')
+
+        # load state_dict of optimizer
         self.optimizer.load_state_dict(state_dict)
 
     @contextmanager

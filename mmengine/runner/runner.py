@@ -29,6 +29,8 @@ from mmengine.hooks import Hook
 from mmengine.logging import MessageHub, MMLogger, print_log
 from mmengine.model import (MMDistributedDataParallel, convert_sync_batchnorm,
                             is_model_wrapper, revert_sync_batchnorm)
+from mmengine.model.efficient_conv_bn_eval import \
+    turn_on_efficient_conv_bn_eval
 from mmengine.optim import (OptimWrapper, OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
 from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, FUNCTIONS,
@@ -367,8 +369,12 @@ class Runner:
         mmengine.mkdir_or_exist(self._log_dir)
         # Used to reset registries location. See :meth:`Registry.build` for
         # more details.
-        self.default_scope = DefaultScope.get_instance(
-            self._experiment_name, scope_name=default_scope)
+        if default_scope is not None:
+            default_scope = DefaultScope.get_instance(  # type: ignore
+                self._experiment_name,
+                scope_name=default_scope)
+        self.default_scope = default_scope
+
         # Build log processor to format message.
         log_processor = dict() if log_processor is None else log_processor
         self.log_processor = self.build_log_processor(log_processor)
@@ -878,6 +884,7 @@ class Runner:
                 broadcast_buffers=False,
                 find_unused_parameters=find_unused_parameters)
         else:
+            model_wrapper_cfg.setdefault('type', 'MMDistributedDataParallel')
             model_wrapper_type = MODEL_WRAPPERS.get(
                 model_wrapper_cfg.get('type'))  # type: ignore
             default_args: dict = dict()
@@ -1384,7 +1391,14 @@ class Runner:
         if 'worker_init_fn' in dataloader_cfg:
             worker_init_fn_cfg = dataloader_cfg.pop('worker_init_fn')
             worker_init_fn_type = worker_init_fn_cfg.pop('type')
-            worker_init_fn = FUNCTIONS.get(worker_init_fn_type)
+            if isinstance(worker_init_fn_type, str):
+                worker_init_fn = FUNCTIONS.get(worker_init_fn_type)
+            elif callable(worker_init_fn_type):
+                worker_init_fn = worker_init_fn_type
+            else:
+                raise TypeError(
+                    'type of worker_init_fn should be string or callable '
+                    f'object, but got {type(worker_init_fn_type)}')
             assert callable(worker_init_fn)
             init_fn = partial(worker_init_fn,
                               **worker_init_fn_cfg)  # type: ignore
@@ -1423,7 +1437,10 @@ class Runner:
                                             dict(type='pseudo_collate'))
         if isinstance(collate_fn_cfg, dict):
             collate_fn_type = collate_fn_cfg.pop('type')
-            collate_fn = FUNCTIONS.get(collate_fn_type)
+            if isinstance(collate_fn_type, str):
+                collate_fn = FUNCTIONS.get(collate_fn_type)
+            else:
+                collate_fn = collate_fn_type
             collate_fn = partial(collate_fn, **collate_fn_cfg)  # type: ignore
         elif callable(collate_fn_cfg):
             collate_fn = collate_fn_cfg
@@ -1431,7 +1448,6 @@ class Runner:
             raise TypeError(
                 'collate_fn should be a dict or callable object, but got '
                 f'{collate_fn_cfg}')
-
         data_loader = DataLoader(
             dataset=dataset,
             sampler=sampler if batch_sampler is None else None,
@@ -1705,6 +1721,14 @@ class Runner:
 
         # initialize the model weights
         self._init_model_weights()
+
+        # try to enable efficient_conv_bn_eval feature
+        modules = self.cfg.get('efficient_conv_bn_eval', None)
+        if modules is not None:
+            self.logger.info(f'Enabling the "efficient_conv_bn_eval" feature'
+                             f' for sub-modules: {modules}')
+            turn_on_efficient_conv_bn_eval(ori_model, modules)
+
         # make sure checkpoint-related hooks are triggered after `before_run`
         self.load_or_resume()
 
@@ -1975,16 +1999,21 @@ class Runner:
             if (previous_gpu_ids is not None and len(previous_gpu_ids) > 0
                     and len(previous_gpu_ids) != self._world_size):
                 # TODO, should we modify the iteration?
-                self.logger.info(
-                    'Number of GPU used for current experiment is not '
-                    'consistent with resuming from checkpoint')
                 if (self.auto_scale_lr is None
                         or not self.auto_scale_lr.get('enable', False)):
                     raise RuntimeError(
-                        'Cannot automatically rescale lr in resuming. Please '
-                        'make sure the number of GPU is consistent with the '
-                        'previous training state resuming from the checkpoint '
-                        'or set `enable` in `auto_scale_lr to False.')
+                        'Number of GPUs used for current experiment is not '
+                        'consistent with the checkpoint being resumed from. '
+                        'This will result in poor performance due to the '
+                        'learning rate. You must set the '
+                        '`auto_scale_lr` parameter for Runner and make '
+                        '`auto_scale_lr["enable"]=True`.')
+                else:
+                    self.logger.info(
+                        'Number of GPU used for current experiment is not '
+                        'consistent with resuming from checkpoint but the '
+                        'leaning rate will be adjusted according to the '
+                        f'setting in auto_scale_lr={self.auto_scale_lr}')
 
         # resume random seed
         resumed_seed = checkpoint['meta'].get('seed', None)
@@ -2090,7 +2119,7 @@ class Runner:
         file_client_args: Optional[dict] = None,
         save_optimizer: bool = True,
         save_param_scheduler: bool = True,
-        meta: dict = None,
+        meta: Optional[dict] = None,
         by_epoch: bool = True,
         backend_args: Optional[dict] = None,
     ):
@@ -2112,8 +2141,8 @@ class Runner:
                 to the checkpoint. Defaults to True.
             meta (dict, optional): The meta information to be saved in the
                 checkpoint. Defaults to None.
-            by_epoch (bool): Whether the scheduled momentum is updated by
-                epochs. Defaults to True.
+            by_epoch (bool): Decide the number of epoch or iteration saved in
+                checkpoint. Defaults to True.
             backend_args (dict, optional): Arguments to instantiate the
                 prefix of uri corresponding backend. Defaults to None.
                 New in v0.2.0.
@@ -2129,9 +2158,11 @@ class Runner:
             # `self.call_hook('after_train_epoch)` but `save_checkpoint` is
             # called by `after_train_epoch`` method of `CheckpointHook` so
             # `epoch` should be `self.epoch + 1`
-            meta.update(epoch=self.epoch + 1, iter=self.iter)
+            meta.setdefault('epoch', self.epoch + 1)
+            meta.setdefault('iter', self.iter)
         else:
-            meta.update(epoch=self.epoch, iter=self.iter + 1)
+            meta.setdefault('epoch', self.epoch)
+            meta.setdefault('iter', self.iter + 1)
 
         if file_client_args is not None:
             warnings.warn(

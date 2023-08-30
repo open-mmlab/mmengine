@@ -9,7 +9,7 @@ import textwrap
 import warnings
 from collections import abc
 from importlib import import_module
-from inspect import getfullargspec
+from inspect import getfullargspec, ismodule
 from itertools import repeat
 from typing import Any, Callable, Optional, Type, Union
 
@@ -500,3 +500,43 @@ def deprecated_function(since: str, removed_in: str,
         return wrapper
 
     return decorator
+
+
+def get_object_from_string(obj_name: str):
+    """Get object from name.
+
+    Args:
+        obj_name (str): The name of the object.
+
+    Examples:
+        >>> get_object_from_string('torch.optim.sgd.SGD')
+        >>> torch.optim.sgd.SGD
+    """
+    parts = iter(obj_name.split('.'))
+    module_name = next(parts)
+    # import module
+    while True:
+        try:
+            module = import_module(module_name)
+            part = next(parts)
+            # mmcv.ops has nms.py has nms function at the same time. So the
+            # function will have a higher priority
+            obj = getattr(module, part, None)
+            if obj is not None and not ismodule(obj):
+                break
+            module_name = f'{module_name}.{part}'
+        except StopIteration:
+            # if obj is a module
+            return module
+        except ImportError:
+            return None
+
+    # get class or attribute from module
+    while True:
+        try:
+            obj_cls = getattr(module, part)
+            part = next(parts)
+        except StopIteration:
+            return obj_cls
+        except AttributeError:
+            return None

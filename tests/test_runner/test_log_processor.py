@@ -92,7 +92,8 @@ class TestLogProcessor(RunnerTestCase):
             train_logs = dict(time=1.0, data_time=1.0, loss_cls=1.0)
         log_processor._collect_scalars = \
             lambda *args, **kwargs: copy.deepcopy(train_logs)
-        _, out = log_processor.get_log_after_iter(self.runner, 1, mode)
+        tag, out = log_processor.get_log_after_iter(self.runner, 1, mode)
+
         # Verify that the correct context have been logged.
         cur_loop = log_processor._get_cur_loop(self.runner, mode)
         if by_epoch:
@@ -117,6 +118,9 @@ class TestLogProcessor(RunnerTestCase):
             if mode == 'train':
                 log_str += f"loss_cls: {train_logs['loss_cls']:.4f}"
             assert out == log_str
+
+            if mode in ['train', 'val']:
+                assert 'epoch' in tag
         else:
             if mode == 'train':
                 max_iters = self.runner.max_iters
@@ -143,6 +147,9 @@ class TestLogProcessor(RunnerTestCase):
             if mode == 'train':
                 log_str += f"loss_cls: {train_logs['loss_cls']:.4f}"
             assert out == log_str
+
+        # tag always has "iter" key
+        assert 'iter' in tag
 
     @parameterized.expand(
         ([True, 'val', True], [True, 'val', False], [False, 'val', True],

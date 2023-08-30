@@ -15,6 +15,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    :caption: Examples
 
    examples/train_a_gan.md
+   examples/train_seg.md
 
 .. toctree::
    :maxdepth: 1
@@ -24,6 +25,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    common_usage/distributed_training.md
    common_usage/speed_up_training.md
    common_usage/save_gpu_memory.md
+   common_usage/large_model_training.md
    common_usage/better_optimizers.md
    common_usage/visualize_training_log.md
    common_usage/set_random_seed.md
@@ -92,6 +94,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    mmengine.registry <api/registry>
    mmengine.config <api/config>
    mmengine.runner <api/runner>
+   mmengine._strategy <api/strategy>
    mmengine.hooks <api/hooks>
    mmengine.model <api/model>
    mmengine.optim <api/optim>

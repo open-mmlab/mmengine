@@ -8,7 +8,7 @@ import torch.distributed as torch_dist
 import torch.nn as nn
 from torch.optim import SGD
 
-from mmengine.dist import all_gather
+from mmengine.dist import all_gather, broadcast
 from mmengine.model import (BaseDataPreprocessor, BaseModel,
                             ExponentialMovingAverage,
                             MMDistributedDataParallel,
@@ -19,7 +19,7 @@ from mmengine.testing._internal import MultiProcessTestCase
 from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.utils.version_utils import digit_version
 
-if digit_version(TORCH_VERSION) >= digit_version('1.11.0'):
+if digit_version(TORCH_VERSION) >= digit_version('2.0.0'):
     from mmengine.model import MMFullyShardedDataParallel  # noqa: F401
 
 
@@ -222,8 +222,8 @@ class TestMMSeparateDistributedDataParallel(TestDistributedDataParallel):
 @unittest.skipIf(
     torch.cuda.device_count() < 2, reason='need 2 gpu to test fsdp')
 @unittest.skipIf(
-    digit_version(TORCH_VERSION) < digit_version('1.11.0'),
-    reason='fsdp needs Pytorch 1.11 or higher')
+    digit_version(TORCH_VERSION) < digit_version('2.0.0'),
+    reason='fsdp needs Pytorch 2.0.0 or higher')
 class TestMMFullyShardedDataParallel(MultiProcessTestCase):
 
     def _init_dist_env(self, rank, world_size):
@@ -247,19 +247,45 @@ class TestMMFullyShardedDataParallel(MultiProcessTestCase):
         model = ToyModel()
         fsdp_model = MMFullyShardedDataParallel(module=model.cuda())
         optimizer = SGD(fsdp_model.parameters(), lr=0)
-        optim_wrapper = OptimWrapper(optimizer, accumulative_iters=1)
+        optim_wrapper = OptimWrapper(optimizer, accumulative_counts=1)
         inputs = torch.randn(1, 3, 1, 1) * self.rank * 255
-        data = dict(inputs=[inputs], data_sample=MagicMock())
+        data = dict(inputs=inputs, data_sample=MagicMock())
         fsdp_model.train()
         self.assertTrue(fsdp_model.training)
         fsdp_model.train_step(data, optim_wrapper=optim_wrapper)
+
+        # require_grad=False
+        model = ToyModel()
+        for _, param in model.state_dict().items():
+            broadcast(param)
+        model.conv1.requires_grad_(False)
+        ori_weight = model.conv1.weight.clone()
+
+        def wrap_policy(module, recurse=True, *args, **kwargs):
+            if recurse:
+                return True
+            return isinstance(module, nn.Conv2d)
+
+        fsdp_model = MMFullyShardedDataParallel(
+            module=model.cuda(), auto_wrap_policy=wrap_policy)
+        optimizer = SGD(fsdp_model.parameters(), lr=0.1)
+        optim_wrapper = OptimWrapper(optimizer, accumulative_counts=1)
+        inputs = torch.randn(1, 3, 1, 1) * self.rank * 255
+        data = dict(inputs=inputs, data_sample=MagicMock())
+        fsdp_model.train()
+        self.assertTrue(fsdp_model.training)
+        fsdp_model.train_step(data, optim_wrapper=optim_wrapper)
+
+        with fsdp_model.summon_full_params(fsdp_model):
+            updated_weight = fsdp_model.module.conv1.weight.cpu()
+            assert_allclose(ori_weight, updated_weight)
 
     def test_val_step(self):
         self._init_dist_env(self.rank, self.world_size)
         model = ToyModel()
         fsdp_model = MMFullyShardedDataParallel(module=model.cuda())
         inputs = torch.randn(1, 3, 1, 1) * self.rank * 255
-        data = dict(inputs=[inputs], data_sample=MagicMock())
+        data = dict(inputs=inputs, data_sample=MagicMock())
         # Test get predictions.
         predictions = fsdp_model.val_step(data)
         self.assertIsInstance(predictions, torch.Tensor)
