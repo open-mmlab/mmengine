@@ -54,14 +54,18 @@ class Searcher:
                 'hparam_spec must have a key "type" and ' \
                 f'its value must be "discrete" or "continuous", but got {v}'
             if v['type'] == 'discrete':
-                assert 'values' in v, \
-                    'if hparam_spec["type"] is "discrete", ' +\
-                    f'hparam_spec must have a key "values", but got {v}'
+                assert 'values' in v and isinstance(v['values'], list) and \
+                    v['values'], 'Expected a non-empty "values" list for ' + \
+                    'discrete type, but got {v}'
             else:
                 assert 'lower' in v and 'upper' in v, \
-                    'if hparam_spec["type"] is "continuous", ' +\
-                    'hparam_spec must have keys "lower" and "upper", ' +\
-                    f'but got {v}'
+                    'Expected keys "lower" and "upper" for continuous ' + \
+                    f'type, but got {v}'
+                assert isinstance(v['lower'], (int, float)) and \
+                    isinstance(v['upper'], (int, float)), \
+                    f'Expected "lower" and "upper" to be numbers, but got {v}'
+                assert v['lower'] < v['upper'], \
+                    f'Expected "lower" to be less than "upper", but got {v}'
 
     @property
     def hparam_spec(self) -> Dict[str, Dict]:

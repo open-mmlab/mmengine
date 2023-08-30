@@ -58,10 +58,10 @@ class ReportingHook(Hook):
             runner (Runner): The runner of the training process.
         """
         if self.tuning_iter is not None:
-            if runner.iter > self.tuning_iter:
+            if runner.iter + 1 >= self.tuning_iter:
                 return True
         elif self.tuning_epoch is not None:
-            if runner.epoch > self.tuning_epoch:
+            if runner.epoch + 1 >= self.tuning_epoch:
                 return True
         else:
             return False
