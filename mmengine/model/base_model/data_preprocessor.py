@@ -293,7 +293,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         else:
             raise TypeError('Output of `cast_data` should be a dict of '
                             'list/tuple with inputs and data_samples, '
-                            f'but got {type(data)}： {data}')
+                            f'but got {type(data)}: {data}')
         data['inputs'] = batch_inputs
         data.setdefault('data_samples', None)
         return data
