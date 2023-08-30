@@ -176,11 +176,11 @@ class MMLogger(Logger, ManagerMixin):
             false.
         file_handler_cfg (dict, optional): Dict to configure file handler.
             Defaults to None. If ``file_handler_cfg`` is not specified,
-            ``logging.FileHandler`` will be used by default. If it is specified,
-            the ``type`` key should be set. It can be 'RotatingFileHandler',
-            'TimedRotatingFileHandler', 'WatchedFileHandler' or other file
-            handler. And the remaining key pairs are passed in the constructor
-            of the handler.
+            ``logging.FileHandler`` will be used by default. If it is
+            specified, the ``type`` key should be set. It can be
+            ``RotatingFileHandler``, ``TimedRotatingFileHandler``,
+            ``WatchedFileHandler`` or other file handlers, and the remaining
+            fields will be used to build the handler.
 
             Examples:
                 >>> file_handler_cfg = dict(
@@ -188,7 +188,7 @@ class MMLogger(Logger, ManagerMixin):
                 >>>    when='MIDNIGHT',
                 >>>    interval=1,
                 >>>    backupCount=365)
-                
+
             `New in version 0.8.5.`
     """
 
@@ -247,7 +247,6 @@ class MMLogger(Logger, ManagerMixin):
                     file_handlers_map = _get_logging_file_handlers()
                     if file_handler_type in file_handlers_map:
                         file_handler_cls = file_handlers_map[file_handler_type]
-                        file_handler_cfg.setdefault('mode', file_mode)
                         file_handler_cfg.setdefault('filename', log_file)
                         file_handler = file_handler_cls(**file_handler_cfg)
                     else:
@@ -430,6 +429,7 @@ def _get_host_info() -> str:
         warnings.warn(f'Host or user not found: {str(e)}')
     finally:
         return host
+
 
 def _get_logging_file_handlers() -> Dict:
     """Get additional file_handlers in ``logging.handlers``.
