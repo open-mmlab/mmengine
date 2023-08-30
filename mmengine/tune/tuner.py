@@ -88,7 +88,7 @@ class Tuner:
                  tuning_iter: Optional[int] = None,
                  tuning_epoch: Optional[int] = None,
                  report_op: str = 'latest',
-                 searcher_cfg: Dict = dict(type='NevergradSearcher')):
+                 searcher_cfg: Dict = dict(type='RandomSearcher')):
 
         self._runner_cfg = runner_cfg.copy()
         self._hparam_spec = hparam_spec

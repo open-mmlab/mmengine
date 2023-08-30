@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import random
 from typing import Dict
 from unittest import mock
 
@@ -14,9 +13,9 @@ class ToySearcher(Searcher):
         hparam = dict()
         for k, v in self.hparam_spec.items():
             if v['type'] == 'discrete':
-                hparam[k] = random.choice(v['values'])
+                hparam[k] = v['values'][0]
             else:
-                hparam[k] = random.uniform(v['lower'], v['upper'])
+                hparam[k] = (v['lower'] + v['upper']) / 2
         return hparam
 
 
