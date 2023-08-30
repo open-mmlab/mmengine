@@ -126,6 +126,9 @@ def _init_dist_pytorch(backend, init_backend='torch', **kwargs) -> None:
         elif init_backend == 'deepspeed':
             import deepspeed
             deepspeed.init_distributed(dist_backend=backend, **kwargs)
+        elif init_backend == 'colossalai':
+            import colossalai
+            colossalai.launch_from_torch(backend=backend, **kwargs)
         else:
             raise ValueError(
                 'supported "init_backend" is "torch" or "deepspeed", '
@@ -208,6 +211,14 @@ def _init_dist_slurm(backend,
     elif init_backend == 'deepspeed':
         import deepspeed
         deepspeed.init_distributed(dist_backend=backend, **kwargs)
+    elif init_backend == 'colossalai':
+        import colossalai
+        colossalai.launch_from_slurm(
+            backend=backend,
+            host=os.environ['MASTER_ADDR'],
+            port=os.environ['MASTER_PORT'],
+            **kwargs,
+        )
     else:
         raise ValueError('supported "init_backend" is "torch" or "deepspeed", '
                          f'but got {init_backend}')

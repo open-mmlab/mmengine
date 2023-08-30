@@ -202,6 +202,20 @@ class MessageHub(ManagerMixin):
         self._set_resumed_keys(key, resumed)
         self._runtime_info[key] = value
 
+    def pop_info(self, key: str, default: Optional[Any] = None) -> Any:
+        """Remove runtime information by key. If the key does not exist, this
+        method will return the default value.
+
+        Args:
+            key (str): Key of runtime information.
+            default (Any, optional): The default returned value for the
+                given key.
+
+        Returns:
+            Any: The runtime information if the key exists.
+        """
+        return self._runtime_info.pop(key, default)
+
     def update_info_dict(self, info_dict: dict, resumed: bool = True) -> None:
         """Update runtime information with dictionary.
 
@@ -289,7 +303,7 @@ class MessageHub(ManagerMixin):
         return self.log_scalars[key]
 
     def get_info(self, key: str, default: Optional[Any] = None) -> Any:
-        """Get runtime information by key. if the key does not exist, this
+        """Get runtime information by key. If the key does not exist, this
         method will return default information.
 
         Args:

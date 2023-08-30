@@ -122,10 +122,6 @@ class OptimWrapper(BaseOptimWrapper):
         assert accumulative_counts > 0, (
             '_accumulative_counts at least greater than or equal to 1')
         self._accumulative_counts = accumulative_counts
-
-        assert isinstance(optimizer, Optimizer), (
-            'optimizer must be a `torch.optim.Optimizer` instance, but got '
-            f'{type(optimizer)}')
         self.optimizer = optimizer
 
         if clip_grad is not None:
