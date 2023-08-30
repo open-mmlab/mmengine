@@ -299,7 +299,8 @@ class DefaultOptimWrapperConstructor:
         # `model_params` rather than `params`. Here we get the first argument
         # name and fill it with the model parameters.
         if isinstance(optimizer_cls, str):
-            optimizer_cls = OPTIMIZERS.get(self.optimizer_cfg['type'])
+            with OPTIMIZERS.switch_scope_and_registry(None) as registry:
+                optimizer_cls = registry.get(self.optimizer_cfg['type'])
         fisrt_arg_name = next(
             iter(inspect.signature(optimizer_cls).parameters))
         # if no paramwise option is specified, just use the global setting
