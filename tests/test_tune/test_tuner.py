@@ -84,7 +84,7 @@ class TestTuner(RunnerTestCase):
 
         # Inject into a non-existent key
         cfg = {}
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(KeyError):
             Tuner.inject_config(cfg, 'a', 1)
 
         # Inject into a sequence
@@ -146,7 +146,7 @@ class TestTuner(RunnerTestCase):
 
     @mock.patch('mmengine.runner.Runner.train')
     @mock.patch('mmengine.tune._report_hook.ReportingHook.report_score')
-    def test_tune_method(self, mock_report_score, mock_train):
+    def test_tune(self, mock_report_score, mock_train):
         mock_scores = [0.05, 0.03, 0.04, 0.06]
         mock_hparams = [{
             'optim_wrapper.optimizer.lr': 0.1
@@ -182,15 +182,24 @@ class TestTuner(RunnerTestCase):
             result = tuner.tune()
 
         self.assertEqual(tuner._history, [(mock_hparams[0], mock_scores[0]),
+                                          (mock_hparams[1], mock_scores[1]),
                                           (mock_hparams[2], mock_scores[2]),
                                           (mock_hparams[3], mock_scores[3])])
 
         self.assertEqual(result, {
-            'hparam': mock_hparams[2],
-            'score': mock_scores[2]
+            'hparam': mock_hparams[1],
+            'score': mock_scores[1]
         })
 
-        tuner.rule = 'greater'
+        tuner = Tuner(
+            runner_cfg=self.epoch_based_cfg,
+            hparam_spec=self.hparam_spec,
+            monitor='loss',
+            rule='greater',
+            num_trials=4,
+            searcher_cfg=dict(type='ToySearcher'))
+        tuner._run_trial = mock.MagicMock(
+            side_effect=mock_run_trial_return_values)
         with self.mock_is_main_process(), self.mock_broadcast():
             result = tuner.tune()
         self.assertEqual(result, {
@@ -215,7 +224,7 @@ class TestTuner(RunnerTestCase):
         tuner = Tuner(
             runner_cfg=self.epoch_based_cfg,
             hparam_spec=self.hparam_spec,
-            monitor='test/acc',
+            monitor='acc',
             rule='greater',
             num_trials=10,
             searcher_cfg=dict(type='ToySearcher'))
@@ -226,5 +235,6 @@ class TestTuner(RunnerTestCase):
         self.assertTrue({
             hparam['optim_wrapper.optimizer.lr']
             for hparam, _ in tuner.history
-        } in self.hparam_spec['optim_wrapper.optimizer.lr']['values'])
+        }.issubset(
+            set(self.hparam_spec['optim_wrapper.optimizer.lr']['values'])))
         self.assertEqual(result['score'], 1)
