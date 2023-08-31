@@ -1,16 +1,14 @@
 import argparse
 import tempfile
-from typing import Dict, Optional, Union
 
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
 
-from mmengine.config import Config, ConfigDict
 from mmengine.evaluator import BaseMetric
 from mmengine.model import BaseModel
 from mmengine.registry import DATASETS, METRICS, MODELS
-from mmengine.tune import Tuner
+from mmengine.runner import Runner
 
 
 class ToyModel(BaseModel):
@@ -86,39 +84,6 @@ def parse_args():
     return args
 
 
-def find_optimial_lr(
-    runner_cfg: Union[Dict, Config, ConfigDict],
-    monitor: str = 'loss',
-    rule: str = 'less',
-    num_trials: int = 32,
-    lower_lr: Optional[float] = 1e-5,
-    upper_lr: Optional[float] = 1e-3,
-    tuning_iter: int = 0,
-    tuning_epoch: int = 0,
-    report_op: str = 'latest',
-    searcher_cfg: Dict = dict(type='NevergradSearcher'),
-) -> Dict[str, Union[dict, float]]:
-    hparam_spec = {
-        'optim_wrapper.optimizer.lr': {
-            'type': 'continuous',
-            'lower': lower_lr,
-            'upper': upper_lr
-        }
-    }
-
-    tuner = Tuner(
-        runner_cfg,
-        hparam_spec=hparam_spec,
-        monitor=monitor,
-        rule=rule,
-        num_trials=num_trials,
-        tuning_iter=tuning_iter,
-        tuning_epoch=tuning_epoch,
-        report_op=report_op,
-        searcher_cfg=searcher_cfg)
-    return tuner.tune()
-
-
 def main():
     args = parse_args()
 
@@ -158,13 +123,23 @@ def main():
         env_cfg=dict(dist_cfg=dict(backend='nccl')),
         experiment_name='test1')
 
-    result = find_optimial_lr(
+    runner = Runner.from_tuning(
         runner_cfg=runner_cfg,
+        hparam_spec={
+            'optim_wrapper.optimizer.lr': {
+                'type': 'continuous',
+                'lower': 1e-5,
+                'upper': 1e-1
+            }
+        },
+        monitor='loss',
+        rule='less',
         num_trials=32,
-        tuning_epoch=3,
+        tuning_epoch=2,
+        searcher_cfg=dict(type='NevergradSearcher'),
     )
-    print('best_lr: ', result.get('hparam'))
-    print('lowest_loss: ', result.get('score'))
+    runner.train()
+
     temp_dir.cleanup()
 
 

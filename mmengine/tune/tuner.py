@@ -10,6 +10,8 @@ from mmengine.runner import Runner
 from ._report_hook import ReportingHook
 from .searchers import HYPER_SEARCHERS, Searcher
 
+ConfigType = Union[Dict, Config, ConfigDict]
+
 
 class Tuner:
     """A helper for hyperparameter tuning.
@@ -32,7 +34,7 @@ class Tuner:
     the peak performance are returned.
 
     Args:
-        runner_cfg (Union[Dict, Config, ConfigDict]):
+        runner_cfg (ConfigType):
             Configuration for the runner.
         hparam_spec (Dict[str, Dict]):
             The hyperparameter search space definition.
@@ -48,8 +50,8 @@ class Tuner:
             Default is None, indicating no epoch limit.
         report_op (str):
             Operation mode for metric reporting. Default is 'latest'.
-        searcher_cfg (Dict): Configuration for the searcher.
-            Default is `dict(type='NevergradSearcher')`.
+        searcher_cfg (ConfigType): Configuration for the searcher.
+            Default is `dict(type='RandomSearcher')`.
 
     Note:
         The black-box optimization depends on external packages,
@@ -80,7 +82,7 @@ class Tuner:
     rules_supported = ['greater', 'less']
 
     def __init__(self,
-                 runner_cfg: Union[Dict, Config, ConfigDict],
+                 runner_cfg: ConfigType,
                  hparam_spec: Dict[str, Dict],
                  monitor: str,
                  rule: str,
@@ -88,7 +90,7 @@ class Tuner:
                  tuning_iter: Optional[int] = None,
                  tuning_epoch: Optional[int] = None,
                  report_op: str = 'latest',
-                 searcher_cfg: Dict = dict(type='RandomSearcher')):
+                 searcher_cfg: ConfigType = dict(type='RandomSearcher')):
 
         self._runner_cfg = runner_cfg.copy()
         self._hparam_spec = hparam_spec
@@ -174,37 +176,41 @@ class Tuner:
         return self._searcher
 
     @staticmethod
-    def inject_config(cfg: Dict, key: str, value: Any):
+    def inject_config(cfg: ConfigType, key: str, value: Any):
         """Inject a value into a config.
 
         The name can be multi-level, like 'optimizer.lr'.
 
         Args:
-            cfg (Dict): The config to be injected.
+            cfg (ConfigType): The config to be injected.
             key (str): The key of the value to be injected.
             value (Any): The value to be injected.
         """
         keys = key.split('.')
         for k in keys[:-1]:
             if isinstance(cfg, list):
-                k = int(k)
-                if k >= len(cfg) or k < 0:
-                    raise KeyError(f'Index {k} is out of range in {cfg}')
-            elif k not in cfg:
-                raise KeyError(f"Key '{k}' not found in {cfg}")
-            cfg = cfg[k]
+                idx = int(k)
+                if idx >= len(cfg) or idx < 0:
+                    raise KeyError(f'Index {idx} is out of range in {cfg}')
+                cfg = cfg[idx]
+            else:
+                if k not in cfg:
+                    raise KeyError(f"Key '{k}' not found in {cfg}")
+                cfg = cfg[k]
+
         if isinstance(cfg, list):
-            k = int(keys[-1])
-            if k >= len(cfg) or k < 0:
-                raise KeyError(f'Index {k} is out of range in {cfg}')
-            cfg[k] = value
-        elif keys[-1] not in cfg:
-            raise KeyError(f"Key '{keys[-1]}' not found in {cfg}")
+            idx = int(keys[-1])
+            if idx >= len(cfg) or idx < 0:
+                raise KeyError(f'Index {idx} is out of range in {cfg}')
+            cfg[idx] = value
         else:
-            cfg[keys[-1]] = value
+            if keys[-1] not in cfg:
+                raise KeyError(f"Key '{keys[-1]}' not found in {cfg}")
+            else:
+                cfg[keys[-1]] = value
         return
 
-    def _build_searcher(self, searcher_cfg: Dict) -> Searcher:
+    def _build_searcher(self, searcher_cfg: ConfigType) -> Searcher:
         """Build searcher from searcher_cfg.
 
         An Example of ``searcher_cfg``::
@@ -215,7 +221,7 @@ class Tuner:
             )
 
         Args:
-            searcher_cfg (Dict): The searcher config.
+            searcher_cfg (ConfigType): The searcher config.
         """
         searcher_cfg = searcher_cfg.copy()
         self._logger.info(f'Building searcher of type: {searcher_cfg["type"]}')
@@ -272,12 +278,13 @@ class Tuner:
             self._searcher.record(hparam, score)
         return hparam, score, error
 
-    def tune(self) -> Dict[str, Union[dict, float]]:
+    def tune(self) -> Dict[str, Union[Dict[str, Any], float]]:
         """Launch tuning.
 
         Returns:
-            Dict[str, Union[dict, float]]:
-                The best hyperparameters and the corresponding score.
+        Dict[str, Union[Dict[str, Any], float]]:
+            A dictionary containing the best hyperparameters under the key
+            'hparam' and the corresponding score under the key 'score'.
         """
         self._logger.info(f'Starting tuning for {self._num_trials} trials...')
         for trail_idx in range(self._num_trials):
