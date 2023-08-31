@@ -1728,7 +1728,7 @@ class Runner:
         modules = self.cfg.get('gredient_checkpoint', None)
         if modules is not None:
             self.logger.info(f'Enabling the "gredient_checkpoint" feature'
-                             f'for sub-modules: {modules}')
+                             f' for sub-modules: {modules}')
             turn_on_gredient_checkpoint(ori_model, modules)
 
         # try to enable efficient_conv_bn_eval feature
