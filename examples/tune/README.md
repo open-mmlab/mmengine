@@ -19,5 +19,5 @@ python examples/tune/find_lr.py
 Distributed data parallel tuning
 
 ```bash
-torchrun -nnodes 1 -nproc_per_node 8 examples/tune/find_lr.py --launcher pytorch
+torchrun --nnodes 1 --nproc_per_node 8 examples/tune/find_lr.py --launcher pytorch
 ```

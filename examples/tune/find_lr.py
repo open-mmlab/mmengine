@@ -40,7 +40,7 @@ class ToyModel(BaseModel):
 
 class ToyDataset(Dataset):
     METAINFO = dict()  # type: ignore
-    num_samples = 1000
+    num_samples = 100
     data = torch.rand(num_samples, 2) * 10
     label = 3 * data[:, 0] + 4 * data[:, 1] + torch.randn(num_samples) * 0.1
 
@@ -129,12 +129,12 @@ def main():
             'optim_wrapper.optimizer.lr': {
                 'type': 'continuous',
                 'lower': 1e-5,
-                'upper': 1e-1
+                'upper': 1e-3
             }
         },
         monitor='loss',
         rule='less',
-        num_trials=32,
+        num_trials=16,
         tuning_epoch=2,
         searcher_cfg=dict(type='NevergradSearcher'),
     )

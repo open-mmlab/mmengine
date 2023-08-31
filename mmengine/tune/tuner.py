@@ -6,7 +6,6 @@ from mmengine.config import Config, ConfigDict
 from mmengine.dist import (broadcast_object_list, init_dist, is_distributed,
                            is_main_process)
 from mmengine.logging import MMLogger
-from mmengine.runner import Runner
 from ._report_hook import ReportingHook
 from .searchers import HYPER_SEARCHERS, Searcher
 
@@ -241,6 +240,8 @@ class Tuner:
         # 2. Once retrieved, the hyperparameters are broadcasted to all other
         #   processes ensuring every process has the same set of
         #   hyperparameters for this trial.
+        from mmengine.runner import Runner
+
         if is_main_process():
             hparams_to_broadcast = [self._searcher.suggest()]
         else:
