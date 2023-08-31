@@ -1,24 +1,30 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import torch.nn as nn
-from torch.utils.checkpoint import checkpoint, checkpoint_sequential
+from functools import wraps
+from operator import attrgetter
+from typing import List, Union
+
+import torch
+from torch.utils.checkpoint import checkpoint
 
 
-class CheckpointWrapper(nn.Module):
+def wrap_forward(forward):
 
-    def __init__(self, module):
-        super().__init__()
-        self.module = module
+    @wraps(forward)
+    def wrapper(*args):
+        return checkpoint(forward, *args)
 
-    def forward(self, x):
-        if isinstance(self.module, nn.Module):
-            return checkpoint(self.module, x)
-        elif isinstance(self.module, nn.Sequential):
-            return checkpoint_sequential(self.module, len(self.module), x)
-        else:
-            return self.module(x)
+    return wrapper
 
 
-def turn_on_gredient_checkpoint(model):
-    for name, child in model.named_children():
-        new_child = CheckpointWrapper(child)
-        setattr(model, name, new_child)
+def turn_on_gredient_checkpoint_for_single_model(model: torch.nn.Module):
+    model.forward = wrap_forward(model.forward)
+
+
+def turn_on_gredient_checkpoint(model: torch.nn.Module,
+                                modules: Union[List[str], str]):
+
+    if isinstance(modules, str):
+        modules = [modules]
+    for module_name in modules:
+        module = attrgetter(module_name)(model)
+        turn_on_gredient_checkpoint_for_single_model(module)
