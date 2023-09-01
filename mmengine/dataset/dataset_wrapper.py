@@ -6,6 +6,7 @@ import math
 from collections import defaultdict
 from typing import List, Sequence, Tuple, Union
 
+import numpy as np
 from torch.utils.data.dataset import ConcatDataset as _ConcatDataset
 
 from mmengine.logging import print_log
@@ -73,7 +74,14 @@ class ConcatDataset(_ConcatDataset):
                     raise ValueError(
                         f'{key} does not in the meta information of '
                         f'the {i}-th dataset')
-                if self._metainfo[key] != dataset.metainfo[key]:
+                if isinstance(self._metainfo[key], np.ndarray) and isinstance(
+                        dataset.metainfo[key], np.ndarray):
+                    if not np.array_equal(self._metainfo[key],
+                                          dataset.metainfo[key]):
+                        raise ValueError(
+                            f'The meta information of the {i}-th dataset does'
+                            'not match meta information of the first dataset')
+                elif self._metainfo[key] != dataset.metainfo[key]:
                     raise ValueError(
                         f'The meta information of the {i}-th dataset does not '
                         'match meta information of the first dataset')
