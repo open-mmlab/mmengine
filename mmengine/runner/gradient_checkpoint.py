@@ -16,15 +16,11 @@ def wrap_forward(forward):
     return wrapper
 
 
-def turn_on_gredient_checkpoint_for_single_model(model: torch.nn.Module):
-    model.forward = wrap_forward(model.forward)
-
-
-def turn_on_gredient_checkpoint(model: torch.nn.Module,
+def turn_on_gradient_checkpoint(model: torch.nn.Module,
                                 modules: Union[List[str], str]):
 
     if isinstance(modules, str):
         modules = [modules]
     for module_name in modules:
         module = attrgetter(module_name)(model)
-        turn_on_gredient_checkpoint_for_single_model(module)
+        module.forward = wrap_forward(module.forward)

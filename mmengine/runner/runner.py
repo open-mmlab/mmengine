@@ -45,7 +45,7 @@ from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          find_latest_checkpoint, save_checkpoint,
                          weights_to_cpu)
-from .gradient_checkpoint import turn_on_gredient_checkpoint
+from .gradient_checkpoint import turn_on_gradient_checkpoint
 from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
@@ -1725,11 +1725,11 @@ class Runner:
         self._init_model_weights()
 
         # try to enable gredient_checkpoint feature
-        modules = self.cfg.get('gredient_checkpoint', None)
+        modules = self.cfg.get('gradient_checkpoint', None)
         if modules is not None:
-            self.logger.info(f'Enabling the "gredient_checkpoint" feature'
+            self.logger.info(f'Enabling the "gradient_checkpoint" feature'
                              f' for sub-modules: {modules}')
-            turn_on_gredient_checkpoint(ori_model, modules)
+            turn_on_gradient_checkpoint(ori_model, modules)
 
         # try to enable efficient_conv_bn_eval feature
         modules = self.cfg.get('efficient_conv_bn_eval', None)
