@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from typing import Dict, List, Optional, Sequence, Union
+from typing import Callable, Dict, List, Optional, Sequence, Union
 
 from mmengine.hooks import Hook
 
@@ -19,12 +19,17 @@ class ReportingHook(Hook):
         tuning_epoch (int, optional): The epoch limit to stop tuning.
             Defaults to None.
         report_op (str, optional): The operation to report the score.
-            Options are 'latest', 'mean'. Defaults to 'latest'.
+            Options are 'latest', 'mean', 'min', 'max'. Defaults to 'latest'.
         max_scoreboard_len (int, optional):
             The maximum length of the scoreboard.
     """
 
-    report_op_supported = ['latest', 'mean']
+    report_op_supported: Dict[str, Callable[[List[float]], float]] = {
+        'latest': lambda x: x[-1],
+        'mean': lambda x: sum(x) / len(x),
+        'max': max,
+        'min': min
+    }
 
     def __init__(self,
                  monitor: str,
@@ -124,11 +129,21 @@ class ReportingHook(Hook):
         """
         if not self.scoreboard:
             score = None
-        elif self.report_op == 'latest':
-            score = self.scoreboard[-1]
-        else:
-            score = sum(self.scoreboard) / len(self.scoreboard)
+        operation = self.report_op_supported[self.report_op]
+        score = operation(self.scoreboard)
         return score
+
+    @classmethod
+    def register_report_op(cls, name: str, func: Callable[[List[float]],
+                                                          float]):
+        """Register a new report operation.
+
+        Args:
+            name (str): The name of the report operation.
+            func (Callable[[List[float]], float]): The function to aggregate
+                the scores.
+        """
+        cls.report_op_supported[name] = func
 
     def clear(self):
         """Clear the scoreboard."""
