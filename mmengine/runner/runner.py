@@ -1724,7 +1724,7 @@ class Runner:
         # initialize the model weights
         self._init_model_weights()
 
-        # try to enable gredient_checkpoint feature
+        # try to enable gradient_checkpoint feature
         modules = self.cfg.get('gradient_checkpoint', None)
         if modules is not None:
             self.logger.info(f'Enabling the "gradient_checkpoint" feature'
