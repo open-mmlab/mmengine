@@ -76,10 +76,11 @@ class ConcatDataset(_ConcatDataset):
                         f'the {i}-th dataset')
                 first_type = type(self._metainfo[key])
                 cur_type = type(dataset.metainfo[key])
-                if first_type is cur_type:  # type: ignore
+                if first_type is not cur_type:  # type: ignore
                     raise TypeError(
-                        f'The type of {key} in the {i}-th dataset should be '
-                        'the same with the first dataset')
+                        f'The type {cur_type} of {key} in the {i}-th dataset '
+                        'should be the same with the first dataset '
+                        f'{first_type}')
                 if (isinstance(self._metainfo[key], np.ndarray)
                         and not np.array_equal(self._metainfo[key],
                                                dataset.metainfo[key])
