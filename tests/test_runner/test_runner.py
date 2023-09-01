@@ -1823,8 +1823,9 @@ class TestRunner(TestCase):
             self.assertIsInstance(runner._val_loop, BaseLoop)
             self.assertIsInstance(runner._test_loop, dict)
 
-        # 15 test num_batch_per_epoch
+        # 15. test num_batch_per_epoch
         cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_train15'
         cfg.train_dataloader['num_batch_per_epoch'] = 2
         cfg.train_cfg = dict(
             by_epoch=True,
