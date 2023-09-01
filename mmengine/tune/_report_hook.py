@@ -129,8 +129,9 @@ class ReportingHook(Hook):
         """
         if not self.scoreboard:
             score = None
-        operation = self.report_op_supported[self.report_op]
-        score = operation(self.scoreboard)
+        else:
+            operation = self.report_op_supported[self.report_op]
+            score = operation(self.scoreboard)
         return score
 
     @classmethod
