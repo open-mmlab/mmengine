@@ -12,9 +12,10 @@ import torch
 from mmengine import Config
 from mmengine.fileio import load
 from mmengine.registry import VISBACKENDS
-from mmengine.visualization import (ClearMLVisBackend, LocalVisBackend,
-                                    MLflowVisBackend, NeptuneVisBackend,
-                                    TensorboardVisBackend, WandbVisBackend)
+from mmengine.visualization import (ClearMLVisBackend, DVCLiveVisBackend,
+                                    LocalVisBackend, MLflowVisBackend,
+                                    NeptuneVisBackend, TensorboardVisBackend,
+                                    WandbVisBackend)
 
 
 class TestLocalVisBackend:
@@ -391,3 +392,51 @@ class TestNeptuneVisBackend:
         neptune_vis_backend = NeptuneVisBackend()
         neptune_vis_backend._init_env()
         neptune_vis_backend.close()
+
+
+class TestDVCLiveVisBackend:
+
+    def test_init(self):
+        DVCLiveVisBackend('tmp_dir')
+        VISBACKENDS.build(dict(type='DVCLiveVisBackend', save_dir='temp_dir'))
+
+    def test_experiment(self):
+        dvclive_vis_backend = DVCLiveVisBackend('tmp_dir')
+        assert dvclive_vis_backend.experiment == dvclive_vis_backend._dvclive
+        shutil.rmtree('temp_dir')
+
+    def test_add_config(self):
+        cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        dvclive_vis_backend = DVCLiveVisBackend('tmp_dir')
+        dvclive_vis_backend.add_config(cfg)
+        shutil.rmtree('temp_dir')
+
+    def test_add_image(self):
+        img = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
+        dvclive_vis_backend = DVCLiveVisBackend('tmp_dir')
+        dvclive_vis_backend.add_image('img', img)
+        shutil.rmtree('temp_dir')
+
+    def test_add_scalar(self):
+        dvclive_vis_backend = DVCLiveVisBackend('tmp_dir')
+        dvclive_vis_backend.add_scalar('mAP', 0.9)
+        # test append mode
+        dvclive_vis_backend.add_scalar('mAP', 0.9)
+        dvclive_vis_backend.add_scalar('mAP', 0.95)
+        shutil.rmtree('temp_dir')
+
+    def test_add_scalars(self):
+        dvclive_vis_backend = DVCLiveVisBackend('tmp_dir')
+        input_dict = {'map': 0.7, 'acc': 0.9}
+        dvclive_vis_backend.add_scalars(input_dict)
+        # test append mode
+        dvclive_vis_backend.add_scalars({'map': 0.8, 'acc': 0.8})
+        shutil.rmtree('temp_dir')
+
+    def test_close(self):
+        cfg = Config(dict(work_dir='temp_dir'))
+        dvclive_vis_backend = DVCLiveVisBackend('tmp_dir')
+        dvclive_vis_backend._init_env()
+        dvclive_vis_backend.add_config(cfg)
+        dvclive_vis_backend.close()
+        shutil.rmtree('temp_dir')

@@ -1,6 +1,7 @@
 clearml
 coverage
 dadaptation
+dvclive
 lion-pytorch
 lmdb
 mlflow
