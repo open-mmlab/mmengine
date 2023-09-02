@@ -12,7 +12,6 @@ from typing import Any, Callable, List, Optional, Sequence, Union
 
 import cv2
 import numpy as np
-import pygit2
 import torch
 
 from mmengine.config import Config, ConfigDict
@@ -1175,6 +1174,7 @@ class DVCLiveVisBackend(BaseVisBackend):
                                'to use DVCLiveVisBackend.')
 
         try:
+            import pygit2
             from dvclive import Live
         except ImportError:
             raise ImportError(
