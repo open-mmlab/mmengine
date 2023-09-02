@@ -1287,7 +1287,13 @@ class DVCLiveVisBackend(BaseVisBackend):
         for file_path, dir_path in file_paths.items():
             self._dvclive.log_artifact(file_path, dir_path)
 
-        self._dvclive.end()
+        try:
+            self._dvclive.end()
+        except Exception as e:
+            warnings.warn(f'Error occurred when closing DVCLive: {e}\n'
+                          'Try to initialize DVC again without Git.')
+            os.system('dvc init -f --no-scm')
+            self._dvclive.end()
 
     def _to_dict(self, config: Config) -> dict:
         """Convert the <class 'Config' or 'ConfigDict'> to a normal dictionary
