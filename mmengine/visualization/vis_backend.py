@@ -12,6 +12,7 @@ from typing import Any, Callable, List, Optional, Sequence, Union
 
 import cv2
 import numpy as np
+import pygit2
 import torch
 
 from mmengine.config import Config, ConfigDict
@@ -1173,14 +1174,20 @@ class DVCLiveVisBackend(BaseVisBackend):
             raise RuntimeError('Please use Python 3.8 or higher version '
                                'to use DVCLiveVisBackend.')
 
-        if not os.path.exists(self._save_dir):
-            os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
-
         try:
             from dvclive import Live
         except ImportError:
             raise ImportError(
                 'Please run "pip install dvclive" to install dvclive')
+        # if no git info, init dvc without git to avoid SCMError
+        path = pygit2.discover_repository(os.fspath(os.curdir), True, '')
+        sig = pygit2.Repository(path).default_signature()
+        user_name = os.environ.get('GIT_COMMITTER_NAME',
+                                   sig.name if sig else None)
+        user_email = os.environ.get('GIT_COMMITTER_EMAIL',
+                                    sig.email if sig else None)
+        if user_name is None or user_email is None:
+            os.system('dvc init -f --no-scm')
 
         if self._init_kwargs is None:
             self._init_kwargs = {
@@ -1287,13 +1294,7 @@ class DVCLiveVisBackend(BaseVisBackend):
         for file_path, dir_path in file_paths.items():
             self._dvclive.log_artifact(file_path, dir_path)
 
-        try:
-            self._dvclive.end()
-        except Exception as e:
-            warnings.warn(f'Error occurred when closing DVCLive: {e}\n'
-                          'Try to initialize DVC again without Git.')
-            os.system('dvc init -f --no-scm')
-            self._dvclive.end()
+        self._dvclive.end()
 
     def _to_dict(self, config: Config) -> dict:
         """Convert the <class 'Config' or 'ConfigDict'> to a normal dictionary
