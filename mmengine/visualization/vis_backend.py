@@ -1181,12 +1181,9 @@ class DVCLiveVisBackend(BaseVisBackend):
                 'Please run "pip install dvclive" to install dvclive')
         # if no git info, init dvc without git to avoid SCMError
         path = pygit2.discover_repository(os.fspath(os.curdir), True, '')
-        sig = pygit2.Repository(path).default_signature()
-        user_name = os.environ.get('GIT_COMMITTER_NAME',
-                                   sig.name if sig else None)
-        user_email = os.environ.get('GIT_COMMITTER_EMAIL',
-                                    sig.email if sig else None)
-        if user_name is None or user_email is None:
+        try:
+            pygit2.Repository(path).default_signature()
+        except KeyError:
             os.system('dvc init -f --no-scm')
 
         if self._init_kwargs is None:
