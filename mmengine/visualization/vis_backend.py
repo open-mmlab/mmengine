@@ -1159,11 +1159,13 @@ class DVCLiveVisBackend(BaseVisBackend):
             is present and matplotlib is installed and html otherwise.
             If report is None, Live.make_report() won't generate anything.
         save_dvc_exp (bool): If True, DVCLive will create a new DVC experiment
-            as part of Live.end(). Defaults to False.
+            as part of Live.end(). Defaults to True.
         dvcyaml (bool): If True, DVCLive will write DVC configuration for
             metrics, plots, and parameters to Live.dvc_file as part of
             Live.next_step() and Live.end(). See Live.make_dvcyaml().
             Defaults to True.
+        cache_images (bool): If True, DVCLive will cache any images logged
+            with Live.log_image() as part of Live.end(). Defaults to True.
         exp_message (str, Optional): If not None, and save_dvc_exp is True,
             the provided string will be passed to dvc exp save --message.
         artifact_suffix (Tuple[str] or str, optional): The artifact suffix.
@@ -1174,8 +1176,9 @@ class DVCLiveVisBackend(BaseVisBackend):
                  save_dir: str,
                  resume: bool = False,
                  report: Optional[str] = 'auto',
-                 save_dvc_exp: bool = False,
+                 save_dvc_exp: bool = True,
                  dvcyaml: bool = True,
+                 cache_images: bool = True,
                  exp_message: Optional[str] = None,
                  artifact_suffix: SUFFIX_TYPE = ('.json', '.log', '.py',
                                                  'yaml')):
@@ -1184,6 +1187,7 @@ class DVCLiveVisBackend(BaseVisBackend):
         self._report = report
         self._save_dvc_exp = save_dvc_exp
         self._dvcyaml = dvcyaml
+        self._cache_images = cache_images,
         self._exp_message = exp_message
         self._artifact_suffix = artifact_suffix
 
@@ -1198,9 +1202,14 @@ class DVCLiveVisBackend(BaseVisBackend):
             raise ImportError(
                 'Please run "pip install dvclive" to install dvclive')
 
-        self._dvclive = Live(self._save_dir, self._resume, self._report,
-                             self._save_dvc_exp, self._dvcyaml,
-                             self._exp_message)
+        self._dvclive = Live(
+            dir=self._save_dir,
+            resume=self._resume,
+            report=self._report,
+            save_dvc_exp=self._save_dvc_exp,
+            dvcyaml=self._dvcyaml,
+            cache_images=self._cache_images,
+            exp_message=self._exp_message)
 
     @property  # type: ignore
     @force_init_env
