@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
+import platform
 import shutil
 import sys
 import warnings
@@ -12,6 +13,7 @@ import torch
 from mmengine import Config
 from mmengine.fileio import load
 from mmengine.registry import VISBACKENDS
+from mmengine.utils import digit_version
 from mmengine.visualization import (ClearMLVisBackend, DVCLiveVisBackend,
                                     LocalVisBackend, MLflowVisBackend,
                                     NeptuneVisBackend, TensorboardVisBackend,
@@ -394,6 +396,9 @@ class TestNeptuneVisBackend:
         neptune_vis_backend.close()
 
 
+@pytest.mark.skipif(
+    digit_version(platform.python_version()) < digit_version('3.8'),
+    reason='DVCLiveVisBackend does not support python version < 3.8')
 class TestDVCLiveVisBackend:
 
     def test_init(self):

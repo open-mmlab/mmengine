@@ -4,6 +4,7 @@ import functools
 import logging
 import os
 import os.path as osp
+import platform
 import warnings
 from abc import ABCMeta, abstractmethod
 from collections.abc import MutableMapping
@@ -18,7 +19,7 @@ from mmengine.fileio import dump
 from mmengine.hooks.logger_hook import SUFFIX_TYPE
 from mmengine.logging import MMLogger, print_log
 from mmengine.registry import VISBACKENDS
-from mmengine.utils import scandir
+from mmengine.utils import digit_version, scandir
 from mmengine.utils.dl_utils import TORCH_VERSION
 
 
@@ -1150,49 +1151,28 @@ class DVCLiveVisBackend(BaseVisBackend):
     Args:
         save_dir (str, optional): The root directory to save the files
             produced by the visualizer.
-        resume (bool): If True, DVCLive will try to read the previous step
-            from the metrics_file and start from that point.
-            Defaults to False.
-        report (str, Optional): Any of `auto`, `html`, `notebook`,
-            `md` or `None`.
-            The auto mode (default) will use md format if the CI env var
-            is present and matplotlib is installed and html otherwise.
-            If report is None, Live.make_report() won't generate anything.
-        save_dvc_exp (bool): If True, DVCLive will create a new DVC experiment
-            as part of Live.end(). Defaults to True.
-        dvcyaml (bool): If True, DVCLive will write DVC configuration for
-            metrics, plots, and parameters to Live.dvc_file as part of
-            Live.next_step() and Live.end(). See Live.make_dvcyaml().
-            Defaults to True.
-        cache_images (bool): If True, DVCLive will cache any images logged
-            with Live.log_image() as part of Live.end(). Defaults to True.
-        exp_message (str, Optional): If not None, and save_dvc_exp is True,
-            the provided string will be passed to dvc exp save --message.
         artifact_suffix (Tuple[str] or str, optional): The artifact suffix.
             Defaults to ('.json', '.log', '.py', 'yaml').
+        init_kwargs (dict, optional): DVCLive initialization parameters.
+            See `DVCLive <https://dvc.org/doc/dvclive/live>`_ for details.
+            Defaults to None.
     """
 
     def __init__(self,
                  save_dir: str,
-                 resume: bool = False,
-                 report: Optional[str] = 'auto',
-                 save_dvc_exp: bool = True,
-                 dvcyaml: bool = True,
-                 cache_images: bool = True,
-                 exp_message: Optional[str] = None,
                  artifact_suffix: SUFFIX_TYPE = ('.json', '.log', '.py',
-                                                 'yaml')):
+                                                 'yaml'),
+                 init_kwargs: Optional[dict] = None):
         super().__init__(save_dir)
-        self._resume = resume
-        self._report = report
-        self._save_dvc_exp = save_dvc_exp
-        self._dvcyaml = dvcyaml
-        self._cache_images = cache_images,
-        self._exp_message = exp_message
         self._artifact_suffix = artifact_suffix
+        self._init_kwargs = init_kwargs
 
     def _init_env(self):
         """Setup env for dvclive."""
+        if digit_version(platform.python_version()) < digit_version('3.8'):
+            raise RuntimeError('Please use Python 3.8 or higher version '
+                               'to use DVCLiveVisBackend.')
+
         if not os.path.exists(self._save_dir):
             os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
 
@@ -1202,14 +1182,18 @@ class DVCLiveVisBackend(BaseVisBackend):
             raise ImportError(
                 'Please run "pip install dvclive" to install dvclive')
 
-        self._dvclive = Live(
-            dir=self._save_dir,
-            resume=self._resume,
-            report=self._report,
-            save_dvc_exp=self._save_dvc_exp,
-            dvcyaml=self._dvcyaml,
-            cache_images=self._cache_images,
-            exp_message=self._exp_message)
+        if self._init_kwargs is None:
+            self._init_kwargs = {
+                'dir': self._save_dir,
+                'save_dvc_exp': True,
+                'cache_images': True
+            }
+        else:
+            self._init_kwargs.setdefault('dir', self._save_dir)
+            self._init_kwargs.setdefault('save_dvc_exp', True)
+            self._init_kwargs.setdefault('cache_images', True)
+
+        self._dvclive = Live(**self._init_kwargs)
 
     @property  # type: ignore
     @force_init_env
