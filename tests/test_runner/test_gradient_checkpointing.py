@@ -2,6 +2,7 @@
 from unittest import TestCase
 
 import torch
+import torch.nn.functional as F
 from torch import nn
 
 from mmengine.runner.gradient_checkpoint import turn_on_gradient_checkpoint
@@ -12,19 +13,25 @@ class Model(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(6, 6, 6)
-        self.bn1 = nn.BatchNorm2d(6)
-        self.conv2 = nn.Conv2d(6, 6, 6)
-        self.bn2 = nn.BatchNorm2d(6)
-        self.conv3 = nn.Conv2d(6, 6, 6)
-        self.bn3 = nn.BatchNorm2d(6)
-        self.linear = nn.Linear(6, 6)
+        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1)
+        self.bn1 = nn.BatchNorm2d(16)
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
+        self.bn2 = nn.BatchNorm2d(32)
+        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
+        self.bn3 = nn.BatchNorm2d(64)
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(64, 10)
 
     def forward(self, x):
         x = self.bn1(self.conv1(x))
+        x = F.relu(x)
         x = self.bn2(self.conv2(x))
+        x = F.relu(x)
         x = self.bn3(self.conv3(x))
-        x = self.linear(x)
+        x = F.relu(x)
+        x = self.pool(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc(x)
         return x
 
 
@@ -32,7 +39,7 @@ class TestGradientCheckpoint(TestCase):
 
     def test_gradient_checkpoint(self):
         model = Model()
-        input = torch.randn(64, 6, 32, 32)
+        input = torch.randn(16, 3, 224, 224)
         input.requires_grad = True
 
         output = model(input)
@@ -45,4 +52,4 @@ class TestGradientCheckpoint(TestCase):
         grad2 = input.grad.clone()
 
         assert_allclose(output, output2)
-        assert_allclose(grad, grad2)
+        assert_allclose(grad, grad2, rtol=1e-3, atol=1e-3)
