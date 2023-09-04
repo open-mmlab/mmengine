@@ -41,6 +41,7 @@ from mmengine.utils import apply_to, digit_version, get_git_hash, is_seq_of
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
                                      set_multi_processing)
 from mmengine.visualization import Visualizer
+from .activation_checkpointing import turn_on_activation_checkpointing
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          find_latest_checkpoint, save_checkpoint,
@@ -1721,6 +1722,13 @@ class Runner:
 
         # initialize the model weights
         self._init_model_weights()
+
+        # try to enable activation_checkpointing feature
+        modules = self.cfg.get('activation_checkpointing', None)
+        if modules is not None:
+            self.logger.info(f'Enabling the "activation_checkpointing" feature'
+                             f' for sub-modules: {modules}')
+            turn_on_activation_checkpointing(ori_model, modules)
 
         # try to enable efficient_conv_bn_eval feature
         modules = self.cfg.get('efficient_conv_bn_eval', None)
