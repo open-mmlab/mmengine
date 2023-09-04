@@ -1685,7 +1685,6 @@ class Runner:
             ori_model = self.model.module
         else:
             ori_model = self.model
-
         assert hasattr(ori_model, 'train_step'), (
             'If you want to train your model, please make sure your model '
             'has implemented `train_step`.')
