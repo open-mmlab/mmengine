@@ -1155,7 +1155,7 @@ class DVCLiveVisBackend(BaseVisBackend):
         save_dir (str, optional): The root directory to save the files
             produced by the visualizer.
         artifact_suffix (Tuple[str] or str, optional): The artifact suffix.
-            Defaults to ('.json', '.log', '.py', 'yaml').
+            Defaults to ('.json', '.py', 'yaml').
         init_kwargs (dict, optional): DVCLive initialization parameters.
             See `DVCLive <https://dvc.org/doc/dvclive/live>`_ for details.
             Defaults to None.
@@ -1163,8 +1163,7 @@ class DVCLiveVisBackend(BaseVisBackend):
 
     def __init__(self,
                  save_dir: str,
-                 artifact_suffix: SUFFIX_TYPE = ('.json', '.log', '.py',
-                                                 'yaml'),
+                 artifact_suffix: SUFFIX_TYPE = ('.json', '.py', 'yaml'),
                  init_kwargs: Optional[dict] = None):
         super().__init__(save_dir)
         self._artifact_suffix = artifact_suffix
@@ -1190,15 +1189,10 @@ class DVCLiveVisBackend(BaseVisBackend):
             os.system('dvc init -f --no-scm')
 
         if self._init_kwargs is None:
-            self._init_kwargs = {
-                'dir': self._save_dir,
-                'save_dvc_exp': True,
-                'cache_images': True,
-            }
-        else:
-            self._init_kwargs.setdefault('dir', self._save_dir)
-            self._init_kwargs.setdefault('save_dvc_exp', True)
-            self._init_kwargs.setdefault('cache_images', True)
+            self._init_kwargs = {}
+        self._init_kwargs.setdefault('dir', self._save_dir)
+        self._init_kwargs.setdefault('save_dvc_exp', True)
+        self._init_kwargs.setdefault('cache_images', True)
 
         self._dvclive = Live(**self._init_kwargs)
 
@@ -1278,7 +1272,8 @@ class DVCLiveVisBackend(BaseVisBackend):
             file_path (str, optional): Useless parameter. Just for
                 interface unification. Defaults to None.
         """
-        self._dvclive.log_params(self._to_dvc_paramlike(scalar_dict))
+        for key, value in scalar_dict.items():
+            self.add_scalar(key, value, step, **kwargs)
 
     def close(self) -> None:
         """close an opened dvclive object."""
