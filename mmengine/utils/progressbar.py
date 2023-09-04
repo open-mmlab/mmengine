@@ -3,7 +3,7 @@ import sys
 from collections.abc import Iterable
 from multiprocessing import Pool
 from shutil import get_terminal_size
-from typing import Callable, Union
+from typing import Callable, Sequence, Union
 
 from .timer import Timer
 
@@ -88,7 +88,7 @@ class ProgressBar:
 
 
 def track_progress(func: Callable,
-                   tasks: Union[list, Iterable],
+                   tasks: Union[tuple, Sequence],
                    bar_width: int = 50,
                    file=sys.stdout,
                    **kwargs):
@@ -98,8 +98,8 @@ def track_progress(func: Callable,
 
     Args:
         func (callable): The function to be applied to each task.
-        tasks (list or tuple[Iterable, int]): A list of tasks or
-            (tasks, total num).
+        tasks (tuple or Size): A tuple contains two elements
+            (tasks, total num) or a sequence object.
         bar_width (int): Width of progress bar.
 
     Returns:
@@ -110,13 +110,13 @@ def track_progress(func: Callable,
         assert isinstance(tasks[0], Iterable)
         assert isinstance(tasks[1], int)
         task_num = tasks[1]
-        tasks = tasks[0]
-    elif isinstance(tasks, list):
+        tasks = tasks[0]  # type: ignore
+    elif isinstance(tasks, Sequence):
         task_num = len(tasks)
     else:
         raise TypeError(
-            '"tasks" must be an iterable object or a (iterator, int) tuple, '
-            f'but got {type(tasks)}')
+            '"tasks" must be a tuple object or a sequence object, but got '
+            f'{type(tasks)}')
     prog_bar = ProgressBar(task_num, bar_width, file=file)
     results = []
     for task in tasks:
@@ -138,7 +138,7 @@ def init_pool(process_num, initializer=None, initargs=None):
 
 
 def track_parallel_progress(func: Callable,
-                            tasks: Union[list, Iterable],
+                            tasks: Union[tuple, Sequence],
                             nproc: int,
                             initializer: Callable = None,
                             initargs: tuple = None,
@@ -154,8 +154,8 @@ def track_parallel_progress(func: Callable,
 
     Args:
         func (callable): The function to be applied to each task.
-        tasks (list or tuple[Iterable, int]): A list of tasks or
-            (tasks, total num).
+        tasks (tuple or Size): A tuple contains two elements
+            (tasks, total num) or a sequence object.
         nproc (int): Process (worker) number.
         initializer (None or callable): Refer to :class:`multiprocessing.Pool`
             for details.
@@ -177,13 +177,13 @@ def track_parallel_progress(func: Callable,
         assert isinstance(tasks[0], Iterable)
         assert isinstance(tasks[1], int)
         task_num = tasks[1]
-        tasks = tasks[0]
-    elif isinstance(tasks, list):
+        tasks = tasks[0]  # type: ignore
+    elif isinstance(tasks, Sequence):
         task_num = len(tasks)
     else:
         raise TypeError(
-            '"tasks" must be an iterable object or a (iterator, int) tuple, '
-            f'but got {type(tasks)}')
+            '"tasks" must be a tuple object or a sequence object, but got '
+            f'{type(tasks)}')
     pool = init_pool(nproc, initializer, initargs)
     start = not skip_first
     task_num -= nproc * chunksize * int(skip_first)
@@ -208,7 +208,7 @@ def track_parallel_progress(func: Callable,
     return results
 
 
-def track_iter_progress(tasks: Union[list, Iterable],
+def track_iter_progress(tasks: Union[tuple, Sequence],
                         bar_width: int = 50,
                         file=sys.stdout):
     """Track the progress of tasks iteration or enumeration with a progress
@@ -217,8 +217,8 @@ def track_iter_progress(tasks: Union[list, Iterable],
     Tasks are yielded with a simple for-loop.
 
     Args:
-        tasks (list or tuple[Iterable, int]): A list of tasks or
-            (tasks, total num).
+        tasks (tuple or Size): A tuple contains two elements
+            (tasks, total num) or a sequence object.
         bar_width (int): Width of progress bar.
 
     Yields:
@@ -229,13 +229,13 @@ def track_iter_progress(tasks: Union[list, Iterable],
         assert isinstance(tasks[0], Iterable)
         assert isinstance(tasks[1], int)
         task_num = tasks[1]
-        tasks = tasks[0]
-    elif isinstance(tasks, list):
+        tasks = tasks[0]  # type: ignore
+    elif isinstance(tasks, Sequence):
         task_num = len(tasks)
     else:
         raise TypeError(
-            '"tasks" must be an iterable object or a (iterator, int) tuple, '
-            f'but got {type(tasks)}')
+            '"tasks" must be a tuple object or a sequence object, but got '
+            f'{type(tasks)}')
     prog_bar = ProgressBar(task_num, bar_width, file=file)
     for task in tasks:
         yield task
