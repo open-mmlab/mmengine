@@ -1280,16 +1280,18 @@ class DVCLiveVisBackend(BaseVisBackend):
         if not hasattr(self, '_dvclive'):
             return
 
-        file_paths = dict()
-        for filename in scandir(self.cfg.work_dir, self._artifact_suffix,
-                                True):
-            file_path = osp.join(self.cfg.work_dir, filename)
-            relative_path = os.path.relpath(file_path, self.cfg.work_dir)
-            dir_path = os.path.dirname(relative_path)
-            file_paths[file_path] = dir_path
+        if (hasattr(self, 'cfg')
+                and osp.isdir(getattr(self.cfg, 'work_dir', ''))):
+            file_paths = dict()
+            for filename in scandir(self.cfg.work_dir, self._artifact_suffix,
+                                    True):
+                file_path = osp.join(self.cfg.work_dir, filename)
+                relative_path = os.path.relpath(file_path, self.cfg.work_dir)
+                dir_path = os.path.dirname(relative_path)
+                file_paths[file_path] = dir_path
 
-        for file_path, dir_path in file_paths.items():
-            self._dvclive.log_artifact(file_path, dir_path)
+            for file_path, dir_path in file_paths.items():
+                self._dvclive.log_artifact(file_path, dir_path)
 
         self._dvclive.end()
 
