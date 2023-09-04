@@ -40,11 +40,12 @@ class TestGradientCheckpoint(TestCase):
     def test_gradient_checkpoint(self):
         model = Model()
         input = torch.randn(16, 3, 224, 224)
+        input.requires_grad = True
         output = model(input)
         output.sum().backward()
         grad = input.grad.clone()
 
-        turn_on_gradient_checkpoint(model, ['conv2', 'conv3'])
+        turn_on_gradient_checkpoint(model, ['conv1', 'conv2', 'conv3'])
         output2 = model(input)
         output2.sum().backward()
         grad2 = input.grad.clone()
