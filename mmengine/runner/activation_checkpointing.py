@@ -16,8 +16,8 @@ def wrap_forward(forward):
     return wrapper
 
 
-def turn_on_gradient_checkpoint(model: torch.nn.Module,
-                                modules: Union[List[str], str]):
+def turn_on_activation_checkpointing(model: torch.nn.Module,
+                                     modules: Union[List[str], str]):
 
     if isinstance(modules, str):
         modules = [modules]
