@@ -1149,6 +1149,9 @@ class DVCLiveVisBackend(BaseVisBackend):
         >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
         >>> dvclive_vis_backend.add_config(cfg)
 
+    Note:
+        `New in version 0.8.5.`
+
     Args:
         save_dir (str, optional): The root directory to save the files
             produced by the visualizer.
