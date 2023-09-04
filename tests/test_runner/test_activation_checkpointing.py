@@ -5,7 +5,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from mmengine.runner.gradient_checkpoint import turn_on_gradient_checkpoint
+from mmengine.runner.activation_checkpointing import \
+    turn_on_activation_checkpointing
 from mmengine.testing import assert_allclose
 
 
@@ -35,9 +36,9 @@ class Model(nn.Module):
         return x
 
 
-class TestGradientCheckpoint(TestCase):
+class TestActivationCheckpointing(TestCase):
 
-    def test_gradient_checkpoint(self):
+    def test_activation_checkpointing(self):
         model = Model()
         input = torch.randn(16, 3, 224, 224)
         input.requires_grad = True
@@ -45,7 +46,7 @@ class TestGradientCheckpoint(TestCase):
         output.sum().backward()
         grad = input.grad.clone()
 
-        turn_on_gradient_checkpoint(model, ['conv1', 'conv2', 'conv3'])
+        turn_on_activation_checkpointing(model, ['conv1', 'conv2', 'conv3'])
         output2 = model(input)
         output2.sum().backward()
         grad2 = input.grad.clone()
