@@ -13,6 +13,7 @@ from typing import Any, Callable, List, Optional, Sequence, Union
 import cv2
 import numpy as np
 import torch
+from dvclive.live import ParamLike
 
 from mmengine.config import Config, ConfigDict
 from mmengine.fileio import dump
@@ -1182,7 +1183,7 @@ class DVCLiveVisBackend(BaseVisBackend):
         # if no git info, init dvc without git to avoid SCMError
         path = pygit2.discover_repository(os.fspath(os.curdir), True, '')
         try:
-            pygit2.Repository(path).default_signature()
+            pygit2.Repository(path).default_signature
         except KeyError:
             os.system('dvc init -f --no-scm')
 
@@ -1190,7 +1191,7 @@ class DVCLiveVisBackend(BaseVisBackend):
             self._init_kwargs = {
                 'dir': self._save_dir,
                 'save_dvc_exp': True,
-                'cache_images': True
+                'cache_images': True,
             }
         else:
             self._init_kwargs.setdefault('dir', self._save_dir)
@@ -1219,7 +1220,7 @@ class DVCLiveVisBackend(BaseVisBackend):
         """
         assert isinstance(config, Config)
         self.cfg = config
-        self._dvclive.log_params(self._to_dict(config))
+        self._dvclive.log_params(self._to_dvc_paramlike(self.cfg))
 
     @force_init_env
     def add_image(self,
@@ -1255,7 +1256,7 @@ class DVCLiveVisBackend(BaseVisBackend):
             step (int): Useless parameter. Dvclive does not
                 need this parameter. Defaults to 0.
         """
-        self._dvclive.log_param(name, value)
+        self._dvclive.log_param(name, self._to_dvc_paramlike(value))
 
     @force_init_env
     def add_scalars(self,
@@ -1273,7 +1274,7 @@ class DVCLiveVisBackend(BaseVisBackend):
             file_path (str, optional): Useless parameter. Just for
                 interface unification. Defaults to None.
         """
-        self._dvclive.log_params(scalar_dict)
+        self._dvclive.log_params(self._to_dvc_paramlike(scalar_dict))
 
     def close(self) -> None:
         """close an opened dvclive object."""
@@ -1293,12 +1294,23 @@ class DVCLiveVisBackend(BaseVisBackend):
 
         self._dvclive.end()
 
-    def _to_dict(self, config: Config) -> dict:
-        """Convert the <class 'Config' or 'ConfigDict'> to a normal dictionary
-        recursively."""
-        assert isinstance(config, Config)
-        config_dict = config.to_dict()
-        for k, v in config_dict.items():
-            if isinstance(v, ConfigDict):
-                config_dict[k] = v.to_dict()
-        return config_dict
+    def _to_dvc_paramlike(
+        self, data: Union[dict, list, tuple, Config, ConfigDict, np.float64,
+                          torch.Tensor, np.ndarray]
+    ) -> ParamLike:
+        """Convert the input data to a DVC ParamLike recursively.
+
+        Or the `log_params` method of dvclive will raise an error.
+        """
+        if isinstance(data, (dict, Config, ConfigDict)):
+            return {k: self._to_dvc_paramlike(v) for k, v in data.items()}
+        elif isinstance(data, tuple):
+            return [self._to_dvc_paramlike(item) for item in data]
+        elif isinstance(data, list):
+            return [self._to_dvc_paramlike(item) for item in data]
+        elif isinstance(data, np.float64):
+            return float(data)
+        elif isinstance(data, (torch.Tensor, np.ndarray)):
+            return data.tolist()
+        else:
+            return data
