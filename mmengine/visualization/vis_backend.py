@@ -13,7 +13,6 @@ from typing import Any, Callable, List, Optional, Sequence, Union
 import cv2
 import numpy as np
 import torch
-from dvclive.live import ParamLike
 
 from mmengine.config import Config, ConfigDict
 from mmengine.fileio import dump
@@ -1184,8 +1183,8 @@ class DVCLiveVisBackend(BaseVisBackend):
             raise ImportError(
                 'Please run "pip install dvclive" to install dvclive')
         # if no git info, init dvc without git to avoid SCMError
-        path = pygit2.discover_repository(os.fspath(os.curdir), True, '')
         try:
+            path = pygit2.discover_repository(os.fspath(os.curdir), True, '')
             pygit2.Repository(path).default_signature
         except KeyError:
             os.system('dvc init -f --no-scm')
@@ -1259,7 +1258,9 @@ class DVCLiveVisBackend(BaseVisBackend):
             step (int): Useless parameter. Dvclive does not
                 need this parameter. Defaults to 0.
         """
-        self._dvclive.log_param(name, self._to_dvc_paramlike(value))
+        if isinstance(value, torch.Tensor):
+            value = value.numpy()
+        self._dvclive.log_metric(name, value)
 
     @force_init_env
     def add_scalars(self,
@@ -1297,23 +1298,23 @@ class DVCLiveVisBackend(BaseVisBackend):
 
         self._dvclive.end()
 
-    def _to_dvc_paramlike(
-        self, data: Union[dict, list, tuple, Config, ConfigDict, np.float64,
-                          torch.Tensor, np.ndarray]
-    ) -> ParamLike:
-        """Convert the input data to a DVC ParamLike recursively.
+    def _to_dvc_paramlike(self,
+                          value: Union[int, float, dict, list, tuple, Config,
+                                       ConfigDict, torch.Tensor, np.ndarray]):
+        """Convert the input value to a DVC `ParamLike` recursively.
 
         Or the `log_params` method of dvclive will raise an error.
         """
-        if isinstance(data, (dict, Config, ConfigDict)):
-            return {k: self._to_dvc_paramlike(v) for k, v in data.items()}
-        elif isinstance(data, tuple):
-            return [self._to_dvc_paramlike(item) for item in data]
-        elif isinstance(data, list):
-            return [self._to_dvc_paramlike(item) for item in data]
-        elif isinstance(data, np.float64):
-            return float(data)
-        elif isinstance(data, (torch.Tensor, np.ndarray)):
-            return data.tolist()
+
+        if isinstance(value, (dict, Config, ConfigDict)):
+            return {k: self._to_dvc_paramlike(v) for k, v in value.items()}
+        elif isinstance(value, tuple):
+            return [self._to_dvc_paramlike(item) for item in value]
+        elif isinstance(value, list):
+            return [self._to_dvc_paramlike(item) for item in value]
+        elif isinstance(value, (torch.Tensor, np.ndarray)):
+            return value.tolist()
+        elif isinstance(value, np.generic):
+            return value.item()
         else:
-            return data
+            return value
