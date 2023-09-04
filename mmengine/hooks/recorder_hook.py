@@ -2,6 +2,7 @@
 import ast
 import inspect
 import logging
+import os.path as osp
 import pickle
 import textwrap
 import types
@@ -13,14 +14,23 @@ from mmengine.registry import HOOKS, RECORDERS
 from . import Hook
 
 
+def function_with_index(function, index):
+    return function + '@' + str(index)
+
+
 class FunctionRecorderTransformer(ast.NodeTransformer):
 
-    def __init__(self, target):
+    def __init__(self, target, target_index):
         super().__init__()
         self._target = target
+        self._target_index = set(target_index)
+        self.count = 0
 
     def visit_Assign(self, node):
         if node.targets[0].id != self._target:
+            return node
+        self.count += 1
+        if self.count not in self._target_index:
             return node
         update_messagehub_node = ast.Expr(
             value=ast.Call(
@@ -29,7 +39,9 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
                     attr='update_info',
                     ctx=ast.Load()),
                 args=[
-                    ast.Constant(value=node.targets[0].id),
+                    ast.Constant(
+                        value=function_with_index(node.targets[0].id,
+                                                  self.count)),
                     ast.Name(id=node.targets[0].id, ctx=ast.Load())
                 ],
                 keywords=[]))
@@ -46,10 +58,6 @@ def _get_tensor_key(target, attribute=None):
     if attribute:
         target = target + '_' + attribute
     return target
-
-
-# def get_node_name(func_name):
-#     return 'tmp_func_' + func_name
 
 
 class FuncCallVisitor(ast.NodeTransformer):
@@ -98,10 +106,13 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
         func_chain = self._target.split('.')
         func_chain.append(self._attribute)
         assert len(func_chain) >= 2
-        attr = ast.Attribute(value=ast.Name(id=func_chain[0], ctx=ast.Load()), attr=func_chain[1], ctx=ast.Load())
+        attr = ast.Attribute(
+            value=ast.Name(id=func_chain[0], ctx=ast.Load()),
+            attr=func_chain[1],
+            ctx=ast.Load())
         for ele in func_chain[2:]:
             attr = ast.Attribute(value=attr, attr=ele, ctx=ast.Load())
-        return attr        
+        return attr
 
     def visit_Assign(self, node):
         self.function_visitor.visit(node)
@@ -112,7 +123,8 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
                 targets=[ast.Name(id=assign_node_name, ctx=ast.Store())],
                 value=assign_right_node)
             if self._attribute:
-                assign_node_name = _get_tensor_key(self._target, self._attribute)
+                assign_node_name = _get_tensor_key(self._target,
+                                                   self._attribute)
                 ast_arg2 = self._get_target_attribute()
             else:
                 ast_arg2 = ast.Name(id=assign_node_name, ctx=ast.Load())
@@ -142,12 +154,13 @@ class Recorder(metaclass=ABCMeta):
 @RECORDERS.register_module()
 class FunctionRecorder(Recorder):
 
-    def __init__(self, target: str):
+    def __init__(self, target: str, index: list):
         super().__init__(target)
+        self.index = index
         self.visit_assign = self._get_transformer_class()
 
     def _get_transformer_class(self):
-        return FunctionRecorderTransformer(self._target)
+        return FunctionRecorderTransformer(self._target, self.index)
 
     def rewrite(self, ast_tree):
         return self.visit_assign.visit(ast_tree)
@@ -184,12 +197,15 @@ class RecorderHook(Hook):
         self._recorders: Dict[str, Recorder] = {}
         self.print_modification = print_modification
         self.save_dir = save_dir  # type: ignore
+        if filename_tmpl is None:
+            self.filename_tmpl = 'record_epoch_{}.pth'
 
         if recorders is None or len(recorders) == 0:
             raise ValueError('recorders not initialized')
         for recorder in recorders:
             target = recorder.get('target')
             attribute = recorder.get('attribute')
+            tensor_key = _get_tensor_key(target, attribute)
 
             if target is None:
                 print_log(
@@ -197,8 +213,17 @@ class RecorderHook(Hook):
                     'because recorder has no target',
                     logger='current',
                     level=logging.WARNING)
-            tensor_key = _get_tensor_key(target, attribute)
-            self.tensor_dict[tensor_key] = list()
+            if recorder.get('type') == 'FunctionRecorder':
+                index = recorder.get('index')
+                if isinstance(index, list):
+                    for i in index:
+                        self.tensor_dict[function_with_index(target,
+                                                             i)] = list()
+                elif isinstance(index, int):
+                    self.tensor_dict[function_with_index(target,
+                                                         index)] = list()
+            elif recorder.get('type') == 'AttributeRecorder':
+                self.tensor_dict[tensor_key] = list()
             self._recorders[tensor_key] = RECORDERS.build(recorder)
 
     def _modify_func(self, func):
@@ -268,8 +293,21 @@ class RecorderHook(Hook):
         for key in self.tensor_dict.keys():
             self.tensor_dict[key].append(self.message_hub.get_info(key))
 
+    def _save_record(self, step):
+        recorder_file_name = self.filename_tmpl.format(step)
+        path = osp.join(self.save_dir, recorder_file_name)
+        with open(path, 'wb') as f:
+            pickle.dump(self.tensor_dict, f)
+
+    def _init_tensor_dict(self):
+        for k in self.tensor_dict.keys():
+            self.tensor_dict[k] = list()
+
+    def after_train_epoch(self, runner) -> None:
+        step = runner.epoch + 1
+        runner.logger.info(f'Saving record at {runner.epoch + 1} epochs')
+        self._save_record(step)
+        self._init_tensor_dict()
+
     def after_train(self, runner) -> None:
-        data = pickle.dumps(self.tensor_dict)
-        print(data)
-        # use self.save_dir to save data
         runner.model.forward = self.origin_forward
