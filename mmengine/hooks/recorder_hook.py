@@ -24,7 +24,7 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
         super().__init__()
         self._target = target
         self._target_index = set(target_index)
-        self.count = 0
+        self.count = -1
 
     def visit_Assign(self, node):
         if node.targets[0].id != self._target:
