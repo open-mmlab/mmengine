@@ -115,7 +115,8 @@ def track_progress(func: Callable,
         task_num = len(tasks)
     else:
         raise TypeError(
-            '"tasks" must be an iterable object or a (iterator, int) tuple')
+            '"tasks" must be an iterable object or a (iterator, int) tuple, '
+            f'but got {type(tasks)}')
     prog_bar = ProgressBar(task_num, bar_width, file=file)
     results = []
     for task in tasks:
@@ -181,7 +182,8 @@ def track_parallel_progress(func: Callable,
         task_num = len(tasks)
     else:
         raise TypeError(
-            '"tasks" must be an iterable object or a (iterator, int) tuple')
+            '"tasks" must be an iterable object or a (iterator, int) tuple, '
+            f'but got {type(tasks)}')
     pool = init_pool(nproc, initializer, initargs)
     start = not skip_first
     task_num -= nproc * chunksize * int(skip_first)
@@ -232,7 +234,8 @@ def track_iter_progress(tasks: Union[list, Iterable],
         task_num = len(tasks)
     else:
         raise TypeError(
-            '"tasks" must be an iterable object or a (iterator, int) tuple')
+            '"tasks" must be an iterable object or a (iterator, int) tuple, '
+            f'but got {type(tasks)}')
     prog_bar = ProgressBar(task_num, bar_width, file=file)
     for task in tasks:
         yield task

@@ -85,7 +85,7 @@ def main():
         collate_fn=dict(type='default_collate'))
     runner = Runner(
         model=MMResNet50(),
-        work_dir='./work_dir',
+        work_dir='./work_dirs',
         train_dataloader=train_dataloader,
         optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
         train_cfg=dict(by_epoch=True, max_epochs=2, val_interval=1),
