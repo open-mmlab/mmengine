@@ -94,19 +94,26 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
         self._attribute = attribute
         self.function_visitor = FuncCallVisitor(target)
 
+    def _get_target_attribute(self):
+        func_chain = self._target.split('.')
+        func_chain.append(self._attribute)
+        assert len(func_chain) >= 2
+        attr = ast.Attribute(value=ast.Name(id=func_chain[0], ctx=ast.Load()), attr=func_chain[1], ctx=ast.Load())
+        for ele in func_chain[2:]:
+            attr = ast.Attribute(value=attr, attr=ele, ctx=ast.Load())
+        return attr        
+
     def visit_Assign(self, node):
         self.function_visitor.visit(node)
         if self.function_visitor.call_nodes:
             assign_right_node = self.function_visitor.call_nodes[0]
-            assign_node_name = _get_tensor_key(self._target, self._attribute)
+            assign_node_name = _get_tensor_key(self._target, None)
             assign_left_node = ast.Assign(
                 targets=[ast.Name(id=assign_node_name, ctx=ast.Store())],
                 value=assign_right_node)
             if self._attribute:
-                ast_arg2 = ast.Attribute(
-                    value=ast.Name(assign_node_name, ctx=ast.Load()),
-                    attr=self._attribute,
-                    ctx=ast.Load())
+                assign_node_name = _get_tensor_key(self._target, self._attribute)
+                ast_arg2 = self._get_target_attribute()
             else:
                 ast_arg2 = ast.Name(id=assign_node_name, ctx=ast.Load())
             update_messagehub_node = ast.Expr(
