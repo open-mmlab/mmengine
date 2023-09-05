@@ -68,6 +68,35 @@ runner = Runner(
 runner.train()
 ```
 
+## Gradient Checkpointing
+
+```{note}
+Starting from MMEngine v0.8.5, gradient checkpointing is supported. For performance comparisons, you can click on [#1319](https://github.com/open-mmlab/mmengine/pull/1319). If you encounter any issues during usage, feel free to provide feedback in [#1319](https://github.com/open-mmlab/mmengine/pull/1319).
+```
+
+You can simply enable gradient checkpointing by configuring activation_checkpointing in the Runner's cfg parameters.
+
+Let's take [Get Started in 15 Minutes](../get_started/15_minutes.md) as an example:
+
+```python
+cfg = dict(
+    activation_checkpointing=['resnet.layer1', 'resnet.layer2', 'resnet.layer3']
+)
+runner = Runner(
+    model=MMResNet50(),
+    work_dir='./work_dir',
+    train_dataloader=train_dataloader,
+    optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+    train_cfg=dict(by_epoch=True, max_epochs=2, val_interval=1),
+    val_dataloader=val_dataloader,
+    val_cfg=dict(),
+    val_evaluator=dict(type=Accuracy),
+    launcher=args.launcher,
+    cfg=cfg,
+)
+runner.train()
+```
+
 ## Large Model Training
 
 ```{warning}
