@@ -149,3 +149,42 @@ runner.train()
 ```
 
 更多初始化配置参数可点击 [neptune.init_run API](https://docs.neptune.ai/api/neptune/#init_run) 查询。
+
+## DVCLive
+
+使用 DVCLive 前需先安装依赖库 `dvclive` 并参考 [iterative.ai](https://dvc.org/doc/start) 进行配置。常见的配置方式如下：
+
+```bash
+pip install dvclive
+cd ${WORK_DIR}
+git init
+dvc init
+git commit -m "DVC init"
+```
+
+设置 `Runner` 初始化参数中的 `visualizer`，并将 `vis_backends` 设置为 [DVCLiveVisBackend](mmengine.visualization.DVCLiveVisBackend)。
+
+```python
+runner = Runner(
+    model=MMResNet50(),
+    work_dir='./work_dir_dvc',
+    train_dataloader=train_dataloader,
+    optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+    train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
+    val_dataloader=val_dataloader,
+    val_cfg=dict(),
+    val_evaluator=dict(type=Accuracy),
+    visualizer=dict(type='Visualizer', vis_backends=[dict(type='DVCLiveVisBackend')]),
+)
+runner.train()
+```
+
+```{note}
+推荐将 `work_dir` 设置为 `work_dirs`。否则，你在 OpenMMLab 仓库中运行试验时，DVC 会给出警告 `WARNING:dvclive:Error in cache: bad DVC file name 'work_dirs\xxx.dvc' is git-ignored`。
+```
+
+更多初始化配置参数可点击 [DVCLive API Reference](https://dvc.org/doc/dvclive/live) 查询。
+
+你还可以安装 VSCode 扩展 [DVC](https://marketplace.visualstudio.com/items?itemName=Iterative.dvc) 来可视化训练过程。
+
+![dvc VSCode extension](https://github.com/open-mmlab/mmengine/assets/27466624/a573e11f-2fed-4775-a0cf-a42f5031dba9)

@@ -149,3 +149,42 @@ runner.train()
 ```
 
 More initialization configuration parameters are available at [neptune.init_run API](https://docs.neptune.ai/api/neptune/#init_run).
+
+## DVCLive
+
+Before using DVCLive, you need to install `dvclive` dependency library and refer to [iterative.ai](https://dvc.org/doc/start) for configuration. Common configurations are as follows:
+
+```bash
+pip install dvclive
+cd ${WORK_DIR}
+git init
+dvc init
+git commit -m "DVC init"
+```
+
+Configure the `Runner` in the initialization parameters of the Runner, and set `vis_backends` to [DVCLiveVisBackend](mmengine.visualization.DVCLiveVisBackend).
+
+```python
+runner = Runner(
+    model=MMResNet50(),
+    work_dir='./work_dir_dvc',
+    train_dataloader=train_dataloader,
+    optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+    train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
+    val_dataloader=val_dataloader,
+    val_cfg=dict(),
+    val_evaluator=dict(type=Accuracy),
+    visualizer=dict(type='Visualizer', vis_backends=[dict(type='DVCLiveVisBackend')]),
+)
+runner.train()
+```
+
+```{note}
+Recommend not to set `work_dir` as `work_dirs`. Or DVC will give a warning `WARNING:dvclive:Error in cache: bad DVC file name 'work_dirs\xxx.dvc' is git-ignored` if you run experiments in a OpenMMLab's repo.
+```
+
+More initialization configuration parameters are available at [DVCLive API Reference](https://dvc.org/doc/dvclive/live).
+
+You can also configure a VSCode extension of [DVC](https://marketplace.visualstudio.com/items?itemName=Iterative.dvc) to visualize the training process.
+
+![dvc VSCode extension](https://github.com/open-mmlab/mmengine/assets/27466624/a573e11f-2fed-4775-a0cf-a42f5031dba9)
