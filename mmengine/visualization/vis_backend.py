@@ -1249,12 +1249,11 @@ class DVCLiveVisBackend(BaseVisBackend):
         Args:
             name (str): The scalar identifier.
             value (int, float, torch.Tensor, np.ndarray): Value to save.
-            step (int): Useless parameter. Dvclive does not
-                need this parameter. Defaults to 0.
+            step (int): Global step value to record. Defaults to 0.
         """
         if isinstance(value, torch.Tensor):
             value = value.numpy()
-        self._dvclive.log_metric(name, value)
+        self._dvclive.log_metric(name, value, step)
 
     @force_init_env
     def add_scalars(self,
@@ -1267,31 +1266,28 @@ class DVCLiveVisBackend(BaseVisBackend):
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Useless parameter. Dvclive does not
-                need this parameter. Defaults to 0.
+            step (int): Global step value to record. Defaults to 0.
             file_path (str, optional): Useless parameter. Just for
                 interface unification. Defaults to None.
         """
         for key, value in scalar_dict.items():
             self.add_scalar(key, value, step, **kwargs)
+        self._dvclive.next_step()
 
     def close(self) -> None:
         """close an opened dvclive object."""
         if not hasattr(self, '_dvclive'):
             return
 
-        if (hasattr(self, 'cfg')
-                and osp.isdir(getattr(self.cfg, 'work_dir', ''))):
-            file_paths = dict()
-            for filename in scandir(self.cfg.work_dir, self._artifact_suffix,
-                                    True):
-                file_path = osp.join(self.cfg.work_dir, filename)
-                relative_path = os.path.relpath(file_path, self.cfg.work_dir)
-                dir_path = os.path.dirname(relative_path)
-                file_paths[file_path] = dir_path
+        file_paths = dict()
+        for filename in scandir(self._save_dir, self._artifact_suffix, True):
+            file_path = osp.join(self._save_dir, filename)
+            relative_path = os.path.relpath(file_path, self._save_dir)
+            dir_path = os.path.dirname(relative_path)
+            file_paths[file_path] = dir_path
 
-            for file_path, dir_path in file_paths.items():
-                self._dvclive.log_artifact(file_path, dir_path)
+        for file_path, dir_path in file_paths.items():
+            self._dvclive.log_artifact(file_path, dir_path)
 
         self._dvclive.end()
 
