@@ -15,6 +15,7 @@ from argparse import Action, ArgumentParser, Namespace
 from collections import OrderedDict, abc
 from contextlib import contextmanager
 from pathlib import Path
+from types import FunctionType
 from typing import Any, Optional, Sequence, Tuple, Union
 
 from addict import Dict
@@ -52,6 +53,8 @@ def _lazy2string(cfg_dict, dict_type=None):
         return type(cfg_dict)(_lazy2string(v) for v in cfg_dict)
     elif isinstance(cfg_dict, (LazyAttr, LazyObject)):
         return f'{cfg_dict.module}.{str(cfg_dict)}'
+    elif isinstance(cfg_dict, FunctionType):
+        return str(cfg_dict)
     else:
         return cfg_dict
 
