@@ -517,11 +517,11 @@ def get_object_from_string(obj_name: str):
     # import module
     while True:
         try:
-            obj = import_module(module_name)
+            module = import_module(module_name)
             part = next(parts)
             # mmcv.ops has nms.py has nms function at the same time. So the
             # function will have a higher priority
-            obj = getattr(obj, part, None)
+            obj = getattr(module, part, None)
             if obj is not None and not ismodule(obj):
                 break
             module_name = f'{module_name}.{part}'
@@ -532,6 +532,7 @@ def get_object_from_string(obj_name: str):
             return None
 
     # get class or attribute from module
+    obj = module
     while True:
         try:
             obj = getattr(obj, part)
