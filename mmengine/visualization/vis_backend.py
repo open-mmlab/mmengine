@@ -1253,7 +1253,8 @@ class DVCLiveVisBackend(BaseVisBackend):
         """
         if isinstance(value, torch.Tensor):
             value = value.numpy()
-        self._dvclive.log_metric(name, value, step)
+        self._dvclive.step = step
+        self._dvclive.log_metric(name, value)
 
     @force_init_env
     def add_scalars(self,
@@ -1272,7 +1273,6 @@ class DVCLiveVisBackend(BaseVisBackend):
         """
         for key, value in scalar_dict.items():
             self.add_scalar(key, value, step, **kwargs)
-        self._dvclive.next_step()
 
     def close(self) -> None:
         """close an opened dvclive object."""
