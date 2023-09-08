@@ -1301,9 +1301,7 @@ class DVCLiveVisBackend(BaseVisBackend):
 
         if isinstance(value, (dict, Config, ConfigDict)):
             return {k: self._to_dvc_paramlike(v) for k, v in value.items()}
-        elif isinstance(value, tuple):
-            return [self._to_dvc_paramlike(item) for item in value]
-        elif isinstance(value, list):
+        elif isinstance(value, (tuple, list)):
             return [self._to_dvc_paramlike(item) for item in value]
         elif isinstance(value, (torch.Tensor, np.ndarray)):
             return value.tolist()
