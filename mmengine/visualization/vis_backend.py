@@ -1355,10 +1355,11 @@ class AimVisBackend(BaseVisBackend):
 
         from datetime import datetime
 
-        path_list = os.path.normpath(self._save_dir).split(os.sep)
-        exp_name = f'{path_list[-2]}_{path_list[-1]}' \
-            if self._save_dir is not None \
-            else datetime.now().strftime('%Y%m%d_%H%M%S')
+        if self._save_dir is not None:
+            path_list = os.path.normpath(self._save_dir).split(os.sep)
+            exp_name = f'{path_list[-2]}_{path_list[-1]}'
+        else:
+            exp_name = datetime.now().strftime('%Y%m%d_%H%M%S')
 
         if self._init_kwargs is None:
             self._init_kwargs = {}
