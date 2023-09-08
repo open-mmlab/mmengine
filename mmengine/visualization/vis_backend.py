@@ -4,6 +4,7 @@ import functools
 import logging
 import os
 import os.path as osp
+import platform
 import warnings
 from abc import ABCMeta, abstractmethod
 from collections.abc import MutableMapping
@@ -13,12 +14,12 @@ import cv2
 import numpy as np
 import torch
 
-from mmengine.config import Config
+from mmengine.config import Config, ConfigDict
 from mmengine.fileio import dump
 from mmengine.hooks.logger_hook import SUFFIX_TYPE
 from mmengine.logging import MMLogger, print_log
 from mmengine.registry import VISBACKENDS
-from mmengine.utils import scandir
+from mmengine.utils import digit_version, scandir
 from mmengine.utils.dl_utils import TORCH_VERSION
 
 
@@ -1130,3 +1131,181 @@ class NeptuneVisBackend(BaseVisBackend):
         """close an opened object."""
         if hasattr(self, '_neptune'):
             self._neptune.stop()
+
+
+@VISBACKENDS.register_module()
+class DVCLiveVisBackend(BaseVisBackend):
+    """DVCLive visualization backend class.
+
+    Examples:
+        >>> from mmengine.visualization import DVCLiveVisBackend
+        >>> import numpy as np
+        >>> dvclive_vis_backend = DVCLiveVisBackend(save_dir='temp_dir')
+        >>> img=np.random.randint(0, 256, size=(10, 10, 3))
+        >>> dvclive_vis_backend.add_image('img', img)
+        >>> dvclive_vis_backend.add_scalar('mAP', 0.6)
+        >>> dvclive_vis_backend.add_scalars({'loss': 0.1, 'acc': 0.8})
+        >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        >>> dvclive_vis_backend.add_config(cfg)
+
+    Note:
+        `New in version 0.8.5.`
+
+    Args:
+        save_dir (str, optional): The root directory to save the files
+            produced by the visualizer.
+        artifact_suffix (Tuple[str] or str, optional): The artifact suffix.
+            Defaults to ('.json', '.py', 'yaml').
+        init_kwargs (dict, optional): DVCLive initialization parameters.
+            See `DVCLive <https://dvc.org/doc/dvclive/live>`_ for details.
+            Defaults to None.
+    """
+
+    def __init__(self,
+                 save_dir: str,
+                 artifact_suffix: SUFFIX_TYPE = ('.json', '.py', 'yaml'),
+                 init_kwargs: Optional[dict] = None):
+        super().__init__(save_dir)
+        self._artifact_suffix = artifact_suffix
+        self._init_kwargs = init_kwargs
+
+    def _init_env(self):
+        """Setup env for dvclive."""
+        if digit_version(platform.python_version()) < digit_version('3.8'):
+            raise RuntimeError('Please use Python 3.8 or higher version '
+                               'to use DVCLiveVisBackend.')
+
+        try:
+            import pygit2
+            from dvclive import Live
+        except ImportError:
+            raise ImportError(
+                'Please run "pip install dvclive" to install dvclive')
+        # if no git info, init dvc without git to avoid SCMError
+        try:
+            path = pygit2.discover_repository(os.fspath(os.curdir), True, '')
+            pygit2.Repository(path).default_signature
+        except KeyError:
+            os.system('dvc init -f --no-scm')
+
+        if self._init_kwargs is None:
+            self._init_kwargs = {}
+        self._init_kwargs.setdefault('dir', self._save_dir)
+        self._init_kwargs.setdefault('save_dvc_exp', True)
+        self._init_kwargs.setdefault('cache_images', True)
+
+        self._dvclive = Live(**self._init_kwargs)
+
+    @property  # type: ignore
+    @force_init_env
+    def experiment(self):
+        """Return dvclive object.
+
+        The experiment attribute can get the dvclive backend, If you want to
+        write other data, such as writing a table, you can directly get the
+        dvclive backend through experiment.
+        """
+        return self._dvclive
+
+    @force_init_env
+    def add_config(self, config: Config, **kwargs) -> None:
+        """Record the config to dvclive.
+
+        Args:
+            config (Config): The Config object
+        """
+        assert isinstance(config, Config)
+        self.cfg = config
+        self._dvclive.log_params(self._to_dvc_paramlike(self.cfg))
+
+    @force_init_env
+    def add_image(self,
+                  name: str,
+                  image: np.ndarray,
+                  step: int = 0,
+                  **kwargs) -> None:
+        """Record the image to dvclive.
+
+        Args:
+            name (str): The image identifier.
+            image (np.ndarray): The image to be saved. The format
+                should be RGB.
+            step (int): Useless parameter. Dvclive does not
+                need this parameter. Defaults to 0.
+        """
+        assert image.dtype == np.uint8
+        save_file_name = f'{name}.png'
+
+        self._dvclive.log_image(save_file_name, image)
+
+    @force_init_env
+    def add_scalar(self,
+                   name: str,
+                   value: Union[int, float, torch.Tensor, np.ndarray],
+                   step: int = 0,
+                   **kwargs) -> None:
+        """Record the scalar data to dvclive.
+
+        Args:
+            name (str): The scalar identifier.
+            value (int, float, torch.Tensor, np.ndarray): Value to save.
+            step (int): Global step value to record. Defaults to 0.
+        """
+        if isinstance(value, torch.Tensor):
+            value = value.numpy()
+        self._dvclive.step = step
+        self._dvclive.log_metric(name, value)
+
+    @force_init_env
+    def add_scalars(self,
+                    scalar_dict: dict,
+                    step: int = 0,
+                    file_path: Optional[str] = None,
+                    **kwargs) -> None:
+        """Record the scalar's data to dvclive.
+
+        Args:
+            scalar_dict (dict): Key-value pair storing the tag and
+                corresponding values.
+            step (int): Global step value to record. Defaults to 0.
+            file_path (str, optional): Useless parameter. Just for
+                interface unification. Defaults to None.
+        """
+        for key, value in scalar_dict.items():
+            self.add_scalar(key, value, step, **kwargs)
+
+    def close(self) -> None:
+        """close an opened dvclive object."""
+        if not hasattr(self, '_dvclive'):
+            return
+
+        file_paths = dict()
+        for filename in scandir(self._save_dir, self._artifact_suffix, True):
+            file_path = osp.join(self._save_dir, filename)
+            relative_path = os.path.relpath(file_path, self._save_dir)
+            dir_path = os.path.dirname(relative_path)
+            file_paths[file_path] = dir_path
+
+        for file_path, dir_path in file_paths.items():
+            self._dvclive.log_artifact(file_path, dir_path)
+
+        self._dvclive.end()
+
+    def _to_dvc_paramlike(self,
+                          value: Union[int, float, dict, list, tuple, Config,
+                                       ConfigDict, torch.Tensor, np.ndarray]):
+        """Convert the input value to a DVC `ParamLike` recursively.
+
+        Or the `log_params` method of dvclive will raise an error.
+        """
+
+        if isinstance(value, (dict, Config, ConfigDict)):
+            return {k: self._to_dvc_paramlike(v) for k, v in value.items()}
+        elif isinstance(value, (tuple, list)):
+            return [self._to_dvc_paramlike(item) for item in value]
+        elif isinstance(value, (torch.Tensor, np.ndarray)):
+            return value.tolist()
+        elif isinstance(value, np.generic):
+            return value.item()
+        else:
+            return value
