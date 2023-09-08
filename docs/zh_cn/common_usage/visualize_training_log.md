@@ -1,6 +1,6 @@
 # 可视化训练日志
 
-MMEngine 集成了 [TensorBoard](https://www.tensorflow.org/tensorboard?hl=zh-cn)、[Weights & Biases (WandB)](https://docs.wandb.ai/)、[MLflow](https://mlflow.org/docs/latest/index.html) 、[ClearML](https://clear.ml/docs/latest/docs) 和 [Neptune](https://docs.neptune.ai/) 实验管理工具，你可以很方便地跟踪和可视化损失及准确率等指标。
+MMEngine 集成了 [TensorBoard](https://www.tensorflow.org/tensorboard?hl=zh-cn)、[Weights & Biases (WandB)](https://docs.wandb.ai/)、[MLflow](https://mlflow.org/docs/latest/index.html) 、[ClearML](https://clear.ml/docs/latest/docs)、[Neptune](https://docs.neptune.ai/) 和 [DVCLive](https://dvc.org/doc/dvclive) 实验管理工具，你可以很方便地跟踪和可视化损失及准确率等指标。
 
 下面基于[15 分钟上手 MMENGINE](../get_started/15_minutes.md)中的例子介绍如何一行配置实验管理工具。
 
@@ -183,8 +183,10 @@ runner.train()
 推荐将 `work_dir` 设置为 `work_dirs`。否则，你在 OpenMMLab 仓库中运行试验时，DVC 会给出警告 `WARNING:dvclive:Error in cache: bad DVC file name 'work_dirs\xxx.dvc' is git-ignored`。
 ```
 
+打开 `work_dir_dvc` 下面的 `report.html` 文件，即可看到如下图的可视化效果。
+
+![image](https://github.com/open-mmlab/mmengine/assets/58739961/47d85520-9a4a-4143-a449-12ed7347cc63)
+
+你还可以安装 VSCode 扩展 [DVC](https://marketplace.visualstudio.com/items?itemName=Iterative.dvc) 进行可视化。
+
 更多初始化配置参数可点击 [DVCLive API Reference](https://dvc.org/doc/dvclive/live) 查询。
-
-你还可以安装 VSCode 扩展 [DVC](https://marketplace.visualstudio.com/items?itemName=Iterative.dvc) 来可视化训练过程。
-
-![dvc VSCode extension](https://github.com/open-mmlab/mmengine/assets/27466624/a573e11f-2fed-4775-a0cf-a42f5031dba9)
