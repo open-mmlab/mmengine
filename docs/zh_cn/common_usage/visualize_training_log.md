@@ -190,3 +190,47 @@ runner.train()
 你还可以安装 VSCode 扩展 [DVC](https://marketplace.visualstudio.com/items?itemName=Iterative.dvc) 进行可视化。
 
 更多初始化配置参数可点击 [DVCLive API Reference](https://dvc.org/doc/dvclive/live) 查询。
+
+## Aim
+
+使用 Aim 前需先安装依赖库 `aim`。
+
+```bash
+pip install aim
+```
+
+设置 `Runner` 初始化参数中的 `visualizer`，并将 `vis_backends` 设置为 [AimVisBackend](mmengine.visualization.AimVisBackend)。
+
+```python
+runner = Runner(
+    model=MMResNet50(),
+    work_dir='./work_dir',
+    train_dataloader=train_dataloader,
+    optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+    train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
+    val_dataloader=val_dataloader,
+    val_cfg=dict(),
+    val_evaluator=dict(type=Accuracy),
+    visualizer=dict(type='Visualizer', vis_backends=[dict(type='AimVisBackend')]),
+)
+runner.train()
+```
+
+在终端中输入
+
+```bash
+aim up
+```
+
+或者在 Jupyter Notebook 中输入
+
+```bash
+%load_ext aim
+%aim up
+```
+
+即可启动 Aim UI，界面如下图所示。
+
+![Aim UI](https://github.com/open-mmlab/mmengine/assets/27466624/a968dfba-a892-4a87-8197-a904c9452a42)
+
+初始化配置参数可点击 [Aim SDK Reference](https://aimstack.readthedocs.io/en/latest/refs/sdk.html#module-aim.sdk.run) 查询。

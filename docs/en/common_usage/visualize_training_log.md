@@ -190,3 +190,47 @@ Open the `report.html` file under `work_dir_dvc`, and you will see the visualiza
 You can also configure a VSCode extension of [DVC](https://marketplace.visualstudio.com/items?itemName=Iterative.dvc) to visualize the training process.
 
 More initialization configuration parameters are available at [DVCLive API Reference](https://dvc.org/doc/dvclive/live).
+
+## Aim
+
+Before using Aim, you need to install `aim` dependency library.
+
+```bash
+pip install aim
+```
+
+Configure the `Runner` in the initialization parameters of the Runner, and set `vis_backends` to [AimVisBackend](mmengine.visualization.AimVisBackend).
+
+```python
+runner = Runner(
+    model=MMResNet50(),
+    work_dir='./work_dir',
+    train_dataloader=train_dataloader,
+    optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+    train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
+    val_dataloader=val_dataloader,
+    val_cfg=dict(),
+    val_evaluator=dict(type=Accuracy),
+    visualizer=dict(type='Visualizer', vis_backends=[dict(type='AimVisBackend')]),
+)
+runner.train()
+```
+
+In the terminal, use the following command,
+
+```bash
+aim up
+```
+
+or in the Jupyter Notebook, use the following command,
+
+```bash
+%load_ext aim
+%aim up
+```
+
+to launch the Aim UI as shown below.
+
+![Aim UI](https://github.com/open-mmlab/mmengine/assets/27466624/a968dfba-a892-4a87-8197-a904c9452a42)
+
+Initialization configuration parameters are available at [Aim SDK Reference](https://aimstack.readthedocs.io/en/latest/refs/sdk.html#module-aim.sdk.run).
