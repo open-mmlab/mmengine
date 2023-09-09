@@ -8,9 +8,11 @@ DATA_BATCH = Optional[Union[dict, tuple, list]]
 
 
 class ReportingHook(Hook):
-    """Auxiliary hook to report the score to tuner.
-
-    If tuning limit is specified, this hook will mark the loop to stop.
+    """Auxiliary hook to report the score to tuner. The ReportingHook maintains
+    a "scoreboard" which keeps track of the monitored metrics' scores during
+    the training process. The scores are aggregated based on the method
+    specified by the 'report_op' parameter. If tuning limit is specified, this
+    hook will mark the loop to stop.
 
     Args:
         monitor (str): The monitored metric key to report.
@@ -18,10 +20,17 @@ class ReportingHook(Hook):
             Defaults to None.
         tuning_epoch (int, optional): The epoch limit to stop tuning.
             Defaults to None.
-        report_op (str, optional): The operation to report the score.
-            Options are 'latest', 'mean', 'min', 'max'. Defaults to 'latest'.
+        report_op (str, optional): The method for aggregating scores
+            in the scoreboard. Accepts the following options:
+            - 'latest': Returns the most recent score in the scoreboard.
+            - 'mean': Returns the mean of all scores in the scoreboard.
+            - 'max': Returns the highest score in the scoreboard.
+            - 'min': Returns the lowest score in the scoreboard.
+            Defaults to 'latest'.
         max_scoreboard_len (int, optional):
-            The maximum length of the scoreboard.
+            Specifies the maximum number of scores that can be retained
+            on the scoreboard, helping to manage memory and computational
+            overhead. Defaults to 1024.
     """
 
     report_op_supported: Dict[str, Callable[[List[float]], float]] = {
@@ -38,7 +47,7 @@ class ReportingHook(Hook):
                  report_op: str = 'latest',
                  max_scoreboard_len: int = 1024):
         if report_op not in self.report_op_supported:
-              raise ValueError(f'report_op {report_op} is not supported')
+            raise ValueError(f'report_op {report_op} is not supported')
         if tuning_iter is not None and tuning_epoch is not None:
             raise ValueError(
                 'tuning_iter and tuning_epoch cannot be set at the same time')
