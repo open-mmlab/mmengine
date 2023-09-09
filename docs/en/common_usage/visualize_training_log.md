@@ -1,6 +1,6 @@
 # Visualize Training Logs
 
-MMEngine integrates experiment management tools such as [TensorBoard](https://www.tensorflow.org/tensorboard), [Weights & Biases (WandB)](https://docs.wandb.ai/), [MLflow](https://mlflow.org/docs/latest/index.html), [ClearML](https://clear.ml/docs/latest/docs), [Neptune](https://docs.neptune.ai/) and [DVCLive](https://dvc.org/doc/dvclive), making it easy to track and visualize metrics like loss and accuracy.
+MMEngine integrates experiment management tools such as [TensorBoard](https://www.tensorflow.org/tensorboard), [Weights & Biases (WandB)](https://docs.wandb.ai/), [MLflow](https://mlflow.org/docs/latest/index.html), [ClearML](https://clear.ml/docs/latest/docs), [Neptune](https://docs.neptune.ai/), [DVCLive](https://dvc.org/doc/dvclive) and [Aim](https://aimstack.readthedocs.io/en/latest/overview.html), making it easy to track and visualize metrics like loss and accuracy.
 
 Below, we'll show you how to configure an experiment management tool in just one line, based on the example from [15 minutes to get started with MMEngine](../get_started/15_minutes.md).
 
@@ -190,3 +190,47 @@ Open the `report.html` file under `work_dir_dvc`, and you will see the visualiza
 You can also configure a VSCode extension of [DVC](https://marketplace.visualstudio.com/items?itemName=Iterative.dvc) to visualize the training process.
 
 More initialization configuration parameters are available at [DVCLive API Reference](https://dvc.org/doc/dvclive/live).
+
+## Aim
+
+Before using Aim, you need to install `aim` dependency library.
+
+```bash
+pip install aim
+```
+
+Configure the `Runner` in the initialization parameters of the Runner, and set `vis_backends` to [AimVisBackend](mmengine.visualization.AimVisBackend).
+
+```python
+runner = Runner(
+    model=MMResNet50(),
+    work_dir='./work_dir',
+    train_dataloader=train_dataloader,
+    optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+    train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
+    val_dataloader=val_dataloader,
+    val_cfg=dict(),
+    val_evaluator=dict(type=Accuracy),
+    visualizer=dict(type='Visualizer', vis_backends=[dict(type='AimVisBackend')]),
+)
+runner.train()
+```
+
+In the terminal, use the following command,
+
+```bash
+aim up
+```
+
+or in the Jupyter Notebook, use the following command,
+
+```bash
+%load_ext aim
+%aim up
+```
+
+to launch the Aim UI as shown below.
+
+![image](https://github.com/open-mmlab/mmengine/assets/58739961/2fc6cdd8-1de7-4125-a20a-c95c1a8bdb1b)
+
+Initialization configuration parameters are available at [Aim SDK Reference](https://aimstack.readthedocs.io/en/latest/refs/sdk.html#module-aim.sdk.run).

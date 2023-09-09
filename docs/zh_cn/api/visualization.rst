@@ -37,3 +37,4 @@ visualization Backend
    ClearMLVisBackend
    NeptuneVisBackend
    DVCLiveVisBackend
+   AimVisBackend

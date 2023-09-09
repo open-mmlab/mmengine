@@ -1,8 +1,8 @@
 # 可视化训练日志
 
-MMEngine 集成了 [TensorBoard](https://www.tensorflow.org/tensorboard?hl=zh-cn)、[Weights & Biases (WandB)](https://docs.wandb.ai/)、[MLflow](https://mlflow.org/docs/latest/index.html) 、[ClearML](https://clear.ml/docs/latest/docs)、[Neptune](https://docs.neptune.ai/) 和 [DVCLive](https://dvc.org/doc/dvclive) 实验管理工具，你可以很方便地跟踪和可视化损失及准确率等指标。
+MMEngine 集成了 [TensorBoard](https://www.tensorflow.org/tensorboard?hl=zh-cn)、[Weights & Biases (WandB)](https://docs.wandb.ai/)、[MLflow](https://mlflow.org/docs/latest/index.html) 、[ClearML](https://clear.ml/docs/latest/docs)、[Neptune](https://docs.neptune.ai/)、[DVCLive](https://dvc.org/doc/dvclive) 和 [Aim](https://aimstack.readthedocs.io/en/latest/overview.html) 实验管理工具，你可以很方便地跟踪和可视化损失及准确率等指标。
 
-下面基于[15 分钟上手 MMENGINE](../get_started/15_minutes.md)中的例子介绍如何一行配置实验管理工具。
+下面基于 [15 分钟上手 MMENGINE](../get_started/15_minutes.md) 中的例子介绍如何一行配置实验管理工具。
 
 ## TensorBoard
 
@@ -190,3 +190,47 @@ runner.train()
 你还可以安装 VSCode 扩展 [DVC](https://marketplace.visualstudio.com/items?itemName=Iterative.dvc) 进行可视化。
 
 更多初始化配置参数可点击 [DVCLive API Reference](https://dvc.org/doc/dvclive/live) 查询。
+
+## Aim
+
+使用 Aim 前需先安装依赖库 `aim`。
+
+```bash
+pip install aim
+```
+
+设置 `Runner` 初始化参数中的 `visualizer`，并将 `vis_backends` 设置为 [AimVisBackend](mmengine.visualization.AimVisBackend)。
+
+```python
+runner = Runner(
+    model=MMResNet50(),
+    work_dir='./work_dir',
+    train_dataloader=train_dataloader,
+    optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+    train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
+    val_dataloader=val_dataloader,
+    val_cfg=dict(),
+    val_evaluator=dict(type=Accuracy),
+    visualizer=dict(type='Visualizer', vis_backends=[dict(type='AimVisBackend')]),
+)
+runner.train()
+```
+
+在终端中输入
+
+```bash
+aim up
+```
+
+或者在 Jupyter Notebook 中输入
+
+```bash
+%load_ext aim
+%aim up
+```
+
+即可启动 Aim UI，界面如下图所示。
+
+![image](https://github.com/open-mmlab/mmengine/assets/58739961/2fc6cdd8-1de7-4125-a20a-c95c1a8bdb1b)
+
+初始化配置参数可点击 [Aim SDK Reference](https://aimstack.readthedocs.io/en/latest/refs/sdk.html#module-aim.sdk.run) 查询。

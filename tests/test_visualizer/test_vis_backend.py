@@ -14,10 +14,10 @@ from mmengine import Config
 from mmengine.fileio import load
 from mmengine.registry import VISBACKENDS
 from mmengine.utils import digit_version
-from mmengine.visualization import (ClearMLVisBackend, DVCLiveVisBackend,
-                                    LocalVisBackend, MLflowVisBackend,
-                                    NeptuneVisBackend, TensorboardVisBackend,
-                                    WandbVisBackend)
+from mmengine.visualization import (AimVisBackend, ClearMLVisBackend,
+                                    DVCLiveVisBackend, LocalVisBackend,
+                                    MLflowVisBackend, NeptuneVisBackend,
+                                    TensorboardVisBackend, WandbVisBackend)
 
 
 class TestLocalVisBackend:
@@ -445,3 +445,44 @@ class TestDVCLiveVisBackend:
         dvclive_vis_backend.add_config(cfg)
         dvclive_vis_backend.close()
         shutil.rmtree('temp_dir')
+
+
+@pytest.mark.skipif(
+    platform.system() == 'Windows',
+    reason='Aim does not support Windows for now.')
+class TestAimVisBackend:
+
+    def test_init(self):
+        AimVisBackend()
+        VISBACKENDS.build(dict(type='AimVisBackend'))
+
+    def test_experiment(self):
+        aim_vis_backend = AimVisBackend()
+        assert aim_vis_backend.experiment == aim_vis_backend._aim_run
+
+    def test_add_config(self):
+        cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        aim_vis_backend = AimVisBackend()
+        aim_vis_backend.add_config(cfg)
+
+    def test_add_image(self):
+        image = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
+        aim_vis_backend = AimVisBackend()
+        aim_vis_backend.add_image('img', image)
+        aim_vis_backend.add_image('img', image, step=1)
+
+    def test_add_scalar(self):
+        aim_vis_backend = AimVisBackend()
+        aim_vis_backend.add_scalar('map', 0.9)
+        aim_vis_backend.add_scalar('map', 0.9, step=1)
+        aim_vis_backend.add_scalar('map', 0.95, step=2)
+
+    def test_add_scalars(self):
+        aim_vis_backend = AimVisBackend()
+        input_dict = {'map': 0.7, 'acc': 0.9}
+        aim_vis_backend.add_scalars(input_dict)
+
+    def test_close(self):
+        aim_vis_backend = AimVisBackend()
+        aim_vis_backend._init_env()
+        aim_vis_backend.close()

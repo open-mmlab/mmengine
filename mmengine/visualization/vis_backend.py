@@ -1309,3 +1309,133 @@ class DVCLiveVisBackend(BaseVisBackend):
             return value.item()
         else:
             return value
+
+
+@VISBACKENDS.register_module()
+class AimVisBackend(BaseVisBackend):
+    """Aim visualization backend class.
+
+    Examples:
+        >>> from mmengine.visualization import AimVisBackend
+        >>> import numpy as np
+        >>> aim_vis_backend = AimVisBackend()
+        >>> img=np.random.randint(0, 256, size=(10, 10, 3))
+        >>> aim_vis_backend.add_image('img', img)
+        >>> aim_vis_backend.add_scalar('mAP', 0.6)
+        >>> aim_vis_backend.add_scalars({'loss': 0.1, 'acc': 0.8})
+        >>> cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        >>> aim_vis_backend.add_config(cfg)
+
+    Note:
+        1. `New in version 0.8.5.`
+        2. Refer to
+           `Github issue <https://github.com/aimhubio/aim/issues/2064>`_ ,
+           Aim is not unable to be install on Windows for now.
+
+    Args:
+        save_dir (str, optional): The root directory to save the files
+            produced by the visualizer.
+        init_kwargs (dict, optional): Aim initialization parameters. See
+            `Aim <https://aimstack.readthedocs.io/en/latest/refs/sdk.html>`_
+            for details. Defaults to None.
+    """
+
+    def __init__(self,
+                 save_dir: Optional[str] = None,
+                 init_kwargs: Optional[dict] = None):
+        super().__init__(save_dir)  # type:ignore
+        self._init_kwargs = init_kwargs
+
+    def _init_env(self):
+        """Setup env for Aim."""
+        try:
+            from aim import Run
+        except ImportError:
+            raise ImportError('Please run "pip install aim" to install aim')
+
+        from datetime import datetime
+
+        if self._save_dir is not None:
+            path_list = os.path.normpath(self._save_dir).split(os.sep)
+            exp_name = f'{path_list[-2]}_{path_list[-1]}'
+        else:
+            exp_name = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+        if self._init_kwargs is None:
+            self._init_kwargs = {}
+        self._init_kwargs.setdefault('experiment', exp_name)
+        self._aim_run = Run(**self._init_kwargs)
+
+    @property  # type: ignore
+    @force_init_env
+    def experiment(self):
+        """Return Aim object."""
+        return self._aim_run
+
+    @force_init_env
+    def add_config(self, config, **kwargs) -> None:
+        """Record the config to Aim.
+
+        Args:
+            config (Config): The Config object
+        """
+        if isinstance(config, Config):
+            config = config.to_dict()
+        self._aim_run['hparams'] = config
+
+    @force_init_env
+    def add_image(self,
+                  name: str,
+                  image: np.ndarray,
+                  step: int = 0,
+                  **kwargs) -> None:
+        """Record the image.
+
+        Args:
+            name (str): The image identifier.
+            image (np.ndarray): The image to be saved. The format
+                should be RGB. Defaults to None.
+            step (int): Global step value to record. Defaults to 0.
+        """
+        from aim import Image
+        self._aim_run.track(name=name, value=Image(image), step=step)
+
+    @force_init_env
+    def add_scalar(self,
+                   name: str,
+                   value: Union[int, float, torch.Tensor, np.ndarray],
+                   step: int = 0,
+                   **kwargs) -> None:
+        """Record the scalar data to Aim.
+
+        Args:
+            name (str): The scalar identifier.
+            value (int, float, torch.Tensor, np.ndarray): Value to save.
+            step (int): Global step value to record. Default to 0.
+        """
+        self._aim_run.track(name=name, value=value, step=step)
+
+    @force_init_env
+    def add_scalars(self,
+                    scalar_dict: dict,
+                    step: int = 0,
+                    file_path: Optional[str] = None,
+                    **kwargs) -> None:
+        """Record the scalar's data to wandb.
+
+        Args:
+            scalar_dict (dict): Key-value pair storing the tag and
+                corresponding values.
+            step (int): Global step value to record. Default to 0.
+            file_path (str, optional): Useless parameter. Just for
+                interface unification. Defaults to None.
+        """
+        for key, value in scalar_dict.items():
+            self._aim_run.track(name=key, value=value, step=step)
+
+    def close(self) -> None:
+        """Close the Aim."""
+        if not hasattr(self, '_aim_run'):
+            return
+
+        self._aim_run.close()
