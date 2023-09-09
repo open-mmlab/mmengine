@@ -70,7 +70,7 @@ class Tuner:
         >>> tuner = Tuner(
         >>>     runner_cfg,
         >>>     hparam_spec=hparam_spec,
-        >>>     monitor='loss',
+        >>>     monitor='train/loss',
         >>>     rule='less',
         >>>     num_trials=32,
         >>> )
