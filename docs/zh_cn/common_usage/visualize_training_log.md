@@ -1,8 +1,8 @@
 # 可视化训练日志
 
-MMEngine 集成了 [TensorBoard](https://www.tensorflow.org/tensorboard?hl=zh-cn)、[Weights & Biases (WandB)](https://docs.wandb.ai/)、[MLflow](https://mlflow.org/docs/latest/index.html) 、[ClearML](https://clear.ml/docs/latest/docs)、[Neptune](https://docs.neptune.ai/) 和 [DVCLive](https://dvc.org/doc/dvclive) 实验管理工具，你可以很方便地跟踪和可视化损失及准确率等指标。
+MMEngine 集成了 [TensorBoard](https://www.tensorflow.org/tensorboard?hl=zh-cn)、[Weights & Biases (WandB)](https://docs.wandb.ai/)、[MLflow](https://mlflow.org/docs/latest/index.html) 、[ClearML](https://clear.ml/docs/latest/docs)、[Neptune](https://docs.neptune.ai/)、[DVCLive](https://dvc.org/doc/dvclive) 和 [Aim](https://aimstack.readthedocs.io/en/latest/overview.html) 实验管理工具，你可以很方便地跟踪和可视化损失及准确率等指标。
 
-下面基于[15 分钟上手 MMENGINE](../get_started/15_minutes.md)中的例子介绍如何一行配置实验管理工具。
+下面基于 [15 分钟上手 MMENGINE](../get_started/15_minutes.md) 中的例子介绍如何一行配置实验管理工具。
 
 ## TensorBoard
 
@@ -231,6 +231,6 @@ aim up
 
 即可启动 Aim UI，界面如下图所示。
 
-![Aim UI](https://github.com/open-mmlab/mmengine/assets/27466624/a968dfba-a892-4a87-8197-a904c9452a42)
+![image](https://github.com/open-mmlab/mmengine/assets/58739961/2fc6cdd8-1de7-4125-a20a-c95c1a8bdb1b)
 
 初始化配置参数可点击 [Aim SDK Reference](https://aimstack.readthedocs.io/en/latest/refs/sdk.html#module-aim.sdk.run) 查询。
