@@ -297,7 +297,7 @@ class Tuner:
             self._tear_down_runner(runner)
 
         # Synchronize and average scores across all processes
-        score_tensor = torch.tensor(score)
+        score_tensor = torch.tensor(score, dtype=torch.float64)
         all_reduce(score_tensor, op='mean')
         score = score_tensor.item()
 

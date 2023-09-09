@@ -66,10 +66,10 @@ class TestReportingHook(RunnerTestCase):
         hook.after_train_iter(runner, 0)
         self.assertEqual(hook.scoreboard[-1], 0.9)
 
-        # Check if no score is appended for a non-existent metric
+        # Check the error raised when the monitored score is missing from logs
         hook2 = ReportingHook(monitor='train/non_existent')
-        hook2.after_train_iter(runner, 0)
-        self.assertEqual(len(hook2.scoreboard), 0)
+        with self.assertRaises(ValueError):
+            hook2.after_train_iter(runner, 0)
 
         # Check that training stops if tuning_iter is reached
         runner.iter = 5
@@ -86,11 +86,11 @@ class TestReportingHook(RunnerTestCase):
         hook.after_val_epoch(runner, metrics=metrics)
         self.assertEqual(hook.scoreboard[-1], 0.9)
 
-        # Check that no score is appended if the metric is missing from metrics
+        # Check the error raised when the monitored score is missing from logs
         metrics = {'loss': 0.1}
         hook2 = ReportingHook(monitor='val/acc')
-        hook2.after_val_epoch(runner, metrics=metrics)
-        self.assertEqual(len(hook2.scoreboard), 0)
+        with self.assertRaises(ValueError):
+            hook2.after_val_epoch(runner, metrics=metrics)
 
     def test_with_runner(self):
         runner = self.build_runner(self.epoch_based_cfg)

@@ -98,7 +98,7 @@ class TestTuner(RunnerTestCase):
         tuner = Tuner(
             runner_cfg=self.epoch_based_cfg,
             hparam_spec=self.hparam_spec,
-            monitor='loss',
+            monitor='train/loss',
             rule='less',
             num_trials=2,
             searcher_cfg=dict(type='ToySearcher'))
@@ -126,7 +126,7 @@ class TestTuner(RunnerTestCase):
         tuner = Tuner(
             runner_cfg=self.epoch_based_cfg,
             hparam_spec=self.hparam_spec,
-            monitor='loss',
+            monitor='train/loss',
             rule='less',
             num_trials=2,
             searcher_cfg=dict(type='ToySearcher'))
@@ -224,7 +224,7 @@ class TestTuner(RunnerTestCase):
         tuner = Tuner(
             runner_cfg=self.epoch_based_cfg,
             hparam_spec=self.hparam_spec,
-            monitor='acc',
+            monitor='val/acc',
             rule='greater',
             num_trials=10,
             searcher_cfg=dict(type='ToySearcher'))
