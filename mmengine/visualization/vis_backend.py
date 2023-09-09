@@ -1379,7 +1379,9 @@ class AimVisBackend(BaseVisBackend):
         Args:
             config (Config): The Config object
         """
-        self._aim_run['hparams'] = dict(config)
+        if isinstance(config, Config):
+            config = config.to_dict()
+        self._aim_run['hparams'] = config
 
     @force_init_env
     def add_image(self,
