@@ -1,6 +1,6 @@
 # Visualize Training Logs
 
-MMEngine integrates experiment management tools such as [TensorBoard](https://www.tensorflow.org/tensorboard), [Weights & Biases (WandB)](https://docs.wandb.ai/), [MLflow](https://mlflow.org/docs/latest/index.html), [ClearML](https://clear.ml/docs/latest/docs), [Neptune](https://docs.neptune.ai/) and [DVCLive](https://dvc.org/doc/dvclive), making it easy to track and visualize metrics like loss and accuracy.
+MMEngine integrates experiment management tools such as [TensorBoard](https://www.tensorflow.org/tensorboard), [Weights & Biases (WandB)](https://docs.wandb.ai/), [MLflow](https://mlflow.org/docs/latest/index.html), [ClearML](https://clear.ml/docs/latest/docs), [Neptune](https://docs.neptune.ai/), [DVCLive](https://dvc.org/doc/dvclive) and [Aim](https://aimstack.readthedocs.io/en/latest/overview.html), making it easy to track and visualize metrics like loss and accuracy.
 
 Below, we'll show you how to configure an experiment management tool in just one line, based on the example from [15 minutes to get started with MMEngine](../get_started/15_minutes.md).
 
@@ -231,6 +231,6 @@ or in the Jupyter Notebook, use the following command,
 
 to launch the Aim UI as shown below.
 
-![Aim UI](https://github.com/open-mmlab/mmengine/assets/27466624/a968dfba-a892-4a87-8197-a904c9452a42)
+![image](https://github.com/open-mmlab/mmengine/assets/58739961/2fc6cdd8-1de7-4125-a20a-c95c1a8bdb1b)
 
 Initialization configuration parameters are available at [Aim SDK Reference](https://aimstack.readthedocs.io/en/latest/refs/sdk.html#module-aim.sdk.run).
