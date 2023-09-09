@@ -37,8 +37,8 @@ class ReportingHook(Hook):
                  tuning_epoch: Optional[int] = None,
                  report_op: str = 'latest',
                  max_scoreboard_len: int = 1024):
-        assert report_op in self.report_op_supported, \
-            f'report_op {report_op} is not supported'
+        if report_op not in self.report_op_supported:
+              raise ValueError(f'report_op {report_op} is not supported')
         if tuning_iter is not None and tuning_epoch is not None:
             raise ValueError(
                 'tuning_iter and tuning_epoch cannot be set at the same time')
