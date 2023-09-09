@@ -191,7 +191,7 @@ class Tuner:
         for k in keys[:-1]:
             if isinstance(cfg, list):
                 idx = int(k)
-                if idx >= len(cfg) or idx < 0:
+                if idx >= len(cfg):
                     raise KeyError(f'Index {idx} is out of range in {cfg}')
                 cfg = cfg[idx]
             else:
@@ -201,7 +201,7 @@ class Tuner:
 
         if isinstance(cfg, list):
             idx = int(keys[-1])
-            if idx >= len(cfg) or idx < 0:
+            if idx >= len(cfg):
                 raise KeyError(f'Index {idx} is out of range in {cfg}')
             cfg[idx] = value
         else:
@@ -235,15 +235,17 @@ class Tuner:
 
     def _run_trial(self) -> Tuple[Dict, float, Optional[Exception]]:
         """Retrieve hyperparameters from searcher and run a trial."""
-
-        # Retrieve hyperparameters for the trial:
-        # 1. Only the main process executes the searcher to avoid any conflicts
-        #   and ensure integrity.
-        # 2. Once retrieved, the hyperparameters are broadcasted to all other
-        #   processes ensuring every process has the same set of
-        #   hyperparameters for this trial.
         from mmengine.runner import Runner
 
+        # Retrieve hyperparameters for the trial:
+        # Only the main process invokes the searcher's suggest method
+        # to mitigate the potential randomness that might occur in methods
+        # like Bayesian optimization or evolutionary algorithms.
+        # These methods might introduce randomness in the selection of
+        # hyperparameters, potentially leading to inconsistent suggestions
+        # across different processes. By centralizing the suggestion
+        # to the main process, we ensure a consistent set of hyperparameters
+        # is used for each trial.
         if is_main_process():
             hparams_to_broadcast = [self._searcher.suggest()]
         else:
