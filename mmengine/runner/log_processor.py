@@ -13,7 +13,7 @@ from mmengine.device import get_max_cuda_memory, is_cuda_available
 from mmengine.registry import LOG_PROCESSORS
 
 
-@LOG_PROCESSORS.register_module()  # type: ignore
+@LOG_PROCESSORS.register_module()
 class LogProcessor:
     """A log processor used to format log information collected from
     ``runner.message_hub.log_scalars``.
@@ -24,7 +24,7 @@ class LogProcessor:
     ``custom_cfg`` of constructor can control the statistics method of logs.
 
     Args:
-        window_size (int): default smooth interval Defaults to 10.
+        window_size (int): default smooth interval. Defaults to 10.
         by_epoch (bool): Whether to format logs with epoch stype. Defaults to
             True.
         custom_cfg (list[dict], optional): Contains multiple log config dict,
@@ -35,7 +35,7 @@ class LogProcessor:
             - If custom_cfg is None, all logs will be formatted via default
               methods, such as smoothing loss by default window_size. If
               custom_cfg is defined as a list of config dict, for example:
-              [dict(data_src=loss, method='mean', log_name='global_loss',
+              [dict(data_src='loss', method='mean', log_name='global_loss',
               window_size='global')]. It means the log item ``loss`` will be
               counted as global mean and additionally logged as ``global_loss``
               (defined by ``log_name``). If ``log_name`` is not defined in
@@ -43,8 +43,8 @@ class LogProcessor:
 
             - The original log item cannot be overwritten twice. Here is
               an error example:
-              [dict(data_src=loss, method='mean', window_size='global'),
-              dict(data_src=loss, method='mean', window_size='epoch')].
+              [dict(data_src='loss', method='mean', window_size='global'),
+              dict(data_src='loss', method='mean', window_size='epoch')].
               Both log config dict in custom_cfg do not have ``log_name`` key,
               which means the loss item will be overwritten twice.
 
@@ -52,7 +52,7 @@ class LogProcessor:
               if ``by_epoch`` is set to False, ``windows_size`` should not be
               `epoch` to statistics log value by epoch.
         num_digits (int): The number of significant digit shown in the
-            logging message.
+            logging message. Defaults to 4.
         log_with_hierarchy (bool): Whether to log with hierarchy. If it is
             True, the information is written to visualizer backend such as
             :obj:`LocalVisBackend` and :obj:`TensorboardBackend`
@@ -122,7 +122,7 @@ class LogProcessor:
 
     def get_log_after_iter(self, runner, batch_idx: int,
                            mode: str) -> Tuple[dict, str]:
-        """Format log string after training, validation or testing epoch.
+        """Format log string after training, validation or testing iteration.
 
         Args:
             runner (Runner): The runner of training phase.
@@ -131,7 +131,7 @@ class LogProcessor:
             mode (str): Current mode of runner, train, test or val.
 
         Return:
-            Tuple(dict, str): Formatted log dict/string which will be
+            Tuple[dict, str]: Formatted log dict/string which will be
             recorded by :obj:`runner.message_hub` and :obj:`runner.visualizer`.
         """
         assert mode in ['train', 'test', 'val']
@@ -139,11 +139,11 @@ class LogProcessor:
         parsed_cfg = self._parse_windows_size(runner, batch_idx,
                                               self.custom_cfg)
         # log_tag is used to write log information to terminal
+        log_tag = self._collect_scalars(parsed_cfg, runner, mode)
+
         # If `self.log_with_hierarchy` is False, the tag is the same as
         # log_tag. Otherwise, each key in tag starts with prefix `train`,
         # `test` or `val`
-        log_tag = self._collect_scalars(parsed_cfg, runner, mode)
-
         if not self.log_with_hierarchy:
             tag = copy.deepcopy(log_tag)
         else:
@@ -259,7 +259,7 @@ class LogProcessor:
                 returned tag. Defaults to False.
 
         Return:
-            Tuple(dict, str): Formatted log dict/string which will be
+            Tuple[dict, str]: Formatted log dict/string which will be
             recorded by :obj:`runner.message_hub` and :obj:`runner.visualizer`.
         """
         assert mode in [
