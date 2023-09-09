@@ -2,9 +2,11 @@
 import math
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import torch
+
 from mmengine.config import Config, ConfigDict
-from mmengine.dist import (broadcast_object_list, init_dist, is_distributed,
-                           is_main_process)
+from mmengine.dist import (all_reduce, broadcast_object_list, init_dist,
+                           is_distributed, is_main_process)
 from mmengine.logging import MMLogger
 from ._report_hook import ReportingHook
 from .searchers import HYPER_SEARCHERS, Searcher
@@ -261,20 +263,22 @@ class Tuner:
         # Run a trial.
         # If an exception occurs during the trial, the score is set
         # to default_score.
-        error = None
+        score: float
+        error: Optional[Exception] = None
         try:
             runner.train()
             score = report_hook.report_score()
             if score is None or math.isnan(score) or math.isinf(score):
                 score = default_score
-            scores_to_broadcast = [score]
         except Exception as e:
-            scores_to_broadcast = [default_score]
+            score = default_score
             error = e
 
-        # Store the score between processes.
-        broadcast_object_list(scores_to_broadcast, src=0)
-        score = scores_to_broadcast[0]
+        # Synchronize and average scores across all processes
+        score_tensor = torch.tensor(score)
+        all_reduce(score_tensor, op='mean')
+        score = score_tensor.item()
+
         if is_main_process():
             self._searcher.record(hparam, score)
         return hparam, score, error
