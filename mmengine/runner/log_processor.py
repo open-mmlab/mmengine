@@ -377,12 +377,11 @@ class LogProcessor:
                 tag[key] = mode_history_scalars[key].current()
         # Update custom keys.
         for log_cfg in custom_cfg:
-            if not reserve_prefix:
-                data_src = log_cfg.pop('data_src')
-                log_name = f"{log_cfg.pop('log_name', data_src)}"
-            else:
-                data_src = f"{mode}/{log_cfg.pop('data_src')}"
-                log_name = f"{mode}/{log_cfg.pop('log_name', data_src)}"
+            data_src = log_cfg.pop('data_src')
+            log_name = log_cfg.pop('log_name', data_src)
+            if reserve_prefix:
+                data_src = f'{mode}/{data_src}'
+                log_name = f'{mode}/{log_name}'
             # log item in custom_cfg could only exist in train or val
             # mode.
             if data_src in mode_history_scalars:
