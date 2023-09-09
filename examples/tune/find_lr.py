@@ -132,7 +132,7 @@ def main():
                 'upper': 1e-3
             }
         },
-        monitor='loss',
+        monitor='train/loss',
         rule='less',
         num_trials=16,
         tuning_epoch=2,

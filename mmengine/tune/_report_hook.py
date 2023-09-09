@@ -15,7 +15,14 @@ class ReportingHook(Hook):
     hook will mark the loop to stop.
 
     Args:
-        monitor (str): The monitored metric key to report.
+        monitor (str): The monitored metric key prefixed with either 'train/'
+            or 'val/' to indicate the specific phase where the metric should
+            be monitored. For instance, 'train/loss' will monitor the 'loss'
+            metric during the training phase, and 'val/accuracy' will monitor
+            the 'accuracy' metric during the validation phase.
+            The actual metric key (i.e., the part following the prefix)
+            should correspond to a key in the logs produced during
+            training or validation.
         tuning_iter (int, optional): The iteration limit to stop tuning.
             Defaults to None.
         tuning_epoch (int, optional): The epoch limit to stop tuning.
@@ -46,16 +53,19 @@ class ReportingHook(Hook):
                  tuning_epoch: Optional[int] = None,
                  report_op: str = 'latest',
                  max_scoreboard_len: int = 1024):
+        if not monitor.startswith('train/') and not monitor.startswith('val/'):
+            raise ValueError("The 'monitor' parameter should start "
+                             "with 'train/' or 'val/' to specify the phase.")
         if report_op not in self.report_op_supported:
             raise ValueError(f'report_op {report_op} is not supported')
         if tuning_iter is not None and tuning_epoch is not None:
             raise ValueError(
                 'tuning_iter and tuning_epoch cannot be set at the same time')
+        self.monitor_prefix, self.monitor_metric = monitor.split('/', 1)
         self.report_op = report_op
         self.tuning_iter = tuning_iter
         self.tuning_epoch = tuning_epoch
 
-        self.monitor = monitor
         self.max_scoreboard_len = max_scoreboard_len
         self.scoreboard: List[float] = []
 
@@ -94,12 +104,15 @@ class ReportingHook(Hook):
             data_batch (dict or tuple or list, optional): Data from dataloader.
             outputs (dict, optional): Outputs from model.
         """
-
+        if self.monitor_prefix != 'train':
+            return
         tag, _ = runner.log_processor.get_log_after_iter(
             runner, batch_idx, 'train')
-        score = tag.get(self.monitor, None)
-        if score is not None:
-            self._append_score(score)
+        score = tag.get(self.monitor_metric)
+        if not isinstance(score, (int, float)):
+            raise ValueError(f"The monitored value '{self.monitor_metric}' "
+                             'should be a number.')
+        self._append_score(score)
 
         if self._should_stop(runner):
             runner.train_loop.stop_training = True
@@ -124,11 +137,13 @@ class ReportingHook(Hook):
                 metrics on validation dataset. The keys are the names of the
                 metrics, and the values are corresponding results.
         """
-        if metrics is None:
+        if self.monitor_prefix != 'val' or metrics is None:
             return
-        score = metrics.get(self.monitor, None)
-        if score is not None:
-            self._append_score(score)
+        score = metrics.get(self.monitor_metric)
+        if not isinstance(score, (int, float)):
+            raise ValueError(f"The monitored value '{self.monitor_metric}' "
+                             'should be a number.')
+        self._append_score(score)
 
     def report_score(self) -> Optional[float]:
         """Aggregate the scores in the scoreboard.
