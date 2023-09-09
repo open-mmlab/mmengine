@@ -1318,7 +1318,7 @@ class AimVisBackend(BaseVisBackend):
     Examples:
         >>> from mmengine.visualization import AimVisBackend
         >>> import numpy as np
-        >>> aim_vis_backend = AimVisBackend(save_dir='temp_dir')
+        >>> aim_vis_backend = AimVisBackend()
         >>> img=np.random.randint(0, 256, size=(10, 10, 3))
         >>> aim_vis_backend.add_image('img', img)
         >>> aim_vis_backend.add_scalar('mAP', 0.6)
@@ -1426,8 +1426,7 @@ class AimVisBackend(BaseVisBackend):
         Args:
             scalar_dict (dict): Key-value pair storing the tag and
                 corresponding values.
-            step (int): Useless parameter. Wandb does not
-                need this parameter. Defaults to 0.
+            step (int): Global step value to record. Default to 0.
             file_path (str, optional): Useless parameter. Just for
                 interface unification. Defaults to None.
         """
