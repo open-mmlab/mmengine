@@ -361,6 +361,7 @@ This project is released under the [Apache 2.0 license](LICENSE).
 ## Ecosystem
 
 - [APES: Attention-based Point Cloud Edge Sampling](https://github.com/JunweiZheng93/APES)
+- [DiffEngine: diffusers training toolbox with mmengine](https://github.com/okotaku/diffengine)
 
 ## Projects in OpenMMLab
 

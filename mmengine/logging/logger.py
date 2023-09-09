@@ -1,13 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import inspect
 import logging
 import os
 import os.path as osp
 import sys
 import warnings
 from getpass import getuser
-from logging import Logger, LogRecord
+from logging import Logger, LogRecord, handlers
 from socket import gethostname
-from typing import Optional, Union
+from typing import Dict, Optional, Union
 
 from termcolor import colored
 
@@ -173,6 +174,22 @@ class MMLogger(Logger, ManagerMixin):
         file_mode (str): The file mode used to open log file. Defaults to 'w'.
         distributed (bool): Whether to save distributed logs, Defaults to
             false.
+        file_handler_cfg (dict, optional): Configuration of file handler.
+            Defaults to None. If ``file_handler_cfg`` is not specified,
+            ``logging.FileHandler`` will be used by default. If it is
+            specified, the ``type`` key should be set. It can be
+            ``RotatingFileHandler``, ``TimedRotatingFileHandler``,
+            ``WatchedFileHandler`` or other file handlers, and the remaining
+            fields will be used to build the handler.
+
+            Examples:
+                >>> file_handler_cfg = dict(
+                >>>    type='TimedRotatingFileHandler',
+                >>>    when='MIDNIGHT',
+                >>>    interval=1,
+                >>>    backupCount=365)
+
+            `New in version 0.8.5.`
     """
 
     def __init__(self,
@@ -181,7 +198,8 @@ class MMLogger(Logger, ManagerMixin):
                  log_file: Optional[str] = None,
                  log_level: Union[int, str] = 'INFO',
                  file_mode: str = 'w',
-                 distributed=False):
+                 distributed=False,
+                 file_handler_cfg: Optional[dict] = None):
         Logger.__init__(self, logger_name)
         ManagerMixin.__init__(self, name)
         # Get rank in DDP mode.
@@ -223,11 +241,25 @@ class MMLogger(Logger, ManagerMixin):
             # Save multi-ranks logs if distributed is True. The logs of rank0
             # will always be saved.
             if global_rank == 0 or is_distributed:
-                # Here, the default behaviour of the official logger is 'a'.
-                # Thus, we provide an interface to change the file mode to
-                # the default behaviour. `FileHandler` is not supported to
-                # have colors, otherwise it will appear garbled.
-                file_handler = logging.FileHandler(log_file, file_mode)
+                if file_handler_cfg is not None:
+                    assert 'type' in file_handler_cfg
+                    file_handler_type = file_handler_cfg.pop('type')
+                    file_handlers_map = _get_logging_file_handlers()
+                    if file_handler_type in file_handlers_map:
+                        file_handler_cls = file_handlers_map[file_handler_type]
+                        file_handler_cfg.setdefault('filename', log_file)
+                        file_handler = file_handler_cls(**file_handler_cfg)
+                    else:
+                        raise ValueError('`logging.handlers` does not '
+                                         f'contain {file_handler_type}')
+                else:
+                    # Here, the default behavior of the official
+                    # logger is 'a'. Thus, we provide an interface to
+                    # change the file mode to the default behavior.
+                    # `FileHandler` is not supported to have colors,
+                    # otherwise it will appear garbled.
+                    file_handler = logging.FileHandler(log_file, file_mode)
+
                 # `StreamHandler` record year, month, day hour, minute,
                 # and second timestamp. file_handler will only record logs
                 # without color to avoid garbled code saved in files.
@@ -397,3 +429,19 @@ def _get_host_info() -> str:
         warnings.warn(f'Host or user not found: {str(e)}')
     finally:
         return host
+
+
+def _get_logging_file_handlers() -> Dict:
+    """Get additional file_handlers in ``logging.handlers``.
+
+    Returns:
+        Dict: A map of file_handlers.
+    """
+    file_handlers_map = {}
+    for module_name in dir(handlers):
+        if module_name.startswith('__'):
+            continue
+        _fh = getattr(handlers, module_name)
+        if inspect.isclass(_fh) and issubclass(_fh, logging.FileHandler):
+            file_handlers_map[module_name] = _fh
+    return file_handlers_map

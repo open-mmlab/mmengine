@@ -362,6 +362,7 @@ runner.train()
 ## 生态项目
 
 - [APES: Attention-based Point Cloud Edge Sampling](https://github.com/JunweiZheng93/APES)
+- [DiffEngine: diffusers training toolbox with mmengine](https://github.com/okotaku/diffengine)
 
 ## OpenMMLab 的其他项目
 
@@ -389,10 +390,10 @@ runner.train()
 
 ## 欢迎加入 OpenMMLab 社区
 
-扫描下方的二维码可关注 OpenMMLab 团队的 [知乎官方账号](https://www.zhihu.com/people/openmmlab)，加入 OpenMMLab 团队的 [官方交流 QQ 群](https://jq.qq.com/?_wv=1027&k=K0QI8ByU)，或通过添加微信“Open小喵Lab”加入官方交流微信群。
+扫描下方的二维码可关注 OpenMMLab 团队的 [知乎官方账号](https://www.zhihu.com/people/openmmlab)，扫描下方微信二维码添加喵喵好友，进入 MMEngine 微信交流社群。【加好友申请格式：研究方向+地区+学校/公司+姓名】
 
 <div align="center">
-<img src="https://user-images.githubusercontent.com/58739961/187154320-f3312cdf-31f2-4316-9dbb-8d7b0e1b7e08.jpg" height="400" />  <img src="https://user-images.githubusercontent.com/25839884/203904835-62392033-02d4-4c73-a68c-c9e4c1e2b07f.jpg" height="400" />  <img src="https://user-images.githubusercontent.com/58739961/187151778-d17c1368-125f-4fde-adbe-38cc6eb3be98.jpg" height="400" />
+<img src="https://user-images.githubusercontent.com/58739961/187154320-f3312cdf-31f2-4316-9dbb-8d7b0e1b7e08.jpg" height="400" />  <img src="https://github.com/open-mmlab/mmengine/assets/62195058/bd482538-1b1a-4130-af1b-ed788b6cafa8" height="400" />
 </div>
 
 我们会在 OpenMMLab 社区为大家

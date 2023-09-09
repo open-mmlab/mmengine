@@ -20,16 +20,16 @@ odl get CamVid -d data
 tar -xzvf data/CamVid/raw/CamVid.tar.gz.00 -C ./data
 ```
 
-## Run the example
+## Run the Example
 
 Single device training
 
 ```bash
-python examples/segmentation/segmentation_training.py
+python examples/segmentation/train.py
 ```
 
 Distributed data parallel training
 
 ```bash
-tochrun -nnodes 1 -nproc_per_node 8 examples/segmentation/segmentation_training.py --launcher pytorch
+tochrun -nnodes 1 -nproc_per_node 8 examples/segmentation/train.py --launcher pytorch
 ```

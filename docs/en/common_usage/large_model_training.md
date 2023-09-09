@@ -25,7 +25,7 @@ pip install deepspeed
 After installing DeepSpeed, you need to configure the `strategy` and `optim_wrapper` parameters of FlexibleRunner as follows:
 
 - strategy: Set `type='DeepSpeedStrategy'` and configure other parameters. See [DeepSpeedStrategy](mmengine._strategy.DeepSpeedStrategy) for more details.
-- optim_wrapper: Set `type='DeepSpeedOptimWrapper'` and configure other parameters. See [DeepSpeedOptimWrapper](mmengine.optim.DeepSpeedOptimWrapper) for more details.
+- optim_wrapper: Set `type='DeepSpeedOptimWrapper'` and configure other parameters. See [DeepSpeedOptimWrapper](mmengine._strategy.deepspeed.DeepSpeedOptimWrapper) for more details.
 
 Here is an example configuration related to DeepSpeed:
 
@@ -182,3 +182,77 @@ torchrun --nproc-per-node 2 examples/distributed_training_with_flexible_runner.p
 ```
 
 </details>
+
+## ColossalAI
+
+[ColossalAI](https://colossalai.org/) is a comprehensive large-scale model training system that utilizes efficient parallelization techniques. Starting from MMEngine v0.8.5, it supports training models using optimization strategies from the ZeRO series in ColossalAI.
+
+Install ColossalAI with a version greater than v0.3.1. This version requirement is due to a [bug](https://github.com/hpcaitech/ColossalAI/issues/4393) in v0.3.1 that causes some program blocking, which has been fixed in later versions. If the highest available version of ColossalAI is still v0.3.1, it is recommended to install ColossalAI from the source code on the main branch.
+
+```{note}
+Note that if you encounter compilation errors like `nvcc fatal: Unsupported gpu architecture 'compute_90'` and your PyTorch version is higher than 2.0, you need to git clone the source code and follow the modifications in this [PR](https://github.com/hpcaitech/ColossalAI/pull/4357) before proceeding with the installation.
+```
+
+```bash
+pip install git+https://github.com/hpcaitech/ColossalAI
+```
+
+If the latest version of ColossalAI is higher than v0.3.1, you can directly install it using pip:
+
+```bash
+pip install colossalai
+```
+
+Once ColossalAI is installed, configure the `strategy` and `optim_wrapper` parameters for FlexibleRunner:
+
+- `strategy`: Specify `type='ColossalAIStrategy'` and configure the parameters. Detailed parameter descriptions can be found in [ColossalAIStrategy](mmengine._strategy.ColossalAIStrategy).
+- `optim_wrapper`: Default to no `type` parameter or specify `type=ColossalAIOptimWrapper`. It is recommended to choose `HybridAdam` as the optimizer type. Other configurable types are listed in [ColossalAIOptimWrapper](mmengine._strategy.ColossalAIOptimWrapper).
+
+Here's the configuration related to ColossalAI:
+
+```python
+from mmengine.runner._flexible_runner import FlexibleRunner
+
+strategy = dict(type='ColossalAIStrategy')
+optim_wrapper = dict(optimizer=dict(type='HybridAdam', lr=1e-3))
+
+# Initialize FlexibleRunner
+runner = FlexibleRunner(
+    model=MMResNet50(),
+    work_dir='./work_dirs',
+    strategy=strategy,
+    train_dataloader=train_dataloader,
+    optim_wrapper=optim_wrapper,
+    param_scheduler=dict(type='LinearLR'),
+    train_cfg=dict(by_epoch=True, max_epochs=10, val_interval=1),
+    val_dataloader=val_dataloader,
+    val_cfg=dict(),
+    val_evaluator=dict(type=Accuracy))
+
+# Start training
+runner.train()
+```
+
+To initiate distributed training using two GPUs:
+
+```bash
+torchrun --nproc-per-node 2 examples/distributed_training_with_flexible_runner.py --use-colossalai
+```
+
+<details>
+<summary>Training Logs</summary>
+
+```
+08/18 11:56:34 - mmengine - INFO - Epoch(train) [1][ 10/196] lr: 3.3333e-04 eta: 0:10:31 time: 0.3238  data_time: 0.0344  memory: 597  loss: 3.8766
+08/18 11:56:35 - mmengine - INFO - Epoch(train)  [1][ 20/196]  lr: 3.3333e-04  eta: 0:06:56  time: 0.1057  data_time: 0.0338  memory: 597  loss: 2.3797
+08/18 11:56:36 - mmengine - INFO - Epoch(train)  [1][ 30/196]  lr: 3.3333e-04  eta: 0:05:45  time: 0.1068  data_time: 0.0342  memory: 597  loss: 2.3219
+08/18 11:56:37 - mmengine - INFO - Epoch(train)  [1][ 40/196]  lr: 3.3333e-04  eta: 0:05:08  time: 0.1059  data_time: 0.0337  memory: 597  loss: 2.2641
+08/18 11:56:38 - mmengine - INFO - Epoch(train)  [1][ 50/196]  lr: 3.3333e-04  eta: 0:04:45  time: 0.1062  data_time: 0.0338  memory: 597  loss: 2.2250
+08/18 11:56:40 - mmengine - INFO - Epoch(train)  [1][ 60/196]  lr: 3.3333e-04  eta: 0:04:31  time: 0.1097  data_time: 0.0339  memory: 597  loss: 2.1672
+08/18 11:56:41 - mmengine - INFO - Epoch(train)  [1][ 70/196]  lr: 3.3333e-04  eta: 0:04:21  time: 0.1096  data_time: 0.0340  memory: 597  loss: 2.1688
+08/18 11:56:42 - mmengine - INFO - Epoch(train)  [1][ 80/196]  lr: 3.3333e-04  eta: 0:04:13  time: 0.1098  data_time: 0.0338  memory: 597  loss: 2.1781
+08/18 11:56:43 - mmengine - INFO - Epoch(train)  [1][ 90/196]  lr: 3.3333e-04  eta: 0:04:06  time: 0.1097  data_time: 0.0338  memory: 597  loss: 2.0938
+08/18 11:56:44 - mmengine - INFO - Epoch(train)  [1][100/196]  lr: 3.3333e-04  eta: 0:04:01  time: 0.1097  data_time: 0.0339  memory: 597  loss: 2.1078
+08/18 11:56:45 - mmengine - INFO - Epoch(train)  [1][110/196]  lr: 3.3333e-04  eta: 0:04:01  time: 0.1395  data_time: 0.0340  memory: 597  loss: 2.0141
+08/18 11:56:46 - mmengine - INFO - Epoch(train)  [1][120/196]  lr: 3.3333
+```
