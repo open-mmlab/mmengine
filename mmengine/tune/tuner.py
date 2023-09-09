@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import math
+import tempfile
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
@@ -7,7 +8,9 @@ import torch
 from mmengine.config import Config, ConfigDict
 from mmengine.dist import (all_reduce, broadcast_object_list, init_dist,
                            is_distributed, is_main_process)
-from mmengine.logging import MMLogger
+from mmengine.logging import MessageHub, MMLogger
+from mmengine.registry import DefaultScope
+from mmengine.visualization import Visualizer
 from ._report_hook import ReportingHook
 from .searchers import HYPER_SEARCHERS, Searcher
 
@@ -233,6 +236,21 @@ class Tuner:
                 num_trials=self._num_trials))
         return HYPER_SEARCHERS.build(searcher_cfg)
 
+    def _tear_down_runner(self, runner):
+        """Clear the global states of a runner."""
+
+        # Set the runner's cls attributes to None
+        runner.cfg = None
+        runner._train_loop = None
+        runner._val_loop = None
+        runner._test_loop = None
+
+        # Remove the instance managed by the ManagerMixin
+        MMLogger._instance_dict.pop(runner.logger.instance_name)
+        MessageHub._instance_dict.pop(runner.message_hub.instance_name)
+        Visualizer._instance_dict.pop(runner.visualizer.instance_name)
+        DefaultScope._instance_dict.pop(runner.default_scope.instance_name)
+
     def _run_trial(self) -> Tuple[Dict, float, Optional[Exception]]:
         """Retrieve hyperparameters from searcher and run a trial."""
         from mmengine.runner import Runner
@@ -269,12 +287,14 @@ class Tuner:
         error: Optional[Exception] = None
         try:
             runner.train()
-            score = report_hook.report_score()
+            score = report_hook.report_score()  # type: ignore
             if score is None or math.isnan(score) or math.isinf(score):
                 score = default_score
         except Exception as e:
             score = default_score
             error = e
+        finally:
+            self._tear_down_runner(runner)
 
         # Synchronize and average scores across all processes
         score_tensor = torch.tensor(score)
@@ -293,6 +313,8 @@ class Tuner:
             A dictionary containing the best hyperparameters under the key
             'hparam' and the corresponding score under the key 'score'.
         """
+        temp_dir = tempfile.TemporaryDirectory()
+        self._runner_cfg['work_dir'] = temp_dir.name
         self._logger.info(f'Starting tuning for {self._num_trials} trials...')
         for trail_idx in range(self._num_trials):
             hparam, score, error = self._run_trial()
@@ -314,6 +336,7 @@ class Tuner:
         self._logger.info(f'Best hyperparameters obtained: {best_hparam}')
         self._logger.info(f'Best score obtained: {best_score}')
         self._logger.info('Tuning completed.')
+        temp_dir.cleanup()
         return dict(hparam=best_hparam, score=best_score)
 
     def clear(self):
