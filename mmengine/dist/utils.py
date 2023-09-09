@@ -408,7 +408,8 @@ def master_only(func: Callable) -> Callable:
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        if is_main_process():
+        if ('img_only_master' in kwargs
+                and kwargs['img_only_master'] is True) or is_main_process():
             return func(*args, **kwargs)
 
     return wrapper
