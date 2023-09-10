@@ -203,7 +203,8 @@ class Visualizer(ManagerMixin):
             if name in self._vis_backends:
                 raise RuntimeError(f'vis_backend name {name} already exists')
             self._vis_backends[name] = vis_backend  # type: ignore
-            self.img_only_master = vis_backend.img_only_master
+            self.img_only_master = vis_backend.\
+                img_only_master['img_only_master']
 
         self.fig_save = None
         self.fig_save_cfg = fig_save_cfg
@@ -1110,12 +1111,7 @@ class Visualizer(ManagerMixin):
             step (int): Global step value to record. Defaults to 0.
         """
         for vis_backend in self._vis_backends.values():
-            vis_backend.add_scalar(
-                name,
-                value,
-                step,
-                img_only_master=self.img_only_master,
-                **kwargs)  # type: ignore
+            vis_backend.add_scalar(name, value, step, **kwargs)  # type: ignore
 
     @master_only
     def add_scalars(self,
