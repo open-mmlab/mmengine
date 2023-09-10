@@ -17,9 +17,10 @@ from mmengine.visualization import Visualizer
 @VISBACKENDS.register_module()
 class MockVisBackend:
 
-    def __init__(self, save_dir: str = 'none'):
+    def __init__(self, save_dir: str = 'none', img_only_master=True):
         self._save_dir = save_dir
         self._close = False
+        self.img_only_master=img_only_master
 
     @property
     def experiment(self) -> Any:

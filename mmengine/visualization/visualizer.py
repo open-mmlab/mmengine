@@ -1110,12 +1110,7 @@ class Visualizer(ManagerMixin):
             step (int): Global step value to record. Defaults to 0.
         """
         for vis_backend in self._vis_backends.values():
-            vis_backend.add_scalar(
-                name,
-                value,
-                step,
-                img_only_master=self.img_only_master,
-                **kwargs)  # type: ignore
+            vis_backend.add_scalar(name, value, step, **kwargs)  # type: ignore
 
     @master_only
     def add_scalars(self,

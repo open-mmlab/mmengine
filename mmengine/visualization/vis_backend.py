@@ -76,6 +76,8 @@ class BaseVisBackend(metaclass=ABCMeta):
     def __init__(self, save_dir: str, img_only_master=True):
         self._save_dir = save_dir
         self._env_initialized = False
+        if img_only_master is dict:
+            img_only_master = img_only_master['img_only_master']
         self.img_only_master = img_only_master
 
     @property
