@@ -527,7 +527,7 @@ def get_object_from_string(obj_name: str):
             module_name = f'{module_name}.{part}'
         except StopIteration:
             # if obj is a module
-            return obj
+            return module
         except ImportError:
             return None
 
