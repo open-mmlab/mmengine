@@ -132,13 +132,24 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
                 ast_arg2 = self._get_target_attribute()
             else:
                 ast_arg2 = ast.Name(id=assign_node_name, ctx=ast.Load())
+
+            deep_copy_ast_arg2 = ast.Call(
+                func=ast.Attribute(
+                    value=ast.Name(id='copy', ctx=ast.Load()),
+                    attr='deepcopy',
+                    ctx=ast.Load()),
+                args=[ast_arg2],
+                keywords=[])
             update_messagehub_node = ast.Expr(
                 value=ast.Call(
                     func=ast.Attribute(
                         value=ast.Name(id='message_hub', ctx=ast.Load()),
                         attr='update_info',
                         ctx=ast.Load()),
-                    args=[ast.Constant(value=assign_node_name), ast_arg2],
+                    args=[
+                        ast.Constant(
+                            value=assign_node_name), deep_copy_ast_arg2
+                    ],
                     keywords=[]))
             self.function_visitor.call_nodes.clear()
             return [assign_left_node, update_messagehub_node, node]
@@ -244,6 +255,7 @@ class RecorderHook(Hook):
             module='mmengine.logging',
             names=[ast.alias(name='MessageHub')],
             level=0)
+        import_copy_node = ast.Import(names=[ast.alias(name='copy')])
         # get messagehub instance
         get_messagehub_node = ast.Assign(
             targets=[ast.Name(id='message_hub', ctx=ast.Store())],
@@ -255,8 +267,9 @@ class RecorderHook(Hook):
                 args=[],
                 keywords=[]))
 
-        tree.body[0].body = [import_messagehub_node, get_messagehub_node
-                             ] + func_body
+        tree.body[0].body = [
+            import_messagehub_node, import_copy_node, get_messagehub_node
+        ] + func_body
 
         for recorder in self._recorders.values():
             tree = recorder.rewrite(tree)
