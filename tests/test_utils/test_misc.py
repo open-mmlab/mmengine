@@ -336,3 +336,5 @@ def test_locate():
     assert get_object_from_string('mmengine.model') is model_module
     assert get_object_from_string(
         'mmengine.model.BaseModel') is model_module.BaseModel
+    assert get_object_from_string('mmengine.model.BaseModel.forward') is \
+        model_module.BaseModel.forward
