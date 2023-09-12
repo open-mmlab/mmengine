@@ -54,9 +54,9 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
 
 
 # Take "x = self.conv1(x)" as an example
-# genertate "tmp_func_self_conv1 = self.conv1(x)"
-# and "x = tmp_func_self_conv1"
-# and "message_hub.update_info('conv1', tmp_func_conv1)"
+# genertate "self_conv1 = self.conv1(x)"
+# and "x = self_conv1"
+# and "message_hub.update_info('self_conv1', self_conv1)"
 def _get_tensor_key(target, attribute=None):
     target = target.replace('.', '_')
     if attribute:
@@ -129,16 +129,16 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
             if self._attribute:
                 assign_node_name = _get_tensor_key(self._target,
                                                    self._attribute)
-                ast_arg2 = self._get_target_attribute()
+                attribute_node = self._get_target_attribute()
             else:
-                ast_arg2 = ast.Name(id=assign_node_name, ctx=ast.Load())
+                attribute_node = ast.Name(id=assign_node_name, ctx=ast.Load())
 
-            deep_copy_ast_arg2 = ast.Call(
+            deep_copy_attribute_node = ast.Call(
                 func=ast.Attribute(
                     value=ast.Name(id='copy', ctx=ast.Load()),
                     attr='deepcopy',
                     ctx=ast.Load()),
-                args=[ast_arg2],
+                args=[attribute_node],
                 keywords=[])
             update_messagehub_node = ast.Expr(
                 value=ast.Call(
@@ -148,7 +148,7 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
                         ctx=ast.Load()),
                     args=[
                         ast.Constant(
-                            value=assign_node_name), deep_copy_ast_arg2
+                            value=assign_node_name), deep_copy_attribute_node
                     ],
                     keywords=[]))
             self.function_visitor.call_nodes.clear()
