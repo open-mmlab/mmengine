@@ -3,11 +3,12 @@ import ast
 import inspect
 import logging
 import os.path as osp
-import pickle
 import textwrap
 import types
 from abc import ABCMeta, abstractmethod
 from typing import Any, Dict, List, Optional
+
+import torch
 
 from mmengine.logging import MessageHub, print_log
 from mmengine.registry import HOOKS, RECORDERS
@@ -23,7 +24,10 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
     def __init__(self, target, target_index):
         super().__init__()
         self._target = target
-        self._target_index = set(target_index)
+        if isinstance(target_index, list):
+            self._target_index = set(target_index)
+        else:
+            self._target_index = {target_index}
         self.count = -1
 
     def visit_Assign(self, node):
@@ -296,8 +300,7 @@ class RecorderHook(Hook):
     def _save_record(self, step):
         recorder_file_name = self.filename_tmpl.format(step)
         path = osp.join(self.save_dir, recorder_file_name)
-        with open(path, 'wb') as f:
-            pickle.dump(self.tensor_dict, f)
+        torch.save(self.tensor_dict, path)
 
     def _init_tensor_dict(self):
         for k in self.tensor_dict.keys():
