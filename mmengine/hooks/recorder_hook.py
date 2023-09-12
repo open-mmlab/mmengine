@@ -218,7 +218,7 @@ class RecorderHook(Hook):
                     logger='current',
                     level=logging.WARNING)
             if recorder.get('type') == 'FunctionRecorder':
-                index = recorder.get('index')
+                index = recorder.get('index', 0)
                 if isinstance(index, list):
                     for i in index:
                         self.tensor_dict[function_with_index(target,
