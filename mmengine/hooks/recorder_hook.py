@@ -6,6 +6,7 @@ import os.path as osp
 import textwrap
 import types
 from abc import ABCMeta, abstractmethod
+from operator import attrgetter
 from typing import Any, Dict, List, Optional
 
 import torch
@@ -158,7 +159,8 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
 
 class Recorder(metaclass=ABCMeta):
 
-    def __init__(self, target: str):
+    def __init__(self, model, target: str):
+        self._model = model
         self._target = target
 
     @abstractmethod
@@ -169,8 +171,8 @@ class Recorder(metaclass=ABCMeta):
 @RECORDERS.register_module()
 class FunctionRecorder(Recorder):
 
-    def __init__(self, target: str, index: list):
-        super().__init__(target)
+    def __init__(self, model: str, target: str, index: list):
+        super().__init__(model, target)
         self.index = index
         self.visit_assign = self._get_transformer_class()
 
@@ -184,8 +186,8 @@ class FunctionRecorder(Recorder):
 @RECORDERS.register_module()
 class AttributeRecorder(Recorder):
 
-    def __init__(self, target: str, attribute: str = None):
-        super().__init__(target)
+    def __init__(self, model: str, target: str, attribute: str = None):
+        super().__init__(model, target)
         self.attribute = attribute
         self.visit_assign = self._get_transformer_class()
 
@@ -218,6 +220,9 @@ class RecorderHook(Hook):
         if recorders is None or len(recorders) == 0:
             raise ValueError('recorders not initialized')
         for recorder in recorders:
+            model = recorder.get('model')
+            if model is None:
+                recorder['model'] = ''
             target = recorder.get('target')
             attribute = recorder.get('attribute')
             tensor_key = _get_tensor_key(target, attribute)
@@ -241,7 +246,7 @@ class RecorderHook(Hook):
                 self.tensor_dict[tensor_key] = list()
             self._recorders[tensor_key] = RECORDERS.build(recorder)
 
-    def _modify_func(self, func):
+    def _modify_forward_func(self, func, recorders):
         # Gets the source code for the function
         source = inspect.getsource(func)
         source = textwrap.dedent(source)
@@ -271,7 +276,7 @@ class RecorderHook(Hook):
             import_messagehub_node, import_copy_node, get_messagehub_node
         ] + func_body
 
-        for recorder in self._recorders.values():
+        for recorder in recorders:
             tree = recorder.rewrite(tree)
             if self.print_modification:
                 new_tree = ast.fix_missing_locations(tree)
@@ -290,6 +295,24 @@ class RecorderHook(Hook):
             namespace)
         return namespace[func.__name__]
 
+    def _get_model(self, model_name):
+        if not model_name:
+            return self.base_model
+        module_list = model_name.split('.')
+        model = self.base_model
+        for model_name in module_list:
+            model = attrgetter(model_name)(model)
+        return model
+
+    def _group_recorder_by_model(self):
+        group_dict = {}
+        for recorder in self._recorders.values():
+            key = recorder._model
+            if key not in group_dict:
+                group_dict[key] = []
+            group_dict[key].append(recorder)
+        return group_dict
+
     def before_run(self, runner) -> None:
         if not self.save_dir:
             self.save_dir = runner.work_dir
@@ -298,9 +321,13 @@ class RecorderHook(Hook):
         self.message_hub = MessageHub.get_current_instance()
         # get model and modify its forward function
         model = runner.model
+        self.base_model = model
         self.origin_forward = model.forward
-        model.forward = types.MethodType(
-            self._modify_func(model.forward), model)
+        self.grouped_recorders = self._group_recorder_by_model()
+        for model_name, recorders in self.grouped_recorders.items():
+            model = self._get_model(model_name)
+            model.forward = types.MethodType(
+                self._modify_forward_func(model.forward, recorders), model)
 
     def after_train_iter(self,
                          runner,
