@@ -6,6 +6,7 @@ from queue import Queue
 from threading import Event, Thread, current_thread
 from typing import Any, Dict, List, Union, Optional, Tuple
 
+import numpy as np
 import psutil
 import torch
 import torch.nn as nn
@@ -34,7 +35,7 @@ class MMPipelineParallel(nn.Module):
                  num_pipelines: Optional[int] = None,
                  num_chunks: Optional[int] = None,
                  memory_threshold: float = 0.7,
-                 memory_map: Optional[Dict[str, int]] = None,
+                 memory_map: Optional[Dict[str, str]] = None,
                  no_split_module_classes: Optional[List[str]] = None,
                  language_module_classes: Optional[str] = None,
                  device_map: Union[str, Dict[str, dict]] = 'auto',
@@ -45,6 +46,7 @@ class MMPipelineParallel(nn.Module):
 
         # init model
         self.model = self._init_model(model)
+        self.weights = weights
         self.entry = getattr(self.model, exec_entry)
         # init pipeline parallelism
         if num_pipelines is not None:
@@ -69,12 +71,12 @@ class MMPipelineParallel(nn.Module):
             self.device_map = device_map
             self.offload_map = self._init_offload_map()
             self.module_map = self._init_module_map()
+            self._load_and_dispatch(self.weights)
+            self._register_hooks()
             self._inited = True
         else:
             # after we get the input shape, we can init the device map
             self.device_map_policy = device_map
-            self.offload_map = None
-            self.module_map = None
             self._inited = False
 
         # init offload directory
@@ -147,8 +149,8 @@ class MMPipelineParallel(nn.Module):
             new_memory_map[f'cuda:{i}'] = gpu_memory
         # check memory map
         if memory_map is not None:
-            memory_map = self._convert_memory_map(memory_map)
-            for device, memory in memory_map.items():
+            converted_memory_map = self._convert_memory_map(memory_map)
+            for device, memory in converted_memory_map.items():
                 if device not in new_memory_map:
                     raise ValueError(
                         f'{device} is not a valid device.' +
@@ -160,7 +162,7 @@ class MMPipelineParallel(nn.Module):
                         'is larger than the available memory ' +
                         f'({new_memory_map[device]}). Please use a smaller one'
                     )
-                new_memory_map[device] = memory
+                new_memory_map[device] = memory * self.memory_threshold
         return new_memory_map
 
     def _convert_memory_map(self,
@@ -239,11 +241,66 @@ class MMPipelineParallel(nn.Module):
             size += param.nelement() * param.element_size()
         return size
 
-    def _find_tied_weights(self) -> List[List[str]]:
+    def _iter_tree(self, module_name: str) -> Dict[str, Any]:
         """
         TODO
         """
-        pass
+        tree = self.model_tree
+        if module_name == '':
+            return tree
+        else:
+            name_split = module_name.split('.')
+            for i in range(len(name_split)):
+                curr_name = '.'.join(name_split[:i + 1])
+                if i == len(name_split) - 1:
+                    # leaf node
+                    if curr_name in tree['buffers']:
+                        # it is buffer
+                        return tree['buffers'][curr_name]
+                    else:
+                        # it is submodule
+                        return tree[curr_name]
+                else:
+                    # due to no_split_module_classes
+                    if 'submodules' not in tree[curr_name]:
+                        continue
+                    else:
+                        tree = tree[curr_name]['submodules']
+        # if not found
+        return None
+
+    def _find_tied_weights(self):
+        """
+        TODO
+        """
+        def _find_tied_parameters(module: nn.Module,
+                                  named_parameters: Dict[str, torch.Tensor],
+                                  prefix: str = '',
+                                  result: Dict[str, List[str]] = {}):
+            if named_parameters is None:
+                named_parameters = {n: p for n, p in module.named_parameters()}
+            else:
+                for name, param in module.named_parameters():
+                    full_name = name if prefix == '' else f'{prefix}.{name}'
+                    if full_name not in named_parameters:
+                        for new_name, new_param in named_parameters.items():
+                            if new_param is param:
+                                if new_name not in result:
+                                    result[new_name] = []
+                                full_name_split = full_name.split('.')
+                                module_name = '.'.join(full_name_split[:-1])
+                                result[new_name].append(module_name)
+            # handle submodule
+            for name, submodule in module.named_children():
+                sub_name = name if prefix == '' else f'{prefix}.{name}'
+                _find_tied_parameters(
+                    submodule, named_parameters, sub_name, result
+                )
+
+        result = {}
+        _find_tied_parameters(self.model, None, '', result)
+        # merge into model tree
+        self.model_tree['tied_parameters'] = result
 
     def _get_meta_data(self, data_sample: Tuple(tuple, dict)):
         """
@@ -274,21 +331,8 @@ class MMPipelineParallel(nn.Module):
         flops = flop_analyzer.by_module()
         # merge into model tree
         for name, num_flops in flops.items():
-            tree = self.model_tree
-            if name == '':
-                tree['flops'] = num_flops
-            else:
-                name_split = name.split('.')
-                for i in range(len(name_split)):
-                    curr_name = '.'.join(name_split[:i + 1])
-                    if i == len(name_split) - 1:
-                        tree[curr_name]['flops'] = num_flops
-                    else:
-                        # due to no_split_module_classes
-                        if 'submodules' not in tree[curr_name]:
-                            continue
-                        else:
-                            tree = tree[curr_name]['submodules']
+            tree = self._iter_tree(name)
+            tree['flops'] = num_flops
 
     def _get_exec_order(self, data_sample: Tuple(tuple, dict)):
         """
@@ -299,7 +343,9 @@ class MMPipelineParallel(nn.Module):
         def return_module_name_hook(module: nn.Module,
                                     args: tuple,
                                     kwargs: dict):
-            exec_order.append(module.__class__.__name__)
+            module_name = module._get_name()
+            if module_name not in exec_order:
+                exec_order.append(module_name)
 
         handle = nn.modules.module.register_module_forward_pre_hook(
             return_module_name_hook
@@ -312,27 +358,112 @@ class MMPipelineParallel(nn.Module):
         handle.remove()
         # merge into model tree
         for name, order in enumerate(exec_order):
-            tree = self.model_tree
-            if name == '':
-                tree['exec_order'] = order
-            else:
-                name_split = name.split('.')
-                for i in range(len(name_split)):
-                    curr_name = '.'.join(name_split[:i + 1])
-                    if i == len(name_split) - 1:
-                        tree[curr_name]['exec_order'] = order
-                    else:
-                        # due to no_split_module_classes
-                        if 'submodules' not in tree[curr_name]:
-                            continue
-                        else:
-                            tree = tree[curr_name]['submodules']            
+            tree = self._iter_tree(name)
+            tree['exec_order'] = order
 
-    def _init_device_map(self, device_map: str) -> Dict[str, dict]:
+    def _init_device_map(self, device_map_policy: str) -> Dict[str, dict]:
         """
         TODO
         """
-        pass
+        if device_map_policy == 'auto':
+            device_map_policy == 'balanced'
+        if device_map_policy == 'balanced':
+            return self._init_device_map_balanced()
+        else:
+            raise ValueError(
+                f'Unsupported device map policy {device_map_policy}'
+            )
+
+    def _init_device_map_balanced(self) -> Dict[str, dict]:
+        """
+        TODO
+        """
+        avg_flops = self.tree['flops'] / self.num_pipelines
+        modules = []
+        module_pointer = 0
+        devices = list(self.memory_map.keys())
+        cuda_devices = [d for d in devices if d.startswith('cuda')]
+        cuda_pointer = 0
+        cpu_used = 0
+        for _ in range(self.num_pipelines):
+            modules.append({
+                'modules': [],
+                'flops': 0,
+                'parameter_size': 0,
+                'init': None,
+                'exec': None
+            })
+
+        def dfs(tree: Dict[str, Any],
+                prefix: str,
+                module_pointer: int,
+                cuda_pointer: int,
+                init_device: str,
+                cpu_used: int):
+            # handle buffers
+            if 'buffers' in tree:
+                for name, _ in tree['buffers'].items():
+                    full_name = name if prefix == '' else f'{prefix}.{name}'
+                    modules[module_pointer]['modules'].append(full_name)
+            # handle self
+            module_flops = tree['flops']
+            curr_flops = modules[module_pointer]['flops']
+            module_size = tree['parameter_size']
+            curr_size = modules[module_pointer]['parameter_size']
+            curr_cuda_memory = self.memory_map[cuda_devices[cuda_pointer]]
+            # infer exec
+            if module_flops + curr_flops < 1.2 * avg_flops and \
+                    module_size + curr_size < curr_cuda_memory:
+                modules[module_pointer]['modules'].append(prefix)
+                modules[module_pointer]['flops'] += module_flops
+                modules[module_pointer]['parameter_size'] += module_size
+            if module_flops + curr_flops > 0.8 * avg_flops:
+                modules[module_pointer]['exec'] = cuda_devices[cuda_pointer]
+                # infer init
+                if not (init_device == 'cpu' or init_device == 'disk'):
+                    if cuda_pointer == len(cuda_devices):
+                        init_device = 'cpu'
+                        part_memory = modules[module_pointer]['parameter_size']
+                        if part_memory + cpu_used > self.memory_map['cpu']:
+                            init_device = 'disk'
+                            modules[module_pointer]['init'] = init_device
+                        else:
+                            init_device = 'cpu'
+                            modules[module_pointer]['init'] = init_device
+                    else:
+                        init_device = cuda_devices[cuda_pointer]
+                        modules[module_pointer]['init'] = init_device
+                module_pointer += 1
+                cuda_pointer = (cuda_pointer + 1) % len(cuda_devices)
+            # handle submodules
+            if 'submodules' in tree:
+                for name, submodule in tree['submodules'].items():
+                    full_name = name if prefix == '' else f'{prefix}.{name}'
+                    dfs(submodule,
+                        full_name,
+                        module_pointer,
+                        cuda_pointer,
+                        init_device,
+                        cpu_used)
+
+        dfs(self.model_tree,
+            prefix='',
+            module_pointer=module_pointer,
+            cuda_pointer=cuda_pointer,
+            init_device='',
+            cpu_used=cpu_used)
+
+        # format modules
+        device_map = {}
+        for i in range(self.num_pipelines):
+            modules_i = modules[i]
+            for module in modules_i['modules']:
+                device_map[module] = {
+                    'part_id': i,
+                    'init_device': modules_i['init'],
+                    'exec_device': modules_i['exec']
+                }
+        return device_map
 
     def _init_offload_map(self) -> Dict[int, int]:
         """
@@ -356,14 +487,13 @@ class MMPipelineParallel(nn.Module):
         """
         module_map = {}
         for name, info in self.device_map.items():
-            name_split = name.split('.')
-            tree = self.model_tree
-            for i in range(len(name_split)):
-                curr_name = '.'.join(name_split[:i + 1])
-                if i == len(name_split) - 1:
-                    module = tree[curr_name]['self']
-                else:
-                    tree = tree[curr_name]['submodules']
+            tree = self._iter_tree(name)
+            if isinstance(tree, dict):
+                # it is a submodule
+                module = tree['self']
+            else:
+                # it is a buffer
+                module = tree
             module_map[name] = {
                 'module': module,
                 'curr_device': info['init_device'],
@@ -371,7 +501,7 @@ class MMPipelineParallel(nn.Module):
             }
         return module_map
 
-    def _init_queues(self) -> Dict[str, Queue]:
+    def _init_queues(self) -> Tuple[Dict[str, Queue], Dict[str, Queue]]:
         """
         TODO
         """
@@ -450,7 +580,25 @@ class MMPipelineParallel(nn.Module):
         """
         TODO
         """
-        pass
+        curr_part_id = -1
+        for name, info in self.device_map.items():
+            module = self.module_map[name]['module']
+            if info['part_id'] != curr_part_id:
+                curr_part_id = info['part_id']
+                hook = MMPipelineParallel.Hook(
+                    part_id=curr_part_id,
+                    num_parts=self.num_pipelines,
+                    exec_device=info['exec_device'],
+                    is_part_begin=True
+                )
+            else:
+                hook = MMPipelineParallel.Hook(
+                    part_id=curr_part_id,
+                    num_parts=self.num_pipelines,
+                    exec_device=info['exec_device'],
+                    is_part_begin=False
+                )
+            module.register_forward_pre_hook(hook, with_kwargs=True)
 
     @staticmethod
     @torch.no_grad()
@@ -573,7 +721,9 @@ class MMPipelineParallel(nn.Module):
             MMPipelineParallel.stream_contexts[
                 self.part_id].__enter__()
 
-    def _chunk_data(self, args: tuple, kwargs: dict) -> List[Tuple[tuple, dict]]:
+    def _chunk_data(self,
+                    args: tuple,
+                    kwargs: dict) -> List[Tuple[tuple, dict]]:
         """
         TODO
         """
@@ -616,9 +766,12 @@ class MMPipelineParallel(nn.Module):
         if not self._inited:
             self._get_flops(chunked_data[0])
             self._get_exec_order(chunked_data[0])
+            self._find_tied_weights()
             self.device_map = self._init_device_map(self.device_map_policy)
             self.offload_map = self._init_offload_map()
             self.module_map = self._init_module_map()
+            self._load_and_dispatch(self.weights)
+            self._register_hooks()
             self._inited = True
 
         num_chunks = min(len(chunked_data), self.num_chunks)
