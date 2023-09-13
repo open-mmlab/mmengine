@@ -463,6 +463,14 @@ class MMPipelineParallel(nn.Module):
                     'init_device': modules_i['init'],
                     'exec_device': modules_i['exec']
                 }
+        # handle tied weights
+        tied_weights = self.model_tree['tied_parameters']
+        for source, targets in tied_weights.items():
+            source_info = device_map[source]
+            for target in targets:
+                target_info = device_map[target]
+                target_info['init_device'] = source_info['init_device']
+                target_info['exec_device'] = source_info['exec_device']
         return device_map
 
     def _init_offload_map(self) -> Dict[int, int]:
@@ -474,6 +482,7 @@ class MMPipelineParallel(nn.Module):
         for info in self.device_map.values():
             if info['part_id'] != curr_part_id:
                 curr_part_id = info['part_id']
+            # 0 is offload, 1 is onload
             if info['init_device'] == 'cpu' or \
                     info['init_device'] == 'disk':
                 offload_map[curr_part_id] = 0
@@ -617,11 +626,36 @@ class MMPipelineParallel(nn.Module):
         done = (False, None)
         out_queue.put(done)
 
-    def _clock(self, num_chunks: int) -> List[Union[Tuple[int, int], str]]:
+    def _clock(self, num_chunks: int) -> List[Union[List[int, int], str]]:
         """
         TODO
         """
-        pass
+        chunk_id = 0
+        schedules = []
+        waiting_offload_chunks = set()
+        while True:
+            if len(waiting_offload_chunks) == num_chunks:
+                schedules = ['offload']
+                waiting_offload_chunks = set()
+            elif schedules == ['offload']:
+                schedules = ['onload']
+            else:
+                if schedules == ['onload']:
+                    schedules = []
+                    chunk_id = 0
+                if chunk_id < num_chunks:
+                    schedules.insert(0, [chunk_id, -1])
+                for i in range(self.num_chunks):
+                    curr_part_id = schedules[i][1]
+                    next_part_id = (curr_part_id + 1) % self.num_pipelines
+                    curr_chunk_id = schedules[i][0]
+                    if self.offload_map[next_part_id] == 0:
+                        waiting_offload_chunks.add(curr_chunk_id)
+                        schedules.pop(i)
+                    else:
+                        schedules[i][1] += 1
+                chunk_id += 1
+            yield schedules
 
     def _move_part(self, part_id: int, target_device: str):
         """
@@ -756,12 +790,40 @@ class MMPipelineParallel(nn.Module):
             )
         return chunked_data
 
+    def _merge_results(self,
+                       results: List[Any]) -> Any:
+        """
+        TODO
+        """
+        # we suppose that the items in results are the same type
+        item = results[0]
+        if isinstance(item, torch.Tensor):
+            result = torch.cat(results, dim=0)
+        elif isinstance(item, dict):
+            result = {k: [] for k in item}
+            for item in results:
+                for k in item:
+                    result[k].append(item[k])
+            for k in result:
+                result[k] = self._merge_results(result[k])
+        elif isinstance(item, list):
+            result = [[] for _ in range(len(item))]
+            for item in results:
+                for i in range(len(item)):
+                    result[i].append(item[i])
+            for i in range(len(result)):
+                result[i] = self._merge_results(result[i])
+        else:
+            raise TypeError(f'Unsupported type {type(item)}')
+        return result
+
     def forward(self, *args, **kwargs):
         """
         TODO
         """
         exec_info = None
         chunked_data = self._chunk_data(args, kwargs)
+        results = [None for _ in range(len(chunked_data))]
         # get flops, init device map, offload map, module map and exec order
         if not self._inited:
             self._get_flops(chunked_data[0])
@@ -780,5 +842,59 @@ class MMPipelineParallel(nn.Module):
         # clear visited times
         MMPipelineParallel.hook_visited_times = {}
         # main loop
-        for schedule in self._clock(num_chunks):
-            pass
+        for schedules in self._clock(num_chunks):
+            if len(finished_chunks) == num_chunks:
+                break
+            if schedules == ['offload']:
+                pass
+            elif schedules == ['onload']:
+                pass
+            else:
+                # send data
+                for chunk_id, part_id in schedules:
+                    if chunk_id in finished_chunks:
+                        continue
+                    else:
+                        curr_part_id = part_id % self.num_pipelines
+                        next_part_id = (part_id + 1) % self.num_pipelines
+                        if part_id >= self.num_pipelines:
+                            curr_part_id += self.lm_offset
+                            next_part_id += self.lm_offset
+                        # lock the next event
+                        MMPipelineParallel.events[
+                            chunk_id][next_part_id].clear()
+                        # unlock the current event
+                        MMPipelineParallel.events[
+                            chunk_id][curr_part_id].set()
+                        # new task
+                        if part_id == 0:
+                            curr_data = chunked_data[chunk_id]
+                            task = partial(self.entry, *curr_data[0],
+                                           **curr_data[1])
+                            MMPipelineParallel.in_queues[
+                                f'chunk-{chunk_id}'].put(task)
+            if schedules == ['offload']:
+                pass
+            elif schedules == ['onload']:
+                pass
+            else:
+                # recv data
+                for chunk_id, part_id in schedules:
+                    if chunk_id in finished_chunks:
+                        continue
+                    else:
+                        success, result = MMPipelineParallel.out_queues[
+                            f'chunk-{chunk_id}'].get()
+                        if exec_info is not None:
+                            continue
+                        elif not success:
+                            exec_info = result
+                            continue
+                        if not isinstance(result, MMPipelineParallel.Flag):
+                            results[chunk_id] = result
+                            finished_chunks.add(chunk_id)
+            if exec_info is not None:
+                raise exec_info[0].with_traceback(exec_info[1], exec_info[2])
+        # merge results
+        merged_results = self._merge_results(results)
+        return merged_results
