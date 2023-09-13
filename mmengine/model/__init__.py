@@ -36,3 +36,6 @@ __all__ = [
 if digit_version(TORCH_VERSION) >= digit_version('2.0.0'):
     from .wrappers import MMFullyShardedDataParallel  # noqa:F401
     __all__.append('MMFullyShardedDataParallel')
+
+    from .wrappers import MMPipelineParallel  # noqa:F401
+    __all__.append('MMPipelineParallel')
