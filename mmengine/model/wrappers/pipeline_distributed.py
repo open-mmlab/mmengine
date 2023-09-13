@@ -302,7 +302,7 @@ class MMPipelineParallel(nn.Module):
         # merge into model tree
         self.model_tree['tied_parameters'] = result
 
-    def _get_meta_data(self, data_sample: Tuple(tuple, dict)):
+    def _get_meta_data(self, data_sample: Tuple[tuple, dict]):
         """
         TODO
         """
@@ -322,7 +322,7 @@ class MMPipelineParallel(nn.Module):
         data_meta = (tuple(args_meta), kwargs_meta)
         return data_meta
 
-    def _get_flops(self, data_sample: Tuple(tuple, dict)):
+    def _get_flops(self, data_sample: Tuple[tuple, dict]):
         """
         TODO
         """
@@ -334,7 +334,7 @@ class MMPipelineParallel(nn.Module):
             tree = self._iter_tree(name)
             tree['flops'] = num_flops
 
-    def _get_exec_order(self, data_sample: Tuple(tuple, dict)):
+    def _get_exec_order(self, data_sample: Tuple[tuple, dict]):
         """
         TODO
         """
@@ -626,7 +626,7 @@ class MMPipelineParallel(nn.Module):
         done = (False, None)
         out_queue.put(done)
 
-    def _clock(self, num_chunks: int) -> List[Union[List[int, int], str]]:
+    def _clock(self, num_chunks: int) -> List[Union[List[int], str]]:
         """
         TODO
         """
@@ -693,7 +693,7 @@ class MMPipelineParallel(nn.Module):
         def __call__(self,
                      module: nn.Module,
                      args: tuple,
-                     kwargs: dict) -> Tuple(tuple, dict):
+                     kwargs: dict) -> Tuple[tuple, dict]:
             """
             TODO
             """
@@ -732,7 +732,7 @@ class MMPipelineParallel(nn.Module):
 
         def _check_device(self,
                           args: tuple,
-                          kwargs: dict) -> Tuple(tuple, dict):
+                          kwargs: dict) -> Tuple[tuple, dict]:
             """
             TODO
             """
