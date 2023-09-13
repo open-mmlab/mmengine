@@ -39,7 +39,7 @@ def dump_extra_type(value):
     if isinstance(value, ModuleType):
         return LazyObject(value.__name__).dump_str
 
-    typename = type(value).__module__ + type(value).__name__
+    typename = type(value).__module__ + '.' + type(value).__name__
     if typename == 'torch.dtype':
         return LazyObject(str(value)).dump_str
 
