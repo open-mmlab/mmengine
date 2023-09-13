@@ -73,6 +73,7 @@ class MMPipelineParallel(nn.Module):
             self.module_map = self._init_module_map()
             self._load_and_dispatch(self.weights)
             self._register_hooks()
+            MMPipelineParallel.stream_contexts = self._init_stream_contexts()
             self._inited = True
         else:
             # after we get the input shape, we can init the device map
@@ -88,9 +89,6 @@ class MMPipelineParallel(nn.Module):
 
         # init events
         MMPipelineParallel.events = self._init_events()
-
-        # init stream contexts
-        MMPipelineParallel.stream_contexts = self._init_stream_contexts()
 
     def _init_model(self, model: ModelType) -> nn.Module:
         """
@@ -254,18 +252,21 @@ class MMPipelineParallel(nn.Module):
                 curr_name = '.'.join(name_split[:i + 1])
                 if i == len(name_split) - 1:
                     # leaf node
-                    if curr_name in tree['buffers']:
-                        # it is buffer
-                        return tree['buffers'][curr_name]
+                    if 'buffers' in tree:
+                        if curr_name in tree['buffers']:
+                            # it is buffer
+                            return tree['buffers'][curr_name]
+                    # it is submodule
+                    if 'submodules' not in tree:
+                        break
                     else:
-                        # it is submodule
-                        return tree[curr_name]
+                        return tree['submodules'][curr_name]
                 else:
                     # due to no_split_module_classes
-                    if 'submodules' not in tree[curr_name]:
-                        continue
+                    if 'submodules' not in tree:
+                        break
                     else:
-                        tree = tree[curr_name]['submodules']
+                        tree = tree['submodules'][curr_name]
         # if not found
         return None
 
@@ -327,23 +328,30 @@ class MMPipelineParallel(nn.Module):
         TODO
         """
         data_meta = self._get_meta_data(data_sample)
-        flop_analyzer = FlopAnalyzer(self.model, inputs=data_meta)
+        if data_meta[1] == {}:
+            inputs = data_meta[0]
+        else:
+            inputs = data_meta
+        flop_analyzer = FlopAnalyzer(self.model, inputs=inputs)
         flops = flop_analyzer.by_module()
         # merge into model tree
         for name, num_flops in flops.items():
             tree = self._iter_tree(name)
-            tree['flops'] = num_flops
+            if tree is None:
+                continue
+            else:
+                tree['flops'] = num_flops
 
     def _get_exec_order(self, data_sample: Tuple[tuple, dict]):
         """
         TODO
         """
         exec_order = []
+        module_name_map = {m: n for n, m in self.model.named_modules()}
 
         def return_module_name_hook(module: nn.Module,
-                                    args: tuple,
-                                    kwargs: dict):
-            module_name = module._get_name()
+                                    args: tuple):
+            module_name = module_name_map[module]
             if module_name not in exec_order:
                 exec_order.append(module_name)
 
@@ -357,16 +365,19 @@ class MMPipelineParallel(nn.Module):
 
         handle.remove()
         # merge into model tree
-        for name, order in enumerate(exec_order):
+        for order, name in enumerate(exec_order):
             tree = self._iter_tree(name)
-            tree['exec_order'] = order
+            if tree is None:
+                continue
+            else:
+                tree['exec_order'] = order
 
     def _init_device_map(self, device_map_policy: str) -> Dict[str, dict]:
         """
         TODO
         """
         if device_map_policy == 'auto':
-            device_map_policy == 'balanced'
+            device_map_policy = 'balanced'
         if device_map_policy == 'balanced':
             return self._init_device_map_balanced()
         else:
@@ -378,13 +389,17 @@ class MMPipelineParallel(nn.Module):
         """
         TODO
         """
-        avg_flops = self.tree['flops'] / self.num_pipelines
+        avg_flops = self.model_tree['flops'] / self.num_pipelines
         modules = []
-        module_pointer = 0
         devices = list(self.memory_map.keys())
         cuda_devices = [d for d in devices if d.startswith('cuda')]
-        cuda_pointer = 0
-        cpu_used = 0
+        meta_info = {
+            'module_pointer': 0,
+            'cuda_pointer': 0,
+            'cpu_used': 0,
+            'init_device': ''
+        }
+
         for _ in range(self.num_pipelines):
             modules.append({
                 'modules': [],
@@ -395,16 +410,13 @@ class MMPipelineParallel(nn.Module):
             })
 
         def dfs(tree: Dict[str, Any],
-                prefix: str,
-                module_pointer: int,
-                cuda_pointer: int,
-                init_device: str,
-                cpu_used: int):
-            # handle buffers
-            if 'buffers' in tree:
-                for name, _ in tree['buffers'].items():
-                    full_name = name if prefix == '' else f'{prefix}.{name}'
-                    modules[module_pointer]['modules'].append(full_name)
+                name: str,
+                meta_info: Dict[str, Union[int, str]]):
+            is_handled = False
+            module_pointer = meta_info['module_pointer']
+            cuda_pointer = meta_info['cuda_pointer']
+            cpu_used = meta_info['cpu_used']
+            init_device = meta_info['init_device']
             # handle self
             module_flops = tree['flops']
             curr_flops = modules[module_pointer]['flops']
@@ -414,44 +426,45 @@ class MMPipelineParallel(nn.Module):
             # infer exec
             if module_flops + curr_flops < 1.2 * avg_flops and \
                     module_size + curr_size < curr_cuda_memory:
-                modules[module_pointer]['modules'].append(prefix)
+                modules[module_pointer]['modules'].append(name)
                 modules[module_pointer]['flops'] += module_flops
                 modules[module_pointer]['parameter_size'] += module_size
-            if module_flops + curr_flops > 0.8 * avg_flops:
-                modules[module_pointer]['exec'] = cuda_devices[cuda_pointer]
-                # infer init
-                if not (init_device == 'cpu' or init_device == 'disk'):
-                    if cuda_pointer == len(cuda_devices):
-                        init_device = 'cpu'
-                        part_memory = modules[module_pointer]['parameter_size']
-                        if part_memory + cpu_used > self.memory_map['cpu']:
-                            init_device = 'disk'
-                            modules[module_pointer]['init'] = init_device
+                is_handled = True
+                if module_flops + curr_flops > 0.8 * avg_flops:
+                    cuda_device = cuda_devices[cuda_pointer]
+                    modules[module_pointer]['exec'] = cuda_device
+                    # infer init
+                    if not (init_device == 'cpu' or init_device == 'disk'):
+                        if cuda_pointer == len(cuda_devices):
+                            part_memory = modules[
+                                module_pointer]['parameter_size']
+                            if part_memory + cpu_used > self.memory_map['cpu']:
+                                init_device = 'disk'
+                                modules[module_pointer]['init'] = init_device
+                            else:
+                                init_device = 'cpu'
+                                modules[module_pointer]['init'] = init_device
+                                cpu_used += part_memory
                         else:
-                            init_device = 'cpu'
+                            init_device = cuda_devices[cuda_pointer]
                             modules[module_pointer]['init'] = init_device
-                    else:
-                        init_device = cuda_devices[cuda_pointer]
-                        modules[module_pointer]['init'] = init_device
-                module_pointer += 1
-                cuda_pointer = (cuda_pointer + 1) % len(cuda_devices)
+                    meta_info['init_device'] = init_device
+                    meta_info['cpu_used'] = cpu_used
+                    if module_pointer != self.num_pipelines - 1:
+                        module_pointer += 1
+                        cuda_pointer = (cuda_pointer + 1) % len(cuda_devices)
+                        meta_info['module_pointer'] = module_pointer
+                        meta_info['cuda_pointer'] = cuda_pointer
+            # handle buffers
+            if 'buffers' in tree and not is_handled:
+                for name, _ in tree['buffers'].items():
+                    modules[module_pointer]['modules'].append(name)
             # handle submodules
-            if 'submodules' in tree:
+            if 'submodules' in tree and not is_handled:
                 for name, submodule in tree['submodules'].items():
-                    full_name = name if prefix == '' else f'{prefix}.{name}'
-                    dfs(submodule,
-                        full_name,
-                        module_pointer,
-                        cuda_pointer,
-                        init_device,
-                        cpu_used)
+                    dfs(submodule, name, meta_info)
 
-        dfs(self.model_tree,
-            prefix='',
-            module_pointer=module_pointer,
-            cuda_pointer=cuda_pointer,
-            init_device='',
-            cpu_used=cpu_used)
+        dfs(self.model_tree, name='', meta_info=meta_info)
 
         # format modules
         device_map = {}
@@ -834,6 +847,7 @@ class MMPipelineParallel(nn.Module):
             self.module_map = self._init_module_map()
             self._load_and_dispatch(self.weights)
             self._register_hooks()
+            MMPipelineParallel.stream_contexts = self._init_stream_contexts()
             self._inited = True
 
         num_chunks = min(len(chunked_data), self.num_chunks)
