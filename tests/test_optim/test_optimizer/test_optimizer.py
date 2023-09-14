@@ -14,7 +14,8 @@ from mmengine.logging import MMLogger
 from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             DefaultOptimWrapperConstructor, OptimWrapper,
                             build_optim_wrapper)
-from mmengine.optim.optimizer.builder import (DADAPTATION_OPTIMIZERS,
+from mmengine.optim.optimizer.builder import (BITSANDBYTES_OPTIMIZERS,
+                                              DADAPTATION_OPTIMIZERS,
                                               LION_OPTIMIZERS,
                                               TORCH_OPTIMIZERS)
 from mmengine.registry import DefaultScope, Registry, build_from_cfg
@@ -39,6 +40,14 @@ def has_dadaptation() -> bool:
 def has_lion() -> bool:
     try:
         import lion_pytorch  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def has_bitsandbytes() -> bool:
+    try:
+        import bitsandbytes  # noqa: F401
         return True
     except ImportError:
         return False
@@ -234,6 +243,16 @@ class TestBuilder(TestCase):
     @unittest.skipIf(not has_lion(), 'lion-pytorch is not installed')
     def test_lion_optimizers(self):
         assert 'Lion' in LION_OPTIMIZERS
+
+    @unittest.skipIf(not has_bitsandbytes(), 'dadaptation is not installed')
+    def test_bitsandbytes_optimizers(self):
+        bitsandbytes_optimizers = [
+            'AdamW8bit', 'Adam8bit', 'Adagrad8bit', 'PagedAdam8bit',
+            'PagedAdamW8bit', 'LAMB8bit', 'LARS8bit', 'RMSprop8bit',
+            'Lion8bit', 'PagedLion8bit', 'SGD8bit'
+        ]
+        assert set(bitsandbytes_optimizers).issubset(
+            set(BITSANDBYTES_OPTIMIZERS))
 
     def test_build_optimizer(self):
         # test build function without ``constructor`` and ``paramwise_cfg``
