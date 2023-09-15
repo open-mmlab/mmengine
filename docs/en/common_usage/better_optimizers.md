@@ -114,8 +114,8 @@ runner = Runner(
     model=ResNet18(),
     work_dir='./work_dir',
     train_dataloader=train_dataloader_cfg,
-    # To view the input parameters for DAdaptAdaGrad, you can refer to
-    # https://github.com/facebookresearch/dadaptation/blob/main/dadaptation/dadapt_adagrad.py
+    # To view the input parameters for AdamW8bit, you can refer to
+    # https://github.com/TimDettmers/bitsandbytes/blob/main/bitsandbytes/optim/adamw.py
     optim_wrapper=dict(optimizer=dict(type='AdamW8bit', lr=1e-4, weight_decay=1e-2)),
     train_cfg=dict(by_epoch=True, max_epochs=3),
 )
