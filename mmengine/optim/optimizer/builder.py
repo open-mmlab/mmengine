@@ -129,6 +129,34 @@ def register_sophia_optimizers() -> List[str]:
 SOPHIA_OPTIMIZERS = register_sophia_optimizers()
 
 
+def register_bitsandbytes_optimizers() -> List[str]:
+    """Register optimizers in ``bitsandbytes`` to the ``OPTIMIZERS`` registry.
+
+    Returns:
+        List[str]: A list of registered optimizers' name.
+    """
+    dadaptation_optimizers = []
+    try:
+        import bitsandbytes as bnb
+    except ImportError:
+        pass
+    else:
+        for module_name in [
+                'AdamW8bit', 'Adam8bit', 'Adagrad8bit', 'PagedAdam8bit',
+                'PagedAdamW8bit', 'LAMB8bit', 'LARS8bit', 'RMSprop8bit',
+                'Lion8bit', 'PagedLion8bit', 'SGD8bit'
+        ]:
+            _optim = getattr(bnb.optim, module_name)
+            if inspect.isclass(_optim) and issubclass(_optim,
+                                                      torch.optim.Optimizer):
+                OPTIMIZERS.register_module(module=_optim)
+                dadaptation_optimizers.append(module_name)
+    return dadaptation_optimizers
+
+
+BITSANDBYTES_OPTIMIZERS = register_bitsandbytes_optimizers()
+
+
 def build_optim_wrapper(model: nn.Module,
                         cfg: Union[dict, Config, ConfigDict]) -> OptimWrapper:
     """Build function of OptimWrapper.

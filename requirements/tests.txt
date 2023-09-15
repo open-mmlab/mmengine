@@ -1,4 +1,5 @@
 aim;sys_platform!='win32'
+bitsandbytes
 clearml
 coverage
 dadaptation
