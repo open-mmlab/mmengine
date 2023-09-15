@@ -58,58 +58,20 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
 # genertate "self_conv1 = self.conv1(x)"
 # and "x = self_conv1"
 # and "message_hub.update_info('self_conv1', self_conv1)"
-def _get_tensor_key(target, attribute=None):
+def _get_tensor_key(target):
     target = target.replace('.', '_')
-    if attribute:
-        target = target + '_' + attribute
     return target
-
-
-class FuncCallVisitor(ast.NodeTransformer):
-
-    def __init__(self, func_name):
-        self.func_name = func_name
-        self.call_nodes = []
-
-    # judge if the ast.Call node is user wanted
-    def _is_target_call(self, call_node):
-        assert isinstance(call_node, ast.Call)
-        call_chain_list = self.func_name.split('.')
-        call_node = call_node.func
-        if len(call_chain_list) == 1:
-            return isinstance(
-                call_node.func,
-                ast.Name) and call_node.func.id == call_chain_list[0]
-        else:
-            # Traversal call_chain_list in reverse order
-            for i in range(len(call_chain_list) - 1, 0, -1):
-                if isinstance(call_node, ast.Attribute
-                              ) and call_node.attr == call_chain_list[i]:
-                    call_node = call_node.value
-                else:
-                    return False
-            return isinstance(call_node,
-                              ast.Name) and call_node.id == call_chain_list[0]
-
-    def visit_Call(self, node):
-        if not self._is_target_call(node):
-            return node
-        new_node = ast.Name(id=_get_tensor_key(self.func_name), ctx=ast.Load())
-        self.call_nodes.append(node)
-        return new_node
 
 
 class AttributeRecorderTransformer(ast.NodeTransformer):
 
-    def __init__(self, target, attribute):
+    def __init__(self, target):
         super().__init__()
         self._target = target
-        self._attribute = attribute
-        self.function_visitor = FuncCallVisitor(target)
+        self._visited = False
 
     def _get_target_attribute(self):
         func_chain = self._target.split('.')
-        func_chain.append(self._attribute)
         assert len(func_chain) >= 2
         attr = ast.Attribute(
             value=ast.Name(id=func_chain[0], ctx=ast.Load()),
@@ -120,47 +82,38 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
         return attr
 
     def visit_Assign(self, node):
-        self.function_visitor.visit(node)
-        if self.function_visitor.call_nodes:
-            assign_right_node = self.function_visitor.call_nodes[0]
-            assign_node_name = _get_tensor_key(self._target, None)
-            assign_left_node = ast.Assign(
-                targets=[ast.Name(id=assign_node_name, ctx=ast.Store())],
-                value=assign_right_node)
-            if self._attribute:
-                assign_node_name = _get_tensor_key(self._target,
-                                                   self._attribute)
-                attribute_node = self._get_target_attribute()
-            else:
-                attribute_node = ast.Name(id=assign_node_name, ctx=ast.Load())
+        if self._visited:
+            return node
+        if node.targets[0].id == 'message_hub':
+            self._visited = True
 
-            deep_copy_attribute_node = ast.Call(
+        attribute_node = self._get_target_attribute()
+
+        deep_copy_attribute_node = ast.Call(
+            func=ast.Attribute(
+                value=ast.Name(id='copy', ctx=ast.Load()),
+                attr='deepcopy',
+                ctx=ast.Load()),
+            args=[attribute_node],
+            keywords=[])
+        update_messagehub_node = ast.Expr(
+            value=ast.Call(
                 func=ast.Attribute(
-                    value=ast.Name(id='copy', ctx=ast.Load()),
-                    attr='deepcopy',
+                    value=ast.Name(id='message_hub', ctx=ast.Load()),
+                    attr='update_info',
                     ctx=ast.Load()),
-                args=[attribute_node],
-                keywords=[])
-            update_messagehub_node = ast.Expr(
-                value=ast.Call(
-                    func=ast.Attribute(
-                        value=ast.Name(id='message_hub', ctx=ast.Load()),
-                        attr='update_info',
-                        ctx=ast.Load()),
-                    args=[
-                        ast.Constant(
-                            value=assign_node_name), deep_copy_attribute_node
-                    ],
-                    keywords=[]))
-            self.function_visitor.call_nodes.clear()
-            return [assign_left_node, update_messagehub_node, node]
-        return node
+                args=[
+                    ast.Constant(value=_get_tensor_key(self._target)),
+                    deep_copy_attribute_node
+                ],
+                keywords=[]))
+        return [node, update_messagehub_node]
 
 
 class Recorder(metaclass=ABCMeta):
 
     def __init__(self, model, target: str):
-        self._model = model
+        self.model = model
         self._target = target
 
     @abstractmethod
@@ -174,10 +127,8 @@ class FunctionRecorder(Recorder):
     def __init__(self, model: str, target: str, index: list):
         super().__init__(model, target)
         self.index = index
-        self.visit_assign = self._get_transformer_class()
-
-    def _get_transformer_class(self):
-        return FunctionRecorderTransformer(self._target, self.index)
+        self.visit_assign = FunctionRecorderTransformer(
+            self._target, self.index)
 
     def rewrite(self, ast_tree):
         return self.visit_assign.visit(ast_tree)
@@ -186,16 +137,24 @@ class FunctionRecorder(Recorder):
 @RECORDERS.register_module()
 class AttributeRecorder(Recorder):
 
-    def __init__(self, model: str, target: str, attribute: str = None):
+    def __init__(self, model: str, target: str):
         super().__init__(model, target)
-        self.attribute = attribute
-        self.visit_assign = self._get_transformer_class()
-
-    def _get_transformer_class(self):
-        return AttributeRecorderTransformer(self._target, self.attribute)
+        self.visit_assign = AttributeRecorderTransformer(self._target)
 
     def rewrite(self, ast_tree):
         return self.visit_assign.visit(ast_tree)
+
+    def _get_target_attribute(self):
+        func_chain = self._target.split('.')
+        func_chain.append(self._attribute)
+        assert len(func_chain) >= 2
+        attr = ast.Attribute(
+            value=ast.Name(id=func_chain[0], ctx=ast.Load()),
+            attr=func_chain[1],
+            ctx=ast.Load())
+        for ele in func_chain[2:]:
+            attr = ast.Attribute(value=attr, attr=ele, ctx=ast.Load())
+        return attr
 
 
 @HOOKS.register_module()
@@ -211,6 +170,7 @@ class RecorderHook(Hook):
     ):
         self.tensor_dict: Dict[str, Any] = {}
         self.origin_forward = None
+        self.origin_func: Dict[Any, Any] = {}
         self._recorders: Dict[str, Recorder] = {}
         self.print_modification = print_modification
         self.save_dir = save_dir  # type: ignore
@@ -224,8 +184,7 @@ class RecorderHook(Hook):
             if model is None:
                 recorder['model'] = ''
             target = recorder.get('target')
-            attribute = recorder.get('attribute')
-            tensor_key = _get_tensor_key(target, attribute)
+            tensor_key = _get_tensor_key(target)
 
             if target is None:
                 print_log(
@@ -298,16 +257,14 @@ class RecorderHook(Hook):
     def _get_model(self, model_name):
         if not model_name:
             return self.base_model
-        module_list = model_name.split('.')
         model = self.base_model
-        for model_name in module_list:
-            model = attrgetter(model_name)(model)
+        model = attrgetter(model_name)(model)
         return model
 
     def _group_recorder_by_model(self):
         group_dict = {}
         for recorder in self._recorders.values():
-            key = recorder._model
+            key = recorder.model
             if key not in group_dict:
                 group_dict[key] = []
             group_dict[key].append(recorder)
@@ -322,10 +279,19 @@ class RecorderHook(Hook):
         # get model and modify its forward function
         model = runner.model
         self.base_model = model
-        self.origin_forward = model.forward
         self.grouped_recorders = self._group_recorder_by_model()
         for model_name, recorders in self.grouped_recorders.items():
-            model = self._get_model(model_name)
+            try:
+                model = self._get_model(model_name)
+            except AttributeError:
+                print_log(
+                    f'Can not record {model_name} in runner.model'
+                    'because it doesn\'t exist',
+                    logger='current',
+                    level=logging.WARNING)
+                continue
+            self.origin_func[model] = model.forward
+            print('here')
             model.forward = types.MethodType(
                 self._modify_forward_func(model.forward, recorders), model)
 
@@ -353,4 +319,6 @@ class RecorderHook(Hook):
         self._init_tensor_dict()
 
     def after_train(self, runner) -> None:
-        runner.model.forward = self.origin_forward
+        # restore forward function after train
+        for m, f in self.origin_func.items():
+            m.forward = f
