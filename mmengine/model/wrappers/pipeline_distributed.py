@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from functools import partial
 from queue import Queue
 from threading import Event, Thread, current_thread
-from typing import Any, Dict, Iterator, List, Union, Optional, Set, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union
 
 import numpy as np
 import psutil
@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 
 from mmengine.analysis import FlopAnalyzer
-from mmengine.registry import MODELS, MODEL_WRAPPERS
+from mmengine.registry import MODEL_WRAPPERS, MODELS
 
 
 @MODEL_WRAPPERS.register_module()
@@ -100,9 +100,7 @@ class MMPipelineParallel(nn.Module):
                 builded_model = MODELS.build(model)
             return builded_model
         else:
-            raise TypeError(
-                f'Unsupported model type {type(model)}'
-            )
+            raise TypeError(f'Unsupported model type {type(model)}')
 
     @contextmanager
     @staticmethod
@@ -110,6 +108,7 @@ class MMPipelineParallel(nn.Module):
         """
         TODO
         """
+
         def _parameter_hook(module, name, param):
             param_class = type(param)
             output = param_class(param.to('meta'), **param.__dict__)
@@ -120,15 +119,12 @@ class MMPipelineParallel(nn.Module):
             return output
 
         nn.modules.module.register_module_parameter_registration_hook(
-            _parameter_hook
-        )
+            _parameter_hook)
         nn.modules.module.register_module_buffer_registration_hook(
-            _buffer_hook
-        )
+            _buffer_hook)
         yield
 
-    def _init_memory_map(self,
-                         memory_map: Optional[Dict[str, str]]
+    def _init_memory_map(self, memory_map: Optional[Dict[str, str]]
                          ) -> Dict[str, int]:
         """
         TODO
@@ -146,10 +142,8 @@ class MMPipelineParallel(nn.Module):
             converted_memory_map = self._convert_memory_map(memory_map)
             for device, memory in converted_memory_map.items():
                 if device not in new_memory_map:
-                    raise ValueError(
-                        f'{device} is not a valid device.' +
-                        'Please use cpu or cuda:i'
-                    )
+                    raise ValueError(f'{device} is not a valid device.' +
+                                     'Please use cpu or cuda:i')
                 if memory > new_memory_map[device]:
                     raise ValueError(
                         f'The memory of {device} ({memory}) ' +
@@ -160,36 +154,34 @@ class MMPipelineParallel(nn.Module):
         return new_memory_map
 
     def _convert_memory_map(self,
-                            memory_map: Dict[str, str]
-                            ) -> Dict[str, int]:
+                            memory_map: Dict[str, str]) -> Dict[str, int]:
         """
         TODO
         """
         converted_memory_map = {}
         for device, memory in memory_map.items():
             if memory.upper().endswith('GIB'):
-                size = int(memory[:-3]) * (1024 ** 3)
+                size = int(memory[:-3]) * (1024**3)
             elif memory.upper().endswith('MIB'):
-                size = int(memory[:-3]) * (1024 ** 2)
+                size = int(memory[:-3]) * (1024**2)
             elif memory.upper().endswith('KIB'):
                 size = int(memory[:-3]) * 1024
             elif memory.upper().endswith('GB'):
-                size = int(memory[:-2]) * (10 ** 9)
+                size = int(memory[:-2]) * (10**9)
                 if memory.endswith('b'):
                     size = size // 8
             elif memory.upper().endswith('MB'):
-                size = int(memory[:-2]) * (10 ** 6)
+                size = int(memory[:-2]) * (10**6)
                 if memory.endswith('b'):
                     size = size // 8
             elif memory.upper().endswith('KB'):
-                size = int(memory[:-2]) * (10 ** 3)
+                size = int(memory[:-2]) * (10**3)
                 if memory.endswith('b'):
                     size = size // 8
             else:
                 raise ValueError(
                     f'{memory} is not in a valid format.' +
-                    'Please use GiB, MiB, KiB, GB, MB or KB, e.g. 6GB'
-                )
+                    'Please use GiB, MiB, KiB, GB, MB or KB, e.g. 6GB')
             converted_memory_map[device] = size
         return converted_memory_map
 
@@ -197,8 +189,8 @@ class MMPipelineParallel(nn.Module):
         """
         TODO
         """
-        def bfs(module: Optional[nn.Module],
-                prefix: str,
+
+        def bfs(module: Optional[nn.Module], prefix: str,
                 info: Dict[str, Any]):
             # None
             if module is None:
@@ -217,13 +209,14 @@ class MMPipelineParallel(nn.Module):
                     info['buffers'][curr_name] = buffer
             # submodule
             module_class_name = module.__class__.__name__
-            if not (len(module._modules) == 0 or
-                    module_class_name in self.no_split_module_classes):
+            if not (len(module._modules) == 0
+                    or module_class_name in self.no_split_module_classes):
                 info['submodules'] = {}
                 for name, submodule in module._modules.items():
                     curr_name = name if prefix == '' else f'{prefix}.{name}'
                     info['submodules'][curr_name] = {}
                     bfs(submodule, curr_name, info['submodules'][curr_name])
+
         tree: Dict[str, Any] = {}
         bfs(self.model, '', tree)
         return tree
@@ -272,6 +265,7 @@ class MMPipelineParallel(nn.Module):
         """
         TODO
         """
+
         def _find_tied_parameters(module: nn.Module,
                                   named_parameters: Dict[str, torch.Tensor],
                                   prefix: str = '',
@@ -292,9 +286,8 @@ class MMPipelineParallel(nn.Module):
             # handle submodule
             for name, submodule in module.named_children():
                 sub_name = name if prefix == '' else f'{prefix}.{name}'
-                _find_tied_parameters(
-                    submodule, named_parameters, sub_name, result
-                )
+                _find_tied_parameters(submodule, named_parameters, sub_name,
+                                      result)
 
         result = {}
         _find_tied_parameters(self.model, None, '', result)
@@ -347,15 +340,13 @@ class MMPipelineParallel(nn.Module):
         exec_order = []
         module_name_map = {m: n for n, m in self.model.named_modules()}
 
-        def return_module_name_hook(module: nn.Module,
-                                    args: tuple):
+        def return_module_name_hook(module: nn.Module, args: tuple):
             module_name = module_name_map[module]
             if module_name not in exec_order:
                 exec_order.append(module_name)
 
         handle = nn.modules.module.register_module_forward_pre_hook(
-            return_module_name_hook
-        )
+            return_module_name_hook)
 
         data_meta = self._get_meta_data(data_sample)
         with torch.no_grad():
@@ -380,8 +371,7 @@ class MMPipelineParallel(nn.Module):
             return self._init_device_map_balanced()
         else:
             raise ValueError(
-                f'Unsupported device map policy {device_map_policy}'
-            )
+                f'Unsupported device map policy {device_map_policy}')
 
     def _init_device_map_balanced(self) -> Dict[str, dict]:
         """
@@ -409,9 +399,7 @@ class MMPipelineParallel(nn.Module):
                 'exec': None
             })
 
-        def dfs(tree: Dict[str, Any],
-                name: str,
-                meta_info: Dict[str, int]):
+        def dfs(tree: Dict[str, Any], name: str, meta_info: Dict[str, int]):
             is_handled = False
             module_pointer = meta_info['module_pointer']
             cuda_pointer = meta_info['cuda_pointer']
@@ -436,8 +424,8 @@ class MMPipelineParallel(nn.Module):
                     # infer init
                     if not (init_device == CPU or init_device == DISK):
                         if cuda_pointer == len(cuda_devices):
-                            part_memory = modules[
-                                module_pointer]['parameter_size']
+                            part_memory = modules[module_pointer][
+                                'parameter_size']
                             if part_memory + cpu_used > self.memory_map['cpu']:
                                 init_device = DISK
                                 modules[module_pointer]['init'] = 'disk'
@@ -537,8 +525,7 @@ class MMPipelineParallel(nn.Module):
                 target=MMPipelineParallel._worker,
                 args=(in_queue, out_queue),
                 name=f'part-{i}',
-                daemon=True
-            )
+                daemon=True)
             thread.start()
 
             in_queues[f'part-{i}'] = in_queue
@@ -565,9 +552,7 @@ class MMPipelineParallel(nn.Module):
         """
         events = []
         for i in range(self.num_chunks):
-            events.append(
-                [Event() for _ in range(self.num_pipelines)]
-            )
+            events.append([Event() for _ in range(self.num_pipelines)])
         return events
 
     def _init_stream_contexts(self) -> List[torch.cuda.StreamContext]:
@@ -612,15 +597,13 @@ class MMPipelineParallel(nn.Module):
                     part_id=curr_part_id,
                     num_parts=self.num_pipelines,
                     exec_device=info['exec_device'],
-                    is_part_begin=True
-                )
+                    is_part_begin=True)
             else:
                 hook = MMPipelineParallel.Hook(
                     part_id=curr_part_id,
                     num_parts=self.num_pipelines,
                     exec_device=info['exec_device'],
-                    is_part_begin=False
-                )
+                    is_part_begin=False)
             module.register_forward_pre_hook(hook, with_kwargs=True)
 
     @staticmethod
@@ -686,6 +669,7 @@ class MMPipelineParallel(nn.Module):
         """
         TODO
         """
+
         def __init__(self, part_id: int):
             self.part_id = part_id
 
@@ -699,6 +683,7 @@ class MMPipelineParallel(nn.Module):
         """
         TODO
         """
+
         def __init__(self,
                      part_id: int,
                      num_parts: int,
@@ -709,9 +694,7 @@ class MMPipelineParallel(nn.Module):
             self.exec_device = exec_device
             self.is_part_begin = is_part_begin
 
-        def __call__(self,
-                     module: nn.Module,
-                     args: tuple,
+        def __call__(self, module: nn.Module, args: tuple,
                      kwargs: dict) -> Tuple[tuple, dict]:
             """
             TODO
@@ -732,25 +715,22 @@ class MMPipelineParallel(nn.Module):
             """
             chunk_id = int(current_thread().name.split('-')[1])
             visit_times = MMPipelineParallel.hook_visited_times.get(
-                f'chunk-{chunk_id}', 0
-            )
+                f'chunk-{chunk_id}', 0)
             if self.part_id != 0 or visit_times != 0:
                 prev_part_id = (self.part_id - 1) % self.num_parts
                 # send exit signal
                 MMPipelineParallel.out_queues[f'chunk-{chunk_id}'].put(
-                    (True, MMPipelineParallel.Flag(prev_part_id))
-                )
+                    (True, MMPipelineParallel.Flag(prev_part_id)))
                 # exit stream context
-                MMPipelineParallel.stream_contexts[
-                    prev_part_id].__exit__(None, None, None)
+                MMPipelineParallel.stream_contexts[prev_part_id].__exit__(
+                    None, None, None)
             # update visited times
             MMPipelineParallel.hook_visited_times[
                 f'chunk-{chunk_id}'] = visit_times + 1
             # wait
             MMPipelineParallel.events[chunk_id][self.part_id].wait()
 
-        def _check_device(self,
-                          args: tuple,
+        def _check_device(self, args: tuple,
                           kwargs: dict) -> Tuple[tuple, dict]:
             """
             TODO
@@ -771,11 +751,9 @@ class MMPipelineParallel(nn.Module):
             """
             TODO
             """
-            MMPipelineParallel.stream_contexts[
-                self.part_id].__enter__()
+            MMPipelineParallel.stream_contexts[self.part_id].__enter__()
 
-    def _chunk_data(self,
-                    args: tuple,
+    def _chunk_data(self, args: tuple,
                     kwargs: dict) -> List[Tuple[tuple, dict]]:
         """
         TODO
@@ -801,16 +779,12 @@ class MMPipelineParallel(nn.Module):
         chunked_data = []
 
         for i in range(real_num_chunks):
-            chunked_data.append(
-                (
-                    tuple([arg[i] for arg in chunked_args]),
-                    {k: v[i] for k, v in chunked_kwargs.items()}
-                )
-            )
+            chunked_data.append((tuple([arg[i] for arg in chunked_args]),
+                                 {k: v[i]
+                                  for k, v in chunked_kwargs.items()}))
         return chunked_data
 
-    def _merge_results(self,
-                       results: List[Any]) -> Any:
+    def _merge_results(self, results: List[Any]) -> Any:
         """
         TODO
         """
@@ -884,11 +858,10 @@ class MMPipelineParallel(nn.Module):
                             curr_part_id += self.lm_offset
                             next_part_id += self.lm_offset
                         # lock the next event
-                        MMPipelineParallel.events[
-                            chunk_id][next_part_id].clear()
+                        MMPipelineParallel.events[chunk_id][
+                            next_part_id].clear()
                         # unlock the current event
-                        MMPipelineParallel.events[
-                            chunk_id][curr_part_id].set()
+                        MMPipelineParallel.events[chunk_id][curr_part_id].set()
                         # new task
                         if part_id == 0:
                             curr_data = chunked_data[chunk_id]
