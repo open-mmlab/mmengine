@@ -81,21 +81,64 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
             attr = ast.Attribute(value=attr, attr=ele, ctx=ast.Load())
         return attr
 
+    def _deepcopy_varname(self):
+        return f'_deep_copy_{self._target.replace(".", "_")}'
+
+    def _get_deep_copy_node(self, var_node):
+        if_node = ast.If(
+            test=ast.Call(
+                func=ast.Name(id='isinstance', ctx=ast.Load()),
+                args=[
+                    var_node,
+                    ast.Attribute(
+                        value=ast.Name(id='torch', ctx=ast.Load()),
+                        attr='Tensor',
+                        ctx=ast.Load())
+                ],
+                keywords=[]),
+            body=[
+                ast.Assign(
+                    targets=[
+                        ast.Name(id=self._deepcopy_varname(), ctx=ast.Store())
+                    ],
+                    value=ast.Call(
+                        func=ast.Attribute(
+                            value=ast.Call(
+                                func=ast.Attribute(
+                                    var_node, attr='detach', ctx=ast.Load()),
+                                args=[],
+                                keywords=[]),
+                            attr='clone',
+                            ctx=ast.Load()),
+                        args=[],
+                        keywords=[]))
+            ],
+            orelse=[
+                ast.Assign(
+                    targets=[
+                        ast.Name(id=self._deepcopy_varname(), ctx=ast.Store())
+                    ],
+                    value=ast.Call(
+                        func=ast.Attribute(
+                            value=ast.Name(id='copy', ctx=ast.Load()),
+                            attr='deepcopy',
+                            ctx=ast.Load()),
+                        args=[var_node],
+                        keywords=[]))
+            ])
+        return if_node
+
     def visit_Assign(self, node):
         if self._visited:
             return node
+        # insert update attribute node after message_hub assign node
         if node.targets[0].id == 'message_hub':
             self._visited = True
 
         attribute_node = self._get_target_attribute()
-
-        deep_copy_attribute_node = ast.Call(
-            func=ast.Attribute(
-                value=ast.Name(id='copy', ctx=ast.Load()),
-                attr='deepcopy',
-                ctx=ast.Load()),
-            args=[attribute_node],
-            keywords=[])
+        if_node = self._get_deep_copy_node(attribute_node)
+        deep_copy_attribute_node = ast.Name(
+            id=self._deepcopy_varname(), ctx=ast.Load())
         update_messagehub_node = ast.Expr(
             value=ast.Call(
                 func=ast.Attribute(
@@ -107,7 +150,7 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
                     deep_copy_attribute_node
                 ],
                 keywords=[]))
-        return [node, update_messagehub_node]
+        return [node, if_node, update_messagehub_node]
 
 
 class Recorder(metaclass=ABCMeta):
@@ -143,18 +186,6 @@ class AttributeRecorder(Recorder):
 
     def rewrite(self, ast_tree):
         return self.visit_assign.visit(ast_tree)
-
-    def _get_target_attribute(self):
-        func_chain = self._target.split('.')
-        func_chain.append(self._attribute)
-        assert len(func_chain) >= 2
-        attr = ast.Attribute(
-            value=ast.Name(id=func_chain[0], ctx=ast.Load()),
-            attr=func_chain[1],
-            ctx=ast.Load())
-        for ele in func_chain[2:]:
-            attr = ast.Attribute(value=attr, attr=ele, ctx=ast.Load())
-        return attr
 
 
 @HOOKS.register_module()
@@ -291,7 +322,6 @@ class RecorderHook(Hook):
                     level=logging.WARNING)
                 continue
             self.origin_func[model] = model.forward
-            print('here')
             model.forward = types.MethodType(
                 self._modify_forward_func(model.forward, recorders), model)
 
