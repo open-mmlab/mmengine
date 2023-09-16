@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from functools import partial
 from queue import Queue
 from threading import Event, Thread, current_thread
-from typing import Any, Dict, List, Union, Optional, Tuple
+from typing import Any, Dict, Iterator, List, Union, Optional, Set, Tuple
 
 import numpy as np
 import psutil
@@ -12,10 +12,7 @@ import torch
 import torch.nn as nn
 
 from mmengine.analysis import FlopAnalyzer
-from mmengine.config import Config, ConfigDict
 from mmengine.registry import MODELS, MODEL_WRAPPERS
-
-ModelType = Union[Config, ConfigDict, dict, nn.Module]
 
 
 @MODEL_WRAPPERS.register_module()
@@ -30,7 +27,7 @@ class MMPipelineParallel(nn.Module):
     hook_visited_times: Dict[str, int] = {}
 
     def __init__(self,
-                 model: ModelType,
+                 model: Union[dict, nn.Module],
                  weights: Optional[str] = None,
                  num_pipelines: Optional[int] = None,
                  num_chunks: Optional[int] = None,
@@ -66,6 +63,7 @@ class MMPipelineParallel(nn.Module):
         self.no_split_module_classes = [] if no_split_module_classes is None \
             else no_split_module_classes
         self.language_module_classes = language_module_classes
+        self.lm_offset = 0
         self.model_tree = self._get_model_tree()
         if isinstance(device_map, dict):
             self.device_map = device_map
@@ -90,23 +88,21 @@ class MMPipelineParallel(nn.Module):
         # init events
         MMPipelineParallel.events = self._init_events()
 
-    def _init_model(self, model: ModelType) -> nn.Module:
+    def _init_model(self, model: Union[dict, nn.Module]) -> nn.Module:
         """
         TODO
         """
         if isinstance(model, nn.Module):
             return model.to('meta')
         elif isinstance(model, dict):
-            cfg = ConfigDict(model)
-        elif isinstance(model, (Config, ConfigDict)):
-            cfg = model
+            builded_model: nn.Module
+            with MMPipelineParallel._init_empty():
+                builded_model = MODELS.build(model)
+            return builded_model
         else:
             raise TypeError(
                 f'Unsupported model type {type(model)}'
             )
-        with MMPipelineParallel._init_empty():
-            model = MODELS.build(cfg)
-        return model
 
     @contextmanager
     @staticmethod
@@ -160,7 +156,7 @@ class MMPipelineParallel(nn.Module):
                         'is larger than the available memory ' +
                         f'({new_memory_map[device]}). Please use a smaller one'
                     )
-                new_memory_map[device] = memory * self.memory_threshold
+                new_memory_map[device] = int(memory * self.memory_threshold)
         return new_memory_map
 
     def _convert_memory_map(self,
@@ -169,42 +165,44 @@ class MMPipelineParallel(nn.Module):
         """
         TODO
         """
+        converted_memory_map = {}
         for device, memory in memory_map.items():
             if memory.upper().endswith('GIB'):
-                memory_map[device] = int(memory[:-3]) * (1024 ** 3)
+                size = int(memory[:-3]) * (1024 ** 3)
             elif memory.upper().endswith('MIB'):
-                memory_map[device] = int(memory[:-3]) * (1024 ** 2)
+                size = int(memory[:-3]) * (1024 ** 2)
             elif memory.upper().endswith('KIB'):
-                memory_map[device] = int(memory[:-3]) * 1024
+                size = int(memory[:-3]) * 1024
             elif memory.upper().endswith('GB'):
                 size = int(memory[:-2]) * (10 ** 9)
                 if memory.endswith('b'):
                     size = size // 8
-                memory_map[device] = size
             elif memory.upper().endswith('MB'):
                 size = int(memory[:-2]) * (10 ** 6)
                 if memory.endswith('b'):
                     size = size // 8
-                memory_map[device] = size
             elif memory.upper().endswith('KB'):
                 size = int(memory[:-2]) * (10 ** 3)
                 if memory.endswith('b'):
                     size = size // 8
-                memory_map[device] = size
             else:
                 raise ValueError(
                     f'{memory} is not in a valid format.' +
                     'Please use GiB, MiB, KiB, GB, MB or KB, e.g. 6GB'
                 )
-        return memory_map
+            converted_memory_map[device] = size
+        return converted_memory_map
 
     def _get_model_tree(self) -> Dict[str, Any]:
         """
         TODO
         """
-        def bfs(module: nn.Module,
+        def bfs(module: Optional[nn.Module],
                 prefix: str,
                 info: Dict[str, Any]):
+            # None
+            if module is None:
+                return
             # self
             info['self'] = module
             info['parameter_size'] = self._parameter_size(module)
@@ -226,7 +224,7 @@ class MMPipelineParallel(nn.Module):
                     curr_name = name if prefix == '' else f'{prefix}.{name}'
                     info['submodules'][curr_name] = {}
                     bfs(submodule, curr_name, info['submodules'][curr_name])
-        tree = {}
+        tree: Dict[str, Any] = {}
         bfs(self.model, '', tree)
         return tree
 
@@ -239,7 +237,7 @@ class MMPipelineParallel(nn.Module):
             size += param.nelement() * param.element_size()
         return size
 
-    def _iter_tree(self, module_name: str) -> Dict[str, Any]:
+    def _iter_tree(self, module_name: str) -> Optional[Dict[str, Any]]:
         """
         TODO
         """
@@ -390,15 +388,17 @@ class MMPipelineParallel(nn.Module):
         TODO
         """
         avg_flops = self.model_tree['flops'] / self.num_pipelines
-        modules = []
+        modules: List[Dict[str, Any]] = []
         devices = list(self.memory_map.keys())
         cuda_devices = [d for d in devices if d.startswith('cuda')]
         meta_info = {
             'module_pointer': 0,
             'cuda_pointer': 0,
             'cpu_used': 0,
-            'init_device': ''
+            'init_device': 0
         }
+        CPU = -1
+        DISK = -2
 
         for _ in range(self.num_pipelines):
             modules.append({
@@ -411,7 +411,7 @@ class MMPipelineParallel(nn.Module):
 
         def dfs(tree: Dict[str, Any],
                 name: str,
-                meta_info: Dict[str, Union[int, str]]):
+                meta_info: Dict[str, int]):
             is_handled = False
             module_pointer = meta_info['module_pointer']
             cuda_pointer = meta_info['cuda_pointer']
@@ -434,20 +434,21 @@ class MMPipelineParallel(nn.Module):
                     cuda_device = cuda_devices[cuda_pointer]
                     modules[module_pointer]['exec'] = cuda_device
                     # infer init
-                    if not (init_device == 'cpu' or init_device == 'disk'):
+                    if not (init_device == CPU or init_device == DISK):
                         if cuda_pointer == len(cuda_devices):
                             part_memory = modules[
                                 module_pointer]['parameter_size']
                             if part_memory + cpu_used > self.memory_map['cpu']:
-                                init_device = 'disk'
-                                modules[module_pointer]['init'] = init_device
+                                init_device = DISK
+                                modules[module_pointer]['init'] = 'disk'
                             else:
-                                init_device = 'cpu'
-                                modules[module_pointer]['init'] = init_device
+                                init_device = CPU
+                                modules[module_pointer]['init'] = 'cpu'
                                 cpu_used += part_memory
                         else:
-                            init_device = cuda_devices[cuda_pointer]
-                            modules[module_pointer]['init'] = init_device
+                            init_device = cuda_pointer
+                            device = cuda_devices[cuda_pointer]
+                            modules[module_pointer]['init'] = device
                     meta_info['init_device'] = init_device
                     meta_info['cpu_used'] = cpu_used
                     if module_pointer != self.num_pipelines - 1:
@@ -530,8 +531,8 @@ class MMPipelineParallel(nn.Module):
         in_queues, out_queues = {}, {}
         # init move queues
         for i in range(self.num_pipelines):
-            in_queue = Queue()
-            out_queue = Queue()
+            in_queue: Queue = Queue()
+            out_queue: Queue = Queue()
             thread = Thread(
                 target=MMPipelineParallel._worker,
                 args=(in_queue, out_queue),
@@ -639,26 +640,28 @@ class MMPipelineParallel(nn.Module):
         done = (False, None)
         out_queue.put(done)
 
-    def _clock(self, num_chunks: int) -> List[Union[List[int], str]]:
+    def _clock(self, num_chunks: int) -> Iterator[Union[List[List[int]], str]]:
         """
         TODO
         """
         chunk_id = 0
-        schedules = []
-        waiting_offload_chunks = set()
+        schedules: List[List[int]] = []
+        waiting_offload_chunks: Set[int] = set()
+        schedule = 'exec'
         while True:
             if len(waiting_offload_chunks) == num_chunks:
-                schedules = ['offload']
+                schedule = 'offload'
                 waiting_offload_chunks = set()
-            elif schedules == ['offload']:
-                schedules = ['onload']
+            elif schedule == 'offload':
+                schedule = 'onload'
             else:
-                if schedules == ['onload']:
+                if schedule == 'onload':
+                    schedule = 'exec'
                     schedules = []
                     chunk_id = 0
                 if chunk_id < num_chunks:
                     schedules.insert(0, [chunk_id, -1])
-                for i in range(self.num_chunks):
+                for i in range(len(schedules)):
                     curr_part_id = schedules[i][1]
                     next_part_id = (curr_part_id + 1) % self.num_pipelines
                     curr_chunk_id = schedules[i][0]
@@ -668,7 +671,10 @@ class MMPipelineParallel(nn.Module):
                     else:
                         schedules[i][1] += 1
                 chunk_id += 1
-            yield schedules
+            if schedule == 'exec':
+                yield schedules
+            else:
+                yield schedule
 
     def _move_part(self, part_id: int, target_device: str):
         """
@@ -750,11 +756,11 @@ class MMPipelineParallel(nn.Module):
             TODO
             """
             # args
-            args = list(args)
-            for i in range(len(args)):
-                if isinstance(args[i], torch.Tensor):
-                    args[i] = args[i].to(self.exec_device)
-            args = tuple(args)
+            list_args = list(args)
+            for i in range(len(list_args)):
+                if isinstance(list_args[i], torch.Tensor):
+                    list_args[i] = list_args[i].to(self.exec_device)
+            args = tuple(list_args)
             # kwargs
             for k in kwargs:
                 if isinstance(kwargs[k], torch.Tensor):
@@ -775,12 +781,12 @@ class MMPipelineParallel(nn.Module):
         TODO
         """
         # args
-        chunked_args = [None for _ in range(len(args))]
+        chunked_args = []
         for i in range(len(args)):
             if isinstance(args[i], torch.Tensor):
-                chunked_args[i] = torch.chunk(args[i], self.num_chunks)
+                chunked_args.append(torch.chunk(args[i], self.num_chunks))
             else:
-                chunked_args[i] = [args[i]] * self.num_chunks
+                chunked_args.append([args[i]] * self.num_chunks)
         # kwargs
         chunked_kwargs = {}
         for k in kwargs:
@@ -811,26 +817,28 @@ class MMPipelineParallel(nn.Module):
         # we suppose that the items in results are the same type
         item = results[0]
         if isinstance(item, torch.Tensor):
-            result = torch.cat(results, dim=0)
+            result_tensor = torch.cat(results, dim=0)
+            return result_tensor
         elif isinstance(item, dict):
-            result = {k: [] for k in item}
+            result_dict: Dict[Any, List[Any]] = {k: [] for k in item}
             for item in results:
                 for k in item:
-                    result[k].append(item[k])
-            for k in result:
-                result[k] = self._merge_results(result[k])
+                    result_dict[k].append(item[k])
+            for k in result_dict:
+                result_dict[k] = self._merge_results(result_dict[k])
+            return result_dict
         elif isinstance(item, list):
-            result = [[] for _ in range(len(item))]
+            result_list: List[List[Any]] = [[] for _ in range(len(item))]
             for item in results:
                 for i in range(len(item)):
-                    result[i].append(item[i])
-            for i in range(len(result)):
-                result[i] = self._merge_results(result[i])
+                    result_list[i].append(item[i])
+            for i in range(len(result_list)):
+                result_list[i] = self._merge_results(result_list[i])
+            result_list
         else:
             raise TypeError(f'Unsupported type {type(item)}')
-        return result
 
-    def forward(self, *args, **kwargs):
+    def forward(self, *args, **kwargs) -> Any:
         """
         TODO
         """
@@ -852,17 +860,18 @@ class MMPipelineParallel(nn.Module):
 
         num_chunks = min(len(chunked_data), self.num_chunks)
         # record finished chunks
-        finished_chunks = set()
+        finished_chunks: Set[int] = set()
         # clear visited times
         MMPipelineParallel.hook_visited_times = {}
         # main loop
         for schedules in self._clock(num_chunks):
             if len(finished_chunks) == num_chunks:
                 break
-            if schedules == ['offload']:
-                pass
-            elif schedules == ['onload']:
-                pass
+            if isinstance(schedules, str):
+                if schedules == 'offload':
+                    pass
+                elif schedules == 'onload':
+                    pass
             else:
                 # send data
                 for chunk_id, part_id in schedules:
@@ -887,10 +896,11 @@ class MMPipelineParallel(nn.Module):
                                            **curr_data[1])
                             MMPipelineParallel.in_queues[
                                 f'chunk-{chunk_id}'].put(task)
-            if schedules == ['offload']:
-                pass
-            elif schedules == ['onload']:
-                pass
+            if isinstance(schedules, str):
+                if schedules == 'offload':
+                    pass
+                elif schedules == 'onload':
+                    pass
             else:
                 # recv data
                 for chunk_id, part_id in schedules:
