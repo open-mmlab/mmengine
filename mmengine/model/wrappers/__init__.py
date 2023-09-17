@@ -15,6 +15,5 @@ if digit_version(TORCH_VERSION) >= digit_version('2.0.0'):
         MMFullyShardedDataParallel  # noqa:F401
     __all__.append('MMFullyShardedDataParallel')
 
-    from .pipeline_distributed import \
-        MMPipelineParallel  # noqa:F401
+    from .pipeline_distributed import MMPipelineParallel  # noqa:F401
     __all__.append('MMPipelineParallel')
