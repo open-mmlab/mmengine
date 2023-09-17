@@ -79,9 +79,11 @@ runner = Runner(
             type='RecorderHook',
             recorders=[
                 dict(
-                    type='AttributeRecorder',
-                    target='self.resnet',
-                    attribute='weight')
+                    model='resnet',
+                    method='_forward_impl',
+                    type='FunctionRecorder',
+                    target='x',
+                    index=[0, 1, 2])
             ],
             save_dir='./work_dir',
             print_modification=True)
@@ -90,7 +92,7 @@ runner = Runner(
     work_dir='./work_dir',
     train_dataloader=train_dataloader,
     optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
-    train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
+    train_cfg=dict(by_epoch=True, max_epochs=1, val_interval=1),
     val_dataloader=val_dataloader,
     val_cfg=dict(),
     val_evaluator=dict(type=Accuracy),
