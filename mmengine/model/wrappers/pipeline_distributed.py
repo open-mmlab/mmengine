@@ -15,7 +15,6 @@ import torch.nn as nn
 
 from mmengine.analysis import FlopAnalyzer
 from mmengine.registry import MODEL_WRAPPERS, MODELS
-from mmengine.runner.checkpoint import CheckpointLoader
 
 
 @MODEL_WRAPPERS.register_module()
@@ -45,9 +44,9 @@ class MMPipelineParallel(nn.Module):
         super().__init__()
 
         # init model
-        self.model = self._init_model(model)
         self.weights = weights
         self.model_state_dict: Dict[str, torch.Tensor] = {}
+        self.model = self._init_model(model)
         self.entry = getattr(self.model, exec_entry)
         # init pipeline parallelism
         if num_pipelines is not None:
@@ -104,8 +103,10 @@ class MMPipelineParallel(nn.Module):
             if self.weights is not None:
                 return model.to('meta')
             else:
-                for n, p in self.named_parameters():
+                for n, p in model.named_parameters():
                     self.model_state_dict[n] = p
+                for n, b in model.named_buffers():
+                    self.model_state_dict[n] = b
                 return model.to('meta')
         elif isinstance(model, dict):
             builded_model: nn.Module
@@ -434,38 +435,41 @@ class MMPipelineParallel(nn.Module):
             curr_size = modules[module_pointer]['parameter_size']
             curr_cuda_memory = self.memory_map[cuda_devices[cuda_pointer]]
             # infer exec
-            if module_flops + curr_flops < 1.2 * avg_flops and \
-                    module_size + curr_size < curr_cuda_memory:
-                modules[module_pointer]['modules'].append(name)
-                modules[module_pointer]['flops'] += module_flops
-                modules[module_pointer]['parameter_size'] += module_size
-                is_handled = True
-                if module_flops + curr_flops > 0.8 * avg_flops:
-                    cuda_device = cuda_devices[cuda_pointer]
-                    modules[module_pointer]['exec'] = cuda_device
-                    # infer init
-                    if not (init_device == CPU or init_device == DISK):
-                        if cuda_pointer == len(cuda_devices):
-                            part_memory = modules[module_pointer][
-                                'parameter_size']
-                            if part_memory + cpu_used > self.memory_map['cpu']:
-                                init_device = DISK
-                                modules[module_pointer]['init'] = 'disk'
+            if module_size + curr_size < curr_cuda_memory:
+                if module_flops + curr_flops < 1.2 * avg_flops or \
+                        module_pointer == self.num_pipelines - 1:
+                    modules[module_pointer]['modules'].append(name)
+                    modules[module_pointer]['flops'] += module_flops
+                    modules[module_pointer]['parameter_size'] += module_size
+                    is_handled = True
+                    if module_flops + curr_flops > 0.8 * avg_flops:
+                        cuda_device = cuda_devices[cuda_pointer]
+                        modules[module_pointer]['exec'] = cuda_device
+                        # infer init
+                        if not (init_device == CPU or init_device == DISK):
+                            if cuda_pointer == len(cuda_devices):
+                                part_memory = modules[module_pointer][
+                                    'parameter_size']
+                                if part_memory + cpu_used > self.memory_map[
+                                        'cpu']:
+                                    init_device = DISK
+                                    modules[module_pointer]['init'] = 'disk'
+                                else:
+                                    init_device = CPU
+                                    modules[module_pointer]['init'] = 'cpu'
+                                    cpu_used += part_memory
                             else:
-                                init_device = CPU
-                                modules[module_pointer]['init'] = 'cpu'
-                                cpu_used += part_memory
-                        else:
-                            init_device = cuda_pointer
-                            device = cuda_devices[cuda_pointer]
-                            modules[module_pointer]['init'] = device
-                    meta_info['init_device'] = init_device
-                    meta_info['cpu_used'] = cpu_used
-                    if module_pointer != self.num_pipelines - 1:
-                        module_pointer += 1
-                        cuda_pointer = (cuda_pointer + 1) % len(cuda_devices)
-                        meta_info['module_pointer'] = module_pointer
-                        meta_info['cuda_pointer'] = cuda_pointer
+                                init_device = cuda_pointer
+                                device = cuda_devices[cuda_pointer]
+                                modules[module_pointer]['init'] = device
+                        meta_info['init_device'] = init_device
+                        meta_info['cpu_used'] = cpu_used
+                        if module_pointer != self.num_pipelines - 1:
+                            module_pointer += 1
+                            cuda_pointer = (cuda_pointer +
+                                            1) % len(cuda_devices)
+                            meta_info['module_pointer'] = module_pointer
+                            meta_info['cuda_pointer'] = cuda_pointer
             # handle buffers
             if 'buffers' in tree and not is_handled:
                 for name, _ in tree['buffers'].items():
@@ -613,9 +617,11 @@ class MMPipelineParallel(nn.Module):
         modules_weights = {k: {} for k in self.device_map.keys()}
         for weight_name, param in self.model_state_dict.items():
             name_split = weight_name.split('.')
+            is_found = False
             for i in range(len(name_split)):
                 curr_name = '.'.join(name_split[:i + 1])
                 if curr_name in self.device_map:
+                    is_found = True
                     init_device = self.device_map[curr_name]['init_device']
                     if init_device == 'disk':
                         dtype = None
@@ -646,12 +652,17 @@ class MMPipelineParallel(nn.Module):
                         # remove prefix
                         weight_name = weight_name.replace(f'{curr_name}.', '')
                         modules_weights[curr_name][weight_name] = param
+            if not is_found:
+                # the keys of device map is ''
+                init_device = self.device_map['']['init_device']
+                param = param.to(init_device)
+                modules_weights[''][weight_name] = param
         # load
         for module_name, module_weights in modules_weights.items():
             init_device = self.device_map[module_name]['init_device']
             module = self.module_map[module_name]['module']
             self.module_map[module_name]['curr_device'] = init_device
-            module.load_state_dict(module_weights)
+            self._load_state_dict(module, module_weights)
         del self.model_state_dict
 
     def _register_hooks(self):
@@ -729,6 +740,27 @@ class MMPipelineParallel(nn.Module):
             else:
                 yield schedule
 
+    def _load_state_dict(self, module: nn.Module,
+                         state_dict: Dict[str, torch.Tensor]):
+        """
+        TODO
+        """
+        for name, param in state_dict.items():
+            new_module = module
+            name_split = name.split('.')
+            for i in name_split[:-1]:
+                new_module = getattr(new_module, i)
+            param_name = name_split[-1]
+            is_buffer = param_name in new_module._buffers
+            if is_buffer:
+                new_module._buffers[param_name] = param
+            else:
+                old_tensor = getattr(new_module, param_name)
+                param_class = type(old_tensor)
+                is_requires_grad = old_tensor.requires_grad
+                new_tensor = param_class(param, requires_grad=is_requires_grad)
+                new_module._parameters[param_name] = new_tensor
+
     def _move_part(self, part_id: int, target_device: str):
         """
         TODO
@@ -761,7 +793,7 @@ class MMPipelineParallel(nn.Module):
                         weight = weight.to(torch.bfloat16)
                     weight = weight.to(target_device)
                     state_dict[param_name] = weight
-                info['module'].load_state_dict(state_dict)
+                self._load_state_dict(info['module'], state_dict)
             elif target_device == 'disk':
                 for param_name, param in info['module'].named_paramters():
                     full_name = f'{module_name}.{param_name}'
