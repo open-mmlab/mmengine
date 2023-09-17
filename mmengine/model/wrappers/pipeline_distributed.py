@@ -1,5 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import os
 import sys
+import tempfile
 from contextlib import contextmanager
 from functools import partial
 from queue import Queue
@@ -13,6 +15,7 @@ import torch.nn as nn
 
 from mmengine.analysis import FlopAnalyzer
 from mmengine.registry import MODEL_WRAPPERS, MODELS
+from mmengine.runner.checkpoint import CheckpointLoader
 
 
 @MODEL_WRAPPERS.register_module()
@@ -44,6 +47,7 @@ class MMPipelineParallel(nn.Module):
         # init model
         self.model = self._init_model(model)
         self.weights = weights
+        self.model_state_dict: Dict[str, torch.Tensor] = {}
         self.entry = getattr(self.model, exec_entry)
         # init pipeline parallelism
         if num_pipelines is not None:
@@ -79,7 +83,11 @@ class MMPipelineParallel(nn.Module):
             self._inited = False
 
         # init offload directory
-        self.offload_directory = offload_directory
+        if offload_directory is not None:
+            self.offload_directory = offload_directory
+        else:
+            self.offload_directory = tempfile.mkdtemp()
+        self.offloaded_weights: Dict[str, Dict[str, Any]] = {}
 
         # init queues
         MMPipelineParallel.in_queues, MMPipelineParallel.out_queues = \
@@ -93,28 +101,36 @@ class MMPipelineParallel(nn.Module):
         TODO
         """
         if isinstance(model, nn.Module):
-            return model.to('meta')
+            if self.weights is not None:
+                return model.to('meta')
+            else:
+                for n, p in self.named_parameters():
+                    self.model_state_dict[n] = p
+                return model.to('meta')
         elif isinstance(model, dict):
             builded_model: nn.Module
-            with MMPipelineParallel._init_empty():
+            with self._init_empty():
                 builded_model = MODELS.build(model)
             return builded_model
         else:
             raise TypeError(f'Unsupported model type {type(model)}')
 
     @contextmanager
-    @staticmethod
-    def _init_empty():
+    def _init_empty(self):
         """
         TODO
         """
 
         def _parameter_hook(module, name, param):
+            if self.weights is None:
+                self.model_state_dict[name] = param
             param_class = type(param)
             output = param_class(param.to('meta'), **param.__dict__)
             return output
 
         def _buffer_hook(module, name, buffer):
+            if self.weights is None:
+                self.model_state_dict[name] = buffer
             output = buffer.to('meta')
             return output
 
@@ -400,6 +416,12 @@ class MMPipelineParallel(nn.Module):
             })
 
         def dfs(tree: Dict[str, Any], name: str, meta_info: Dict[str, int]):
+            # handle language model
+            if tree['self']._get_name() == self.language_module_classes:
+                meta_info['module_pointer'] += 1
+                meta_info['cuda_pointer'] = (meta_info['cuda_pointer'] +
+                                             1) % len(cuda_devices)
+                self.lm_offset = meta_info['module_pointer']
             is_handled = False
             module_pointer = meta_info['module_pointer']
             cuda_pointer = meta_info['cuda_pointer']
@@ -518,18 +540,18 @@ class MMPipelineParallel(nn.Module):
         """
         in_queues, out_queues = {}, {}
         # init move queues
-        for i in range(self.num_pipelines):
+        for move in ['out', 'in']:
             in_queue: Queue = Queue()
             out_queue: Queue = Queue()
             thread = Thread(
                 target=MMPipelineParallel._worker,
                 args=(in_queue, out_queue),
-                name=f'part-{i}',
+                name=f'move-{move}',
                 daemon=True)
             thread.start()
 
-            in_queues[f'part-{i}'] = in_queue
-            out_queues[f'part-{i}'] = out_queue
+            in_queues[f'move-{move}'] = in_queue
+            out_queues[f'move-{move}'] = out_queue
         # init execution queues
         for i in range(self.num_chunks):
             in_queue = Queue()
@@ -579,10 +601,58 @@ class MMPipelineParallel(nn.Module):
         """
         TODO
         """
-        if weights is None:
-            return
-        # load weights
-        pass
+        if weights is not None:
+            # load weights
+            ckpt = CheckpointLoader.load_checkpoint(weights)
+            if 'state_dict' in ckpt:
+                self.model_state_dict = ckpt['state_dict']
+            else:
+                self.model_state_dict = ckpt
+        # dispatch weights
+        modules_weights: Dict[str, Dict[str, torch.Tensor]]
+        modules_weights = {k: {} for k in self.device_map.keys()}
+        for weight_name, param in self.model_state_dict.items():
+            name_split = weight_name.split('.')
+            for i in range(len(name_split)):
+                curr_name = '.'.join(name_split[:i + 1])
+                if curr_name in self.device_map:
+                    init_device = self.device_map[curr_name]['init_device']
+                    if init_device == 'disk':
+                        dtype = None
+                        if param.dtype == torch.bfloat16:
+                            param = param.to(torch.int16)
+                            dtype = 'bfloat16'
+                        array = param.cpu().numpy()
+                        if array.ndim == 0:
+                            array = array[None]
+                        if not os.path.exists(self.offload_directory):
+                            os.makedirs(self.offload_directory, exist_ok=True)
+                        self.offloaded_weights[weight_name] = {
+                            'dtype': array.dtype if dtype is None else dtype,
+                            'shape': list(array.shape),
+                        }
+                        offload_path = os.path.join(self.offload_directory,
+                                                    f'{weight_name}.npy')
+                        file_array: np.memmap
+                        file_array = np.memmap(
+                            offload_path,
+                            dtype=array.dtype,
+                            mode='w+',
+                            shape=array.shape)
+                        file_array[:] = array[:]
+                        file_array.flush()
+                    else:
+                        param = param.to(init_device)
+                        # remove prefix
+                        weight_name = weight_name.replace(f'{curr_name}.', '')
+                        modules_weights[curr_name][weight_name] = param
+        # load
+        for module_name, module_weights in modules_weights.items():
+            init_device = self.device_map[module_name]['init_device']
+            module = self.module_map[module_name]['module']
+            self.module_map[module_name]['curr_device'] = init_device
+            module.load_state_dict(module_weights)
+        del self.model_state_dict
 
     def _register_hooks(self):
         """
@@ -663,7 +733,65 @@ class MMPipelineParallel(nn.Module):
         """
         TODO
         """
-        pass
+        for module_name, info in self.module_map.items():
+            if info['part_id'] != part_id:
+                continue
+            if info['curr_device'] == target_device:
+                continue
+            if info['curr_device'] == 'disk':
+                param_names = [n for n, _ in info['module'].named_parameters()]
+                state_dict = {}
+                for param_name in param_names:
+                    full_name = f'{module_name}.{param_name}'
+                    param_info = self.offloaded_weights[full_name]
+                    param_path = os.path.join(self.offload_directory,
+                                              full_name)
+                    dtype = param_info['dtype']
+                    shape = tuple(param_info['shape'])
+                    if shape == ():
+                        shape = (1, )
+                    if param_info['dtype'] == torch.bfloat16:
+                        dtype = 'int16'
+                    array: np.memmap = np.memmap(
+                        param_path, dtype=dtype, mode='r', shape=shape)
+                    if len(param_info['shape']) == 0:
+                        array = array[0]
+                    weight = torch.as_tensor(array)
+                    if param_info['dtype'] == 'bfloat16':
+                        weight = weight.to(torch.bfloat16)
+                    weight = weight.to(target_device)
+                    state_dict[param_name] = weight
+                info['module'].load_state_dict(state_dict)
+            elif target_device == 'disk':
+                for param_name, param in info['module'].named_paramters():
+                    full_name = f'{module_name}.{param_name}'
+                    dtype = None
+                    if param.dtype == torch.bfloat16:
+                        param = param.to(torch.int16)
+                        dtype = 'bfloat16'
+                    array = param.cpu().numpy()
+                    if array.ndim == 0:
+                        array = array[None]
+                    if not os.path.exists(self.offload_directory):
+                        os.makedirs(self.offload_directory, exist_ok=True)
+                    self.offloaded_weights[full_name] = {
+                        'dtype': array.dtype if dtype is None else dtype,
+                        'shape': list(array.shape),
+                    }
+                    offload_path = os.path.join(self.offload_directory,
+                                                f'{full_name}.npy')
+                    file_array: np.memmap
+                    file_array = np.memmap(
+                        offload_path,
+                        dtype=array.dtype,
+                        mode='w+',
+                        shape=array.shape)
+                    file_array[:] = array[:]
+                    file_array.flush()
+            else:
+                module = info['module']
+                module.to(target_device)
+                info['curr_device'] = target_device
 
     class Flag:
         """
