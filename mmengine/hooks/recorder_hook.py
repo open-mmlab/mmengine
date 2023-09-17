@@ -16,10 +16,6 @@ from mmengine.registry import HOOKS, RECORDERS
 from . import Hook
 
 
-def function_with_index(function, index):
-    return function + '@' + str(index)
-
-
 class FunctionRecorderTransformer(ast.NodeTransformer):
 
     def __init__(self, model, target, target_index):
@@ -233,17 +229,6 @@ class RecorderHook(Hook):
                     'because recorder has no target',
                     logger='current',
                     level=logging.WARNING)
-            # if recorder.get('type') == 'FunctionRecorder':
-            #     index = recorder.get('index', 0)
-            #     if isinstance(index, list):
-            #         for i in index:
-            #             self.tensor_dict[function_with_index(target,
-            #                                                  i)] = list()
-            #     elif isinstance(index, int):
-            #         self.tensor_dict[function_with_index(target,
-            #                                              index)] = list()
-            # elif recorder.get('type') == 'AttributeRecorder':
-            #     self.tensor_dict[tensor_key] = list()
             self._recorders.append(RECORDERS.build(recorder))
 
     def _modify_forward_func(self, func, recorders):
