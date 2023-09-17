@@ -18,9 +18,10 @@ from . import Hook
 
 class FunctionRecorderTransformer(ast.NodeTransformer):
 
-    def __init__(self, model, target, target_index):
+    def __init__(self, model, method, target, target_index):
         super().__init__()
         self._model = model
+        self._method = method
         self._target = target
         if isinstance(target_index, list):
             self._target_index = set(target_index)
@@ -29,7 +30,7 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
         self.count = -1
 
     def get_store_varname_with_index(self, index):
-        return f'{self._model}:{self._target}@{index}'
+        return f'{self._model}:{self._method}:{self._target}@{index}'
 
     def visit_Assign(self, node):
         if node.targets[0].id != self._target:
@@ -55,9 +56,10 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
 
 class AttributeRecorderTransformer(ast.NodeTransformer):
 
-    def __init__(self, model, target):
+    def __init__(self, model, method, target):
         super().__init__()
         self._model = model
+        self._method = method
         self._target = target
         self._visited = False
 
@@ -76,7 +78,7 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
         return f'_deep_copy_{self._target.replace(".", "_")}'
 
     def _get_tensor_name(self):
-        return f'{self._model}:{self._target}'
+        return f'{self._model}:{self._method}:{self._target}'
 
     def _get_deep_copy_node(self, var_node):
         if_node = ast.If(
@@ -149,8 +151,9 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
 
 class Recorder(metaclass=ABCMeta):
 
-    def __init__(self, model, target: str):
+    def __init__(self, model, method, target: str):
         self._model = model
+        self._method = method
         self._target = target
 
     @abstractmethod
@@ -165,32 +168,35 @@ class Recorder(metaclass=ABCMeta):
 @RECORDERS.register_module()
 class FunctionRecorder(Recorder):
 
-    def __init__(self, model: str, target: str, index: list):
-        super().__init__(model, target)
+    def __init__(self, model: str, method: str, target: str, index: list):
+        super().__init__(model, method, target)
         self.index = index
         self.visit_assign = FunctionRecorderTransformer(
-            self._model, self._target, self.index)
+            self._model, self._method, self._target, self.index)
 
     def rewrite(self, ast_tree):
         return self.visit_assign.visit(ast_tree)
 
     def get_store_varname(self):
-        return [f'{self._model}:{self._target}@{i}' for i in self.index]
+        return [
+            f'{self._model}:{self._method}:{self._target}@{i}'
+            for i in self.index
+        ]
 
 
 @RECORDERS.register_module()
 class AttributeRecorder(Recorder):
 
-    def __init__(self, model: str, target: str):
-        super().__init__(model, target)
+    def __init__(self, model: str, method: str, target: str):
+        super().__init__(model, method, target)
         self.visit_assign = AttributeRecorderTransformer(
-            self._model, self._target)
+            self._model, self._method, self._target)
 
     def rewrite(self, ast_tree):
         return self.visit_assign.visit(ast_tree)
 
     def get_store_varname(self):
-        return f'{self._model}:{self._target}'
+        return f'{self._model}:{self._method}:{self._target}'
 
 
 @HOOKS.register_module()
@@ -206,7 +212,7 @@ class RecorderHook(Hook):
     ):
         self.tensor_dict: Dict[str, Any] = {}
         self.origin_forward = None
-        self.origin_func: Dict[Any, Any] = {}
+        self.origin_methods: Dict[Any, Any] = {}
         self._recorders: List[Recorder] = []
         self.print_modification = print_modification
         self.save_dir = save_dir  # type: ignore
@@ -220,8 +226,9 @@ class RecorderHook(Hook):
             if model is None:
                 recorder['model'] = 'runner_model'
             target = recorder.get('target')
-            print(recorder)
-            # tensor_key = _get_tensor_key(target)
+            method = recorder.get('method')
+            if method is None:
+                recorder['method'] = 'forward'
 
             if target is None:
                 print_log(
@@ -287,14 +294,30 @@ class RecorderHook(Hook):
         model = attrgetter(model_name)(model)
         return model
 
-    def _group_recorder_by_model(self):
+    def _group_recorder_by_model_method(self):
         group_dict = {}
         for recorder in self._recorders:
             key = recorder._model
             if key not in group_dict:
                 group_dict[key] = []
             group_dict[key].append(recorder)
+        for model_name, recorders in group_dict.items():
+            group_dict[model_name] = self._group_recorder_by_method(recorders)
         return group_dict
+
+    def _group_recorder_by_method(self, recorders):
+        group_dict = {}
+        for recorder in recorders:
+            key = recorder._method
+            if key not in group_dict:
+                group_dict[key] = []
+            group_dict[key].append(recorder)
+        return group_dict
+
+    def _save_origin_method(self, model, method_name, origin_method):
+        if model not in self.origin_methods:
+            self.origin_methods[model] = {}
+        self.origin_methods[model][method_name] = origin_method
 
     def before_run(self, runner) -> None:
         if not self.save_dir:
@@ -306,20 +329,37 @@ class RecorderHook(Hook):
         self._init_tensor_dict()
         # get model and modify its forward function
         self.base_model = runner.model
-        self.grouped_recorders = self._group_recorder_by_model()
-        for model_name, recorders in self.grouped_recorders.items():
+        self.grouped_recorders = self._group_recorder_by_model_method()
+        for model_name, group_method_recorders in self.grouped_recorders.items(
+        ):
             try:
                 model = self._get_model(model_name)
             except AttributeError:
                 print_log(
-                    f'Can not record {model_name} in runner.model'
+                    f'Can not record {model_name} in runner.model '
                     'because it doesn\'t exist',
                     logger='current',
                     level=logging.WARNING)
                 continue
-            self.origin_func[model] = model.forward
-            model.forward = types.MethodType(
-                self._modify_forward_func(model.forward, recorders), model)
+            for method_name, recorders in group_method_recorders.items():
+                try:
+                    method = getattr(model, method_name)
+                except AttributeError:
+                    print_log(
+                        f'Can not record {method_name} in {model_name}'
+                        'because it doesn\'t exist',
+                        logger='current',
+                        level=logging.WARNING)
+                    continue
+                # self.origin_methods[model][method_name] = method
+                print_log(
+                    f'Modify {method_name} in {model_name}',
+                    logger='current',
+                    level=logging.INFO)
+                self._save_origin_method(model, method_name, method)
+                new_method = types.MethodType(
+                    self._modify_forward_func(method, recorders), model)
+                setattr(model, method_name, new_method)
 
     def after_train_iter(self,
                          runner,
@@ -351,5 +391,6 @@ class RecorderHook(Hook):
 
     def after_train(self, runner) -> None:
         # restore forward function after train
-        for m, f in self.origin_func.items():
-            m.forward = f
+        for model, v in self.origin_methods.items():
+            for method_name, origin_method in v.items():
+                setattr(model, method_name, origin_method)
