@@ -22,14 +22,18 @@ def function_with_index(function, index):
 
 class FunctionRecorderTransformer(ast.NodeTransformer):
 
-    def __init__(self, target, target_index):
+    def __init__(self, model, target, target_index):
         super().__init__()
+        self._model = model
         self._target = target
         if isinstance(target_index, list):
             self._target_index = set(target_index)
         else:
             self._target_index = {target_index}
         self.count = -1
+
+    def get_store_varname_with_index(self, index):
+        return f'{self._model}:{self._target}@{index}'
 
     def visit_Assign(self, node):
         if node.targets[0].id != self._target:
@@ -45,8 +49,7 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
                     ctx=ast.Load()),
                 args=[
                     ast.Constant(
-                        value=function_with_index(node.targets[0].id,
-                                                  self.count)),
+                        value=self.get_store_varname_with_index(self.count)),
                     ast.Name(id=node.targets[0].id, ctx=ast.Load())
                 ],
                 keywords=[]))
@@ -54,19 +57,11 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
         return [node, update_messagehub_node]
 
 
-# Take "x = self.conv1(x)" as an example
-# genertate "self_conv1 = self.conv1(x)"
-# and "x = self_conv1"
-# and "message_hub.update_info('self_conv1', self_conv1)"
-def _get_tensor_key(target):
-    target = target.replace('.', '_')
-    return target
-
-
 class AttributeRecorderTransformer(ast.NodeTransformer):
 
-    def __init__(self, target):
+    def __init__(self, model, target):
         super().__init__()
+        self._model = model
         self._target = target
         self._visited = False
 
@@ -83,6 +78,9 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
 
     def _deepcopy_varname(self):
         return f'_deep_copy_{self._target.replace(".", "_")}'
+
+    def _get_tensor_name(self):
+        return f'{self._model}:{self._target}'
 
     def _get_deep_copy_node(self, var_node):
         if_node = ast.If(
@@ -146,7 +144,7 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
                     attr='update_info',
                     ctx=ast.Load()),
                 args=[
-                    ast.Constant(value=_get_tensor_key(self._target)),
+                    ast.Constant(value=self._get_tensor_name()),
                     deep_copy_attribute_node
                 ],
                 keywords=[]))
@@ -156,11 +154,15 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
 class Recorder(metaclass=ABCMeta):
 
     def __init__(self, model, target: str):
-        self.model = model
+        self._model = model
         self._target = target
 
     @abstractmethod
     def rewrite(self, ast_tree):
+        pass
+
+    @abstractmethod
+    def get_store_varname(self):
         pass
 
 
@@ -171,10 +173,13 @@ class FunctionRecorder(Recorder):
         super().__init__(model, target)
         self.index = index
         self.visit_assign = FunctionRecorderTransformer(
-            self._target, self.index)
+            self._model, self._target, self.index)
 
     def rewrite(self, ast_tree):
         return self.visit_assign.visit(ast_tree)
+
+    def get_store_varname(self):
+        return [f'{self._model}:{self._target}@{i}' for i in self.index]
 
 
 @RECORDERS.register_module()
@@ -182,10 +187,14 @@ class AttributeRecorder(Recorder):
 
     def __init__(self, model: str, target: str):
         super().__init__(model, target)
-        self.visit_assign = AttributeRecorderTransformer(self._target)
+        self.visit_assign = AttributeRecorderTransformer(
+            self._model, self._target)
 
     def rewrite(self, ast_tree):
         return self.visit_assign.visit(ast_tree)
+
+    def get_store_varname(self):
+        return f'{self._model}:{self._target}'
 
 
 @HOOKS.register_module()
@@ -202,7 +211,7 @@ class RecorderHook(Hook):
         self.tensor_dict: Dict[str, Any] = {}
         self.origin_forward = None
         self.origin_func: Dict[Any, Any] = {}
-        self._recorders: Dict[str, Recorder] = {}
+        self._recorders: List[Recorder] = []
         self.print_modification = print_modification
         self.save_dir = save_dir  # type: ignore
         if filename_tmpl is None:
@@ -213,9 +222,10 @@ class RecorderHook(Hook):
         for recorder in recorders:
             model = recorder.get('model')
             if model is None:
-                recorder['model'] = ''
+                recorder['model'] = 'runner_model'
             target = recorder.get('target')
-            tensor_key = _get_tensor_key(target)
+            print(recorder)
+            # tensor_key = _get_tensor_key(target)
 
             if target is None:
                 print_log(
@@ -223,18 +233,18 @@ class RecorderHook(Hook):
                     'because recorder has no target',
                     logger='current',
                     level=logging.WARNING)
-            if recorder.get('type') == 'FunctionRecorder':
-                index = recorder.get('index', 0)
-                if isinstance(index, list):
-                    for i in index:
-                        self.tensor_dict[function_with_index(target,
-                                                             i)] = list()
-                elif isinstance(index, int):
-                    self.tensor_dict[function_with_index(target,
-                                                         index)] = list()
-            elif recorder.get('type') == 'AttributeRecorder':
-                self.tensor_dict[tensor_key] = list()
-            self._recorders[tensor_key] = RECORDERS.build(recorder)
+            # if recorder.get('type') == 'FunctionRecorder':
+            #     index = recorder.get('index', 0)
+            #     if isinstance(index, list):
+            #         for i in index:
+            #             self.tensor_dict[function_with_index(target,
+            #                                                  i)] = list()
+            #     elif isinstance(index, int):
+            #         self.tensor_dict[function_with_index(target,
+            #                                              index)] = list()
+            # elif recorder.get('type') == 'AttributeRecorder':
+            #     self.tensor_dict[tensor_key] = list()
+            self._recorders.append(RECORDERS.build(recorder))
 
     def _modify_forward_func(self, func, recorders):
         # Gets the source code for the function
@@ -286,7 +296,7 @@ class RecorderHook(Hook):
         return namespace[func.__name__]
 
     def _get_model(self, model_name):
-        if not model_name:
+        if not model_name or model_name == 'runner_model':
             return self.base_model
         model = self.base_model
         model = attrgetter(model_name)(model)
@@ -294,8 +304,8 @@ class RecorderHook(Hook):
 
     def _group_recorder_by_model(self):
         group_dict = {}
-        for recorder in self._recorders.values():
-            key = recorder.model
+        for recorder in self._recorders:
+            key = recorder._model
             if key not in group_dict:
                 group_dict[key] = []
             group_dict[key].append(recorder)
@@ -307,9 +317,10 @@ class RecorderHook(Hook):
 
         # get messagehub instance and store it.
         self.message_hub = MessageHub.get_current_instance()
+        # init_save_var_dict
+        self._init_tensor_dict()
         # get model and modify its forward function
-        model = runner.model
-        self.base_model = model
+        self.base_model = runner.model
         self.grouped_recorders = self._group_recorder_by_model()
         for model_name, recorders in self.grouped_recorders.items():
             try:
@@ -339,8 +350,13 @@ class RecorderHook(Hook):
         torch.save(self.tensor_dict, path)
 
     def _init_tensor_dict(self):
-        for k in self.tensor_dict.keys():
-            self.tensor_dict[k] = list()
+        for recorder in self._recorders:
+            varname = recorder.get_store_varname()
+            if isinstance(varname, list):
+                for name in varname:
+                    self.tensor_dict[name] = list()
+            else:
+                self.tensor_dict[varname] = list()
 
     def after_train_epoch(self, runner) -> None:
         step = runner.epoch + 1
