@@ -48,7 +48,9 @@ class MMPipelineParallel(nn.Module):
 
     Examples:
         >>> model = torchvision.models.resnet152()
-        >>> model = MMPipelineParallel(model, num_pipelines=2)
+        >>> model = MMPipelineParallel(model,
+        ...                            num_pipelines=2,
+        ...                            no_split_module_classes='Bottleneck')
         >>> data = torch.randn(2, 3, 224, 224)
         >>> output = model(data) # (2, 1000)
     """
@@ -171,8 +173,8 @@ class MMPipelineParallel(nn.Module):
             _buffer_hook)
         yield
 
-    def _init_memory_map(self, memory_map: Optional[Dict[str, str]]
-                         ) -> Dict[str, int]:
+    def _init_memory_map(
+            self, memory_map: Optional[Dict[str, str]]) -> Dict[str, int]:
         """Check or get the memory map of the cpu and gpus."""
         new_memory_map = {}
         # cpu
@@ -198,8 +200,8 @@ class MMPipelineParallel(nn.Module):
                 new_memory_map[device] = int(memory * self.memory_threshold)
         return new_memory_map
 
-    def _convert_memory_map(self,
-                            memory_map: Dict[str, str]) -> Dict[str, int]:
+    def _convert_memory_map(self, memory_map: Dict[str,
+                                                   str]) -> Dict[str, int]:
         """Convert the memory map from string to int."""
         converted_memory_map = {}
         for device, memory in memory_map.items():
@@ -231,8 +233,8 @@ class MMPipelineParallel(nn.Module):
     def _get_model_tree(self) -> Dict[str, Any]:
         """Init the model tree for many usages."""
 
-        def bfs(module: Optional[nn.Module], prefix: str,
-                info: Dict[str, Any]):
+        def bfs(module: Optional[nn.Module], prefix: str, info: Dict[str,
+                                                                     Any]):
             # None
             if module is None:
                 return
@@ -944,9 +946,10 @@ class MMPipelineParallel(nn.Module):
         chunked_data = []
 
         for i in range(real_num_chunks):
-            chunked_data.append((tuple([arg[i] for arg in chunked_args]),
-                                 {k: v[i]
-                                  for k, v in chunked_kwargs.items()}))
+            chunked_data.append((tuple([arg[i] for arg in chunked_args]), {
+                k: v[i]
+                for k, v in chunked_kwargs.items()
+            }))
         return chunked_data
 
     def _merge_results(self, results: List[Any]) -> Any:
