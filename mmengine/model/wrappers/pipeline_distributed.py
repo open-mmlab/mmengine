@@ -511,8 +511,6 @@ class MMPipelineParallel(nn.Module):
         device_map = {}
         for i in range(self.num_pipelines):
             modules_i = modules[i]
-            print(i, modules_i['flops'],
-                  self.model_tree['flops'] // self.num_pipelines)
             for module in modules_i['modules']:
                 device_map[module] = {
                     'part_id': i,
