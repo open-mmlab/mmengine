@@ -240,7 +240,14 @@ class MMPipelineParallel(nn.Module):
 
         def bfs(module: Optional[nn.Module], prefix: str, info: Dict[str,
                                                                      Any]):
-            """BFS the module to generate the model tree."""
+            """BFS the module to generate the model tree.
+
+            First, register the module self as a node.
+            Then, register the buffers as the children of the node.
+            Next, register the submodules.
+            Last, for every submodule, if it is not in no_split_module_classes,
+                do the bfs recursively.
+            """
             # None
             if module is None:
                 return
@@ -318,14 +325,15 @@ class MMPipelineParallel(nn.Module):
             else:
                 for name, param in module.named_parameters():
                     full_name = name if prefix == '' else f'{prefix}.{name}'
-                    if full_name not in named_parameters:
-                        for new_name, new_param in named_parameters.items():
-                            if new_param is param:
-                                if new_name not in result:
-                                    result[new_name] = []
-                                full_name_split = full_name.split('.')
-                                module_name = '.'.join(full_name_split[:-1])
-                                result[new_name].append(module_name)
+                    if full_name in named_parameters:
+                        continue
+                    for new_name, new_param in named_parameters.items():
+                        if new_param is param:
+                            if new_name not in result:
+                                result[new_name] = []
+                            full_name_split = full_name.split('.')
+                            module_name = '.'.join(full_name_split[:-1])
+                            result[new_name].append(module_name)
             # handle submodule
             for name, submodule in module.named_children():
                 sub_name = name if prefix == '' else f'{prefix}.{name}'
@@ -429,6 +437,16 @@ class MMPipelineParallel(nn.Module):
             })
 
         def dfs(tree: Dict[str, Any], name: str, meta_info: Dict[str, int]):
+            """DFS the model tree to get the device map.
+
+            First, handle language model.
+            Second, get the current module flops and size. If the current
+                device can hold the current module and the current flops does
+                not exceed the average flops, put the current module into the
+                modules and update the meta info.
+            Third, if the current module is not handled, but it has
+                submodules, handle the buffers and do the dfs recursively.
+            """
             # handle language model
             if tree['self']._get_name() == self.language_module_classes:
                 if meta_info['module_pointer'] != 0:
@@ -464,12 +482,12 @@ class MMPipelineParallel(nn.Module):
                             cuda_pointer %= len(cuda_devices)
                             meta_info['module_pointer'] = module_pointer
                             meta_info['cuda_pointer'] = cuda_pointer
-            # handle buffers
-            if 'buffers' in tree and not is_handled:
-                for name, _ in tree['buffers'].items():
-                    modules[module_pointer]['modules'].append(name)
             # handle submodules
             if 'submodules' in tree and not is_handled:
+                # handle buffers
+                if 'buffers' in tree:
+                    for name, _ in tree['buffers'].items():
+                        modules[module_pointer]['modules'].append(name)
                 for name, submodule in tree['submodules'].items():
                     dfs(submodule, name, meta_info)
             # if it is not handled, but it has no submodules
