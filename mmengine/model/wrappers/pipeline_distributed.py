@@ -130,7 +130,7 @@ class MMPipelineParallel(nn.Module):
         MMPipelineParallel.events = self._init_events()
 
     def _init_model(self, model: Union[dict, nn.Module]) -> nn.Module:
-        """Init the model on the meta device and store the current weight"""
+        """Init the model on the meta device and store the current weight."""
         if isinstance(model, nn.Module):
             if self.weights is not None:
                 return model.to('meta')
@@ -978,8 +978,8 @@ class MMPipelineParallel(nn.Module):
     def forward(self, *args, **kwargs) -> Any:
         """The forward function of the model.
 
-        The forward function of the model. The type of input should be the same
-        as the original model.
+        The forward function of the model. The type of input should be
+        the same as the original model.
         """
         exec_info = None
         chunked_data = self._chunk_data(args, kwargs)
