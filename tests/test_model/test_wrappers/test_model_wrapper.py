@@ -49,7 +49,7 @@ class ToyModel(BaseModel):
 
 
 class ToyLinearModel(BaseModel):
-    # because the flop analyzer cannnot analyze the conv layer
+    # because the flop analyzer cannot analyze the conv layer
     def __init__(self):
         super().__init__(data_preprocessor=ToyDataPreprocessor())
         self.linear1 = nn.Linear(1, 1)
