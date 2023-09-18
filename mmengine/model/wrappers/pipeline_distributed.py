@@ -35,7 +35,7 @@ class MMPipelineParallel(nn.Module):
         memory_map (dict, optional): The memory map of devices.
             Defaults to None.
         no_split_module_classes (list, optional): The module classes which
-            contains skip connnection so that they should not be split.
+            contains skip connection so that they should not be split.
             Defaults to None.
         language_module_classes (str, optional): The module class of language
             model. Defaults to None.
@@ -45,6 +45,12 @@ class MMPipelineParallel(nn.Module):
             weights. Defaults to None.
         exec_entry (str, optional): The entry of execution. Defaults to
             '__call__'.
+
+    Examples:
+        >>> model = torchvision.models.resnet152()
+        >>> model = MMPipelineParallel(model, num_pipelines=2)
+        >>> data = torch.randn(2, 3, 224, 224)
+        >>> output = model(data) # (2, 1000)
     """
     in_queues: Dict[str, Queue] = {}
     out_queues: Dict[str, Queue] = {}
