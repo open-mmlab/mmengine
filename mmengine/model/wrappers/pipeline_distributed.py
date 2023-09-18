@@ -25,7 +25,7 @@ class MMPipelineParallel(nn.Module):
     """The model wrapper for pipeline parallelism.
 
     Args:
-        model (dict | nn.Module): The model to be wrapped.
+        model (dict or nn.Module): The model to be wrapped.
         weights (str, optional): The path of the weights.
             Defaults to None.
         num_pipelines (int, optional): The number of pipelines.
@@ -39,14 +39,15 @@ class MMPipelineParallel(nn.Module):
         no_split_module_classes (list, optional): The module classes which
             contains skip connection so that they should not be split.
             Defaults to None.
-        language_module_classes (str, optional): The module class of language
-            model. Defaults to None.
-        device_map (str | dict, optional): The device map policy or the device
+        language_module_class (str, optional): The module class of language
+            model, such as LlamaForCausalLM, OPTForCausalLM. Defaults to None.
+        device_map (str or dict, optional): The device map policy or the device
             map. Defaults to device_map_policy 'auto'.
         offload_directory (str, optional): The directory to store offloaded
             weights. Defaults to None.
         exec_entry (str, optional): The entry of execution. Defaults to
-            '__call__'.
+            '__call__'. For CV model, it should be '__call__'. For NLP model,
+            it may be 'generate'.
 
     Examples:
         >>> model = torchvision.models.resnet152()
@@ -70,13 +71,13 @@ class MMPipelineParallel(nn.Module):
                  memory_threshold: float = 0.7,
                  memory_map: Optional[Dict[str, str]] = None,
                  no_split_module_classes: Optional[List[str]] = None,
-                 language_module_classes: Optional[str] = None,
+                 language_module_class: Optional[str] = None,
                  device_map: Union[str, Dict[str, dict]] = 'auto',
                  offload_directory: Optional[str] = None,
                  exec_entry: str = '__call__'):
 
         if digit_version(TORCH_VERSION) <= digit_version('2.0.0'):
-            raise ValueError(
+            raise RuntimeError(
                 'MMPipelineParallel should work with PyTorch >= 2.0.0')
 
         super().__init__()
@@ -107,7 +108,7 @@ class MMPipelineParallel(nn.Module):
         # init device map
         self.no_split_module_classes = [] if no_split_module_classes is None \
             else no_split_module_classes
-        self.language_module_classes = language_module_classes
+        self.language_module_class = language_module_class
         self.lm_offset = 0
         self.model_tree = self._get_model_tree()
         if isinstance(device_map, dict):
@@ -143,6 +144,7 @@ class MMPipelineParallel(nn.Module):
             if self.weights is not None:
                 return model.to('meta')
             else:
+                # store the current weight for later use
                 for n, p in model.named_parameters():
                     self.model_state_dict[n] = p
                 for n, b in model.named_buffers():
@@ -246,7 +248,7 @@ class MMPipelineParallel(nn.Module):
             First, register the module self as a node. Then, register
             the buffers as the children of the node. Next, register the
             submodules. Last, for every submodule, if it is not in
-            no_split_module_classes,     do the bfs recursively.
+            no_split_module_classes, do the bfs recursively.
             """
             # None
             if module is None:
@@ -320,6 +322,8 @@ class MMPipelineParallel(nn.Module):
                                   named_parameters: Dict[str, torch.Tensor],
                                   prefix: str = '',
                                   result: Dict[str, List[str]] = {}):
+            # The tied parameters will not be in the full named_parameters
+            # but in the named_parameters of the submodule.
             if named_parameters is None:
                 named_parameters = {n: p for n, p in module.named_parameters()}
             else:
@@ -390,6 +394,7 @@ class MMPipelineParallel(nn.Module):
             if module_name not in exec_order:
                 exec_order.append(module_name)
 
+        # register hook
         handle = nn.modules.module.register_module_forward_pre_hook(
             return_module_name_hook)
 
@@ -397,6 +402,7 @@ class MMPipelineParallel(nn.Module):
         with torch.no_grad():
             self.entry(*data_meta[0], **data_meta[1])
 
+        # after we get the exec order, we can remove the hook
         handle.remove()
         # merge into model tree
         for order, name in enumerate(exec_order):
@@ -440,15 +446,14 @@ class MMPipelineParallel(nn.Module):
             """DFS the model tree to get the device map.
 
             First, handle language model. Second, get the current module
-            flops and size. If the current     device can hold the
-            current module and the current flops does     not exceed the
-            average flops, put the current module into the     modules
-            and update the meta info. Third, if the current module is
-            not handled, but it has     submodules, handle the buffers
-            and do the dfs recursively.
+            flops and size. If the current device can hold the current
+            module and the current flops does not exceed the average flops,
+            put the current module into the modules and update the meta info.
+            Third, if the current module is not handled, but it has submodules,
+            handle the buffers and do the dfs recursively.
             """
             # handle language model
-            if tree['self']._get_name() == self.language_module_classes:
+            if tree['self']._get_name() == self.language_module_class:
                 if meta_info['module_pointer'] != 0:
                     meta_info['module_pointer'] += 1
                 meta_info['cuda_pointer'] += 1
@@ -465,14 +470,19 @@ class MMPipelineParallel(nn.Module):
             curr_cuda_memory = self.memory_map[cuda_devices[cuda_pointer]]
             # infer exec
             is_memory_enough = False
+            # if the current module can be put into the current device
             if module_size + curr_size < curr_cuda_memory:
                 is_memory_enough = True
+                # To get approximate solution, we choose 1.2 * avg_flops
+                # as the upper bound
+                # But we have got the last module, so we have to put it
                 if module_flops + curr_flops < 1.2 * avg_flops or \
                         module_pointer == self.num_pipelines - 1:
                     modules[module_pointer]['modules'].append(name)
                     modules[module_pointer]['flops'] += module_flops
                     modules[module_pointer]['parameter_size'] += module_size
                     is_handled = True
+                    # we choose 1 * avg_flops as the lower bound
                     if module_flops + curr_flops > avg_flops:
                         cuda_device = cuda_devices[cuda_pointer]
                         modules[module_pointer]['exec'] = cuda_device
@@ -484,6 +494,7 @@ class MMPipelineParallel(nn.Module):
                             meta_info['cuda_pointer'] = cuda_pointer
             # handle submodules
             if 'submodules' in tree and not is_handled:
+                # the submodules can be handled, so we can handle the buffers
                 # handle buffers
                 if 'buffers' in tree:
                     for name, _ in tree['buffers'].items():
@@ -493,7 +504,10 @@ class MMPipelineParallel(nn.Module):
             # if it is not handled, but it has no submodules
             if not is_handled and 'submodules' not in tree:
                 if is_memory_enough:
+                    # if the current module can be put into the current device
                     if module_pointer == self.num_pipelines - 1:
+                        # last module, we have to put it
+                        # update meta info
                         modules[module_pointer]['modules'].append(name)
                         modules[module_pointer]['flops'] += module_flops
                         modules[module_pointer][
@@ -513,6 +527,9 @@ class MMPipelineParallel(nn.Module):
                             'The model is too large to fit into' +
                             f'{cuda_devices[cuda_pointer]}' +
                             'Please use more GPUs.')
+                # if the current module can not be put into the current device
+                # but we can go to the next module
+                # we can put the current module into the next device
                 if module_pointer != self.num_pipelines - 1:
                     cuda_device = cuda_devices[cuda_pointer]
                     modules[module_pointer]['exec'] = cuda_device
@@ -537,6 +554,8 @@ class MMPipelineParallel(nn.Module):
             else:
                 cpu_used += modules[i]['parameter_size']
                 if cpu_used > self.memory_map['cpu']:
+                    # if the cpu memory is not enough
+                    # we can use disk offload
                     modules[i]['init'] = 'disk'
                 else:
                     modules[i]['init'] = 'cpu'
@@ -601,6 +620,7 @@ class MMPipelineParallel(nn.Module):
         for move in ['out', 'in']:
             in_queue: Queue = Queue()
             out_queue: Queue = Queue()
+            # create the thread corresponding to the move queues
             thread = Thread(
                 target=MMPipelineParallel._worker,
                 args=(in_queue, out_queue),
@@ -614,6 +634,8 @@ class MMPipelineParallel(nn.Module):
         for i in range(self.num_chunks):
             in_queue = Queue()
             out_queue = Queue()
+            # create the thread for each chunk
+            # because we cannot split the module
             thread = Thread(
                 target=MMPipelineParallel._worker,
                 args=(in_queue, out_queue),
@@ -667,12 +689,14 @@ class MMPipelineParallel(nn.Module):
         for weight_name, param in self.model_state_dict.items():
             name_split = weight_name.split('.')
             is_found = False
+            # find the module that the weight belongs to
             for i in range(len(name_split)):
                 curr_name = '.'.join(name_split[:i + 1])
                 if curr_name in self.device_map:
                     is_found = True
                     init_device = self.device_map[curr_name]['init_device']
                     if init_device == 'disk':
+                        # it should be offloaded
                         dtype = None
                         if param.dtype == torch.bfloat16:
                             param = param.to(torch.int16)
@@ -682,12 +706,14 @@ class MMPipelineParallel(nn.Module):
                             array = array[None]
                         if not os.path.exists(self.offload_directory):
                             os.makedirs(self.offload_directory, exist_ok=True)
+                        # save the param info
                         self.offloaded_weights[weight_name] = {
                             'dtype': array.dtype if dtype is None else dtype,
                             'shape': list(array.shape),
                         }
                         offload_path = os.path.join(self.offload_directory,
                                                     f'{weight_name}.npy')
+                        # offload
                         file_array: np.memmap
                         file_array = np.memmap(
                             offload_path,
@@ -710,6 +736,7 @@ class MMPipelineParallel(nn.Module):
         for module_name, module_weights in modules_weights.items():
             init_device = self.device_map[module_name]['init_device']
             module = self.module_map[module_name]['module']
+            # update the curr_device
             self.module_map[module_name]['curr_device'] = init_device
             self._load_state_dict(module, module_weights)
         del self.model_state_dict
@@ -720,6 +747,7 @@ class MMPipelineParallel(nn.Module):
         for name, info in self.device_map.items():
             module = self.module_map[name]['module']
             if info['part_id'] != curr_part_id:
+                # new part
                 curr_part_id = info['part_id']
                 hook = MMPipelineParallel.Hook(
                     part_id=curr_part_id,
@@ -727,6 +755,7 @@ class MMPipelineParallel(nn.Module):
                     exec_device=info['exec_device'],
                     is_part_begin=True)
             else:
+                # curr part
                 hook = MMPipelineParallel.Hook(
                     part_id=curr_part_id,
                     num_parts=self.num_pipelines,
@@ -759,22 +788,28 @@ class MMPipelineParallel(nn.Module):
         waiting_offload_chunks: Set[int] = set()
         schedule = 'exec'
         first_part_id = -1
+        # blocked part id as resume point
         blocked_part_id = -1
         while True:
             if schedule == 'offload':
+                # after offload, we should onload
                 schedule = 'onload'
             else:
                 if schedule == 'onload':
+                    # after onload, we should resume
                     schedule = 'exec'
                     schedules = []
                     chunk_id = 0
                     first_part_id = blocked_part_id
                 if chunk_id < num_chunks:
+                    # create schedules
                     schedules.insert(0, [chunk_id, first_part_id])
                 for i in range(len(schedules)):
+                    # check whether schedules can be executed
                     curr_part_id = schedules[i][1]
                     next_part_id = (curr_part_id + 1) % self.num_pipelines
                     curr_chunk_id = schedules[i][0]
+                    # the next part is offloaded
                     if self.offload_map[next_part_id] == 0:
                         waiting_offload_chunks.add(curr_chunk_id)
                         blocked_part_id = curr_part_id
@@ -796,13 +831,19 @@ class MMPipelineParallel(nn.Module):
         for name, param in state_dict.items():
             new_module = module
             name_split = name.split('.')
+            # find the module
             for i in name_split[:-1]:
                 new_module = getattr(new_module, i)
             param_name = name_split[-1]
             is_buffer = param_name in new_module._buffers
             if is_buffer:
+                # just replace the old buffer
                 new_module._buffers[param_name] = param
             else:
+                # create a new tensor because the old tensor is
+                # on the meta device, we cannnot call `load_state_dict`
+                # directly, so we should create a new tensor on the
+                # target device and replace the old tensor
                 old_tensor = getattr(new_module, param_name)
                 param_class = type(old_tensor)
                 is_requires_grad = old_tensor.requires_grad
@@ -817,8 +858,10 @@ class MMPipelineParallel(nn.Module):
             if info['curr_device'] == target_device:
                 continue
             if info['curr_device'] == 'disk':
+                # load from disk
                 param_names = [n for n, _ in info['module'].named_parameters()]
                 state_dict = {}
+                # prepare the state dict
                 for param_name in param_names:
                     full_name = f'{module_name}.{param_name}'
                     param_info = self.offloaded_weights[full_name]
@@ -830,17 +873,21 @@ class MMPipelineParallel(nn.Module):
                         shape = (1, )
                     if param_info['dtype'] == torch.bfloat16:
                         dtype = 'int16'
+                    # load from disk
                     array: np.memmap = np.memmap(
                         param_path, dtype=dtype, mode='r', shape=shape)
                     if len(param_info['shape']) == 0:
                         array = array[0]
                     weight = torch.as_tensor(array)
+                    # convert to the target dtype
                     if param_info['dtype'] == 'bfloat16':
                         weight = weight.to(torch.bfloat16)
                     weight = weight.to(target_device)
                     state_dict[param_name] = weight
+                # load
                 self._load_state_dict(info['module'], state_dict)
             elif target_device == 'disk':
+                # disk offload
                 for param_name, param in info['module'].named_paramters():
                     full_name = f'{module_name}.{param_name}'
                     dtype = None
@@ -852,12 +899,14 @@ class MMPipelineParallel(nn.Module):
                         array = array[None]
                     if not os.path.exists(self.offload_directory):
                         os.makedirs(self.offload_directory, exist_ok=True)
+                    # save the param info
                     self.offloaded_weights[full_name] = {
                         'dtype': array.dtype if dtype is None else dtype,
                         'shape': list(array.shape),
                     }
                     offload_path = os.path.join(self.offload_directory,
                                                 f'{full_name}.npy')
+                    # offload
                     file_array: np.memmap
                     file_array = np.memmap(
                         offload_path,
@@ -867,6 +916,7 @@ class MMPipelineParallel(nn.Module):
                     file_array[:] = array[:]
                     file_array.flush()
             else:
+                # just move
                 module = info['module']
                 module.to(target_device)
                 info['curr_device'] = target_device
@@ -981,9 +1031,11 @@ class MMPipelineParallel(nn.Module):
         # we suppose that the items in results are the same type
         item = results[0]
         if isinstance(item, torch.Tensor):
+            # if the item is a tensor, we can concatenate them
             result_tensor = torch.cat(results, dim=0)
             return result_tensor
         elif isinstance(item, dict):
+            # if the item is a dict, we can merge them recursively
             result_dict: Dict[Any, List[Any]] = {k: [] for k in item}
             for item in results:
                 for k in item:
@@ -992,6 +1044,7 @@ class MMPipelineParallel(nn.Module):
                 result_dict[k] = self._merge_results(result_dict[k])
             return result_dict
         elif isinstance(item, list):
+            # if the item is a list, we can merge them recursively
             result_list: List[List[Any]] = [[] for _ in range(len(item))]
             for item in results:
                 for i in range(len(item)):
@@ -1013,6 +1066,10 @@ class MMPipelineParallel(nn.Module):
         results = [None for _ in range(len(chunked_data))]
         # get flops, init device map, offload map, module map and exec order
         if not self._inited:
+            # we should get the shape of input data, so we can
+            # get the flops of each module and the execution order
+            # after that, we can init the device map, offload map
+            # load the weights and dispatch them to the corresponding devices
             self._get_flops(chunked_data[0])
             self._get_exec_order(chunked_data[0])
             self._find_tied_weights()
@@ -1036,6 +1093,8 @@ class MMPipelineParallel(nn.Module):
                 break
             if isinstance(schedules, str):
                 if schedules == 'offload':
+                    # get the first offloaded part
+                    # and the first onloaded part
                     for i in range(len(self.offload_map)):
                         if self.offload_map[i] == 0 and \
                                 offloaded_part_id == -1:
@@ -1043,6 +1102,7 @@ class MMPipelineParallel(nn.Module):
                         if self.offload_map[i] == 1 and \
                                 onloaded_part_id == -1:
                             onloaded_part_id = i
+                    # get the target device
                     if offloaded_part_id != -1:
                         target_device = None
                         for info in self.device_map.values():
@@ -1055,6 +1115,8 @@ class MMPipelineParallel(nn.Module):
                         MMPipelineParallel.in_queues['move-out'].put(task)
                         self.offload_map[onloaded_part_id] = 0
                 elif schedules == 'onload':
+                    # because 'onload' is after 'offload'
+                    # the first offloaded part id does not change
                     target_device = None
                     for info in self.device_map.values():
                         if info['part_id'] == onloaded_part_id:
@@ -1072,8 +1134,12 @@ class MMPipelineParallel(nn.Module):
                     if chunk_id in finished_chunks:
                         continue
                     else:
+                        # get the current part id and the next part id
                         curr_part_id = part_id % self.num_pipelines
                         next_part_id = (part_id + 1) % self.num_pipelines
+                        # if there is a language model
+                        # the generate function will call the forward function
+                        # many times, so we should add the offset
                         if part_id >= self.num_pipelines:
                             curr_part_id += self.lm_offset
                             next_part_id += self.lm_offset
@@ -1091,6 +1157,7 @@ class MMPipelineParallel(nn.Module):
                                 f'chunk-{chunk_id}'].put(task)
             if isinstance(schedules, str):
                 if schedules == 'offload':
+                    # receive the success signal
                     success, result = MMPipelineParallel.out_queues[
                         'move-out'].get()
                     if exec_info is not None:
@@ -1099,6 +1166,7 @@ class MMPipelineParallel(nn.Module):
                         exec_info = result
                         continue
                 elif schedules == 'onload':
+                    # receive the success signal
                     success, result = MMPipelineParallel.out_queues[
                         'move-in'].get()
                     if exec_info is not None:
@@ -1120,6 +1188,8 @@ class MMPipelineParallel(nn.Module):
                             exec_info = result
                             continue
                         if not isinstance(result, MMPipelineParallel.Flag):
+                            # it is not a flag, it is a result
+                            # this chunk is finished
                             results[chunk_id] = result
                             finished_chunks.add(chunk_id)
             if exec_info is not None:
