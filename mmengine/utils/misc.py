@@ -532,11 +532,12 @@ def get_object_from_string(obj_name: str):
             return None
 
     # get class or attribute from module
+    obj = module
     while True:
         try:
-            obj_cls = getattr(module, part)
+            obj = getattr(obj, part)
             part = next(parts)
         except StopIteration:
-            return obj_cls
+            return obj
         except AttributeError:
             return None
