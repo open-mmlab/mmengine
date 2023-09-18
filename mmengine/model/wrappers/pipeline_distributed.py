@@ -243,11 +243,10 @@ class MMPipelineParallel(nn.Module):
                                                                      Any]):
             """BFS the module to generate the model tree.
 
-            First, register the module self as a node.
-            Then, register the buffers as the children of the node.
-            Next, register the submodules.
-            Last, for every submodule, if it is not in no_split_module_classes,
-                do the bfs recursively.
+            First, register the module self as a node. Then, register
+            the buffers as the children of the node. Next, register the
+            submodules. Last, for every submodule, if it is not in
+            no_split_module_classes,     do the bfs recursively.
             """
             # None
             if module is None:
@@ -440,13 +439,13 @@ class MMPipelineParallel(nn.Module):
         def dfs(tree: Dict[str, Any], name: str, meta_info: Dict[str, int]):
             """DFS the model tree to get the device map.
 
-            First, handle language model.
-            Second, get the current module flops and size. If the current
-                device can hold the current module and the current flops does
-                not exceed the average flops, put the current module into the
-                modules and update the meta info.
-            Third, if the current module is not handled, but it has
-                submodules, handle the buffers and do the dfs recursively.
+            First, handle language model. Second, get the current module
+            flops and size. If the current     device can hold the
+            current module and the current flops does     not exceed the
+            average flops, put the current module into the     modules
+            and update the meta info. Third, if the current module is
+            not handled, but it has     submodules, handle the buffers
+            and do the dfs recursively.
             """
             # handle language model
             if tree['self']._get_name() == self.language_module_classes:
