@@ -16,6 +16,8 @@ import torch.nn as nn
 
 from mmengine.analysis import FlopAnalyzer
 from mmengine.registry import MODEL_WRAPPERS, MODELS
+from mmengine.utils.dl_utils import TORCH_VERSION
+from mmengine.utils.version_utils import digit_version
 
 
 @MODEL_WRAPPERS.register_module()
@@ -72,6 +74,9 @@ class MMPipelineParallel(nn.Module):
                  device_map: Union[str, Dict[str, dict]] = 'auto',
                  offload_directory: Optional[str] = None,
                  exec_entry: str = '__call__'):
+        if digit_version(TORCH_VERSION) <= digit_version('2.0.0'):
+            raise ValueError(
+                'MMPipelineParallel should work with PyTorch >= 2.0.0')
 
         super().__init__()
 
@@ -235,6 +240,7 @@ class MMPipelineParallel(nn.Module):
 
         def bfs(module: Optional[nn.Module], prefix: str, info: Dict[str,
                                                                      Any]):
+            """BFS the module to generate the model tree."""
             # None
             if module is None:
                 return
