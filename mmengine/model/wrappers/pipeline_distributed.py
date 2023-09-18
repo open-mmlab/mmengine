@@ -74,6 +74,7 @@ class MMPipelineParallel(nn.Module):
                  device_map: Union[str, Dict[str, dict]] = 'auto',
                  offload_directory: Optional[str] = None,
                  exec_entry: str = '__call__'):
+
         if digit_version(TORCH_VERSION) <= digit_version('2.0.0'):
             raise ValueError(
                 'MMPipelineParallel should work with PyTorch >= 2.0.0')
