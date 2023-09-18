@@ -2,6 +2,7 @@
 import os
 import sys
 import tempfile
+import warnings
 from contextlib import contextmanager
 from functools import partial
 from queue import Queue
@@ -19,8 +20,31 @@ from mmengine.registry import MODEL_WRAPPERS, MODELS
 
 @MODEL_WRAPPERS.register_module()
 class MMPipelineParallel(nn.Module):
-    """
-    TODO
+    """The model wrapper for pipeline parallelism.
+
+    Args:
+        model (dict | nn.Module): The model to be wrapped.
+        weights (str, optional): The path of the weights.
+            Defaults to None.
+        num_pipelines (int, optional): The number of pipelines.
+            Defaults to None.
+        num_chunks (int, optional): The number of mini-batches.
+            Defaults to None.
+        memory_threshold (float, optional): The memory threshold to avoid
+            OOM. Defaults to 0.7.
+        memory_map (dict, optional): The memory map of devices.
+            Defaults to None.
+        no_split_module_classes (list, optional): The module classes which
+            contains skip connnection so that they should not be split.
+            Defaults to None.
+        language_module_classes (str, optional): The module class of language
+            model. Defaults to None.
+        device_map (str | dict, optional): The device map policy or the device
+            map. Defaults to device_map_policy 'auto'.
+        offload_directory (str, optional): The directory to store offloaded
+            weights. Defaults to None.
+        exec_entry (str, optional): The entry of execution. Defaults to
+            '__call__'.
     """
     in_queues: Dict[str, Queue] = {}
     out_queues: Dict[str, Queue] = {}
@@ -51,6 +75,10 @@ class MMPipelineParallel(nn.Module):
         # init pipeline parallelism
         if num_pipelines is not None:
             self.num_pipelines = num_pipelines
+            if self.num_pipelines > torch.cuda.device_count():
+                warnings.warn('The number of pipelines is larger than ' +
+                              'the number of GPUs. ' +
+                              'There may be some unpredictable bugs.')
         else:
             self.num_pipelines = torch.cuda.device_count()
         if num_chunks is not None:
@@ -96,9 +124,7 @@ class MMPipelineParallel(nn.Module):
         MMPipelineParallel.events = self._init_events()
 
     def _init_model(self, model: Union[dict, nn.Module]) -> nn.Module:
-        """
-        TODO
-        """
+        """Init the model on the meta device and store the current weight"""
         if isinstance(model, nn.Module):
             if self.weights is not None:
                 return model.to('meta')
@@ -118,9 +144,7 @@ class MMPipelineParallel(nn.Module):
 
     @contextmanager
     def _init_empty(self):
-        """
-        TODO
-        """
+        """The context to init an empty model on the meta device."""
 
         def _parameter_hook(module, name, param):
             if self.weights is None:
@@ -143,9 +167,7 @@ class MMPipelineParallel(nn.Module):
 
     def _init_memory_map(self, memory_map: Optional[Dict[str, str]]
                          ) -> Dict[str, int]:
-        """
-        TODO
-        """
+        """Check or get the memory map of the cpu and gpus."""
         new_memory_map = {}
         # cpu
         cpu_memory = psutil.virtual_memory().available
@@ -172,9 +194,7 @@ class MMPipelineParallel(nn.Module):
 
     def _convert_memory_map(self,
                             memory_map: Dict[str, str]) -> Dict[str, int]:
-        """
-        TODO
-        """
+        """Convert the memory map from string to int."""
         converted_memory_map = {}
         for device, memory in memory_map.items():
             if memory.upper().endswith('GIB'):
@@ -203,9 +223,7 @@ class MMPipelineParallel(nn.Module):
         return converted_memory_map
 
     def _get_model_tree(self) -> Dict[str, Any]:
-        """
-        TODO
-        """
+        """Init the model tree for many usages."""
 
         def bfs(module: Optional[nn.Module], prefix: str,
                 info: Dict[str, Any]):
@@ -239,18 +257,14 @@ class MMPipelineParallel(nn.Module):
         return tree
 
     def _parameter_size(self, module: nn.Module) -> int:
-        """
-        TODO
-        """
+        """Get the parameter size of a module."""
         size = 0
         for _, param in module.named_parameters():
             size += param.nelement() * param.element_size()
         return size
 
     def _iter_tree(self, module_name: str) -> Optional[Dict[str, Any]]:
-        """
-        TODO
-        """
+        """Get the tree where the name of its root is module_name."""
         tree = self.model_tree
         if module_name == '':
             return tree
@@ -279,9 +293,7 @@ class MMPipelineParallel(nn.Module):
         return None
 
     def _find_tied_weights(self):
-        """
-        TODO
-        """
+        """Find the tied weights in the model."""
 
         def _find_tied_parameters(module: nn.Module,
                                   named_parameters: Dict[str, torch.Tensor],
@@ -312,9 +324,7 @@ class MMPipelineParallel(nn.Module):
         self.model_tree['tied_parameters'] = result
 
     def _get_meta_data(self, data_sample: Tuple[tuple, dict]):
-        """
-        TODO
-        """
+        """Turn the data sample into meta data, for flops and exec order."""
         args, kwargs = data_sample
         args_meta = []
         for arg in args:
@@ -332,9 +342,7 @@ class MMPipelineParallel(nn.Module):
         return data_meta
 
     def _get_flops(self, data_sample: Tuple[tuple, dict]):
-        """
-        TODO
-        """
+        """Get the flops of each module."""
         data_meta = self._get_meta_data(data_sample)
         if data_meta[1] == {}:
             inputs = data_meta[0]
@@ -351,9 +359,7 @@ class MMPipelineParallel(nn.Module):
                 tree['flops'] = num_flops
 
     def _get_exec_order(self, data_sample: Tuple[tuple, dict]):
-        """
-        TODO
-        """
+        """Get the execution order of each module."""
         exec_order = []
         module_name_map = {m: n for n, m in self.model.named_modules()}
 
@@ -379,9 +385,7 @@ class MMPipelineParallel(nn.Module):
                 tree['exec_order'] = order
 
     def _init_device_map(self, device_map_policy: str) -> Dict[str, dict]:
-        """
-        TODO
-        """
+        """Init the device map of the model."""
         if device_map_policy == 'auto':
             device_map_policy = 'balanced'
         if device_map_policy == 'balanced':
@@ -391,9 +395,7 @@ class MMPipelineParallel(nn.Module):
                 f'Unsupported device map policy {device_map_policy}')
 
     def _init_device_map_balanced(self) -> Dict[str, dict]:
-        """
-        TODO
-        """
+        """Init the device map of the model with balanced policy."""
         avg_flops = self.model_tree['flops'] / self.num_pipelines
         modules: List[Dict[str, Any]] = []
         devices = list(self.memory_map.keys())
@@ -528,9 +530,7 @@ class MMPipelineParallel(nn.Module):
         return device_map
 
     def _init_offload_map(self) -> Dict[int, int]:
-        """
-        TODO
-        """
+        """Init the offload map of the model."""
         curr_part_id = -1
         offload_map = {}
         for info in self.device_map.values():
@@ -545,9 +545,7 @@ class MMPipelineParallel(nn.Module):
         return offload_map
 
     def _init_module_map(self) -> Dict[str, dict]:
-        """
-        TODO
-        """
+        """Init the module map of the model."""
         module_map = {}
         for name, info in self.device_map.items():
             tree = self._iter_tree(name)
@@ -565,9 +563,7 @@ class MMPipelineParallel(nn.Module):
         return module_map
 
     def _init_queues(self) -> Tuple[Dict[str, Queue], Dict[str, Queue]]:
-        """
-        TODO
-        """
+        """Init the move queues and execution queues."""
         in_queues, out_queues = {}, {}
         # init move queues
         for move in ['out', 'in']:
@@ -599,18 +595,14 @@ class MMPipelineParallel(nn.Module):
         return in_queues, out_queues
 
     def _init_events(self) -> List[List[Event]]:
-        """
-        TODO
-        """
+        """Init the events for synchronization."""
         events = []
         for i in range(self.num_chunks):
             events.append([Event() for _ in range(self.num_pipelines)])
         return events
 
     def _init_stream_contexts(self) -> List[torch.cuda.StreamContext]:
-        """
-        TODO
-        """
+        """Init the stream contexts for execution."""
         curr_part_id = -1
         inited_streams = {}
         stream_contexts = []
@@ -628,9 +620,7 @@ class MMPipelineParallel(nn.Module):
         return stream_contexts
 
     def _load_and_dispatch(self, weights: Optional[str] = None):
-        """
-        TODO
-        """
+        """Load the weights and dispatch them to the corresponding devices."""
         if weights is not None:
             # load weights
             from mmengine.runner.checkpoint import CheckpointLoader
@@ -693,9 +683,7 @@ class MMPipelineParallel(nn.Module):
         del self.model_state_dict
 
     def _register_hooks(self):
-        """
-        TODO
-        """
+        """Register the hooks."""
         curr_part_id = -1
         for name, info in self.device_map.items():
             module = self.module_map[name]['module']
@@ -717,6 +705,7 @@ class MMPipelineParallel(nn.Module):
     @staticmethod
     @torch.no_grad()
     def _worker(in_queue: Queue, out_queue: Queue):
+        """The worker for execution and moving."""
         while True:
             task = in_queue.get()
             if task is None:
@@ -732,9 +721,7 @@ class MMPipelineParallel(nn.Module):
         out_queue.put(done)
 
     def _clock(self, num_chunks: int) -> Iterator[Union[List[List[int]], str]]:
-        """
-        TODO
-        """
+        """The clock for generating schedules."""
         chunk_id = 0
         schedules: List[List[int]] = []
         waiting_offload_chunks: Set[int] = set()
@@ -773,9 +760,7 @@ class MMPipelineParallel(nn.Module):
 
     def _load_state_dict(self, module: nn.Module,
                          state_dict: Dict[str, torch.Tensor]):
-        """
-        TODO
-        """
+        """Load the state dict to the module on meta device."""
         for name, param in state_dict.items():
             new_module = module
             name_split = name.split('.')
@@ -793,9 +778,7 @@ class MMPipelineParallel(nn.Module):
                 new_module._parameters[param_name] = new_tensor
 
     def _move_part(self, part_id: int, target_device: str):
-        """
-        TODO
-        """
+        """Move the part to the target device."""
         for module_name, info in self.module_map.items():
             if info['part_id'] != part_id:
                 continue
@@ -857,9 +840,7 @@ class MMPipelineParallel(nn.Module):
                 info['curr_device'] = target_device
 
     class Flag:
-        """
-        TODO
-        """
+        """The flag for communication."""
 
         def __init__(self, part_id: int):
             self.part_id = part_id
@@ -871,9 +852,7 @@ class MMPipelineParallel(nn.Module):
             return self.__str__()
 
     class Hook:
-        """
-        TODO
-        """
+        """The hook to check the execution device, and send exit signal."""
 
         def __init__(self,
                      part_id: int,
@@ -887,9 +866,6 @@ class MMPipelineParallel(nn.Module):
 
         def __call__(self, module: nn.Module, args: tuple,
                      kwargs: dict) -> Tuple[tuple, dict]:
-            """
-            TODO
-            """
             if not self.is_part_begin:
                 return args, kwargs
             # exit previous part
@@ -901,9 +877,7 @@ class MMPipelineParallel(nn.Module):
             return args, kwargs
 
         def _exit_prev_part(self):
-            """
-            TODO
-            """
+            """Exit the previous part and send exit signal."""
             chunk_id = int(current_thread().name.split('-')[1])
             visit_times = MMPipelineParallel.hook_visited_times.get(
                 f'chunk-{chunk_id}', 0)
@@ -923,9 +897,7 @@ class MMPipelineParallel(nn.Module):
 
         def _check_device(self, args: tuple,
                           kwargs: dict) -> Tuple[tuple, dict]:
-            """
-            TODO
-            """
+            """Check the device and move the data to the execution device."""
             # args
             list_args = list(args)
             for i in range(len(list_args)):
@@ -939,16 +911,12 @@ class MMPipelineParallel(nn.Module):
             return args, kwargs
 
         def _enter_curr_part(self):
-            """
-            TODO
-            """
+            """Enter the current part."""
             MMPipelineParallel.stream_contexts[self.part_id].__enter__()
 
     def _chunk_data(self, args: tuple,
                     kwargs: dict) -> List[Tuple[tuple, dict]]:
-        """
-        TODO
-        """
+        """Chunk the data into mini-batches."""
         # args
         chunked_args = []
         for i in range(len(args)):
@@ -976,9 +944,7 @@ class MMPipelineParallel(nn.Module):
         return chunked_data
 
     def _merge_results(self, results: List[Any]) -> Any:
-        """
-        TODO
-        """
+        """Merge the results of mini-batches."""
         # we suppose that the items in results are the same type
         item = results[0]
         if isinstance(item, torch.Tensor):
@@ -1004,8 +970,10 @@ class MMPipelineParallel(nn.Module):
             raise TypeError(f'Unsupported type {type(item)}')
 
     def forward(self, *args, **kwargs) -> Any:
-        """
-        TODO
+        """The forward function of the model.
+
+        The forward function of the model. The type of input should be the same
+        as the original model.
         """
         exec_info = None
         chunked_data = self._chunk_data(args, kwargs)
