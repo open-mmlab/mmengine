@@ -218,6 +218,8 @@ class RecorderHook(Hook):
         self.save_dir = save_dir  # type: ignore
         if filename_tmpl is None:
             self.filename_tmpl = 'record_epoch_{}.pth'
+        else:
+            self.filename_tmpl = filename_tmpl
 
         if recorders is None or len(recorders) == 0:
             raise ValueError('recorders not initialized')
@@ -259,9 +261,9 @@ class RecorderHook(Hook):
             value=ast.Call(
                 func=ast.Attribute(
                     value=ast.Name(id='MessageHub', ctx=ast.Load()),
-                    attr='get_current_instance',
+                    attr='get_instance',
                     ctx=ast.Load()),
-                args=[],
+                args=[ast.Constant(value='recorder_hook')],
                 keywords=[]))
 
         tree.body[0].body = [
@@ -324,7 +326,7 @@ class RecorderHook(Hook):
             self.save_dir = runner.work_dir
 
         # get messagehub instance and store it.
-        self.message_hub = MessageHub.get_current_instance()
+        self.message_hub = MessageHub.get_instance('recorder_hook')
         # init_save_var_dict
         self._init_tensor_dict()
         # get model and modify its forward function
