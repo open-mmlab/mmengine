@@ -7,7 +7,7 @@ import textwrap
 import types
 from abc import ABCMeta, abstractmethod
 from operator import attrgetter
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import torch
 
@@ -31,7 +31,8 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
         target_index (int or list): Index of var to record.
     """
 
-    def __init__(self, model, method, target, target_index):
+    def __init__(self, model: str, method: str, target: str,
+                 target_index: Union[int, List[int]]):
         super().__init__()
         self._model = model
         self._method = method
@@ -42,7 +43,7 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
             self._target_index = {target_index}
         self.count = -1
 
-    def get_store_varname_with_index(self, index):
+    def get_store_varname_with_index(self, index: int) -> str:
         """Generate and return the variable name with the specified index.
 
         Args:
@@ -53,7 +54,7 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
         """
         return f'{self._model}:{self._method}:{self._target}@{index}'
 
-    def visit_Assign(self, node):
+    def visit_Assign(self, node: ast.Assign) -> Union[Any, List[Any]]:
         """Visit and possibly transform an assignment node in the AST.
 
         Args:
@@ -62,6 +63,7 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
         Returns:
             Modified AST node or a list of AST nodes.
         """
+        assert isinstance(node.targets[0], ast.Name)
         if node.targets[0].id != self._target:
             return node
         self.count += 1
@@ -103,7 +105,7 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
         self._target = target
         self._visited = False
 
-    def _get_target_attribute(self):
+    def _get_target_attribute(self) -> ast.Attribute:
         """Extract and return the target attribute from the AST as a node.
 
         Returns:
@@ -119,7 +121,7 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
             attr = ast.Attribute(value=attr, attr=ele, ctx=ast.Load())
         return attr
 
-    def _deepcopy_varname(self):
+    def _deepcopy_varname(self) -> str:
         """Generate and return a variable name for the deep copy of the target
         attribute.
 
@@ -128,7 +130,7 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
         """
         return f'_deep_copy_{self._target.replace(".", "_")}'
 
-    def _get_tensor_name(self):
+    def _get_tensor_name(self) -> str:
         """Generate and return the tensor name for the target attribute.
 
         Returns:
@@ -136,7 +138,7 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
         """
         return f'{self._model}:{self._method}:{self._target}'
 
-    def _get_deep_copy_node(self, var_node):
+    def _get_deep_copy_node(self, var_node) -> ast.If:
         """Generate and return the AST node for deep copying the target
         attribute.
 
@@ -190,7 +192,7 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
             ])
         return if_node
 
-    def visit_Assign(self, node):
+    def visit_Assign(self, node: ast.Assign) -> Union[Any, List[Any]]:
         """Visit and possibly transform an assignment node in the AST.
 
         Args:
@@ -202,7 +204,8 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
         if self._visited:
             return node
         # insert update attribute node after message_hub assign node
-        if node.targets[0].id == 'message_hub':
+        if isinstance(node.targets[0],
+                      ast.Name) and node.targets[0].id == 'message_hub':
             self._visited = True
 
         attribute_node = self._get_target_attribute()
@@ -235,13 +238,13 @@ class Recorder(metaclass=ABCMeta):
         target (str): The target layer or tensor to be recorded.
     """
 
-    def __init__(self, model, method, target: str):
+    def __init__(self, model: str, method: str, target: str):
         self._model = model
         self._method = method
         self._target = target
 
     @abstractmethod
-    def rewrite(self, ast_tree):
+    def rewrite(self, ast_tree) -> Any:
         """Rewrite the AST tree to include recording logic.
 
         Args:
@@ -253,7 +256,7 @@ class Recorder(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_store_varname(self):
+    def get_store_varname(self) -> Union[str, List[str]]:
         """Get the variable name used for storing recorded data.
 
         Returns:
@@ -283,12 +286,12 @@ class FunctionRecorder(Recorder):
         self.visit_assign = FunctionRecorderTransformer(
             self._model, self._method, self._target, self.index)
 
-    def rewrite(self, ast_tree):
+    def rewrite(self, ast_tree) -> Any:
         """Rewrite the AST tree to include recording logic for output of
         function calls."""
         return self.visit_assign.visit(ast_tree)
 
-    def get_store_varname(self):
+    def get_store_varname(self) -> List[str]:
         """Generate and return variable names based on output name.
 
         Outputs with the same name will be distinguished based on the index
@@ -318,11 +321,11 @@ class AttributeRecorder(Recorder):
         self.visit_assign = AttributeRecorderTransformer(
             self._model, self._method, self._target)
 
-    def rewrite(self, ast_tree):
+    def rewrite(self, ast_tree) -> Any:
         """Rewrite the AST tree to include recording logic for attributes."""
         return self.visit_assign.visit(ast_tree)
 
-    def get_store_varname(self):
+    def get_store_varname(self) -> str:
         """Generate and return variable name based on model attributes."""
         return f'{self._model}:{self._method}:{self._target}'
 
@@ -396,7 +399,8 @@ class RecorderHook(Hook):
                     level=logging.WARNING)
             self._recorders.append(RECORDERS.build(recorder))
 
-    def _modify_forward_func(self, func, recorders):
+    def _modify_forward_func(self, func: Callable,
+                             recorders: List[Recorder]) -> Callable:
         """Modify the forward function to incorporate recording behaviors.
 
         Args:
@@ -412,8 +416,12 @@ class RecorderHook(Hook):
 
         # Parse source code as ast
         tree = ast.parse(source)
-
-        func_body = tree.body[0].body
+        breakpoint()
+        if isinstance(tree.body[0], ast.FunctionDef):
+            func_body = tree.body[0].body
+        else:
+            raise ValueError(
+                "Unexpected node type that doesn't have a body attribute.")
         # import mmengine.logging.MessageHub
         import_messagehub_node = ast.ImportFrom(
             module='mmengine.logging',
@@ -448,13 +456,18 @@ class RecorderHook(Hook):
         tree = ast.fix_missing_locations(tree)
 
         # Compile the modified ast as a new function
-        namespace = {}
+        namespace: Dict[str, Any] = {}
+        if isinstance(func, types.FunctionType):
+            globals_dict = func.__globals__
+            func_name = func.__name__
+        else:
+            raise TypeError('It is not a function')
         exec(
-            compile(tree, filename='<ast>', mode='exec'), func.__globals__,
+            compile(tree, filename='<ast>', mode='exec'), globals_dict,
             namespace)
-        return namespace[func.__name__]
+        return namespace[func_name]
 
-    def _get_model(self, model_name):
+    def _get_model(self, model_name: str) -> Any:
         """Retrieve a specific model from runner.
         If model_name == 'runner_model', return runner.model.
         Else, return runner.model.model_name
@@ -470,23 +483,28 @@ class RecorderHook(Hook):
         model = attrgetter(model_name)(model)
         return model
 
-    def _group_recorder_by_model_method(self):
+    def _group_recorder_by_model_method(
+            self) -> Dict[str, Dict[str, List[Recorder]]]:
         """Group recorders by model and method.
 
         Returns:
             dict: Grouped recorders.
         """
-        group_dict = {}
+        group_model_dist = {}
+        group_model_method_dict: Dict[str, Dict[str, List[Recorder]]] = {}
         for recorder in self._recorders:
             key = recorder._model
-            if key not in group_dict:
-                group_dict[key] = []
-            group_dict[key].append(recorder)
-        for model_name, recorders in group_dict.items():
-            group_dict[model_name] = self._group_recorder_by_method(recorders)
-        return group_dict
+            if key not in group_model_dist:
+                group_model_dist[key] = [recorder]
+            else:
+                group_model_dist[key].append(recorder)
+        for model_name, recorders in group_model_dist.items():
+            group_model_method_dict[
+                model_name] = self._group_recorder_by_method(recorders)
+        return group_model_method_dict
 
-    def _group_recorder_by_method(self, recorders):
+    def _group_recorder_by_method(
+            self, recorders: List[Recorder]) -> Dict[str, List[Recorder]]:
         """Group recorders by method.
 
         Args:
@@ -495,15 +513,16 @@ class RecorderHook(Hook):
         Returns:
             dict: Grouped recorders.
         """
-        group_dict = {}
+        group_dict: Dict[str, List[Recorder]] = {}
         for recorder in recorders:
             key = recorder._method
             if key not in group_dict:
-                group_dict[key] = []
+                group_dict[key] = [recorder]
             group_dict[key].append(recorder)
         return group_dict
 
-    def _save_origin_method(self, model, method_name, origin_method):
+    def _save_origin_method(self, model: Any, method_name: str,
+                            origin_method: Callable) -> None:
         """Save reference to the original method of a model.
 
         Args:
@@ -582,7 +601,7 @@ class RecorderHook(Hook):
         """Save recorded tensors to disk.
 
         Args:
-            step (int): Current training step or epoch.
+            step (int): Current training epoch.
         """
         recorder_file_name = self.filename_tmpl.format(step)
         path = osp.join(self.save_dir, recorder_file_name)
