@@ -17,6 +17,19 @@ from . import Hook
 
 
 class FunctionRecorderTransformer(ast.NodeTransformer):
+    """Transformer that modifies the Abstract Syntax Tree (AST) for function-
+    related record updates.
+
+    The transformer is responsible for updating the AST to add the logic needed
+    to record tensor data at specific indices when a function is called within
+    the model's forward pass.
+
+    Args:
+        model (str): The name or identifier of the model.
+        method (str): The method in which the transformer operates.
+        target (str): The target function to be recorded.
+        target_index (int or list): Index of var to record.
+    """
 
     def __init__(self, model, method, target, target_index):
         super().__init__()
@@ -30,9 +43,25 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
         self.count = -1
 
     def get_store_varname_with_index(self, index):
+        """Generate and return the variable name with the specified index.
+
+        Args:
+            index (int): The index for which to generate the variable name.
+
+        Returns:
+            str: The variable name for the given index.
+        """
         return f'{self._model}:{self._method}:{self._target}@{index}'
 
     def visit_Assign(self, node):
+        """Visit and possibly transform an assignment node in the AST.
+
+        Args:
+            node: The AST node being visited.
+
+        Returns:
+            Modified AST node or a list of AST nodes.
+        """
         if node.targets[0].id != self._target:
             return node
         self.count += 1
@@ -55,6 +84,17 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
 
 
 class AttributeRecorderTransformer(ast.NodeTransformer):
+    """Transformer that modifies the Abstract Syntax Tree (AST) for attribute-
+    related record updates.
+
+    The transformer is responsible for updating the AST to add the logic needed
+    to record tensor data from model attributes during the forward pass.
+
+    Args:
+        model (str): The name or identifier of the model.
+        method (str): The method in which the transformer operates.
+        target (str): The target attribute to be recorded.
+    """
 
     def __init__(self, model, method, target):
         super().__init__()
@@ -64,6 +104,11 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
         self._visited = False
 
     def _get_target_attribute(self):
+        """Extract and return the target attribute from the AST as a node.
+
+        Returns:
+            ast.Attribute: The node representing the target attribute.
+        """
         func_chain = self._target.split('.')
         assert len(func_chain) >= 2
         attr = ast.Attribute(
@@ -75,12 +120,33 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
         return attr
 
     def _deepcopy_varname(self):
+        """Generate and return a variable name for the deep copy of the target
+        attribute.
+
+        Returns:
+            str: The variable name for the deep copy of the target attribute.
+        """
         return f'_deep_copy_{self._target.replace(".", "_")}'
 
     def _get_tensor_name(self):
+        """Generate and return the tensor name for the target attribute.
+
+        Returns:
+            str: The tensor name for the target attribute.
+        """
         return f'{self._model}:{self._method}:{self._target}'
 
     def _get_deep_copy_node(self, var_node):
+        """Generate and return the AST node for deep copying the target
+        attribute.
+
+        Args:
+            var_node (ast.Name):
+            The AST node representing the variable to be deep copied.
+
+        Returns:
+            ast.If: The `if` node for deep copying the target attribute.
+        """
         if_node = ast.If(
             test=ast.Call(
                 func=ast.Name(id='isinstance', ctx=ast.Load()),
@@ -125,6 +191,14 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
         return if_node
 
     def visit_Assign(self, node):
+        """Visit and possibly transform an assignment node in the AST.
+
+        Args:
+            node: The AST node being visited.
+
+        Returns:
+            Modified AST node or a list of AST nodes.
+        """
         if self._visited:
             return node
         # insert update attribute node after message_hub assign node
@@ -150,6 +224,16 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
 
 
 class Recorder(metaclass=ABCMeta):
+    """Abstract base class for implementing tensor data recorders.
+
+    The Recorder is intended to be a blueprint for creating specific recorder
+    types to capture tensor data during model forward passes.
+
+    Args:
+        model: The name or identifier of the model.
+        method: The method on which the Recorder is attached.
+        target (str): The target layer or tensor to be recorded.
+    """
 
     def __init__(self, model, method, target: str):
         self._model = model
@@ -158,15 +242,40 @@ class Recorder(metaclass=ABCMeta):
 
     @abstractmethod
     def rewrite(self, ast_tree):
+        """Rewrite the AST tree to include recording logic.
+
+        Args:
+            ast_tree: The Abstract Syntax Tree to be rewritten.
+
+        Returns:
+            Modified AST tree.
+        """
         pass
 
     @abstractmethod
     def get_store_varname(self):
+        """Get the variable name used for storing recorded data.
+
+        Returns:
+            Variable name or a list of variable names.
+        """
         pass
 
 
 @RECORDERS.register_module()
 class FunctionRecorder(Recorder):
+    """A Recorder implementation to capture output tensor data from function
+    calls.
+
+    This Recorder hooks into specific function calls within the model's forward
+    pass and records tensor data at specified indices.
+
+    Args:
+        model (str): The name or identifier of the model.
+        method (str): The method on which the Recorder is attached.
+        target (str): The target function to be recorded.
+        index (list): List of indices within the function call to record.
+    """
 
     def __init__(self, model: str, method: str, target: str, index: list):
         super().__init__(model, method, target)
@@ -175,9 +284,16 @@ class FunctionRecorder(Recorder):
             self._model, self._method, self._target, self.index)
 
     def rewrite(self, ast_tree):
+        """Rewrite the AST tree to include recording logic for output of
+        function calls."""
         return self.visit_assign.visit(ast_tree)
 
     def get_store_varname(self):
+        """Generate and return variable names based on output name.
+
+        Outputs with the same name will be distinguished based on the sequence
+        number.
+        """
         return [
             f'{self._model}:{self._method}:{self._target}@{i}'
             for i in self.index
@@ -186,6 +302,16 @@ class FunctionRecorder(Recorder):
 
 @RECORDERS.register_module()
 class AttributeRecorder(Recorder):
+    """A Recorder implementation to capture tensor data from model attributes.
+
+    This Recorder hooks into model attributes and records their tensor data
+    during the forward pass.
+
+    Args:
+        model (str): The name or identifier of the model.
+        method (str): The method on which the Recorder is attached.
+        target (str): The target attribute to be recorded.
+    """
 
     def __init__(self, model: str, method: str, target: str):
         super().__init__(model, method, target)
@@ -193,14 +319,45 @@ class AttributeRecorder(Recorder):
             self._model, self._method, self._target)
 
     def rewrite(self, ast_tree):
+        """Rewrite the AST tree to include recording logic for attributes."""
         return self.visit_assign.visit(ast_tree)
 
     def get_store_varname(self):
+        """Generate and return variable name based on model attributes."""
         return f'{self._model}:{self._method}:{self._target}'
 
 
 @HOOKS.register_module()
 class RecorderHook(Hook):
+    """A hook to record information during model training.
+
+    This hook allows users to modify and record certain model variables
+    during training iterations and save them for analysis purposes.
+    It provides the ability to modify any function of a model
+    using ast module in python.
+
+    Args:
+        recorders (Optional[List[Dict]]):
+            Configurations for individual recorders.
+            Each recorder dict should contain the target model and method.
+        print_modification (bool): Whether to print the modified source code
+            after it's been altered by a recorder. Defaults to True.
+        save_dir (str): The directory where recorded data will be saved.
+            If not specified, it will use the runner's work directory.
+            Defaults to None.
+        filename_tmpl (Optional[str]): The filename template used when saving
+            recorded data. If not provided, a default template will be used.
+            Defaults to None.
+
+    Examples:
+        >>> recorder_hook_cfg = dict(
+        ...     recorders=[{'model': 'runner_model',
+        ...                'target': 'layer1', 'method': 'forward'}],
+        ...     print_modification=True,
+        ...     save_dir='./records',
+        ...     filename_tmpl='record_epoch_{}.pth'
+        ... )
+    """
     priority = 'LOWEST'
 
     def __init__(
@@ -241,6 +398,15 @@ class RecorderHook(Hook):
             self._recorders.append(RECORDERS.build(recorder))
 
     def _modify_forward_func(self, func, recorders):
+        """Modify the forward function to incorporate recording behaviors.
+
+        Args:
+            func (callable): Original forward function to modify.
+            recorders (List[Recorder]): List of recorder instances.
+
+        Returns:
+            callable: Modified forward function.
+        """
         # Gets the source code for the function
         source = inspect.getsource(func)
         source = textwrap.dedent(source)
@@ -290,6 +456,15 @@ class RecorderHook(Hook):
         return namespace[func.__name__]
 
     def _get_model(self, model_name):
+        """Retrieve a specific model from runner.
+        If model_name == 'runner_model', return runner.model.
+        Else, return runner.model.model_name
+        Args:
+            model_name (str): Name of the model to retrieve.
+
+        Returns:
+            Model: Requested model instance.
+        """
         if not model_name or model_name == 'runner_model':
             return self.base_model
         model = self.base_model
@@ -297,6 +472,11 @@ class RecorderHook(Hook):
         return model
 
     def _group_recorder_by_model_method(self):
+        """Group recorders by model and method.
+
+        Returns:
+            dict: Grouped recorders.
+        """
         group_dict = {}
         for recorder in self._recorders:
             key = recorder._model
@@ -308,6 +488,14 @@ class RecorderHook(Hook):
         return group_dict
 
     def _group_recorder_by_method(self, recorders):
+        """Group recorders by method.
+
+        Args:
+            recorders (List[Recorder]): List of recorder instances.
+
+        Returns:
+            dict: Grouped recorders.
+        """
         group_dict = {}
         for recorder in recorders:
             key = recorder._method
@@ -317,11 +505,23 @@ class RecorderHook(Hook):
         return group_dict
 
     def _save_origin_method(self, model, method_name, origin_method):
+        """Save reference to the original method of a model.
+
+        Args:
+            model (Model): Model instance.
+            method_name (str): Name of the method to save.
+            origin_method (callable): Original method to save.
+        """
         if model not in self.origin_methods:
             self.origin_methods[model] = {}
         self.origin_methods[model][method_name] = origin_method
 
     def before_run(self, runner) -> None:
+        """Prepare for training by modifying methods for recording.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
         if not self.save_dir:
             self.save_dir = runner.work_dir
 
@@ -368,15 +568,29 @@ class RecorderHook(Hook):
                          batch_idx: int,
                          data_batch=None,
                          outputs=None) -> None:
+        """Record specific tensors after each training iteration.
+
+        Args:
+            runner (Runner): The runner of the training process.
+            batch_idx (int): Index of the current batch.
+            data_batch (Optional): Current data batch. Default is None.
+            outputs (Optional): Outputs from the current iteration.
+        """
         for key in self.tensor_dict.keys():
             self.tensor_dict[key].append(self.message_hub.get_info(key))
 
     def _save_record(self, step):
+        """Save recorded tensors to disk.
+
+        Args:
+            step (int): Current training step or epoch.
+        """
         recorder_file_name = self.filename_tmpl.format(step)
         path = osp.join(self.save_dir, recorder_file_name)
         torch.save(self.tensor_dict, path)
 
     def _init_tensor_dict(self):
+        """Initialize the tensor dictionary for recording."""
         for recorder in self._recorders:
             varname = recorder.get_store_varname()
             if isinstance(varname, list):
@@ -386,13 +600,22 @@ class RecorderHook(Hook):
                 self.tensor_dict[varname] = list()
 
     def after_train_epoch(self, runner) -> None:
+        """Save recorded tensors after each training epoch.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
         step = runner.epoch + 1
         runner.logger.info(f'Saving record at {runner.epoch + 1} epochs')
         self._save_record(step)
         self._init_tensor_dict()
 
     def after_train(self, runner) -> None:
-        # restore forward function after train
+        """Restore original methods after training.
+
+        Args:
+            runner (Runner): The runner of the training process.
+        """
         for model, v in self.origin_methods.items():
             for method_name, origin_method in v.items():
                 setattr(model, method_name, origin_method)
