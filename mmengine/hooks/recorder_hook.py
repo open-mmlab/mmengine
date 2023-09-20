@@ -291,7 +291,7 @@ class FunctionRecorder(Recorder):
     def get_store_varname(self):
         """Generate and return variable names based on output name.
 
-        Outputs with the same name will be distinguished based on the sequence
+        Outputs with the same name will be distinguished based on the index
         number.
         """
         return [
@@ -368,11 +368,10 @@ class RecorderHook(Hook):
         filename_tmpl: Optional[str] = None,
     ):
         self.tensor_dict: Dict[str, Any] = {}
-        self.origin_forward = None
         self.origin_methods: Dict[Any, Any] = {}
         self._recorders: List[Recorder] = []
-        self.print_modification = print_modification
-        self.save_dir = save_dir  # type: ignore
+        self.print_modification: bool = print_modification
+        self.save_dir: Optional[str] = save_dir  # type: ignore
         if filename_tmpl is None:
             self.filename_tmpl = 'record_epoch_{}.pth'
         else:
