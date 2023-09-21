@@ -35,10 +35,17 @@ pip install -U openmim
 mim install mmengine
 ```
 
+If you only want to use fileio, registry and configs in MMEngine, you can install mmengine lite:
+
+```bash
+MMENGINE_LITE=1 mim install mmengine
+```
+
 ### Install with pip
 
 ```bash
 pip install mmengine
+# MMENGINE_LITE=1 pip install mmengine
 ```
 
 ### Use docker images
@@ -64,6 +71,9 @@ pip install mmengine
 git clone https://github.com/open-mmlab/mmengine.git
 cd mmengine
 pip install -e . -v
+
+# If you only want to use fileio, registry and configs in MMEngine, you can install mmengine lite:
+# MMENGINE_LITE=1 pip install -e . -v
 ```
 
 ### Verify the Installation

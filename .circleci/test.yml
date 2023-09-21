@@ -54,6 +54,33 @@ jobs:
           name: Run unit tests
           command: pytest tests/test_config tests/test_registry tests/test_fileio tests/test_logging tests/test_utils --ignore=tests/test_utils/test_dl_utils
 
+  build_lite:
+    parameters:
+      # The python version must match available image tags in
+      # https://circleci.com/developer/images/image/cimg/python
+      python:
+        type: string
+        default: "3.7.4"
+    docker:
+      - image: cimg/python:<< parameters.python >>
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Upgrade pip
+          command: |
+            pip install pip --upgrade
+            pip --version
+      - run:
+          name: Build MMEngine from source
+          command: MMENGINE_LITE=1 pip install -e -v
+      - run:
+          name: Install unit tests dependencies
+          command: pip install -r requirements/tests.txt
+      - run:
+          name: Run unit tests
+          command: pytest tests/test_config tests/test_registry tests/test_fileio tests/test_logging tests/test_utils --ignore=tests/test_utils/test_dl_utils
+
   build_cpu:
     parameters:
       # The python version must match available image tags in
