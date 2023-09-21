@@ -73,7 +73,7 @@ jobs:
             pip --version
       - run:
           name: Build MMEngine from source
-          command: MMENGINE_LITE=1 pip install -e -v
+          command: MMENGINE_LITE=1 pip install -e . -v
       - run:
           name: Install unit tests dependencies
           command: pip install -r requirements/tests.txt
@@ -244,10 +244,14 @@ workflows:
             branches:
               ignore:
                 - main
+      - build_lite:
+          name: build lite
+          requires:
+            - lint
       - build_without_torch:
           name: build without torch
           requires:
-            - lint
+            - build_lite
       - build_cpu:
           name: minimum_version_cpu
           torch: 1.6.0
