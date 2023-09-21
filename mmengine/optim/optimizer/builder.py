@@ -157,6 +157,21 @@ def register_bitsandbytes_optimizers() -> List[str]:
 BITSANDBYTES_OPTIMIZERS = register_bitsandbytes_optimizers()
 
 
+def register_transformers_optimizers():
+    transformer_optimizers = []
+    try:
+        from transformers import Adafactor
+    except ImportError:
+        pass
+    else:
+        OPTIMIZERS.register_module(name='Adafactor', module=Adafactor)
+        transformer_optimizers.append('Adafactor')
+    return transformer_optimizers
+
+
+TRANSFORMERS_OPTIMIZERS = register_transformers_optimizers()
+
+
 def build_optim_wrapper(model: nn.Module,
                         cfg: Union[dict, Config, ConfigDict]) -> OptimWrapper:
     """Build function of OptimWrapper.
