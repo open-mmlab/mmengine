@@ -145,8 +145,8 @@ runner = Runner(
     model=ResNet18(),
     work_dir='./work_dir',
     train_dataloader=train_dataloader_cfg,
-    # To view the input parameters for AdamW8bit, you can refer to
-    # https://github.com/TimDettmers/bitsandbytes/blob/main/bitsandbytes/optim/adamw.py
+    # To view the input parameters for Adafactor, you can refer to
+    # https://github.com/huggingface/transformers/blob/v4.33.2/src/transformers/optimization.py#L492
     optim_wrapper=dict(optimizer=dict(type='Adafactor', lr=1e-5,
         weight_decay=1e-2, scale_parameter=False, relative_step=False)),
     train_cfg=dict(by_epoch=True, max_epochs=3),
