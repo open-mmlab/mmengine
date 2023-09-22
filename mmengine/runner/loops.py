@@ -363,7 +363,7 @@ class ValLoop(BaseLoop):
             self.run_iter(idx, data_batch)
 
         # compute metrics
-        metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
+        metrics = self.evaluator.evaluate(self.dataloader.dataset)
         self.runner.call_hook('after_val_epoch', metrics=metrics)
         self.runner.call_hook('after_val')
         return metrics
@@ -435,7 +435,7 @@ class TestLoop(BaseLoop):
             self.run_iter(idx, data_batch)
 
         # compute metrics
-        metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
+        metrics = self.evaluator.evaluate(self.dataloader.dataset)
         self.runner.call_hook('after_test_epoch', metrics=metrics)
         self.runner.call_hook('after_test')
         return metrics
