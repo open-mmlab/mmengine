@@ -1472,8 +1472,7 @@ class Config:
                 blank_line_before_nested_class_or_def=True,
                 split_before_expression_after_opening_paren=True)
             try:
-                text, _ = FormatCode(
-                    text, style_config=yapf_style, verify=True)
+                text, _ = FormatCode(text, style_config=yapf_style)
             except:  # noqa: E722
                 raise SyntaxError('Failed to format the config file, please '
                                   f'check the syntax of: \n{text}')
