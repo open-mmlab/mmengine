@@ -840,7 +840,7 @@ class MMPipelineParallel(nn.Module):
                 new_module._buffers[param_name] = param
             else:
                 # create a new tensor because the old tensor is
-                # on the meta device, we cannnot call `load_state_dict`
+                # on the meta device, we cannot call `load_state_dict`
                 # directly, so we should create a new tensor on the
                 # target device and replace the old tensor
                 old_tensor = getattr(new_module, param_name)
