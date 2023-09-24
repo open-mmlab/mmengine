@@ -106,8 +106,7 @@ class MMPipelineParallel(nn.Module):
         self.memory_map = self._init_memory_map(memory_map)
 
         # init device map
-        self.no_split_module_classes = [] if no_split_module_classes is None \
-            else no_split_module_classes
+        self.no_split_module_classes = no_split_module_classes or []
         self.language_module_class = language_module_class
         self.lm_offset = 0
         self.model_tree = self._get_model_tree()
