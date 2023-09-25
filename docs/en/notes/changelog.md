@@ -1,5 +1,11 @@
 # Changelog of v0.x
 
+## v0.8.5 (25/09/2023)
+
+### Bug fixes
+
+- Optional removal of the `verify` parameter in `yapf`, ensuring compatibility across different `yapf` versions by [@okotaku](https://github.com/okotaku) in https://github.com/open-mmlab/mmengine/pull/1365
+
 ## v0.8.4 (03/08/2023)
 
 ### New Features & Enhancements
