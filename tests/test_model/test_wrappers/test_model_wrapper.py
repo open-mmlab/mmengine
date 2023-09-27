@@ -328,8 +328,7 @@ class TestMMPipelineParallel(unittest.TestCase):
 
     def test_init(self):
         model = ToyLinearModel()
-        model = MMPipelineParallel(model,
-                                   num_pipelines=2)
+        model = MMPipelineParallel(model, num_pipelines=2)
         self.assertEqual(model.model.linear1.weight.device,
                          torch.device('meta'))
         self.assertEqual(model.model.linear2.weight.device,
@@ -337,8 +336,7 @@ class TestMMPipelineParallel(unittest.TestCase):
 
     def test_forward(self):
         model = ToyLinearModel()
-        model = MMPipelineParallel(model,
-                                   num_pipelines=2)
+        model = MMPipelineParallel(model, num_pipelines=2)
         inputs = torch.randn(6, 1)
         self.assertIsInstance(model(inputs), torch.Tensor)
         self.assertEqual(model.model.linear1.weight.device,
