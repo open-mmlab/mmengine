@@ -171,10 +171,10 @@ class MMPipelineParallel(nn.Module):
                                                                      Any]):
             """BFS the module to generate the model tree.
 
-            First, register the module self as a node. Then, register
-            the buffers as the children of the node. Next, register the
-            submodules. Last, for every submodule, if it is not in
-            no_split_module_classes, do the bfs recursively.
+            First, register the module self as a node. Then, register the
+            buffers as the children of the node. Next, register the submodules.
+            Last, for every submodule, if it is not in no_split_module_classes,
+            do the bfs recursively.
             """
             # None
             if module is None:
@@ -346,12 +346,12 @@ class MMPipelineParallel(nn.Module):
         def dfs(tree: Dict[str, Any], name: str, meta_info: Dict[str, int]):
             """DFS the model tree to get the device map.
 
-            First, handle language model. Second, get the current module
-            flops and size. If the current device can hold the current
-            module and the current flops does not exceed the average flops,
-            put the current module into the modules and update the meta info.
-            Third, if the current module is not handled, but it has submodules,
-            handle the buffers and do the dfs recursively.
+            First, handle language model. Second, get the current module flops
+            and size. If the current device can hold the current module and the
+            current flops does not exceed the average flops, put the current
+            module into the modules and update the meta info. Third, if the
+            current module is not handled, but it has submodules, handle the
+            buffers and do the dfs recursively.
             """
             # handle language model
             if tree['self']._get_name() == self.language_module_class:
@@ -900,8 +900,8 @@ class MMPipelineParallel(nn.Module):
     def forward(self, *args, **kwargs) -> Any:
         """The forward function of the model.
 
-        The forward function of the model. The type of input should be
-        the same as the original model.
+        The forward function of the model. The type of input should be the same
+        as the original model.
         """
         exec_info = None
         chunked_data = _chunk_data(args, kwargs, self.num_chunks)
@@ -1060,8 +1060,7 @@ def _init_empty(weights: Optional[str], state_dict: Dict[str, torch.Tensor]):
 
     nn.modules.module.register_module_parameter_registration_hook(
         _parameter_hook)
-    nn.modules.module.register_module_buffer_registration_hook(
-        _buffer_hook)
+    nn.modules.module.register_module_buffer_registration_hook(_buffer_hook)
     yield
 
 
@@ -1087,8 +1086,7 @@ def _init_memory_map(memory_map: Optional[Dict[str, str]],
                 raise ValueError(
                     f'The memory of {device} ({memory}) ' +
                     'is larger than the available memory ' +
-                    f'({new_memory_map[device]}). Please use a smaller one'
-                )
+                    f'({new_memory_map[device]}). Please use a smaller one')
             new_memory_map[device] = int(memory * memory_threshold)
     return new_memory_map
 
@@ -1150,8 +1148,7 @@ def _get_meta_data(data_sample: Tuple[tuple, dict]):
     return data_meta
 
 
-def _chunk_data(args: tuple,
-                kwargs: dict,
+def _chunk_data(args: tuple, kwargs: dict,
                 num_chunks: int) -> List[Tuple[tuple, dict]]:
     """Chunk the data into mini-batches."""
     # args
@@ -1175,10 +1172,9 @@ def _chunk_data(args: tuple,
     chunked_data = []
 
     for i in range(real_num_chunks):
-        chunked_data.append((tuple([arg[i] for arg in chunked_args]), {
-            k: v[i]
-            for k, v in chunked_kwargs.items()
-        }))
+        chunked_data.append((tuple([arg[i] for arg in chunked_args]),
+                             {k: v[i]
+                              for k, v in chunked_kwargs.items()}))
     return chunked_data
 
 
