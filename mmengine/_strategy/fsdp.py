@@ -5,9 +5,12 @@ import os
 import os.path as osp
 import time
 from collections import OrderedDict
+from functools import partial
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
 import torch.nn as nn
+from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import \
+    apply_activation_checkpointing
 from torch.distributed.fsdp import (FullStateDictConfig,
                                     FullyShardedDataParallel,
                                     LocalStateDictConfig, StateDictType)
@@ -25,7 +28,7 @@ from mmengine.model import BaseDataPreprocessor, is_model_wrapper
 from mmengine.optim import (AmpOptimWrapper, BaseOptimWrapper, OptimWrapper,
                             OptimWrapperDict, _ParamScheduler,
                             build_optim_wrapper)
-from mmengine.registry import (MODEL_WRAPPERS, OPTIM_WRAPPERS,
+from mmengine.registry import (FUNCTIONS, MODEL_WRAPPERS, OPTIM_WRAPPERS,
                                PARAM_SCHEDULERS, STRATEGIES, Registry)
 from mmengine.utils import get_git_hash, mkdir_or_exist
 from .distributed import DDPStrategy
@@ -91,6 +94,19 @@ class FSDPStrategy(DDPStrategy):
               :meth:`setup_env`. Defaults to None.
             - log_kwargs (dict, optional): Logger config passed in
               :meth:`build_logger`. Defaults to None.
+        gradient_checkpoint (dict, optional): Config dict for gradient
+            checkpoint.
+
+            Examples:
+              >>> gradient_checkpoint = dict(check_fn='CustomCheckFn')
+              >>> gradient_checkpoint = dict(check_fn=dict(type='CustomCheckFn', arg1=arg1))
+
+
+            ``check_fn`` field should behave consistently with
+            ``auto_wrap_policy`` defined in `model_wrapper`, and other
+            fields will be passed to ``apply_activation_checkpointing``
+
+            `New in version 0.17.0.`
 
     .. _FSDP official api documents: https://pytorch.org/docs/stable/fsdp.html#torch.distributed.fsdp.FullyShardedDataParallel.set_state_dict_type
     """  # noqa: E501
@@ -100,6 +116,7 @@ class FSDPStrategy(DDPStrategy):
                  model_wrapper: Optional[dict] = None,
                  skip_init_weights=False,
                  state_dict_cfg: Union[str, dict] = 'local',
+                 gradient_checkpoint: Optional[dict] = None,
                  **kwargs):
         super().__init__(model_wrapper=model_wrapper, **kwargs)
         self._init_state_dict_cfg(state_dict_cfg)
@@ -107,6 +124,7 @@ class FSDPStrategy(DDPStrategy):
             raise TypeError('skip_init_weights must be a boolean, but got '
                             f'{type(skip_init_weights)}')
         self.skip_init_weights = skip_init_weights
+        self.gradient_checkpoint = gradient_checkpoint
 
     def _wrap_model(self, model: nn.Module) -> None:
         """Wrap the model to :obj:``MMFullyShardedDataParallel`` or other
@@ -138,6 +156,21 @@ class FSDPStrategy(DDPStrategy):
         model.set_state_dict_type(model, self.state_dict_type,
                                   self.state_dict_config,
                                   self.optim_state_dict_config)
+
+        if self.gradient_checkpoint is not None:
+            cfg = copy.deepcopy(self.gradient_checkpoint)
+            with FUNCTIONS.switch_scope_and_registry(None):
+                check_fn = cfg.pop('check_fn')
+                if isinstance(check_fn, str):
+                    check_fn = FUNCTIONS.get(check_fn)
+                if isinstance(check_fn, dict):
+                    check_fn = FUNCTIONS.get(check_fn.pop('type'))
+                    check_fn = partial(check_fn, **cfg)
+                if not callable(apply_activation_checkpointing):
+                    raise TypeError(
+                        '`apply_activation_checkpointing` must be a '
+                        'callable function')
+                apply_activation_checkpointing(model, check_fn=check_fn, **cfg)
         return model
 
     def _is_full_state_dict(self):
