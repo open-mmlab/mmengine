@@ -337,6 +337,34 @@ def isfile(
     return backend.isfile(filepath)
 
 
+def isabs(
+    filepath: Union[str, Path],
+    backend_args: Optional[dict] = None,
+) -> bool:
+    """Check whether a file path is an absolute path.
+
+    Args:
+        filepath (str or Path): Path to be checked whether it is absolute.
+        backend_args (dict, optional): Arguments to instantiate the
+            corresponding backend. Defaults to None.
+
+    Returns:
+        bool: Return ``True`` if ``filepath`` is an absolute path, ``False``
+        otherwise.
+
+    Examples:
+        >>> filepath = '/path/of/file'
+        >>> isabs(filepath)
+        True
+
+    Note:
+        New in version 0.8.0.
+    """
+    backend = get_file_backend(
+        filepath, backend_args=backend_args, enable_singleton=True)
+    return backend.isabs(filepath)
+
+
 def join_path(
     filepath: Union[str, Path],
     *filepaths: Union[str, Path],
@@ -366,6 +394,36 @@ def join_path(
     backend = get_file_backend(
         filepath, backend_args=backend_args, enable_singleton=True)
     return backend.join_path(filepath, *filepaths)
+
+
+def split(
+    filepath: Union[str, Path],
+    backend_args: Optional[dict] = None,
+) -> Tuple[str, str]:
+    """Split the filepath into dirname and basename.
+
+    Split the filepath into a pair, (head, tail) where tail is the last
+    pathname component and head is everything leading up to that.
+
+    Args:
+        filepath (str or Path): Path to be split.
+        backend_args (dict, optional): Arguments to instantiate the
+            corresponding backend. Defaults to None.
+
+    Returns:
+        Tuple[str, str]: A pair of dirname and basename.
+
+    Examples:
+        >>> filepath = '/path/of/file'
+        >>> split(filepath)
+        ('/path/of', 'file')
+
+    Note:
+        New in version 0.8.0.
+    """
+    backend = get_file_backend(
+        filepath, backend_args=backend_args, enable_singleton=True)
+    return backend.split(filepath)
 
 
 @contextmanager

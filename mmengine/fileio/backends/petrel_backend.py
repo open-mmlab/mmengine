@@ -37,6 +37,7 @@ class PetrelBackend(BaseStorageBackend):
         >>> backend.get(filepath1)  # get data from default cluster
         >>> client.get(filepath2)  # get data from 'cluster-name' cluster
     """
+    prefixes = ('petrel', 's3')
 
     def __init__(self,
                  path_mapping: Optional[dict] = None,
@@ -246,6 +247,39 @@ class PetrelBackend(BaseStorageBackend):
         filepath = self._replace_prefix(filepath)
         return self._client.contains(filepath)
 
+    def isabs(self, filepath: Union[str, Path]) -> bool:
+        """Check whether a file path is absolute. If it starts with prefixes,
+        it is absolute.
+
+        Args:
+            filepath (str or Path): Path to be checked whether it is absolute.
+
+        Returns:
+            bool: Return ``True`` if ``filepath`` is an absolute path,
+            ``False`` otherwise.
+
+        Examples:
+            >>> backend = PetrelBackend()
+            >>> filepath = 'petrel://path/of/file'
+            >>> backend.isabs(filepath)
+            True
+            >>> backend.isabs('file')
+            False
+
+        Note:
+            New in version 0.8.0.
+        """
+        filepath = self._format_path(self._map_path(filepath))
+        if not hasattr(self, 'prefixes'):
+            raise AttributeError('`prefixes` is not set in the backend. '
+                                 'Please manually set it in the backend.')
+
+        for prefix in self.prefixes:  # type: ignore
+            if f'{prefix}://' in filepath:
+                return True
+
+        return False
+
     def join_path(
         self,
         filepath: Union[str, Path],
@@ -279,6 +313,27 @@ class PetrelBackend(BaseStorageBackend):
             formatted_paths.append(formatted_path.lstrip('/'))
 
         return '/'.join(formatted_paths)
+
+    def split(self, filepath: Union[str, Path]) -> Tuple[str, str]:
+        """Split a file path into a pair head and tail.
+
+        Args:
+            filepath (str or Path): Path to be split.
+
+        Returns:
+            tuple[str, str]: A pair of head and tail.
+
+        Examples:
+            >>> backend = PetrelBackend()
+            >>> filepath = 'petrel://path/of/file'
+            >>> backend.split(filepath)
+            ('petrel://path/of', 'file')
+
+        Note:
+            New in version 0.8.0.
+        """
+        filepath = self._format_path(self._map_path(filepath))
+        return tuple(filepath.rsplit('/', 1))  # type: ignore
 
     @contextmanager
     def get_local_path(

@@ -12,6 +12,8 @@ from .base import BaseStorageBackend
 class HTTPBackend(BaseStorageBackend):
     """HTTP and HTTPS storage bachend."""
 
+    prefixes = ('http', 'https')
+
     def get(self, filepath: str) -> bytes:
         """Read bytes from a given ``filepath``.
 
@@ -76,3 +78,27 @@ class HTTPBackend(BaseStorageBackend):
             yield f.name
         finally:
             os.remove(f.name)
+
+    def isabs(self, filepath: str) -> bool:
+        """Check whether a file path is absolute. If it starts with prefixes,
+        it is absolute.
+
+        Args:
+            filepath (str): Path to be checked whether it is absolute.
+
+        Returns:
+            bool: Return ``True`` if ``filepath`` is an absolute path,
+            ``False`` otherwise.
+
+        Examples:
+            >>> backend = HTTPBackend()
+            >>> filepath = 'http://path/of/file'
+            >>> backend.isabs(filepath)
+            True
+            >>> backend.isabs('file')
+            False
+
+        Note:
+            New in version 0.8.0.
+        """
+        return filepath.startswith(self.prefixes)  # type: ignore
