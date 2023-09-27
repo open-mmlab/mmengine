@@ -24,6 +24,13 @@ from mmengine.utils.version_utils import digit_version
 class MMPipelineParallel(nn.Module):
     """The model wrapper for pipeline parallelism.
 
+    A model wrpper for pipeline parallelism, which is ONLY applicable to
+    the model inference. The wrapper will build the model on the meta device,
+    get the memory map of the devices including cpu and gpus, infer the device
+    map to split the model, and dispatch the weights to the corresponding
+    devices. Then, the wrapper can perform the model inference with pipeline
+    parallelism.
+
     Args:
         model (dict or nn.Module): The model to be wrapped.
         weights (str, optional): The path of the weights.
@@ -103,7 +110,7 @@ class MMPipelineParallel(nn.Module):
 
         # init memory map
         self.memory_threshold = memory_threshold
-        self.memory_map = self._init_memory_map(memory_map)
+        self.memory_map = _init_memory_map(memory_map, self.memory_threshold)
 
         # init device map
         self.no_split_module_classes = no_split_module_classes or []
@@ -151,91 +158,11 @@ class MMPipelineParallel(nn.Module):
                 return model.to('meta')
         elif isinstance(model, dict):
             builded_model: nn.Module
-            with self._init_empty():
+            with _init_empty(self.weights, self.model_state_dict):
                 builded_model = MODELS.build(model)
             return builded_model
         else:
             raise TypeError(f'Unsupported model type {type(model)}')
-
-    @contextmanager
-    def _init_empty(self):
-        """The context to init an empty model on the meta device."""
-
-        def _parameter_hook(module, name, param):
-            if self.weights is None:
-                self.model_state_dict[name] = param
-            param_class = type(param)
-            output = param_class(param.to('meta'), **param.__dict__)
-            return output
-
-        def _buffer_hook(module, name, buffer):
-            if self.weights is None:
-                self.model_state_dict[name] = buffer
-            output = buffer.to('meta')
-            return output
-
-        nn.modules.module.register_module_parameter_registration_hook(
-            _parameter_hook)
-        nn.modules.module.register_module_buffer_registration_hook(
-            _buffer_hook)
-        yield
-
-    def _init_memory_map(
-            self, memory_map: Optional[Dict[str, str]]) -> Dict[str, int]:
-        """Check or get the memory map of the cpu and gpus."""
-        new_memory_map = {}
-        # cpu
-        cpu_memory = psutil.virtual_memory().available
-        new_memory_map['cpu'] = cpu_memory
-        # gpu
-        for i in range(torch.cuda.device_count()):
-            gpu_memory = torch.cuda.get_device_properties(i).total_memory
-            new_memory_map[f'cuda:{i}'] = gpu_memory
-        # check memory map
-        if memory_map is not None:
-            converted_memory_map = self._convert_memory_map(memory_map)
-            for device, memory in converted_memory_map.items():
-                if device not in new_memory_map:
-                    raise ValueError(f'{device} is not a valid device.' +
-                                     'Please use cpu or cuda:i')
-                if memory > new_memory_map[device]:
-                    raise ValueError(
-                        f'The memory of {device} ({memory}) ' +
-                        'is larger than the available memory ' +
-                        f'({new_memory_map[device]}). Please use a smaller one'
-                    )
-                new_memory_map[device] = int(memory * self.memory_threshold)
-        return new_memory_map
-
-    def _convert_memory_map(self, memory_map: Dict[str,
-                                                   str]) -> Dict[str, int]:
-        """Convert the memory map from string to int."""
-        converted_memory_map = {}
-        for device, memory in memory_map.items():
-            if memory.upper().endswith('GIB'):
-                size = int(memory[:-3]) * (1024**3)
-            elif memory.upper().endswith('MIB'):
-                size = int(memory[:-3]) * (1024**2)
-            elif memory.upper().endswith('KIB'):
-                size = int(memory[:-3]) * 1024
-            elif memory.upper().endswith('GB'):
-                size = int(memory[:-2]) * (10**9)
-                if memory.endswith('b'):
-                    size = size // 8
-            elif memory.upper().endswith('MB'):
-                size = int(memory[:-2]) * (10**6)
-                if memory.endswith('b'):
-                    size = size // 8
-            elif memory.upper().endswith('KB'):
-                size = int(memory[:-2]) * (10**3)
-                if memory.endswith('b'):
-                    size = size // 8
-            else:
-                raise ValueError(
-                    f'{memory} is not in a valid format.' +
-                    'Please use GiB, MiB, KiB, GB, MB or KB, e.g. 6GB')
-            converted_memory_map[device] = size
-        return converted_memory_map
 
     def _get_model_tree(self) -> Dict[str, Any]:
         """Init the model tree for many usages."""
@@ -254,7 +181,7 @@ class MMPipelineParallel(nn.Module):
                 return
             # self
             info['self'] = module
-            info['parameter_size'] = self._parameter_size(module)
+            info['parameter_size'] = _parameter_size(module)
             info['flops'] = None
             info['exec_order'] = None
             info['checked'] = False
@@ -277,13 +204,6 @@ class MMPipelineParallel(nn.Module):
         tree: Dict[str, Any] = {}
         bfs(self.model, '', tree)
         return tree
-
-    def _parameter_size(self, module: nn.Module) -> int:
-        """Get the parameter size of a module."""
-        size = 0
-        for _, param in module.named_parameters():
-            size += param.nelement() * param.element_size()
-        return size
 
     def _iter_tree(self, module_name: str) -> Optional[Dict[str, Any]]:
         """Get the tree where the name of its root is module_name."""
@@ -348,27 +268,9 @@ class MMPipelineParallel(nn.Module):
         # merge into model tree
         self.model_tree['tied_parameters'] = result
 
-    def _get_meta_data(self, data_sample: Tuple[tuple, dict]):
-        """Turn the data sample into meta data, for flops and exec order."""
-        args, kwargs = data_sample
-        args_meta = []
-        for arg in args:
-            if isinstance(arg, torch.Tensor):
-                args_meta.append(arg.to('meta'))
-            else:
-                args_meta.append(arg)
-        kwargs_meta = {}
-        for k, v in kwargs.items():
-            if isinstance(v, torch.Tensor):
-                kwargs_meta[k] = v.to('meta')
-            else:
-                kwargs_meta[k] = v
-        data_meta = (tuple(args_meta), kwargs_meta)
-        return data_meta
-
     def _get_flops(self, data_sample: Tuple[tuple, dict]):
         """Get the flops of each module."""
-        data_meta = self._get_meta_data(data_sample)
+        data_meta = _get_meta_data(data_sample)
         if data_meta[1] == {}:
             inputs = data_meta[0]
         else:
@@ -397,7 +299,7 @@ class MMPipelineParallel(nn.Module):
         handle = nn.modules.module.register_module_forward_pre_hook(
             return_module_name_hook)
 
-        data_meta = self._get_meta_data(data_sample)
+        data_meta = _get_meta_data(data_sample)
         with torch.no_grad():
             self.entry(*data_meta[0], **data_meta[1])
 
@@ -995,65 +897,6 @@ class MMPipelineParallel(nn.Module):
             """Enter the current part."""
             MMPipelineParallel.stream_contexts[self.part_id].__enter__()
 
-    def _chunk_data(self, args: tuple,
-                    kwargs: dict) -> List[Tuple[tuple, dict]]:
-        """Chunk the data into mini-batches."""
-        # args
-        chunked_args = []
-        for i in range(len(args)):
-            if isinstance(args[i], torch.Tensor):
-                chunked_args.append(torch.chunk(args[i], self.num_chunks))
-            else:
-                chunked_args.append([args[i]] * self.num_chunks)
-        # kwargs
-        chunked_kwargs = {}
-        for k in kwargs:
-            if isinstance(kwargs[k], torch.Tensor):
-                chunked_kwargs[k] = torch.chunk(kwargs[k], self.num_chunks)
-            else:
-                chunked_kwargs[k] = [kwargs[k]] * self.num_chunks
-        # merge
-        lengths = [len(arg) for arg in chunked_args] + \
-            [len(v) for v in chunked_kwargs.values()]
-        real_num_chunks = min(lengths)
-        chunked_data = []
-
-        for i in range(real_num_chunks):
-            chunked_data.append((tuple([arg[i] for arg in chunked_args]), {
-                k: v[i]
-                for k, v in chunked_kwargs.items()
-            }))
-        return chunked_data
-
-    def _merge_results(self, results: List[Any]) -> Any:
-        """Merge the results of mini-batches."""
-        # we suppose that the items in results are the same type
-        item = results[0]
-        if isinstance(item, torch.Tensor):
-            # if the item is a tensor, we can concatenate them
-            result_tensor = torch.cat(results, dim=0)
-            return result_tensor
-        elif isinstance(item, dict):
-            # if the item is a dict, we can merge them recursively
-            result_dict: Dict[Any, List[Any]] = {k: [] for k in item}
-            for item in results:
-                for k in item:
-                    result_dict[k].append(item[k])
-            for k in result_dict:
-                result_dict[k] = self._merge_results(result_dict[k])
-            return result_dict
-        elif isinstance(item, list):
-            # if the item is a list, we can merge them recursively
-            result_list: List[List[Any]] = [[] for _ in range(len(item))]
-            for item in results:
-                for i in range(len(item)):
-                    result_list[i].append(item[i])
-            for i in range(len(result_list)):
-                result_list[i] = self._merge_results(result_list[i])
-            result_list
-        else:
-            raise TypeError(f'Unsupported type {type(item)}')
-
     def forward(self, *args, **kwargs) -> Any:
         """The forward function of the model.
 
@@ -1061,7 +904,7 @@ class MMPipelineParallel(nn.Module):
         the same as the original model.
         """
         exec_info = None
-        chunked_data = self._chunk_data(args, kwargs)
+        chunked_data = _chunk_data(args, kwargs, self.num_chunks)
         results = [None for _ in range(len(chunked_data))]
         # get flops, init device map, offload map, module map and exec order
         if not self._inited:
@@ -1194,5 +1037,176 @@ class MMPipelineParallel(nn.Module):
             if exec_info is not None:
                 raise exec_info[0].with_traceback(exec_info[1], exec_info[2])
         # merge results
-        merged_results = self._merge_results(results)
+        merged_results = _merge_results(results)
         return merged_results
+
+
+@contextmanager
+def _init_empty(weights: Optional[str], state_dict: Dict[str, torch.Tensor]):
+    """The context to init an empty model on the meta device."""
+
+    def _parameter_hook(module, name, param):
+        if weights is None:
+            state_dict[name] = param
+        param_class = type(param)
+        output = param_class(param.to('meta'), **param.__dict__)
+        return output
+
+    def _buffer_hook(module, name, buffer):
+        if weights is None:
+            state_dict[name] = buffer
+        output = buffer.to('meta')
+        return output
+
+    nn.modules.module.register_module_parameter_registration_hook(
+        _parameter_hook)
+    nn.modules.module.register_module_buffer_registration_hook(
+        _buffer_hook)
+    yield
+
+
+def _init_memory_map(memory_map: Optional[Dict[str, str]],
+                     memory_threshold: float) -> Dict[str, int]:
+    """Check or get the memory map of the cpu and gpus."""
+    new_memory_map = {}
+    # cpu
+    cpu_memory = psutil.virtual_memory().available
+    new_memory_map['cpu'] = cpu_memory
+    # gpu
+    for i in range(torch.cuda.device_count()):
+        gpu_memory = torch.cuda.get_device_properties(i).total_memory
+        new_memory_map[f'cuda:{i}'] = gpu_memory
+    # check memory map
+    if memory_map is not None:
+        converted_memory_map = _convert_memory_map(memory_map)
+        for device, memory in converted_memory_map.items():
+            if device not in new_memory_map:
+                raise ValueError(f'{device} is not a valid device.' +
+                                 'Please use cpu or cuda:i')
+            if memory > new_memory_map[device]:
+                raise ValueError(
+                    f'The memory of {device} ({memory}) ' +
+                    'is larger than the available memory ' +
+                    f'({new_memory_map[device]}). Please use a smaller one'
+                )
+            new_memory_map[device] = int(memory * memory_threshold)
+    return new_memory_map
+
+
+def _convert_memory_map(memory_map: Dict[str, str]) -> Dict[str, int]:
+    """Convert the memory map from string to int."""
+    converted_memory_map = {}
+    for device, memory in memory_map.items():
+        if memory.upper().endswith('GIB'):
+            size = int(memory[:-3]) * (1024**3)
+        elif memory.upper().endswith('MIB'):
+            size = int(memory[:-3]) * (1024**2)
+        elif memory.upper().endswith('KIB'):
+            size = int(memory[:-3]) * 1024
+        elif memory.upper().endswith('GB'):
+            size = int(memory[:-2]) * (10**9)
+            if memory.endswith('b'):
+                size = size // 8
+        elif memory.upper().endswith('MB'):
+            size = int(memory[:-2]) * (10**6)
+            if memory.endswith('b'):
+                size = size // 8
+        elif memory.upper().endswith('KB'):
+            size = int(memory[:-2]) * (10**3)
+            if memory.endswith('b'):
+                size = size // 8
+        else:
+            raise ValueError(
+                f'{memory} is not in a valid format.' +
+                'Please use GiB, MiB, KiB, GB, MB or KB, e.g. 6GB')
+        converted_memory_map[device] = size
+    return converted_memory_map
+
+
+def _parameter_size(module: nn.Module) -> int:
+    """Get the parameter size of a module."""
+    size = 0
+    for _, param in module.named_parameters():
+        size += param.nelement() * param.element_size()
+    return size
+
+
+def _get_meta_data(data_sample: Tuple[tuple, dict]):
+    """Turn the data sample into meta data, for flops and exec order."""
+    args, kwargs = data_sample
+    args_meta = []
+    for arg in args:
+        if isinstance(arg, torch.Tensor):
+            args_meta.append(arg.to('meta'))
+        else:
+            args_meta.append(arg)
+    kwargs_meta = {}
+    for k, v in kwargs.items():
+        if isinstance(v, torch.Tensor):
+            kwargs_meta[k] = v.to('meta')
+        else:
+            kwargs_meta[k] = v
+    data_meta = (tuple(args_meta), kwargs_meta)
+    return data_meta
+
+
+def _chunk_data(args: tuple,
+                kwargs: dict,
+                num_chunks: int) -> List[Tuple[tuple, dict]]:
+    """Chunk the data into mini-batches."""
+    # args
+    chunked_args = []
+    for i in range(len(args)):
+        if isinstance(args[i], torch.Tensor):
+            chunked_args.append(torch.chunk(args[i], num_chunks))
+        else:
+            chunked_args.append([args[i]] * num_chunks)
+    # kwargs
+    chunked_kwargs = {}
+    for k in kwargs:
+        if isinstance(kwargs[k], torch.Tensor):
+            chunked_kwargs[k] = torch.chunk(kwargs[k], num_chunks)
+        else:
+            chunked_kwargs[k] = [kwargs[k]] * num_chunks
+    # merge
+    lengths = [len(arg) for arg in chunked_args] + \
+        [len(v) for v in chunked_kwargs.values()]
+    real_num_chunks = min(lengths)
+    chunked_data = []
+
+    for i in range(real_num_chunks):
+        chunked_data.append((tuple([arg[i] for arg in chunked_args]), {
+            k: v[i]
+            for k, v in chunked_kwargs.items()
+        }))
+    return chunked_data
+
+
+def _merge_results(results: List[Any]) -> Any:
+    """Merge the results of mini-batches."""
+    # we suppose that the items in results are the same type
+    item = results[0]
+    if isinstance(item, torch.Tensor):
+        # if the item is a tensor, we can concatenate them
+        result_tensor = torch.cat(results, dim=0)
+        return result_tensor
+    elif isinstance(item, dict):
+        # if the item is a dict, we can merge them recursively
+        result_dict: Dict[Any, List[Any]] = {k: [] for k in item}
+        for item in results:
+            for k in item:
+                result_dict[k].append(item[k])
+        for k in result_dict:
+            result_dict[k] = _merge_results(result_dict[k])
+        return result_dict
+    elif isinstance(item, list):
+        # if the item is a list, we can merge them recursively
+        result_list: List[List[Any]] = [[] for _ in range(len(item))]
+        for item in results:
+            for i in range(len(item)):
+                result_list[i].append(item[i])
+        for i in range(len(result_list)):
+            result_list[i] = _merge_results(result_list[i])
+        result_list
+    else:
+        raise TypeError(f'Unsupported type {type(item)}')
