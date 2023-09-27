@@ -11,7 +11,7 @@ from torch.optim import SGD
 from mmengine.dist import all_gather, broadcast
 from mmengine.model import (BaseDataPreprocessor, BaseModel,
                             ExponentialMovingAverage,
-                            MMDistributedDataParallel, MMPipelineParallel,
+                            MMDistributedDataParallel,
                             MMSeparateDistributedDataParallel)
 from mmengine.optim import AmpOptimWrapper, OptimWrapper, OptimWrapperDict
 from mmengine.testing import assert_allclose
@@ -20,7 +20,7 @@ from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.utils.version_utils import digit_version
 
 if digit_version(TORCH_VERSION) >= digit_version('2.0.0'):
-    from mmengine.model import MMFullyShardedDataParallel  # noqa: F401
+    from mmengine.model import MMFullyShardedDataParallel, MMPipelineParallel
 
 
 class ToyDataPreprocessor(BaseDataPreprocessor):
