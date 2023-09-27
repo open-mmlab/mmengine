@@ -416,7 +416,6 @@ class RecorderHook(Hook):
 
         # Parse source code as ast
         tree = ast.parse(source)
-        breakpoint()
         if isinstance(tree.body[0], ast.FunctionDef):
             func_body = tree.body[0].body
         else:
@@ -457,11 +456,8 @@ class RecorderHook(Hook):
 
         # Compile the modified ast as a new function
         namespace: Dict[str, Any] = {}
-        if isinstance(func, types.FunctionType):
-            globals_dict = func.__globals__
-            func_name = func.__name__
-        else:
-            raise TypeError('It is not a function')
+        globals_dict = func.__globals__  # type: ignore
+        func_name = func.__name__  # type: ignore
         exec(
             compile(tree, filename='<ast>', mode='exec'), globals_dict,
             namespace)
@@ -518,7 +514,8 @@ class RecorderHook(Hook):
             key = recorder._method
             if key not in group_dict:
                 group_dict[key] = [recorder]
-            group_dict[key].append(recorder)
+            else:
+                group_dict[key].append(recorder)
         return group_dict
 
     def _save_origin_method(self, model: Any, method_name: str,
