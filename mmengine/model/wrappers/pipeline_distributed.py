@@ -67,7 +67,10 @@ class MMPipelineParallel(nn.Module):
     in_queues: Dict[str, Queue] = {}
     out_queues: Dict[str, Queue] = {}
     events: List[List[Event]] = []
-    stream_contexts: List[torch.cuda.StreamContext] = []
+    # a list of cuda stream contexts
+    # but PyTorch version < 1.9.0 does not support stream context
+    # we use Any to avoid error
+    stream_contexts: List[Any] = []
     hook_visited_times: Dict[str, int] = {}
 
     def __init__(self,
@@ -556,8 +559,10 @@ class MMPipelineParallel(nn.Module):
             events.append([Event() for _ in range(self.num_pipelines)])
         return events
 
-    def _init_stream_contexts(self) -> List[torch.cuda.StreamContext]:
+    def _init_stream_contexts(self) -> List[Any]:
         """Init the stream contexts for execution."""
+        # PyTorch version < 1.9.0 does not support stream context
+        # we use Any to avoid error
         curr_part_id = -1
         inited_streams = {}
         stream_contexts = []
