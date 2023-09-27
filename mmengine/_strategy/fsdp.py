@@ -164,7 +164,9 @@ class FSDPStrategy(DDPStrategy):
                 if isinstance(check_fn, str):
                     check_fn = FUNCTIONS.get(check_fn)
                 if isinstance(check_fn, dict):
-                    check_fn = FUNCTIONS.get(check_fn.pop('type'))
+                    fn_type = check_fn.pop('type')
+                    if isinstance(fn_type, str):
+                        check_fn = FUNCTIONS.get(fn_type)
                     check_fn = partial(check_fn, **cfg)
                 if not callable(apply_activation_checkpointing):
                     raise TypeError(
