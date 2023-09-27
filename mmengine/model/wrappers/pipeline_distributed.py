@@ -522,10 +522,11 @@ class MMPipelineParallel(nn.Module):
             in_queue: Queue = Queue()
             out_queue: Queue = Queue()
             # create the thread corresponding to the move queues
-            thread = Thread(target=MMPipelineParallel._worker,
-                            args=(in_queue, out_queue),
-                            name=f'move-{move}',
-                            daemon=True)
+            thread = Thread(
+                target=MMPipelineParallel._worker,
+                args=(in_queue, out_queue),
+                name=f'move-{move}',
+                daemon=True)
             thread.start()
 
             in_queues[f'move-{move}'] = in_queue
@@ -615,10 +616,11 @@ class MMPipelineParallel(nn.Module):
                                                     f'{weight_name}.npy')
                         # offload
                         file_array: np.memmap
-                        file_array = np.memmap(offload_path,
-                                               dtype=array.dtype,
-                                               mode='w+',
-                                               shape=array.shape)
+                        file_array = np.memmap(
+                            offload_path,
+                            dtype=array.dtype,
+                            mode='w+',
+                            shape=array.shape)
                         file_array[:] = array[:]
                         file_array.flush()
                     else:
@@ -648,16 +650,18 @@ class MMPipelineParallel(nn.Module):
             if info['part_id'] != curr_part_id:
                 # new part
                 curr_part_id = info['part_id']
-                hook = MMPipelineParallel.Hook(part_id=curr_part_id,
-                                               num_parts=self.num_pipelines,
-                                               exec_device=info['exec_device'],
-                                               is_part_begin=True)
+                hook = MMPipelineParallel.Hook(
+                    part_id=curr_part_id,
+                    num_parts=self.num_pipelines,
+                    exec_device=info['exec_device'],
+                    is_part_begin=True)
             else:
                 # curr part
-                hook = MMPipelineParallel.Hook(part_id=curr_part_id,
-                                               num_parts=self.num_pipelines,
-                                               exec_device=info['exec_device'],
-                                               is_part_begin=False)
+                hook = MMPipelineParallel.Hook(
+                    part_id=curr_part_id,
+                    num_parts=self.num_pipelines,
+                    exec_device=info['exec_device'],
+                    is_part_begin=False)
             module.register_forward_pre_hook(hook, with_kwargs=True)
 
     @staticmethod
@@ -771,10 +775,8 @@ class MMPipelineParallel(nn.Module):
                     if param_info['dtype'] == torch.bfloat16:
                         dtype = 'int16'
                     # load from disk
-                    array: np.memmap = np.memmap(param_path,
-                                                 dtype=dtype,
-                                                 mode='r',
-                                                 shape=shape)
+                    array: np.memmap = np.memmap(
+                        param_path, dtype=dtype, mode='r', shape=shape)
                     if len(param_info['shape']) == 0:
                         array = array[0]
                     weight = torch.as_tensor(array)
@@ -807,10 +809,11 @@ class MMPipelineParallel(nn.Module):
                                                 f'{full_name}.npy')
                     # offload
                     file_array: np.memmap
-                    file_array = np.memmap(offload_path,
-                                           dtype=array.dtype,
-                                           mode='w+',
-                                           shape=array.shape)
+                    file_array = np.memmap(
+                        offload_path,
+                        dtype=array.dtype,
+                        mode='w+',
+                        shape=array.shape)
                     file_array[:] = array[:]
                     file_array.flush()
             else:
