@@ -1,10 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from typing import Optional, Sequence, Union
 
-from mmengine.hooks import Hook
 from mmengine.logging import print_log
 from mmengine.model import is_model_wrapper
 from mmengine.registry import HOOKS
+from .hook import Hook
 
 
 @HOOKS.register_module()
