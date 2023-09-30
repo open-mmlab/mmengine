@@ -73,12 +73,9 @@ class BaseVisBackend(metaclass=ABCMeta):
             the files produced by the backend.
     """
 
-    def __init__(self, save_dir: str, img_only_master=True):
+    def __init__(self, save_dir: str):
         self._save_dir = save_dir
         self._env_initialized = False
-        if img_only_master is dict:
-            img_only_master = img_only_master['img_only_master']
-        self.img_only_master = img_only_master
 
     @property
     @abstractmethod
@@ -203,11 +200,10 @@ class LocalVisBackend(BaseVisBackend):
                  save_dir: str,
                  img_save_dir: str = 'vis_image',
                  config_save_file: str = 'config.py',
-                 scalar_save_file: str = 'scalars.json',
-                 **kwargs):
+                 scalar_save_file: str = 'scalars.json'):
         assert config_save_file.split('.')[-1] == 'py'
         assert scalar_save_file.split('.')[-1] == 'json'
-        super().__init__(save_dir, kwargs)
+        super().__init__(save_dir)
         self._img_save_dir = img_save_dir
         self._config_save_file = config_save_file
         self._scalar_save_file = scalar_save_file
@@ -387,9 +383,8 @@ class WandbVisBackend(BaseVisBackend):
                  define_metric_cfg: Union[dict, list, None] = None,
                  commit: Optional[bool] = True,
                  log_code_name: Optional[str] = None,
-                 watch_kwargs: Optional[dict] = None,
-                 **kwargs):
-        super().__init__(save_dir, kwargs)
+                 watch_kwargs: Optional[dict] = None):
+        super().__init__(save_dir)
         self._init_kwargs = init_kwargs
         self._define_metric_cfg = define_metric_cfg
         self._commit = commit
@@ -538,8 +533,8 @@ class TensorboardVisBackend(BaseVisBackend):
             produced by the backend.
     """
 
-    def __init__(self, save_dir: str, **kwargs):
-        super().__init__(save_dir, kwargs)
+    def __init__(self, save_dir: str):
+        super().__init__(save_dir)
 
     def _init_env(self):
         """Setup env for Tensorboard."""
@@ -685,9 +680,8 @@ class MLflowVisBackend(BaseVisBackend):
                  tracking_uri: Optional[str] = None,
                  artifact_suffix: SUFFIX_TYPE = ('.json', '.log', '.py',
                                                  'yaml'),
-                 tracked_config_keys: Optional[dict] = None,
-                 **kwargs):
-        super().__init__(save_dir, kwargs)
+                 tracked_config_keys: Optional[dict] = None):
+        super().__init__(save_dir)
         self._exp_name = exp_name
         self._run_name = run_name
         self._tags = tags
@@ -890,9 +884,8 @@ class ClearMLVisBackend(BaseVisBackend):
     def __init__(self,
                  save_dir: Optional[str] = None,
                  init_kwargs: Optional[dict] = None,
-                 artifact_suffix: SUFFIX_TYPE = ('.py', '.pth'),
-                 **kwargs):
-        super().__init__(save_dir, kwargs)  # type: ignore
+                 artifact_suffix: SUFFIX_TYPE = ('.py', '.pth')):
+        super().__init__(save_dir)  # type: ignore
         self._init_kwargs = init_kwargs
         self._artifact_suffix = artifact_suffix
 
@@ -1042,9 +1035,8 @@ class NeptuneVisBackend(BaseVisBackend):
 
     def __init__(self,
                  save_dir: Optional[str] = None,
-                 init_kwargs: Optional[dict] = None,
-                 **kwargs):
-        super().__init__(save_dir, kwargs)  # type:ignore
+                 init_kwargs: Optional[dict] = None):
+        super().__init__(save_dir)  # type:ignore
         self._init_kwargs = init_kwargs
 
     def _init_env(self):
@@ -1172,9 +1164,8 @@ class DVCLiveVisBackend(BaseVisBackend):
     def __init__(self,
                  save_dir: str,
                  artifact_suffix: SUFFIX_TYPE = ('.json', '.py', 'yaml'),
-                 init_kwargs: Optional[dict] = None,
-                 **kwargs):
-        super().__init__(save_dir, kwargs)
+                 init_kwargs: Optional[dict] = None):
+        super().__init__(save_dir)
         self._artifact_suffix = artifact_suffix
         self._init_kwargs = init_kwargs
 
@@ -1351,9 +1342,8 @@ class AimVisBackend(BaseVisBackend):
 
     def __init__(self,
                  save_dir: Optional[str] = None,
-                 init_kwargs: Optional[dict] = None,
-                 **kwargs):
-        super().__init__(save_dir, kwargs)  # type:ignore
+                 init_kwargs: Optional[dict] = None):
+        super().__init__(save_dir)  # type:ignore
         self._init_kwargs = init_kwargs
 
     def _init_env(self):

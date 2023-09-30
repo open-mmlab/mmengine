@@ -13,7 +13,7 @@ import torch
 import torch.nn.functional as F
 
 from mmengine.config import Config
-from mmengine.dist import master_only
+from mmengine.dist import get_rank, master_only
 from mmengine.registry import VISBACKENDS, VISUALIZERS
 from mmengine.structures import BaseDataElement
 from mmengine.utils import ManagerMixin, is_seq_of
@@ -153,18 +153,18 @@ class Visualizer(ManagerMixin):
         >>>         pass
     """
 
-    def __init__(
-        self,
-        name='visualizer',
-        image: Optional[np.ndarray] = None,
-        vis_backends: VisBackendsType = None,
-        save_dir: Optional[str] = None,
-        fig_save_cfg=dict(frameon=False),
-        fig_show_cfg=dict(frameon=False)
-    ) -> None:
+    def __init__(self,
+                 name='visualizer',
+                 image: Optional[np.ndarray] = None,
+                 vis_backends: VisBackendsType = None,
+                 save_dir: Optional[str] = None,
+                 fig_save_cfg=dict(frameon=False),
+                 fig_show_cfg=dict(frameon=False),
+                 master_only: bool = True) -> None:
         super().__init__(name)
         self._dataset_meta: Optional[dict] = None
         self._vis_backends: Dict[str, BaseVisBackend] = {}
+        self.master_only = master_only
 
         if vis_backends is None:
             vis_backends = []
@@ -203,7 +203,6 @@ class Visualizer(ManagerMixin):
             if name in self._vis_backends:
                 raise RuntimeError(f'vis_backend name {name} already exists')
             self._vis_backends[name] = vis_backend  # type: ignore
-            self.img_only_master = vis_backend.img_only_master
 
         self.fig_save = None
         self.fig_save_cfg = fig_save_cfg
@@ -216,6 +215,12 @@ class Visualizer(ManagerMixin):
         if image is not None:
             self.set_image(image)
 
+    def _should_do(self):
+        if self.master_only and get_rank() != 0:
+            return False
+        else:
+            return True
+
     @property  # type: ignore
     @master_only
     def dataset_meta(self) -> Optional[dict]:
@@ -223,12 +228,11 @@ class Visualizer(ManagerMixin):
         return self._dataset_meta
 
     @dataset_meta.setter  # type: ignore
-    @master_only
     def dataset_meta(self, dataset_meta: dict) -> None:
         """Set the dataset meta info to the Visualizer."""
-        self._dataset_meta = dataset_meta
+        if self._should_do():
+            self._dataset_meta = dataset_meta
 
-    @master_only
     def show(self,
              drawn_img: Optional[np.ndarray] = None,
              win_name: str = 'image',
@@ -249,6 +253,8 @@ class Visualizer(ManagerMixin):
             backend (str): The backend to show the image. Defaults to
                 'matplotlib'. `New in version 0.7.3.`
         """
+        if not self._should_do():
+            return None
         if backend == 'matplotlib':
             import matplotlib.pyplot as plt
             is_inline = 'inline' in plt.get_backend()
@@ -280,13 +286,14 @@ class Visualizer(ManagerMixin):
             raise ValueError('backend should be "matplotlib" or "cv2", '
                              f'but got {backend} instead')
 
-    @master_only
     def set_image(self, image: np.ndarray) -> None:
         """Set the image to draw.
 
         Args:
             image (np.ndarray): The image to draw.
         """
+        if not self._should_do():
+            return None
         assert image is not None
         image = image.astype('uint8')
         self._image = image
@@ -306,13 +313,14 @@ class Visualizer(ManagerMixin):
             extent=(0, self.width, self.height, 0),
             interpolation='none')
 
-    @master_only
     def get_image(self) -> np.ndarray:
         """Get the drawn image. The format is RGB.
 
         Returns:
             np.ndarray: the drawn image which channel is RGB.
         """
+        if not self._should_do():
+            return None
         assert self._image is not None, 'Please set image using `set_image`'
         return img_from_canvas(self.fig_save_canvas)  # type: ignore
 
@@ -383,7 +391,6 @@ class Visualizer(ManagerMixin):
                (position[..., 1] >= 0).all()
         return flag
 
-    @master_only
     def draw_points(self,
                     positions: Union[np.ndarray, torch.Tensor],
                     colors: Union[str, tuple, List[str], List[tuple]] = 'g',
@@ -405,6 +412,8 @@ class Visualizer(ManagerMixin):
             sizes (Optional[Union[np.ndarray, torch.Tensor]]): The marker size.
                 Defaults to None.
         """
+        if not self._should_do():
+            return None
         check_type('positions', positions, (np.ndarray, torch.Tensor))
         positions = tensor2ndarray(positions)
 
@@ -418,7 +427,6 @@ class Visualizer(ManagerMixin):
             positions[:, 0], positions[:, 1], c=colors, s=sizes, marker=marker)
         return self
 
-    @master_only
     def draw_texts(
         self,
         texts: Union[str, List[str]],
@@ -493,6 +501,8 @@ class Visualizer(ManagerMixin):
                 Defaults to None.
                 `New in version 0.6.0.`
         """  # noqa: E501
+        if not self._should_do():
+            return self
         from matplotlib.font_manager import FontProperties
         check_type('texts', texts, (str, list))
         if isinstance(texts, str):
@@ -562,7 +572,6 @@ class Visualizer(ManagerMixin):
                 color=colors[i])
         return self
 
-    @master_only
     def draw_lines(
         self,
         x_datas: Union[np.ndarray, torch.Tensor],
@@ -597,6 +606,8 @@ class Visualizer(ManagerMixin):
                 If ``line_widths`` is single value, all the lines will
                 have the same linewidth. Defaults to 2.
         """
+        if not self._should_do():
+            return self
         from matplotlib.collections import LineCollection
         check_type('x_datas', x_datas, (np.ndarray, torch.Tensor))
         x_datas = tensor2ndarray(x_datas)
@@ -625,7 +636,6 @@ class Visualizer(ManagerMixin):
         self.ax_save.add_collection(line_collect)
         return self
 
-    @master_only
     def draw_circles(
         self,
         center: Union[np.ndarray, torch.Tensor],
@@ -666,6 +676,8 @@ class Visualizer(ManagerMixin):
             alpha (Union[int, float]): The transparency of circles.
                 Defaults to 0.8.
         """
+        if not self._should_do():
+            return self
         from matplotlib.collections import PatchCollection
         from matplotlib.patches import Circle
         check_type('center', center, (np.ndarray, torch.Tensor))
@@ -709,7 +721,6 @@ class Visualizer(ManagerMixin):
         self.ax_save.add_collection(p)
         return self
 
-    @master_only
     def draw_bboxes(
         self,
         bboxes: Union[np.ndarray, torch.Tensor],
@@ -747,6 +758,8 @@ class Visualizer(ManagerMixin):
             alpha (Union[int, float]): The transparency of bboxes.
                 Defaults to 0.8.
         """
+        if not self._should_do():
+            return self
         check_type('bboxes', bboxes, (np.ndarray, torch.Tensor))
         bboxes = tensor2ndarray(bboxes)
 
@@ -774,7 +787,6 @@ class Visualizer(ManagerMixin):
             line_widths=line_widths,
             face_colors=face_colors)
 
-    @master_only
     def draw_polygons(
         self,
         polygons: Union[Union[np.ndarray, torch.Tensor],
@@ -814,6 +826,8 @@ class Visualizer(ManagerMixin):
             alpha (Union[int, float]): The transparency of polygons.
                 Defaults to 0.8.
         """
+        if not self._should_do():
+            return self
         from matplotlib.collections import PolyCollection
         check_type('polygons', polygons, (list, np.ndarray, torch.Tensor))
         edge_colors = color_val_matplotlib(edge_colors)  # type: ignore
@@ -849,7 +863,6 @@ class Visualizer(ManagerMixin):
         self.ax_save.add_collection(polygon_collection)
         return self
 
-    @master_only
     def draw_binary_masks(
             self,
             binary_masks: Union[np.ndarray, torch.Tensor],
@@ -870,6 +883,8 @@ class Visualizer(ManagerMixin):
             alphas (Union[int, List[int]]): The transparency of masks.
                 Defaults to 0.8.
         """
+        if not self._should_do():
+            return self
         check_type('binary_masks', binary_masks, (np.ndarray, torch.Tensor))
         binary_masks = tensor2ndarray(binary_masks)
         assert binary_masks.dtype == np.bool_, (
@@ -1061,7 +1076,6 @@ class Visualizer(ManagerMixin):
             plt.close(fig)
             return image
 
-    @master_only
     def add_config(self, config: Config, **kwargs):
         """Record the config.
 
@@ -1071,7 +1085,6 @@ class Visualizer(ManagerMixin):
         for vis_backend in self._vis_backends.values():
             vis_backend.add_config(config, **kwargs)
 
-    @master_only
     def add_graph(self, model: torch.nn.Module, data_batch: Sequence[dict],
                   **kwargs) -> None:
         """Record the model graph.
@@ -1080,10 +1093,11 @@ class Visualizer(ManagerMixin):
             model (torch.nn.Module): Model to draw.
             data_batch (Sequence[dict]): Batch of data from dataloader.
         """
+        if not self._should_do():
+            return None
         for vis_backend in self._vis_backends.values():
             vis_backend.add_graph(model, data_batch, **kwargs)
 
-    @master_only
     def add_image(self, name: str, image: np.ndarray, step: int = 0) -> None:
         """Record the image.
 
@@ -1093,10 +1107,11 @@ class Visualizer(ManagerMixin):
                 should be RGB. Defaults to None.
             step (int): Global step value to record. Defaults to 0.
         """
+        if not self._should_do():
+            return None
         for vis_backend in self._vis_backends.values():
             vis_backend.add_image(name, image, step)  # type: ignore
 
-    @master_only
     def add_scalar(self,
                    name: str,
                    value: Union[int, float],
@@ -1109,10 +1124,11 @@ class Visualizer(ManagerMixin):
             value (float, int): Value to save.
             step (int): Global step value to record. Defaults to 0.
         """
+        if not self._should_do():
+            return None
         for vis_backend in self._vis_backends.values():
             vis_backend.add_scalar(name, value, step, **kwargs)  # type: ignore
 
-    @master_only
     def add_scalars(self,
                     scalar_dict: dict,
                     step: int = 0,
@@ -1129,10 +1145,11 @@ class Visualizer(ManagerMixin):
                 if the `file_path` parameter is specified.
                 Defaults to None.
         """
+        if not self._should_do():
+            return None
         for vis_backend in self._vis_backends.values():
             vis_backend.add_scalars(scalar_dict, step, file_path, **kwargs)
 
-    @master_only
     def add_datasample(self,
                        name,
                        image: np.ndarray,
@@ -1143,6 +1160,8 @@ class Visualizer(ManagerMixin):
                        wait_time: int = 0,
                        step: int = 0) -> None:
         """Draw datasample."""
+        if not self._should_do():
+            return None
         pass
 
     def close(self) -> None:
