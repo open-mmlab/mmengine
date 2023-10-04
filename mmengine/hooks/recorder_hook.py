@@ -34,9 +34,9 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
     def __init__(self, model: str, method: str, target: str,
                  target_index: Union[int, List[int]]):
         super().__init__()
-        self._model = model
-        self._method = method
-        self._target = target
+        self.model = model
+        self.method = method
+        self.target = target
         if isinstance(target_index, list):
             self._target_index = set(target_index)
         else:
@@ -52,7 +52,7 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
         Returns:
             str: The variable name for the given index.
         """
-        return f'{self._model}:{self._method}:{self._target}@{index}'
+        return f'{self.model}:{self.method}:{self.target}@{index}'
 
     def visit_Assign(self, node: ast.Assign) -> Union[Any, List[Any]]:
         """Visit and possibly transform an assignment node in the AST.
@@ -64,7 +64,7 @@ class FunctionRecorderTransformer(ast.NodeTransformer):
             Modified AST node or a list of AST nodes.
         """
         assert isinstance(node.targets[0], ast.Name)
-        if node.targets[0].id != self._target:
+        if node.targets[0].id != self.target:
             return node
         self.count += 1
         if self.count not in self._target_index:
@@ -100,9 +100,9 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
 
     def __init__(self, model, method, target):
         super().__init__()
-        self._model = model
-        self._method = method
-        self._target = target
+        self.model = model
+        self.method = method
+        self.target = target
         self._visited = False
 
     def _get_target_attribute(self) -> ast.Attribute:
@@ -111,7 +111,8 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
         Returns:
             ast.Attribute: The node representing the target attribute.
         """
-        func_chain = self._target.split('.')
+        target = 'self.' + self.target
+        func_chain = target.split('.')
         assert len(func_chain) >= 2
         attr = ast.Attribute(
             value=ast.Name(id=func_chain[0], ctx=ast.Load()),
@@ -128,7 +129,7 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
         Returns:
             str: The variable name for the deep copy of the target attribute.
         """
-        return f'_deep_copy_{self._target.replace(".", "_")}'
+        return f'_deep_copy_{self.target.replace(".", "_")}'
 
     def _get_tensor_name(self) -> str:
         """Generate and return the tensor name for the target attribute.
@@ -136,7 +137,7 @@ class AttributeRecorderTransformer(ast.NodeTransformer):
         Returns:
             str: The tensor name for the target attribute.
         """
-        return f'{self._model}:{self._method}:{self._target}'
+        return f'{self.model}:{self.method}:{self.target}'
 
     def _get_deep_copy_node(self, var_node) -> ast.If:
         """Generate and return the AST node for deep copying the target
@@ -239,9 +240,9 @@ class Recorder(metaclass=ABCMeta):
     """
 
     def __init__(self, model: str, method: str, target: str):
-        self._model = model
-        self._method = method
-        self._target = target
+        self.model = model
+        self.method = method
+        self.target = target
 
     @abstractmethod
     def rewrite(self, ast_tree) -> Any:
@@ -284,7 +285,7 @@ class FunctionRecorder(Recorder):
         super().__init__(model, method, target)
         self.index = index
         self.visit_assign = FunctionRecorderTransformer(
-            self._model, self._method, self._target, self.index)
+            self.model, self.method, self.target, self.index)
 
     def rewrite(self, ast_tree) -> Any:
         """Rewrite the AST tree to include recording logic for output of
@@ -298,8 +299,7 @@ class FunctionRecorder(Recorder):
         number.
         """
         return [
-            f'{self._model}:{self._method}:{self._target}@{i}'
-            for i in self.index
+            f'{self.model}:{self.method}:{self.target}@{i}' for i in self.index
         ]
 
 
@@ -317,9 +317,11 @@ class AttributeRecorder(Recorder):
     """
 
     def __init__(self, model: str, method: str, target: str):
+        if target.startswith('self.'):
+            target = target[5:]
         super().__init__(model, method, target)
         self.visit_assign = AttributeRecorderTransformer(
-            self._model, self._method, self._target)
+            self.model, self.method, self.target)
 
     def rewrite(self, ast_tree) -> Any:
         """Rewrite the AST tree to include recording logic for attributes."""
@@ -327,7 +329,7 @@ class AttributeRecorder(Recorder):
 
     def get_store_varname(self) -> str:
         """Generate and return variable name based on model attributes."""
-        return f'{self._model}:{self._method}:{self._target}'
+        return f'{self.model}:{self.method}:{self.target}'
 
 
 @HOOKS.register_module()
@@ -348,8 +350,9 @@ class RecorderHook(Hook):
         save_dir (str): The directory where recorded data will be saved.
             If not specified, it will use the runner's work directory.
             Defaults to None.
-        filename_tmpl (Optional[str]): The filename template used when saving
-            recorded data. If not provided, a default template will be used.
+        filename_tmpl (str, optional): The filename template used when saving
+            recorded data. If specified, must contain one and only one "{}",
+            which will be replaced with ``epoch + 1``.
             Defaults to None.
 
     Examples:
@@ -372,7 +375,7 @@ class RecorderHook(Hook):
     ):
         self.tensor_dict: Dict[str, Any] = {}
         self.origin_methods: Dict[Any, Any] = {}
-        self._recorders: List[Recorder] = []
+        self.recorders: List[Recorder] = []
         self.print_modification: bool = print_modification
         self.save_dir: Optional[str] = save_dir  # type: ignore
         if filename_tmpl is None:
@@ -383,6 +386,12 @@ class RecorderHook(Hook):
         if recorders is None or len(recorders) == 0:
             raise ValueError('recorders not initialized')
         for recorder in recorders:
+            if recorder.get('type') == 'FunctionRecorder':
+                if recorder.get('index') is None:
+                    recorder['index'] = 0
+                if not isinstance(recorder['index'], list):
+                    recorder['index'] = [recorder['index']]
+
             model = recorder.get('model')
             if model is None:
                 recorder['model'] = 'runner_model'
@@ -397,7 +406,7 @@ class RecorderHook(Hook):
                     'because recorder has no target',
                     logger='current',
                     level=logging.WARNING)
-            self._recorders.append(RECORDERS.build(recorder))
+            self.recorders.append(RECORDERS.build(recorder))
 
     def _modify_forward_func(self, func: Callable,
                              recorders: List[Recorder]) -> Callable:
@@ -488,8 +497,8 @@ class RecorderHook(Hook):
         """
         group_model_dist = {}
         group_model_method_dict: Dict[str, Dict[str, List[Recorder]]] = {}
-        for recorder in self._recorders:
-            key = recorder._model
+        for recorder in self.recorders:
+            key = recorder.model
             if key not in group_model_dist:
                 group_model_dist[key] = [recorder]
             else:
@@ -511,7 +520,7 @@ class RecorderHook(Hook):
         """
         group_dict: Dict[str, List[Recorder]] = {}
         for recorder in recorders:
-            key = recorder._method
+            key = recorder.method
             if key not in group_dict:
                 group_dict[key] = [recorder]
             else:
@@ -568,7 +577,6 @@ class RecorderHook(Hook):
                         logger='current',
                         level=logging.WARNING)
                     continue
-                # self.origin_methods[model][method_name] = method
                 print_log(
                     f'Modify {method_name} in {model_name}',
                     logger='current',
@@ -594,7 +602,7 @@ class RecorderHook(Hook):
         for key in self.tensor_dict.keys():
             self.tensor_dict[key].append(self.message_hub.get_info(key))
 
-    def _save_record(self, step):
+    def _save_record_to_file(self, step):
         """Save recorded tensors to disk.
 
         Args:
@@ -606,7 +614,7 @@ class RecorderHook(Hook):
 
     def _init_tensor_dict(self):
         """Initialize the tensor dictionary for recording."""
-        for recorder in self._recorders:
+        for recorder in self.recorders:
             varname = recorder.get_store_varname()
             if isinstance(varname, list):
                 for name in varname:
@@ -622,7 +630,7 @@ class RecorderHook(Hook):
         """
         step = runner.epoch + 1
         runner.logger.info(f'Saving record at {runner.epoch + 1} epochs')
-        self._save_record(step)
+        self._save_record_to_file(step)
         self._init_tensor_dict()
 
     def after_train(self, runner) -> None:
