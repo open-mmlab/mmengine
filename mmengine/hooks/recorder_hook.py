@@ -352,8 +352,6 @@ class RecorderHook(Hook):
         recorders (Optional[List[Dict]]):
             Configurations for individual recorders.
             Each recorder dict should contain the target model and method.
-        print_modification (bool): Whether to print the modified source code
-            after it's been altered by a recorder. Defaults to True.
         save_dir (str): The directory where recorded data will be saved.
             If not specified, it will use the runner's work directory.
             Defaults to None.
@@ -366,7 +364,6 @@ class RecorderHook(Hook):
         >>> recorder_hook_cfg = dict(
         ...     recorders=[{'model': 'runner_model',
         ...                'target': 'layer1', 'method': 'forward'}],
-        ...     print_modification=True,
         ...     save_dir='./records',
         ...     filename_tmpl='record_epoch_{}.pth'
         ... )
@@ -379,7 +376,6 @@ class RecorderHook(Hook):
         by_epoch: bool = True,
         save_last: bool = True,
         recorders: Optional[List[Dict]] = None,
-        print_modification: bool = True,
         save_dir: str = None,
         filename_tmpl: Optional[str] = None,
     ):
@@ -389,7 +385,6 @@ class RecorderHook(Hook):
         self.tensor_dict: Dict[str, Any] = {}
         self.origin_methods: Dict[Any, Any] = {}
         self.recorders: List[Recorder] = []
-        self.print_modification: bool = print_modification
         self.save_dir: Optional[str] = save_dir  # type: ignore
         if filename_tmpl is None:
             if self.by_epoch:
@@ -469,14 +464,6 @@ class RecorderHook(Hook):
 
         for recorder in recorders:
             tree = recorder.rewrite(tree)
-            if self.print_modification:
-                new_tree = ast.fix_missing_locations(tree)
-                modified_source_code = ast.unparse(new_tree)
-                print_log(
-                    f'After modification, the source code is:\n'
-                    f'{modified_source_code}',
-                    logger='current',
-                    level=logging.INFO)
         tree = ast.fix_missing_locations(tree)
 
         # Compile the modified ast as a new function
