@@ -1,13 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import copy
 import logging
+import os.path as osp
 import tempfile
 from unittest.mock import Mock
 
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset
+from parameterized import parameterized
 
-from mmengine.evaluator import BaseMetric
 from mmengine.hooks import RecorderHook
 from mmengine.logging import MMLogger
 from mmengine.model import BaseModel
@@ -34,42 +35,6 @@ class ToyModel(BaseModel):
             return outputs
 
 
-class DummyDataset(Dataset):
-    METAINFO = dict()  # type: ignore
-    data = torch.randn(12, 2)
-    label = torch.ones(12)
-
-    @property
-    def metainfo(self):
-        return self.METAINFO
-
-    def __len__(self):
-        return self.data.size(0)
-
-    def __getitem__(self, index):
-        return dict(inputs=self.data[index], data_sample=self.label[index])
-
-
-class DummyMetric(BaseMetric):
-
-    default_prefix: str = 'test'
-
-    def __init__(self, length):
-        super().__init__()
-        self.length = length
-        self.best_idx = length // 2
-        self.cur_idx = 0
-        self.vals = [90, 91, 92, 88, 89, 90] * 2
-
-    def process(self, *args, **kwargs):
-        self.results.append(0)
-
-    def compute_metrics(self, *args, **kwargs):
-        acc = self.vals[self.cur_idx]
-        self.cur_idx += 1
-        return dict(acc=acc)
-
-
 def get_mock_runner():
     runner = Mock()
     runner.train_loop = Mock()
@@ -80,6 +45,7 @@ def get_mock_runner():
 class TestRecorderHook(RunnerTestCase):
 
     def setUp(self):
+        super().setUp()
         self.temp_dir = tempfile.TemporaryDirectory()
 
     def tearDown(self):
@@ -92,31 +58,33 @@ class TestRecorderHook(RunnerTestCase):
     def test_init(self):
         # Test recorders
         with self.assertRaisesRegex(ValueError, 'recorders not initialized'):
-            RecorderHook(None, self.temp_dir)
+            RecorderHook(recorders=None, save_dir=self.temp_dir)
         with self.assertRaisesRegex(ValueError, 'recorders not initialized'):
-            RecorderHook([], self.temp_dir)
+            RecorderHook(recorders=[], save_dir=self.temp_dir)
 
-        hook = RecorderHook([dict(type='FunctionRecorder', target='x')])
+        hook = RecorderHook(
+            recorders=[dict(type='FunctionRecorder', target='x')])
         self.assertEqual(len(hook.recorders), 1)
         self.assertEqual(hook.recorders[0].target, 'x')
 
         self.assertEqual(hook.recorders[0].model, 'runner_model')
         self.assertEqual(hook.recorders[0].method, 'forward')
 
-        hook = RecorderHook(
-            [dict(type='AttributeRecorder', target='self.linear1.weight')])
+        hook = RecorderHook(recorders=[
+            dict(type='AttributeRecorder', target='self.linear1.weight')
+        ])
         self.assertEqual(len(hook.recorders), 1)
         self.assertEqual(hook.recorders[0].model, 'runner_model')
         self.assertEqual(hook.recorders[0].method, 'forward')
         self.assertEqual(hook.recorders[0].target, 'linear1.weight')
 
-        hook = RecorderHook([
+        hook = RecorderHook(recorders=[
             dict(type='FunctionRecorder', target='x'),
             dict(type='AttributeRecorder', target='self.linear1.weight')
         ])
         self.assertEqual(len(hook.recorders), 2)
 
-        hook = RecorderHook([
+        hook = RecorderHook(recorders=[
             dict(
                 type='AttributeRecorder',
                 model='resnet',
@@ -136,7 +104,8 @@ class TestRecorderHook(RunnerTestCase):
         runner.model = base_model
         runner.work_dir = self.temp_dir.name
 
-        hook = RecorderHook([dict(type='FunctionRecorder', target='x')])
+        hook = RecorderHook(
+            recorders=[dict(type='FunctionRecorder', target='x')])
         hook.before_run(runner)
         self.assertEqual(hook.save_dir, self.temp_dir.name)
         self.assertEqual(hook.base_model, base_model)
@@ -148,10 +117,76 @@ class TestRecorderHook(RunnerTestCase):
         origin_forward = base_model.forward
         runner.model = base_model
 
-        hook = RecorderHook([dict(type='FunctionRecorder', target='x')])
+        hook = RecorderHook(
+            recorders=[dict(type='FunctionRecorder', target='x')])
         hook.before_run(runner)
         self.assertEqual(hook.base_model, base_model)
         self.assertNotEqual(origin_forward, hook.base_model.forward)
 
         hook.after_train(runner)
         self.assertEqual(origin_forward, hook.base_model.forward)
+
+    @parameterized.expand([['iter'], ['epoch']])
+    def test_with_runner(self, training_type):
+        common_cfg = getattr(self, f'{training_type}_based_cfg')
+        setattr(common_cfg.train_cfg, f'max_{training_type}s', 11)
+        recorder_cfg = dict(
+            type='RecorderHook', by_epoch=training_type == 'epoch', interval=1)
+        common_cfg.default_hooks = dict(recorder=recorder_cfg)
+
+        # Test interval in epoch based training
+        cfg = copy.deepcopy(common_cfg)
+        cfg.default_hooks.recorder.recorders = [
+            dict(type='FunctionRecorder', target='outputs', index=[0, 1])
+        ]
+        cfg.default_hooks.recorder.interval = 2
+        runner = self.build_runner(cfg)
+        runner.train()
+
+        for i in range(1, 11):
+            self.assertEqual(
+                osp.isfile(
+                    osp.join(cfg.work_dir, f'record_{training_type}_{i}.pth')),
+                i % 2 == 0)
+
+        record = torch.load(
+            osp.join(cfg.work_dir, f'record_{training_type}_10.pth'))
+        self.assertEqual(len(record), 2)
+        for varname, var in record.items():
+            self.assertTrue(varname.startswith('runner_model:forward:outputs'))
+            # tensor_list should be a list of tensor
+            if training_type == 'epoch':
+                self.assertTrue(
+                    all(isinstance(item, torch.Tensor) for item in var))
+            else:
+                self.assertTrue(isinstance(var, torch.Tensor))
+
+        self.clear_work_dir()
+
+        cfg = copy.deepcopy(common_cfg)
+        cfg.default_hooks.recorder.recorders = [
+            dict(type='AttributeRecorder', target='linear1.weight'),
+            dict(type='AttributeRecorder', target='linear2.bias')
+        ]
+
+        runner = self.build_runner(cfg)
+        runner.train()
+
+        for i in range(1, 11):
+            self.assertEqual(
+                osp.isfile(
+                    osp.join(cfg.work_dir, f'record_{training_type}_{i}.pth')),
+                True)
+
+        record = torch.load(
+            osp.join(cfg.work_dir, f'record_{training_type}_10.pth'))
+        self.assertEqual(len(record), 2)
+        for varname, var in record.items():
+            self.assertTrue(
+                varname.startswith('runner_model:forward:linear1.weight')
+                or varname.startswith('runner_model:forward:linear2.bias'))
+            if training_type == 'epoch':
+                self.assertTrue(
+                    all(isinstance(item, torch.Tensor) for item in var))
+            else:
+                self.assertTrue(isinstance(var, torch.Tensor))

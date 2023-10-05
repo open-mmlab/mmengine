@@ -342,6 +342,13 @@ class RecorderHook(Hook):
     using ast module in python.
 
     Args:
+        interval (int): The saving period. If ``by_epoch=True``, interval
+            indicates epochs, otherwise it indicates iterations.
+            Defaults to -1, which means "never".
+        by_epoch (bool): Saving checkpoints by epoch or by iteration.
+            Defaults to True.
+        save_last (bool): Whether to force the last record to be
+            saved regardless of interval. Defaults to True.
         recorders (Optional[List[Dict]]):
             Configurations for individual recorders.
             Each recorder dict should contain the target model and method.
@@ -368,18 +375,27 @@ class RecorderHook(Hook):
 
     def __init__(
         self,
+        interval: int = -1,
+        by_epoch: bool = True,
+        save_last: bool = True,
         recorders: Optional[List[Dict]] = None,
         print_modification: bool = True,
         save_dir: str = None,
         filename_tmpl: Optional[str] = None,
     ):
+        self.interval = interval
+        self.by_epoch = by_epoch
+        self.save_last = save_last
         self.tensor_dict: Dict[str, Any] = {}
         self.origin_methods: Dict[Any, Any] = {}
         self.recorders: List[Recorder] = []
         self.print_modification: bool = print_modification
         self.save_dir: Optional[str] = save_dir  # type: ignore
         if filename_tmpl is None:
-            self.filename_tmpl = 'record_epoch_{}.pth'
+            if self.by_epoch:
+                self.filename_tmpl = 'record_epoch_{}.pth'
+            else:
+                self.filename_tmpl = 'record_iter_{}.pth'
         else:
             self.filename_tmpl = filename_tmpl
 
@@ -599,8 +615,23 @@ class RecorderHook(Hook):
             data_batch (Optional): Current data batch. Default is None.
             outputs (Optional): Outputs from the current iteration.
         """
-        for key in self.tensor_dict.keys():
-            self.tensor_dict[key].append(self.message_hub.get_info(key))
+        if self.by_epoch:
+            for key in self.tensor_dict.keys():
+                self.tensor_dict[key].append(self.message_hub.get_info(key))
+        else:
+            for key in self.tensor_dict.keys():
+                self.tensor_dict[key] = self.message_hub.get_info(key)
+            # save record for following cases:
+            # 1. every ``self.interval`` iterations
+            # 2. reach the last iteration of training
+            if (self.every_n_train_iters(runner, self.interval)
+                    or self.save_last and self.is_last_train_iter(runner)):
+                step = runner.iter + 1
+                runner.logger.info(
+                    f'Saving record at {runner.iter + 1} iterations')
+                self._save_record_to_file(step)
+                # every iteration will clear the tensor_dict
+                self._init_tensor_dict()
 
     def _save_record_to_file(self, step):
         """Save recorded tensors to disk.
@@ -618,9 +649,23 @@ class RecorderHook(Hook):
             varname = recorder.get_store_varname()
             if isinstance(varname, list):
                 for name in varname:
-                    self.tensor_dict[name] = list()
+                    if self.by_epoch:
+                        self.tensor_dict[name] = list()
+                    else:
+                        self.tensor_dict[name] = None
             else:
+                if self.by_epoch:
+                    self.tensor_dict[varname] = list()
+                else:
+                    self.tensor_dict[varname] = None
+
+    def _clear_tensor_dict(self):
+        """Clear the tensor dictionary."""
+        for varname, record in self.tensor_dict.items():
+            if isinstance(record, list):
                 self.tensor_dict[varname] = list()
+            else:
+                self.tensor_dict[varname] = None
 
     def after_train_epoch(self, runner) -> None:
         """Save recorded tensors after each training epoch.
@@ -628,10 +673,18 @@ class RecorderHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
-        step = runner.epoch + 1
-        runner.logger.info(f'Saving record at {runner.epoch + 1} epochs')
-        self._save_record_to_file(step)
-        self._init_tensor_dict()
+        if not self.by_epoch:
+            return
+        # save record for following cases:
+        # 1. every ``self.interval`` epochs
+        # 2. reach the last epoch of training
+        if self.every_n_epochs(runner, self.interval) or (
+                self.save_last and self.is_last_train_epoch(runner)):
+            step = runner.epoch + 1
+            runner.logger.info(f'Saving record at {runner.epoch + 1} epochs')
+            self._save_record_to_file(step)
+        # every epoch will clear the tensor_dict
+        self._clear_tensor_dict()
 
     def after_train(self, runner) -> None:
         """Restore original methods after training.
