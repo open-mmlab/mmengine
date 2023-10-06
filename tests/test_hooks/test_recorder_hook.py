@@ -10,7 +10,7 @@ import torch.nn as nn
 from parameterized import parameterized
 
 from mmengine.hooks import RecorderHook
-from mmengine.logging import MMLogger
+from mmengine.logging import MessageHub, MMLogger
 from mmengine.model import BaseModel
 from mmengine.testing import RunnerTestCase
 
@@ -96,6 +96,18 @@ class TestRecorderHook(RunnerTestCase):
         self.assertEqual(hook.recorders[0].method, '_forward_impl')
         self.assertEqual(hook.recorders[0].target, 'x')
 
+        # Test interval, by_epoch, save_dir, save_to
+        hook = RecorderHook(
+            recorders=[dict(type='FunctionRecorder', target='x')],
+            interval=1,
+            by_epoch=True,
+            save_dir=self.temp_dir.name,
+            save_to='messagehub')
+        self.assertEqual(hook.interval, 1)
+        self.assertEqual(hook.by_epoch, True)
+        self.assertEqual(hook.save_dir, self.temp_dir.name)
+        self.assertEqual(hook.save_to, 'messagehub')
+
     def test_before_run(self):
         # test method modification
         runner = Mock()
@@ -151,6 +163,7 @@ class TestRecorderHook(RunnerTestCase):
 
         record = torch.load(
             osp.join(cfg.work_dir, f'record_{training_type}_10.pth'))
+        self.assertTrue(isinstance(record, dict))
         self.assertEqual(len(record), 2)
         for varname, var in record.items():
             self.assertTrue(varname.startswith('runner_model:forward:outputs'))
@@ -180,11 +193,41 @@ class TestRecorderHook(RunnerTestCase):
 
         record = torch.load(
             osp.join(cfg.work_dir, f'record_{training_type}_10.pth'))
+        self.assertTrue(isinstance(record, dict))
         self.assertEqual(len(record), 2)
         for varname, var in record.items():
             self.assertTrue(
                 varname.startswith('runner_model:forward:linear1.weight')
                 or varname.startswith('runner_model:forward:linear2.bias'))
+            if training_type == 'epoch':
+                self.assertTrue(
+                    all(isinstance(item, torch.Tensor) for item in var))
+            else:
+                self.assertTrue(isinstance(var, torch.Tensor))
+
+        self.clear_work_dir()
+
+        # Test store to messagehub
+        cfg = copy.deepcopy(common_cfg)
+        cfg.default_hooks.recorder.recorders = [
+            dict(type='FunctionRecorder', target='outputs', index=[0, 1])
+        ]
+        cfg.default_hooks.recorder.save_to = 'messagehub'
+        cfg.default_hooks.recorder.messagehub_name = 'test_messagehub'
+        runner = self.build_runner(cfg)
+        runner.train()
+
+        test_messagehub = MessageHub.get_instance('test_messagehub')
+        for i in range(1, 11):
+            key = f'record_{training_type}_{i}'
+            record = test_messagehub.get_info(key)
+            self.assertIsNotNone(record)
+
+        record = test_messagehub.get_info(f'record_{training_type}_10')
+        self.assertTrue(isinstance(record, dict))
+        self.assertEqual(len(record), 2)
+        for varname, var in record.items():
+            self.assertTrue(varname.startswith('runner_model:forward:outputs'))
             if training_type == 'epoch':
                 self.assertTrue(
                     all(isinstance(item, torch.Tensor) for item in var))

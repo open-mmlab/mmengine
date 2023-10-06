@@ -347,6 +347,8 @@ class RecorderHook(Hook):
             Defaults to -1, which means "never".
         by_epoch (bool): Saving checkpoints by epoch or by iteration.
             Defaults to True.
+        save_to (str): The place to save the recorded data. It can be either
+            'file' or 'messagehub'. Defaults to 'file'.
         save_last (bool): Whether to force the last record to be
             saved regardless of interval. Defaults to True.
         recorders (Optional[List[Dict]]):
@@ -356,9 +358,17 @@ class RecorderHook(Hook):
             If not specified, it will use the runner's work directory.
             Defaults to None.
         filename_tmpl (str, optional): The filename template used when saving
-            recorded data. If specified, must contain one and only one "{}",
-            which will be replaced with ``epoch + 1``.
+            recorded data to file.
+            If specified, must contain one and only one "{}",
+            which will be replaced with ``epoch + 1`` or ``iter + 1``.
             Defaults to None.
+        messagehub_key_tmpl (str, optional): The messagehub_key
+            template used when saving recorded data to messagehub.
+            If specified, must contain one and only one "{}",
+            which will be replaced with ``epoch + 1`` or ``iter + 1``.
+            Defaults to None.
+        messagehub_name (str, optional): The name of messagehub instance,
+            only useful when ``save_to`` is equal to "messagehub".
 
     Examples:
         >>> recorder_hook_cfg = dict(
@@ -370,29 +380,46 @@ class RecorderHook(Hook):
     """
     priority = 'LOWEST'
 
-    def __init__(
-        self,
-        interval: int = -1,
-        by_epoch: bool = True,
-        save_last: bool = True,
-        recorders: Optional[List[Dict]] = None,
-        save_dir: str = None,
-        filename_tmpl: Optional[str] = None,
-    ):
+    def __init__(self,
+                 interval: int = -1,
+                 by_epoch: bool = True,
+                 save_to: str = 'disk',
+                 save_last: bool = True,
+                 recorders: Optional[List[Dict]] = None,
+                 save_dir: str = None,
+                 filename_tmpl: Optional[str] = None,
+                 messagehub_key_tmpl: Optional[str] = None,
+                 messagehub_name: Optional[str] = None):
         self.interval = interval
         self.by_epoch = by_epoch
         self.save_last = save_last
         self.tensor_dict: Dict[str, Any] = {}
         self.origin_methods: Dict[Any, Any] = {}
         self.recorders: List[Recorder] = []
+        self.save_to: Optional[str] = save_to
         self.save_dir: Optional[str] = save_dir  # type: ignore
-        if filename_tmpl is None:
-            if self.by_epoch:
-                self.filename_tmpl = 'record_epoch_{}.pth'
+        if save_to == 'disk':
+            if filename_tmpl is None:
+                if self.by_epoch:
+                    self.save_tmpl = 'record_epoch_{}.pth'
+                else:
+                    self.save_tmpl = 'record_iter_{}.pth'
             else:
-                self.filename_tmpl = 'record_iter_{}.pth'
+                self.save_tmpl = filename_tmpl
+        elif save_to == 'messagehub':
+            if messagehub_name is None:
+                messagehub_name = 'recorder_hook'
+            self.save_messagehub = MessageHub.get_instance(messagehub_name)
+            if messagehub_key_tmpl is None:
+                if self.by_epoch:
+                    self.save_tmpl = 'record_epoch_{}'
+                else:
+                    self.save_tmpl = 'record_iter_{}'
+            else:
+                self.save_tmpl = messagehub_key_tmpl
         else:
-            self.filename_tmpl = filename_tmpl
+            raise ValueError(f"save_to should be 'file' or 'messagehub', "
+                             f'but got {save_to}')
 
         if recorders is None or len(recorders) == 0:
             raise ValueError('recorders not initialized')
@@ -553,7 +580,7 @@ class RecorderHook(Hook):
             self.save_dir = runner.work_dir
 
         # get messagehub instance and store it.
-        self.message_hub = MessageHub.get_instance('recorder_hook')
+        self.buffer_messagehub = MessageHub.get_instance('recorder_hook')
         # init_save_var_dict
         self._init_tensor_dict()
         # get model and modify its forward function
@@ -604,10 +631,11 @@ class RecorderHook(Hook):
         """
         if self.by_epoch:
             for key in self.tensor_dict.keys():
-                self.tensor_dict[key].append(self.message_hub.get_info(key))
+                self.tensor_dict[key].append(
+                    self.buffer_messagehub.get_info(key))
         else:
             for key in self.tensor_dict.keys():
-                self.tensor_dict[key] = self.message_hub.get_info(key)
+                self.tensor_dict[key] = self.buffer_messagehub.get_info(key)
             # save record for following cases:
             # 1. every ``self.interval`` iterations
             # 2. reach the last iteration of training
@@ -616,9 +644,20 @@ class RecorderHook(Hook):
                 step = runner.iter + 1
                 runner.logger.info(
                     f'Saving record at {runner.iter + 1} iterations')
-                self._save_record_to_file(step)
+                self._save_record(step)
                 # every iteration will clear the tensor_dict
                 self._init_tensor_dict()
+
+    def _save_record(self, step):
+        """Save recorded tensors to disk or messagehub.
+
+        Args:
+            step (int): Current training epoch.
+        """
+        if self.save_to == 'disk':
+            self._save_record_to_file(step)
+        elif self.save_to == 'messagehub':
+            self._save_record_to_messagehub(step)
 
     def _save_record_to_file(self, step):
         """Save recorded tensors to disk.
@@ -626,9 +665,18 @@ class RecorderHook(Hook):
         Args:
             step (int): Current training epoch.
         """
-        recorder_file_name = self.filename_tmpl.format(step)
+        recorder_file_name = self.save_tmpl.format(step)
         path = osp.join(self.save_dir, recorder_file_name)
         torch.save(self.tensor_dict, path)
+
+    def _save_record_to_messagehub(self, step):
+        """Save recorded tensors to messagehub.
+
+        Args:
+            step (int): Current training epoch.
+        """
+        self.save_messagehub.update_info(
+            self.save_tmpl.format(step), self.tensor_dict.copy())
 
     def _init_tensor_dict(self):
         """Initialize the tensor dictionary for recording."""
@@ -669,7 +717,7 @@ class RecorderHook(Hook):
                 self.save_last and self.is_last_train_epoch(runner)):
             step = runner.epoch + 1
             runner.logger.info(f'Saving record at {runner.epoch + 1} epochs')
-            self._save_record_to_file(step)
+            self._save_record(step)
         # every epoch will clear the tensor_dict
         self._clear_tensor_dict()
 
