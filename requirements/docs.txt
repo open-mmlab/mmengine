@@ -1,4 +1,4 @@
-deepspeed
+torch
 docutils==0.17.1
 myst-parser
 opencv-python
