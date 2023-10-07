@@ -26,6 +26,14 @@
 
 ## 安装 MMEngine
 
+:::{note}
+如果你只想使用 MMEngine 中的 fileio、registry 和 config 模块，你可以设置 `MMENGINE_LITE` 环境变量，它只会安装必须的几个第三方库依赖（例如不会安装 opencv、matplotlib）：
+
+```bash
+MMENGINE_LITE=1 pip install mmengine
+```
+:::
+
 ### 使用 mim 安装
 
 [mim](https://github.com/open-mmlab/mim) 是 OpenMMLab 项目的包管理工具，使用它可以很方便地安装 OpenMMLab 项目。
@@ -35,17 +43,10 @@ pip install -U openmim
 mim install mmengine
 ```
 
-如果你只想使用 MMEngine 中的 fileio、registry 和 configs，可以安装 mmengine lite：
-
-```bash
-MMENGINE_LITE=1 mim install mmengine
-```
-
 ### 使用 pip 安装
 
 ```bash
 pip install mmengine
-# MMENGINE_LITE=1 pip install mmengine
 ```
 
 ### 使用 docker 镜像
@@ -71,9 +72,6 @@ pip install mmengine
 git clone https://github.com/open-mmlab/mmengine.git
 cd mmengine
 pip install -e . -v
-
-# If you only want to use fileio, registry and configs in MMEngine, you can install mmengine lite:
-# MMENGINE_LITE=1 pip install -e . -v
 ```
 
 ## 验证安装
