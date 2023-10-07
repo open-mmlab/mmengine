@@ -1,5 +1,4 @@
-torch --global-option="--no-build-isolation"
-deepspeed --global-option="--no-build-isolation"
+deepspeed
 docutils==0.17.1
 myst-parser
 opencv-python
