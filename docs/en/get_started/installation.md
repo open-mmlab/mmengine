@@ -26,6 +26,14 @@
 
 ## Install MMEngine
 
+:::{note}
+If you only want to use the fileio, registry, and config modules in MMEngine, you can set the `MMENGINE_LITE` environment variable, which will only install the few third-party library dependencies that are necessary (e.g., it will not install opencv, matplotlib):
+
+```bash
+MMENGINE_LITE=1 pip install mmengine
+```
+:::
+
 ### Install with mim
 
 [mim](https://github.com/open-mmlab/mim) is a package management tool for OpenMMLab projects, which can be used to install the OpenMMLab project easily.
@@ -35,17 +43,10 @@ pip install -U openmim
 mim install mmengine
 ```
 
-If you only want to use fileio, registry and configs in MMEngine, you can install mmengine lite:
-
-```bash
-MMENGINE_LITE=1 mim install mmengine
-```
-
 ### Install with pip
 
 ```bash
 pip install mmengine
-# MMENGINE_LITE=1 pip install mmengine
 ```
 
 ### Use docker images
@@ -71,9 +72,6 @@ pip install mmengine
 git clone https://github.com/open-mmlab/mmengine.git
 cd mmengine
 pip install -e . -v
-
-# If you only want to use fileio, registry and configs in MMEngine, you can install mmengine lite:
-# MMENGINE_LITE=1 pip install -e . -v
 ```
 
 ### Verify the Installation
