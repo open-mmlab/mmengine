@@ -216,10 +216,7 @@ class Visualizer(ManagerMixin):
             self.set_image(image)
 
     def _should_do(self):
-        if self.master_only and get_rank() != 0:
-            return False
-        else:
-            return True
+        return get_rank() == 0 or not self.master_only
 
     @property  # type: ignore
     @master_only
