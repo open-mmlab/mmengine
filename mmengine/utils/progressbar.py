@@ -3,14 +3,35 @@ import sys
 from collections.abc import Iterable
 from multiprocessing import Pool
 from shutil import get_terminal_size
+from typing import Callable, Sequence
 
 from .timer import Timer
 
 
 class ProgressBar:
-    """A progress bar which can print the progress."""
+    """A progress bar which can print the progress.
 
-    def __init__(self, task_num=0, bar_width=50, start=True, file=sys.stdout):
+    Args:
+        task_num (int): Number of total steps. Defaults to 0.
+        bar_width (int): Width of the progress bar. Defaults to 50.
+        start (bool): Whether to start the progress bar in the constructor.
+            Defaults to True.
+        file (callable): Progress bar output mode. Defaults to "sys.stdout".
+
+    Examples:
+        >>> import mmengine
+        >>> import time
+        >>> bar = mmengine.ProgressBar(10)
+        >>> for i in range(10):
+        >>>    bar.update()
+        >>>    time.sleep(1)
+    """
+
+    def __init__(self,
+                 task_num: int = 0,
+                 bar_width: int = 50,
+                 start: bool = True,
+                 file=sys.stdout):
         self.task_num = task_num
         self.bar_width = bar_width
         self.completed = 0
@@ -32,7 +53,12 @@ class ProgressBar:
         self.file.flush()
         self.timer = Timer()
 
-    def update(self, num_tasks=1):
+    def update(self, num_tasks: int = 1):
+        """update progressbar.
+
+        Args:
+            num_tasks (int): Update step size.
+        """
         assert num_tasks > 0
         self.completed += num_tasks
         elapsed = self.timer.since_start()
@@ -61,15 +87,21 @@ class ProgressBar:
         self.file.flush()
 
 
-def track_progress(func, tasks, bar_width=50, file=sys.stdout, **kwargs):
+def track_progress(func: Callable,
+                   tasks: Sequence,
+                   bar_width: int = 50,
+                   file=sys.stdout,
+                   **kwargs):
     """Track the progress of tasks execution with a progress bar.
 
     Tasks are done with a simple for-loop.
 
     Args:
         func (callable): The function to be applied to each task.
-        tasks (list or tuple[Iterable, int]): A list of tasks or
-            (tasks, total num).
+        tasks (Sequence): If tasks is a tuple, it must contain two elements,
+            the first being the tasks to be completed and the other being the
+            number of tasks. If it is not a tuple, it represents the tasks to
+            be completed.
         bar_width (int): Width of progress bar.
 
     Returns:
@@ -80,12 +112,13 @@ def track_progress(func, tasks, bar_width=50, file=sys.stdout, **kwargs):
         assert isinstance(tasks[0], Iterable)
         assert isinstance(tasks[1], int)
         task_num = tasks[1]
-        tasks = tasks[0]
-    elif isinstance(tasks, Iterable):
+        tasks = tasks[0]  # type: ignore
+    elif isinstance(tasks, Sequence):
         task_num = len(tasks)
     else:
         raise TypeError(
-            '"tasks" must be an iterable object or a (iterator, int) tuple')
+            '"tasks" must be a tuple object or a sequence object, but got '
+            f'{type(tasks)}')
     prog_bar = ProgressBar(task_num, bar_width, file=file)
     results = []
     for task in tasks:
@@ -106,15 +139,15 @@ def init_pool(process_num, initializer=None, initargs=None):
         return Pool(process_num, initializer, initargs)
 
 
-def track_parallel_progress(func,
-                            tasks,
-                            nproc,
-                            initializer=None,
-                            initargs=None,
-                            bar_width=50,
-                            chunksize=1,
-                            skip_first=False,
-                            keep_order=True,
+def track_parallel_progress(func: Callable,
+                            tasks: Sequence,
+                            nproc: int,
+                            initializer: Callable = None,
+                            initargs: tuple = None,
+                            bar_width: int = 50,
+                            chunksize: int = 1,
+                            skip_first: bool = False,
+                            keep_order: bool = True,
                             file=sys.stdout):
     """Track the progress of parallel task execution with a progress bar.
 
@@ -123,8 +156,10 @@ def track_parallel_progress(func,
 
     Args:
         func (callable): The function to be applied to each task.
-        tasks (list or tuple[Iterable, int]): A list of tasks or
-            (tasks, total num).
+        tasks (Sequence): If tasks is a tuple, it must contain two elements,
+            the first being the tasks to be completed and the other being the
+            number of tasks. If it is not a tuple, it represents the tasks to
+            be completed.
         nproc (int): Process (worker) number.
         initializer (None or callable): Refer to :class:`multiprocessing.Pool`
             for details.
@@ -146,12 +181,13 @@ def track_parallel_progress(func,
         assert isinstance(tasks[0], Iterable)
         assert isinstance(tasks[1], int)
         task_num = tasks[1]
-        tasks = tasks[0]
-    elif isinstance(tasks, Iterable):
+        tasks = tasks[0]  # type: ignore
+    elif isinstance(tasks, Sequence):
         task_num = len(tasks)
     else:
         raise TypeError(
-            '"tasks" must be an iterable object or a (iterator, int) tuple')
+            '"tasks" must be a tuple object or a sequence object, but got '
+            f'{type(tasks)}')
     pool = init_pool(nproc, initializer, initargs)
     start = not skip_first
     task_num -= nproc * chunksize * int(skip_first)
@@ -176,15 +212,17 @@ def track_parallel_progress(func,
     return results
 
 
-def track_iter_progress(tasks, bar_width=50, file=sys.stdout):
+def track_iter_progress(tasks: Sequence, bar_width: int = 50, file=sys.stdout):
     """Track the progress of tasks iteration or enumeration with a progress
     bar.
 
     Tasks are yielded with a simple for-loop.
 
     Args:
-        tasks (list or tuple[Iterable, int]): A list of tasks or
-            (tasks, total num).
+        tasks (Sequence): If tasks is a tuple, it must contain two elements,
+            the first being the tasks to be completed and the other being the
+            number of tasks. If it is not a tuple, it represents the tasks to
+            be completed.
         bar_width (int): Width of progress bar.
 
     Yields:
@@ -195,12 +233,13 @@ def track_iter_progress(tasks, bar_width=50, file=sys.stdout):
         assert isinstance(tasks[0], Iterable)
         assert isinstance(tasks[1], int)
         task_num = tasks[1]
-        tasks = tasks[0]
-    elif isinstance(tasks, Iterable):
+        tasks = tasks[0]  # type: ignore
+    elif isinstance(tasks, Sequence):
         task_num = len(tasks)
     else:
         raise TypeError(
-            '"tasks" must be an iterable object or a (iterator, int) tuple')
+            '"tasks" must be a tuple object or a sequence object, but got '
+            f'{type(tasks)}')
     prog_bar = ProgressBar(task_num, bar_width, file=file)
     for task in tasks:
         yield task
