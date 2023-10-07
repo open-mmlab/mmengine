@@ -48,7 +48,7 @@ from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
 from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
-from .utils import set_random_seed
+from .utils import _get_batch_size, set_random_seed
 
 ConfigType = Union[Dict, Config, ConfigDict]
 ParamSchedulerType = Union[List[_ParamScheduler], Dict[str,
@@ -61,27 +61,15 @@ class _SlicedDataset:
     def __init__(self, dataset, length) -> None:
         self._dataset = dataset
         self._length = length
-        self._count = 0
-        self._dataset_iter = None
 
     def __getattr__(self, name):
         return getattr(self._dataset, name)
-
-    def __iter__(self):
-        self._dataset_iter = iter(self._dataset)
-        return self
 
     def __getitem__(self, idx):
         return self._dataset[idx]
 
     def __len__(self):
         return self._length
-
-    def __next__(self):
-        self._count += 1
-        if self._count > self._length:
-            raise StopIteration
-        return next(self._dataset_iter)
 
 
 @RUNNERS.register_module()
@@ -2415,20 +2403,3 @@ class Runner:
         setattr(self.model, target, compiled_func)
         self.logger.info('Model has been "compiled". The first few iterations'
                          ' will be slow, please be patient.')
-
-
-def _get_batch_size(dataloader):
-    if isinstance(dataloader, dict):
-        if 'batch_size' in dataloader:
-            return dataloader['batch_size']
-        elif ('batch_sampler' in dataloader
-              and 'batch_size' in dataloader['batch_sampler']):
-            return dataloader['batch_sampler']['batch_size']
-        else:
-            raise ValueError('Please set batch_size in `Dataloader` or '
-                             '`batch_sampler`')
-    elif isinstance(dataloader, DataLoader):
-        return dataloader.batch_sampler.batch_size
-    else:
-        raise ValueError('dataloader should be a dict or a Dataloader '
-                         f'instance, but got {type(dataloader)}')
