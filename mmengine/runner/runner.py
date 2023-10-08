@@ -21,8 +21,8 @@ import mmengine
 from mmengine.config import Config, ConfigDict
 from mmengine.dataset import worker_init_fn as default_worker_init_fn
 from mmengine.device import get_device
-from mmengine.dist import (broadcast, get_dist_info, get_rank, init_dist,
-                           is_distributed, master_only)
+from mmengine.dist import (broadcast, get_dist_info, get_rank, get_world_size,
+                           init_dist, is_distributed, master_only)
 from mmengine.evaluator import Evaluator
 from mmengine.fileio import FileClient, join_path
 from mmengine.hooks import Hook
@@ -49,12 +49,28 @@ from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
 from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
-from .utils import set_random_seed
+from .utils import _get_batch_size, set_random_seed
 
 ConfigType = Union[Dict, Config, ConfigDict]
 ParamSchedulerType = Union[List[_ParamScheduler], Dict[str,
                                                        List[_ParamScheduler]]]
 OptimWrapperType = Union[OptimWrapper, OptimWrapperDict]
+
+
+class _SlicedDataset:
+
+    def __init__(self, dataset, length) -> None:
+        self._dataset = dataset
+        self._length = length
+
+    def __getattr__(self, name):
+        return getattr(self._dataset, name)
+
+    def __getitem__(self, idx):
+        return self._dataset[idx]
+
+    def __len__(self):
+        return self._length
 
 
 @RUNNERS.register_module()
@@ -1358,6 +1374,14 @@ class Runner:
             # fallback to raise error in dataloader
             # if `dataset_cfg` is not a valid type
             dataset = dataset_cfg
+
+        num_batch_per_epoch = dataloader_cfg.pop('num_batch_per_epoch', None)
+        if num_batch_per_epoch is not None:
+            world_size = get_world_size()
+            num_samples = (
+                num_batch_per_epoch * _get_batch_size(dataloader_cfg) *
+                world_size)
+            dataset = _SlicedDataset(dataset, num_samples)
 
         # build sampler
         sampler_cfg = dataloader_cfg.pop('sampler')

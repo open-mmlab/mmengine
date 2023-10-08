@@ -1301,6 +1301,17 @@ class TestRunner(TestCase):
             dataloader = runner.build_dataloader(cfg)
             self.assertIsInstance(dataloader.collate_fn, partial)
 
+        # num_batch_per_epoch is not None
+        cfg = dict(
+            dataset=dict(type='ToyDataset'),
+            sampler=dict(type='DefaultSampler', shuffle=True),
+            collate_fn=dict(type='default_collate'),
+            batch_size=3,
+            num_workers=2,
+            num_batch_per_epoch=2)
+        dataloader = runner.build_dataloader(cfg)
+        self.assertEqual(len(dataloader.dataset), 6)
+
     def test_build_train_loop(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_build_train_loop'
@@ -1812,6 +1823,18 @@ class TestRunner(TestCase):
             self.assertIsInstance(runner._val_loop, BaseLoop)
             self.assertIsInstance(runner._test_loop, dict)
 
+        # 15. test num_batch_per_epoch
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_train15'
+        cfg.train_dataloader['num_batch_per_epoch'] = 2
+        cfg.train_cfg = dict(
+            by_epoch=True,
+            max_epochs=3,
+        )
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+        self.assertEqual(runner.iter, 3 * 2)
+
     @skipIf(
         SKIP_TEST_COMPILE,
         reason='torch.compile is not valid, please install PyTorch>=2.0.0')
@@ -1899,6 +1922,31 @@ class TestRunner(TestCase):
             self.assertIsInstance(runner._train_loop, dict)
             self.assertIsInstance(runner._test_loop, dict)
 
+        # test num_batch_per_epoch
+        val_result = 0
+
+        @HOOKS.register_module(force=True)
+        class TestIterHook(Hook):
+
+            def __init__(self):
+                self.val_iter = 0
+
+            def after_val_iter(self,
+                               runner,
+                               batch_idx,
+                               data_batch=None,
+                               outputs=None):
+                self.val_iter += 1
+                nonlocal val_result
+                val_result = self.val_iter
+
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
+        cfg.val_dataloader['num_batch_per_epoch'] = 2
+        runner = Runner.from_cfg(cfg)
+        runner.val()
+        self.assertEqual(val_result, 2)
+
     @skipIf(
         SKIP_TEST_COMPILE,
         reason='torch.compile is not valid, please install PyTorch>=2.0.0')
@@ -1978,6 +2026,31 @@ class TestRunner(TestCase):
             runner.test()
             self.assertIsInstance(runner._train_loop, dict)
             self.assertIsInstance(runner._val_loop, dict)
+
+        # test num_batch_per_epoch
+        test_result = 0
+
+        @HOOKS.register_module(force=True)
+        class TestIterHook(Hook):
+
+            def __init__(self):
+                self.test_iter = 0
+
+            def after_test_iter(self,
+                                runner,
+                                batch_idx,
+                                data_batch=None,
+                                outputs=None):
+                self.test_iter += 1
+                nonlocal test_result
+                test_result = self.test_iter
+
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
+        cfg.test_dataloader['num_batch_per_epoch'] = 2
+        runner = Runner.from_cfg(cfg)
+        runner.test()
+        self.assertEqual(test_result, 2)
 
     @skipIf(
         SKIP_TEST_COMPILE,

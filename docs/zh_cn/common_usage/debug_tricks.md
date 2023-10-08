@@ -50,6 +50,56 @@ python tools/train.py configs/resnet/resnet18_8xb16_cifar10.py
 02/20 14:45:01 - mmengine - INFO - Epoch(train)   [1][300/313]  lr: 1.0000e-01  eta: 0:20:39  time: 0.0143  data_time: 0.0003  memory: 214  loss: 1.814
 ```
 
+## 固定训练的迭代次数（基于 epoch 的训练）
+
+在调试代码的过程中，有时需要训练几个 epoch，例如调试验证过程或者权重的保存是否符合期望。然而如果数据集太大，需要花费较长时间才能训完一个 epoch，在这种情况下，可以配置 dataloader 的 `num_batch_per_epoch` 参数。
+
+```{note}
+`num_batch_per_epoch` 参数不是 PyTorch 中 dataloader 的原生参数，而是 MMEngine 为了实现此功能而额外添加的参数。
+```
+
+我们以[15 分钟上手 MMEngine](../get_started/15_minutes.md) 中定义的模型为例。通过在 `train_dataloader` 和 `val_dataloader` 中设置 `num_batch_per_epoch=5`，便可实现一个 epoch 只迭代 5 次。
+
+```python
+train_dataloader = dict(
+    batch_size=32,
+    dataset=train_set,
+    sampler=dict(type='DefaultSampler', shuffle=True),
+    collate_fn=dict(type='default_collate'),
+    num_batch_per_epoch=5)
+val_dataloader = dict(
+    batch_size=32,
+    dataset=valid_set,
+    sampler=dict(type='DefaultSampler', shuffle=False),
+    collate_fn=dict(type='default_collate'),
+    num_batch_per_epoch=5)
+runner = Runner(
+    model=MMResNet50(),
+    work_dir='./work_dir',
+    train_dataloader=train_dataloader,
+    optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+    train_cfg=dict(by_epoch=True, max_epochs=2, val_interval=1),
+    val_dataloader=val_dataloader,
+    val_cfg=dict(),
+    val_evaluator=dict(type=Accuracy),
+    launcher=args.launcher,
+)
+runner.train()
+```
+
+可以看到，迭代次数变成了 `5`，相比原先，这样能够更快跑完一个 epoch。
+
+```
+08/18 20:27:22 - mmengine - INFO - Epoch(train) [1][5/5]  lr: 1.0000e-03  eta: 0:00:02  time: 0.4566  data_time: 0.0074  memory: 477  loss: 6.7576
+08/18 20:27:22 - mmengine - INFO - Saving checkpoint at 1 epochs
+08/18 20:27:22 - mmengine - WARNING - `save_param_scheduler` is True but `self.param_schedulers` is None, so skip saving parameter schedulers
+08/18 20:27:23 - mmengine - INFO - Epoch(val) [1][5/5]    accuracy: 7.5000  data_time: 0.0044  time: 0.0146
+08/18 20:27:23 - mmengine - INFO - Exp name: 20230818_202715
+08/18 20:27:23 - mmengine - INFO - Epoch(train) [2][5/5]  lr: 1.0000e-03  eta: 0:00:00  time: 0.2501  data_time: 0.0077  memory: 477  loss: 5.3044
+08/18 20:27:23 - mmengine - INFO - Saving checkpoint at 2 epochs
+08/18 20:27:24 - mmengine - INFO - Epoch(val) [2][5/5]    accuracy: 12.5000  data_time: 0.0058  time: 0.0175
+```
+
 ## 检查不参与 loss 计算的参数
 
 使用多卡训练时，当模型的参数参与了前向计算，但没有参与 loss 的计算，程序会抛出下面的错误：
