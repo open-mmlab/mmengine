@@ -225,10 +225,10 @@ class Visualizer(ManagerMixin):
         return self._dataset_meta
 
     @dataset_meta.setter  # type: ignore
+    @master_only
     def dataset_meta(self, dataset_meta: dict) -> None:
-        """Set the dataset meta info to the Visualizer."""
-        if self._should_do():
-            self._dataset_meta = dataset_meta
+        """Set the dataset meta info to the Visualizer.""" 
+        self._dataset_meta = dataset_meta
 
     def show(self,
              drawn_img: Optional[np.ndarray] = None,
