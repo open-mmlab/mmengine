@@ -1,6 +1,6 @@
 # Visualize Training Logs
 
-MMEngine integrates experiment management tools such as [TensorBoard](https://www.tensorflow.org/tensorboard), [Weights & Biases (WandB)](https://docs.wandb.ai/), [MLflow](https://mlflow.org/docs/latest/index.html), [ClearML](https://clear.ml/docs/latest/docs) and [Neptune](https://docs.neptune.ai/), making it easy to track and visualize metrics like loss and accuracy.
+MMEngine integrates experiment management tools such as [TensorBoard](https://www.tensorflow.org/tensorboard), [Weights & Biases (WandB)](https://docs.wandb.ai/), [MLflow](https://mlflow.org/docs/latest/index.html), [ClearML](https://clear.ml/docs/latest/docs), [Neptune](https://docs.neptune.ai/), [DVCLive](https://dvc.org/doc/dvclive) and [Aim](https://aimstack.readthedocs.io/en/latest/overview.html), making it easy to track and visualize metrics like loss and accuracy.
 
 Below, we'll show you how to configure an experiment management tool in just one line, based on the example from [15 minutes to get started with MMEngine](../get_started/15_minutes.md).
 
@@ -149,3 +149,88 @@ runner.train()
 ```
 
 More initialization configuration parameters are available at [neptune.init_run API](https://docs.neptune.ai/api/neptune/#init_run).
+
+## DVCLive
+
+Before using DVCLive, you need to install `dvclive` dependency library and refer to [iterative.ai](https://dvc.org/doc/start) for configuration. Common configurations are as follows:
+
+```bash
+pip install dvclive
+cd ${WORK_DIR}
+git init
+dvc init
+git commit -m "DVC init"
+```
+
+Configure the `Runner` in the initialization parameters of the Runner, and set `vis_backends` to [DVCLiveVisBackend](mmengine.visualization.DVCLiveVisBackend).
+
+```python
+runner = Runner(
+    model=MMResNet50(),
+    work_dir='./work_dir_dvc',
+    train_dataloader=train_dataloader,
+    optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+    train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
+    val_dataloader=val_dataloader,
+    val_cfg=dict(),
+    val_evaluator=dict(type=Accuracy),
+    visualizer=dict(type='Visualizer', vis_backends=[dict(type='DVCLiveVisBackend')]),
+)
+runner.train()
+```
+
+```{note}
+Recommend not to set `work_dir` as `work_dirs`. Or DVC will give a warning `WARNING:dvclive:Error in cache: bad DVC file name 'work_dirs\xxx.dvc' is git-ignored` if you run experiments in a OpenMMLab's repo.
+```
+
+Open the `report.html` file under `work_dir_dvc`, and you will see the visualization as shown in the following image.
+
+![image](https://github.com/open-mmlab/mmengine/assets/58739961/47d85520-9a4a-4143-a449-12ed7347cc63)
+
+You can also configure a VSCode extension of [DVC](https://marketplace.visualstudio.com/items?itemName=Iterative.dvc) to visualize the training process.
+
+More initialization configuration parameters are available at [DVCLive API Reference](https://dvc.org/doc/dvclive/live).
+
+## Aim
+
+Before using Aim, you need to install `aim` dependency library.
+
+```bash
+pip install aim
+```
+
+Configure the `Runner` in the initialization parameters of the Runner, and set `vis_backends` to [AimVisBackend](mmengine.visualization.AimVisBackend).
+
+```python
+runner = Runner(
+    model=MMResNet50(),
+    work_dir='./work_dir',
+    train_dataloader=train_dataloader,
+    optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+    train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
+    val_dataloader=val_dataloader,
+    val_cfg=dict(),
+    val_evaluator=dict(type=Accuracy),
+    visualizer=dict(type='Visualizer', vis_backends=[dict(type='AimVisBackend')]),
+)
+runner.train()
+```
+
+In the terminal, use the following command,
+
+```bash
+aim up
+```
+
+or in the Jupyter Notebook, use the following command,
+
+```bash
+%load_ext aim
+%aim up
+```
+
+to launch the Aim UI as shown below.
+
+![image](https://github.com/open-mmlab/mmengine/assets/58739961/2fc6cdd8-1de7-4125-a20a-c95c1a8bdb1b)
+
+Initialization configuration parameters are available at [Aim SDK Reference](https://aimstack.readthedocs.io/en/latest/refs/sdk.html#module-aim.sdk.run).
