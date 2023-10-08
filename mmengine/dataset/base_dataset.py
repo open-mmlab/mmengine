@@ -157,7 +157,7 @@ class BaseDataset(Dataset):
 
     Args:
         ann_file (str, optional): Annotation file path. Defaults to ''.
-        metainfo (Union[Mapping, Config], optional): Meta information for
+        metainfo (Mapping or Config, optional): Meta information for
             dataset, such as class information. Defaults to None.
         data_root (str, optional): The root directory for ``data_prefix`` and
             ``ann_file``. Defaults to ''.
@@ -215,7 +215,7 @@ class BaseDataset(Dataset):
 
     def __init__(self,
                  ann_file: Optional[str] = '',
-                 metainfo: Optional[Union[Mapping, Config]] = None,
+                 metainfo: Union[Mapping, Config, None] = None,
                  data_root: Optional[str] = '',
                  data_prefix: dict = dict(img_path=''),
                  filter_cfg: Optional[dict] = None,
@@ -474,11 +474,11 @@ class BaseDataset(Dataset):
         return data_list
 
     @classmethod
-    def _load_metainfo(cls, metainfo: Union[Mapping, Config] = None) -> dict:
+    def _load_metainfo(cls, metainfo: Union[Mapping, Config, None] = None) -> dict:
         """Collect meta information from the dictionary of meta.
 
         Args:
-            metainfo (Union[Mapping, Config]): Meta information dict.
+            metainfo (Mapping or Config, optional): Meta information dict.
                 If ``metainfo`` contains existed filename, it will be
                 parsed by ``list_from_file``.
 
