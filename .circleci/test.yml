@@ -49,7 +49,7 @@ jobs:
           command: pip install -e . -v
       - run:
           name: Install unit tests dependencies
-          command: pip install -r requirements/tests.txt
+          command: pip install -r requirements/tests_lite.txt
       - run:
           name: Run unit tests
           command: pytest tests/test_config tests/test_registry tests/test_fileio tests/test_logging tests/test_utils --ignore=tests/test_utils/test_dl_utils
