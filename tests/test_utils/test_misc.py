@@ -4,9 +4,9 @@ from importlib import import_module
 
 import numpy as np
 import pytest
-import torch
 
 from mmengine import MMLogger
+from mmengine.utils import is_installed
 # yapf: disable
 from mmengine.utils.misc import (apply_to, concat_list, deprecated_api_warning,
                                  deprecated_function, get_object_from_string,
@@ -290,7 +290,10 @@ def test_deprecated_function():
     assert expected_docstring.strip(' ') == deprecated_demo1.__doc__
 
 
+@pytest.mark.skipif(not is_installed('torch'), reason='tests requires torch')
 def test_apply_to():
+    import torch
+
     # Test only apply `+1` to int object.
     data = dict(a=1, b=2.0)
     result = apply_to(data, lambda x: isinstance(x, int), lambda x: x + 1)
@@ -332,9 +335,9 @@ def test_apply_to():
 
 def test_locate():
     assert get_object_from_string('a.b.c') is None
-    model_module = import_module('mmengine.model')
-    assert get_object_from_string('mmengine.model') is model_module
+    config_module = import_module('mmengine.config')
+    assert get_object_from_string('mmengine.config') is config_module
     assert get_object_from_string(
-        'mmengine.model.BaseModel') is model_module.BaseModel
-    assert get_object_from_string('mmengine.model.BaseModel.forward') is \
-        model_module.BaseModel.forward
+        'mmengine.config.Config') is config_module.Config
+    assert get_object_from_string('mmengine.config.Config.fromfile') is \
+        config_module.Config.fromfile
