@@ -90,3 +90,34 @@ runner = Runner(
 )
 runner.train()
 ```
+
+## bitsandbytes
+
+[bitsandbytes](https://github.com/TimDettmers/bitsandbytes) 提供了 `AdamW8bit`、`Adam8bit`、`Adagrad8bit`、`PagedAdam8bit`、`PagedAdamW8bit`、`LAMB8bit`、 `LARS8bit`、`RMSprop8bit`、`Lion8bit`、`PagedLion8bit` 和 `SGD8bit` 优化器。
+
+```{note}
+如使用 D-Adaptation 提供的优化器，需将 mmengine 升级至 `0.8.5`。
+```
+
+- 安装
+
+```bash
+pip install bitsandbytes
+```
+
+- 使用
+
+以 `AdamW8bit` 为例。
+
+```python
+runner = Runner(
+    model=ResNet18(),
+    work_dir='./work_dir',
+    train_dataloader=train_dataloader_cfg,
+    # 如需查看 AdamW8bit 的输入参数，可查看
+    # https://github.com/TimDettmers/bitsandbytes/blob/main/bitsandbytes/optim/adamw.py
+    optim_wrapper=dict(optimizer=dict(type='AdamW8bit', lr=1e-4, weight_decay=1e-2)),
+    train_cfg=dict(by_epoch=True, max_epochs=3),
+)
+runner.train()
+```

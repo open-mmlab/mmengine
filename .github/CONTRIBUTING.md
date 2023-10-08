@@ -1,1 +1,1 @@
-We appreciate all contributions to improve MMEngine. Please refer to [CONTRIBUTING.md](https://github.com/open-mmlab/mmcv/blob/master/CONTRIBUTING.md) in MMCV for more details about the contributing guideline.
+We appreciate all contributions to improve MMEngine. Please refer to [Contributing to OpenMMLab](https://mmengine.readthedocs.io/en/latest/notes/contributing.html) for more details about the contributing guideline.

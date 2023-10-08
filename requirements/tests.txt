@@ -1,4 +1,5 @@
-aim
+aim<=3.17.5;sys_platform!='win32'
+bitsandbytes
 clearml
 coverage
 dadaptation
@@ -8,4 +9,6 @@ lmdb
 mlflow
 neptune
 parameterized
+pydantic==1.10.9
 pytest
+transformers

@@ -31,6 +31,7 @@ from .checkpoint import find_latest_checkpoint
 from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
+from .utils import _get_batch_size
 
 ConfigType = Union[Dict, Config, ConfigDict]
 ParamSchedulerType = Union[List[_ParamScheduler], Dict[str,
@@ -1646,20 +1647,3 @@ class FlexibleRunner:
 
         if self.cfg._cfg_dict:
             self.logger.info(f'Config:\n{self.cfg.pretty_text}')
-
-
-def _get_batch_size(dataloader):
-    if isinstance(dataloader, dict):
-        if 'batch_size' in dataloader:
-            return dataloader['batch_size']
-        elif ('batch_sampler' in dataloader
-              and 'batch_size' in dataloader['batch_sampler']):
-            return dataloader['batch_sampler']['batch_size']
-        else:
-            raise ValueError('Please set batch_size in `Dataloader` or '
-                             '`batch_sampler`')
-    elif isinstance(dataloader, DataLoader):
-        return dataloader.batch_sampler.batch_size
-    else:
-        raise ValueError('dataloader should be a dict or a Dataloader '
-                         f'instance, but got {type(dataloader)}')

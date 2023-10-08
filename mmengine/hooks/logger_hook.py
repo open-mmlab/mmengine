@@ -46,7 +46,7 @@ class LoggerHook(Hook):
             checkpoints. If not specified, ``runner.work_dir`` will be used
             by default. If specified, the ``out_dir`` will be the concatenation
             of ``out_dir`` and the last level directory of ``runner.work_dir``.
-            For example, if the input ``our_dir`` is ``./tmp`` and
+            For example, if the input ``out_dir`` is ``./tmp`` and
             ``runner.work_dir`` is ``./work_dir/cur_exp``, then the log will be
             saved in ``./tmp/cur_exp``. Defaults to None.
         out_suffix (Tuple[str] or str): Those files in ``runner._log_dir``
