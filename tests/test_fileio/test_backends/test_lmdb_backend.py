@@ -2,7 +2,6 @@
 from pathlib import Path
 from unittest import TestCase
 
-import cv2
 import numpy as np
 from parameterized import parameterized
 
@@ -10,6 +9,7 @@ from mmengine.fileio.backends import LmdbBackend
 
 
 def imfrombytes(content):
+    import cv2
     img_np = np.frombuffer(content, np.uint8)
     img = cv2.imdecode(img_np, cv2.IMREAD_COLOR)
     return img
