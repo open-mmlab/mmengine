@@ -251,7 +251,7 @@ workflows:
       - build_without_torch:
           name: build without torch
           requires:
-            - build_lite
+            - lint
       - build_cpu:
           name: minimum_version_cpu
           torch: 1.6.0
