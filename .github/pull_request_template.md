@@ -1,4 +1,4 @@
-Thanks for your contribution and we appreciate it a lot. The following instructions would make your pull request more healthy and more easily get feedback. If you do not understand some items, don't worry, just make the pull request and seek help from maintainers.
+Thanks for your contribution and we appreciate it a lot. The following instructions would make your pull request more healthy and more easily get feedback. If you do not understand some items, don't worry, just make the pull request and seek help from maintainers. By the way, if you're not familiar with how to use pre-commit to fix lint issues or add unit tests, please refer to [Contributing to OpenMMLab](https://mmengine.readthedocs.io/en/latest/notes/contributing.html).
 
 ## Motivation
 
@@ -21,5 +21,5 @@ If this PR introduces a new feature, it is better to list some use cases here, a
 
 1. Pre-commit or other linting tools are used to fix the potential lint issues.
 2. The modification is covered by complete unit tests. If not, please add more unit test to ensure the correctness.
-3. If the modification has potential influence on downstream projects, this PR should be tested with downstream projects, like MMDet or MMCls.
+3. If the modification has potential influence on downstream projects, this PR should be tested with downstream projects, like MMDetection or MMPretrain.
 4. The documentation has been modified accordingly, like docstring or example tutorials.
