@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 import torch
 
+from mmengine.config import Config, ConfigDict
 from mmengine.dataset import (BaseDataset, ClassBalancedDataset, Compose,
                               ConcatDataset, RepeatDataset, force_full_init)
 from mmengine.registry import DATASETS, TRANSFORMS
@@ -202,6 +203,39 @@ class TestBaseDataset:
             task_name='new_task',
             classes=('dog', ),
             empty_list=[])
+
+        # test dataset.metainfo with passing metainfo as Config into
+        # self.base_dataset
+        metainfo = Config(dict(classes=('dog', ), task_name='new_task'))
+        dataset = BaseDataset(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img_path='imgs'),
+            ann_file='annotations/dummy_annotation.json',
+            metainfo=metainfo)
+        assert BaseDataset.METAINFO == dict(
+            dataset_type=dataset_type, classes=('dog', 'cat'))
+        assert dataset.metainfo == dict(
+            dataset_type=dataset_type,
+            task_name='new_task',
+            classes=('dog', ),
+            empty_list=[])
+
+        # test dataset.metainfo with passing metainfo as ConfigDict (Mapping)
+        # into self.base_dataset
+        metainfo = ConfigDict(dict(classes=('dog', ), task_name='new_task'))
+        dataset = BaseDataset(
+            data_root=osp.join(osp.dirname(__file__), '../data/'),
+            data_prefix=dict(img_path='imgs'),
+            ann_file='annotations/dummy_annotation.json',
+            metainfo=metainfo)
+        assert BaseDataset.METAINFO == dict(
+            dataset_type=dataset_type, classes=('dog', 'cat'))
+        assert dataset.metainfo == dict(
+            dataset_type=dataset_type,
+            task_name='new_task',
+            classes=('dog', ),
+            empty_list=[])
+
         # reset `base_dataset.METAINFO`, the `dataset.metainfo` should not
         # change
         BaseDataset.METAINFO['classes'] = ('dog', 'cat', 'fish')
