@@ -474,7 +474,8 @@ class BaseDataset(Dataset):
         return data_list
 
     @classmethod
-    def _load_metainfo(cls, metainfo: Union[Mapping, Config, None] = None) -> dict:
+    def _load_metainfo(cls,
+                       metainfo: Union[Mapping, Config, None] = None) -> dict:
         """Collect meta information from the dictionary of meta.
 
         Args:
