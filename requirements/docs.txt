@@ -1,4 +1,3 @@
-torch
 docutils==0.17.1
 myst-parser
 opencv-python
@@ -8,5 +7,6 @@ sphinx-copybutton
 sphinx-tabs
 sphinx_markdown_tables
 tabulate
+torch
 torchvision
 urllib3<2.0.0
