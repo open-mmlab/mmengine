@@ -227,7 +227,7 @@ class Visualizer(ManagerMixin):
     @dataset_meta.setter  # type: ignore
     @master_only
     def dataset_meta(self, dataset_meta: dict) -> None:
-        """Set the dataset meta info to the Visualizer.""" 
+        """Set the dataset meta info to the Visualizer."""
         self._dataset_meta = dataset_meta
 
     def show(self,
