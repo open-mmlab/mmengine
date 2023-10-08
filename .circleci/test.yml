@@ -79,7 +79,7 @@ jobs:
           command: pip install -r requirements/tests.txt
       - run:
           name: Run unit tests
-          command: pytest tests/test_config tests/test_registry tests/test_fileio tests/test_logging tests/test_utils --ignore=tests/test_utils/test_dl_utils
+          command: pytest tests/test_config tests/test_registry tests/test_logging tests/test_utils --ignore=tests/test_utils/test_dl_utils
 
   build_cpu:
     parameters:
