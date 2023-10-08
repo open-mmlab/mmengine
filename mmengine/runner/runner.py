@@ -463,7 +463,7 @@ class Runner:
             load_from=cfg.get('load_from'),
             resume=cfg.get('resume', False),
             launcher=cfg.get('launcher', 'none'),
-            env_cfg=cfg.get('env_cfg'),  # type: ignore
+            env_cfg=cfg.get('env_cfg', dict(dist_cfg=dict(backend='nccl'))),
             log_processor=cfg.get('log_processor'),
             log_level=cfg.get('log_level', 'INFO'),
             visualizer=cfg.get('visualizer'),
