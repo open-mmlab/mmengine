@@ -71,7 +71,7 @@ runner.train()
 ## 梯度检查点
 
 ```{note}
-MMEngine v0.8.5 开始支持梯度检查点的功能。关于性能的比较可点击 [#1319](https://github.com/open-mmlab/mmengine/pull/1319)。如果你在使用过程中遇到任何问题，欢迎在 [#1319](https://github.com/open-mmlab/mmengine/pull/1319) 反馈。
+MMEngine v0.9.0 开始支持梯度检查点的功能。关于性能的比较可点击 [#1319](https://github.com/open-mmlab/mmengine/pull/1319)。如果你在使用过程中遇到任何问题，欢迎在 [#1319](https://github.com/open-mmlab/mmengine/pull/1319) 反馈。
 ```
 
 只需在 Runner 的 cfg 参数中配置 `activation_checkpointing` 即可开启梯度检查点。
