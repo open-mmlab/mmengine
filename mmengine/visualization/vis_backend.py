@@ -1007,7 +1007,7 @@ class NeptuneVisBackend(BaseVisBackend):
         >>> neptune_vis_backend.add_config(cfg)
 
     Note:
-        `New in version 0.8.5.`
+        `New in version 0.9.0.`
 
     Args:
         save_dir (str, optional): The root directory to save the files
@@ -1149,7 +1149,7 @@ class DVCLiveVisBackend(BaseVisBackend):
         >>> dvclive_vis_backend.add_config(cfg)
 
     Note:
-        `New in version 0.8.5.`
+        `New in version 0.9.0.`
 
     Args:
         save_dir (str, optional): The root directory to save the files
@@ -1327,7 +1327,7 @@ class AimVisBackend(BaseVisBackend):
         >>> aim_vis_backend.add_config(cfg)
 
     Note:
-        1. `New in version 0.8.5.`
+        1. `New in version 0.9.0.`
         2. Refer to
            `Github issue <https://github.com/aimhubio/aim/issues/2064>`_ ,
            Aim is not unable to be install on Windows for now.

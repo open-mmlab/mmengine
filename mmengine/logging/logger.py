@@ -189,7 +189,7 @@ class MMLogger(Logger, ManagerMixin):
                 >>>    interval=1,
                 >>>    backupCount=365)
 
-            `New in version 0.8.5.`
+            `New in version 0.9.0.`
     """
 
     def __init__(self,

@@ -71,7 +71,7 @@ runner.train()
 ## Gradient Checkpointing
 
 ```{note}
-Starting from MMEngine v0.8.5, gradient checkpointing is supported. For performance comparisons, you can click on [#1319](https://github.com/open-mmlab/mmengine/pull/1319). If you encounter any issues during usage, feel free to provide feedback in [#1319](https://github.com/open-mmlab/mmengine/pull/1319).
+Starting from MMEngine v0.9.0, gradient checkpointing is supported. For performance comparisons, you can click on [#1319](https://github.com/open-mmlab/mmengine/pull/1319). If you encounter any issues during usage, feel free to provide feedback in [#1319](https://github.com/open-mmlab/mmengine/pull/1319).
 ```
 
 You can simply enable gradient checkpointing by configuring activation_checkpointing in the Runner's cfg parameters.

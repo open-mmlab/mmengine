@@ -184,7 +184,7 @@ torchrun --nproc-per-node 2 examples/distributed_training_with_flexible_runner.p
 
 ## ColossalAI
 
-[ColossalAI](https://colossalai.org/) 是一个具有高效并行化技术的综合大规模模型训练系统。MMEngine 自 v0.8.5 开始，支持使用 ColossalAI 中的 ZeRO 系列优化策略训练模型。
+[ColossalAI](https://colossalai.org/) 是一个具有高效并行化技术的综合大规模模型训练系统。MMEngine 自 v0.9.0 开始，支持使用 ColossalAI 中的 ZeRO 系列优化策略训练模型。
 
 安装版本大于 v0.3.1 的 ColossalAI。这个版本限制是由于 v0.3.1 存在一些程序阻塞的 [Bug](https://github.com/hpcaitech/ColossalAI/issues/4393)，而该 Bug 在之后的版本中已经修复。如果目前 ColossalAI 的最高版本仍为 v0.3.1，建议从源码安装主分支的 ColossalAI。
 
