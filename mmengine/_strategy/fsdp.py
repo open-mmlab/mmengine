@@ -92,12 +92,12 @@ class FSDPStrategy(DDPStrategy):
               :meth:`setup_env`. Defaults to None.
             - log_kwargs (dict, optional): Logger config passed in
               :meth:`build_logger`. Defaults to None.
-        gradient_checkpoint (dict, optional): Config dict for gradient
+        activation_checkpointing (dict, optional): Config dict for gradient
             checkpoint.
 
             Examples:
-              >>> gradient_checkpoint = dict(check_fn='CustomCheckFn')
-              >>> gradient_checkpoint = dict(check_fn=dict(type='CustomCheckFn', arg1=arg1))
+              >>> activation_checkpointing = dict(check_fn='CustomCheckFn')
+              >>> activation_checkpointing = dict(check_fn=dict(type='CustomCheckFn', arg1=arg1))
 
 
             ``check_fn`` field should behave consistently with
@@ -114,7 +114,7 @@ class FSDPStrategy(DDPStrategy):
                  model_wrapper: Optional[dict] = None,
                  skip_init_weights=False,
                  state_dict_cfg: Union[str, dict] = 'local',
-                 gradient_checkpoint: Optional[dict] = None,
+                 activation_checkpointing: Optional[dict] = None,
                  **kwargs):
         super().__init__(model_wrapper=model_wrapper, **kwargs)
         self._init_state_dict_cfg(state_dict_cfg)
@@ -122,7 +122,7 @@ class FSDPStrategy(DDPStrategy):
             raise TypeError('skip_init_weights must be a boolean, but got '
                             f'{type(skip_init_weights)}')
         self.skip_init_weights = skip_init_weights
-        self.gradient_checkpoint = gradient_checkpoint
+        self.activation_checkpointing = activation_checkpointing
 
     def _wrap_model(self, model: nn.Module) -> None:
         """Wrap the model to :obj:``MMFullyShardedDataParallel`` or other
@@ -161,13 +161,13 @@ class FSDPStrategy(DDPStrategy):
                                   self.state_dict_config,
                                   self.optim_state_dict_config)
 
-        if self.gradient_checkpoint is not None:
+        if self.activation_checkpointing is not None:
             if apply_activation_checkpointing is None:
                 raise RuntimeError(
-                    'gradient_checkpoint maybe deprecated by current PyTorch '
-                    'version, maybe you could switch to PyTorch 2.0 or 2.1 to '
-                    'use `gradient_checkpoint`.')
-            cfg = copy.deepcopy(self.gradient_checkpoint)
+                    'activation_checkpointing maybe deprecated by current '
+                    'PyTorch version, maybe you could switch to PyTorch 2.0 '
+                    'or 2.1 to use `activation_checkpointing`.')
+            cfg = copy.deepcopy(self.activation_checkpointing)
             with FUNCTIONS.switch_scope_and_registry(None):
                 check_fn = cfg.pop('check_fn')
                 if isinstance(check_fn, str):
