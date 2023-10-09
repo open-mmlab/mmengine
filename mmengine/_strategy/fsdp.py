@@ -172,15 +172,14 @@ class FSDPStrategy(DDPStrategy):
                 check_fn = cfg.pop('check_fn')
                 if isinstance(check_fn, str):
                     check_fn = FUNCTIONS.get(check_fn)
-                if isinstance(check_fn, dict):
+                elif isinstance(check_fn, dict):
                     fn_type = check_fn.pop('type')
                     if isinstance(fn_type, str):
-                        check_fn = FUNCTIONS.get(fn_type)
-                    check_fn = partial(check_fn, **cfg)
-                if not callable(apply_activation_checkpointing):
-                    raise TypeError(
-                        '`apply_activation_checkpointing` must be a '
-                        'callable function')
+                        fn_type = FUNCTIONS.get(fn_type)
+                    check_fn = partial(fn_type, **cfg)
+
+                if not callable(check_fn):
+                    raise TypeError('`check_fn` must be a callable function')
                 apply_activation_checkpointing(model, check_fn=check_fn, **cfg)
         return model
 
