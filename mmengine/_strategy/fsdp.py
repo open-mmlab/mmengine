@@ -137,7 +137,7 @@ class FSDPStrategy(DDPStrategy):
         """
         try:
             from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import \
-                apply_activation_checkpointing  # noqa: E501
+                apply_activation_checkpointing
         except ImportError:
             apply_activation_checkpointing = None
 
