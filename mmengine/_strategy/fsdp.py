@@ -9,8 +9,6 @@ from functools import partial
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
 import torch.nn as nn
-from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import \
-    apply_activation_checkpointing
 from torch.distributed.fsdp import (FullStateDictConfig,
                                     FullyShardedDataParallel,
                                     LocalStateDictConfig, StateDictType)
@@ -106,7 +104,7 @@ class FSDPStrategy(DDPStrategy):
             ``auto_wrap_policy`` defined in `model_wrapper`, and other
             fields will be passed to ``apply_activation_checkpointing``
 
-            `New in version 0.17.0.`
+            `New in version 0.9.0.`
 
     .. _FSDP official api documents: https://pytorch.org/docs/stable/fsdp.html#torch.distributed.fsdp.FullyShardedDataParallel.set_state_dict_type
     """  # noqa: E501
@@ -137,6 +135,12 @@ class FSDPStrategy(DDPStrategy):
             FullyShardedDataParallel: ``MMFullyShardedDataParallel``
             or subclass of ``FullyShardedDataParallel``.
         """
+        try:
+            from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import \
+                apply_activation_checkpointing  # noqa: E501
+        except ImportError:
+            apply_activation_checkpointing = None
+
         for module in model.modules():
             if isinstance(module, BaseDataPreprocessor):
                 module.to(get_device())
@@ -158,6 +162,11 @@ class FSDPStrategy(DDPStrategy):
                                   self.optim_state_dict_config)
 
         if self.gradient_checkpoint is not None:
+            if apply_activation_checkpointing is None:
+                raise RuntimeError(
+                    'gradient_checkpoint maybe deprecated by current PyTorch '
+                    'version, maybe you could switch to PyTorch 2.0 or 2.1 to '
+                    'use `gradient_checkpoint`.')
             cfg = copy.deepcopy(self.gradient_checkpoint)
             with FUNCTIONS.switch_scope_and_registry(None):
                 check_fn = cfg.pop('check_fn')
