@@ -58,32 +58,22 @@ English | [简体中文](README_zh-CN.md)
 
 ## What's New
 
-v0.8.4 was released on 2023-08-03.
+v0.9.0 was released on 2023-10-10.
 
-Highlights:
+Hightlights:
 
-- Support enabling `efficient_conv_bn_eval` for efficient convolution and batch normalization. See [save memory on gpu](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#save-memory-on-gpu) for more details
+- Support training with [ColossalAI](https://colossalai.org/). Refer to the [example](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training_with_flexible_runner.py) for more detailed usages.
 
-- Add an [example](./examples/llama2/) to finetune Llama2.
+- Support gradient checkpointing. Refer to the [usage](https://github.com/open-mmlab/mmengine/blob/main/docs/en/common_usage/save_gpu_memory.md#gradient-checkpointing) for more details.
 
-- Support training with [FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp) and [DeepSpeed](https://www.deepspeed.ai/). Refer to the [Training Large Models](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html) for more detailed usages.
+- Supports multiple visualization backends, including `NeptuneVisBackend`, `DVCLiveVisBackend` and `AimVisBackend`.
 
-- Introduce the pure Python style configuration file:
-
-  - Support navigating to base configuration file in IDE
-  - Support navigating to base variable in IDE
-  - Support navigating to source code of class in IDE
-  - Support inheriting two configuration files containing the same field
-  - Load the configuration file without other third-party requirements
-
-  Refer to the [tutorial](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#a-pure-python-style-configuration-file-beta) for more detailed usages.
-
-  ![new-config-en](https://github.com/open-mmlab/mmengine/assets/57566630/7eb41748-9374-488f-901e-fcd7f0d3c8a1)
-
-Read [Changelog](./docs/en/notes/changelog.md#v083-08032023) for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v090-10102023) for more details.
 
 ## Table of Contents
 
+- [What's New](#whats-new)
+- [Table of Contents](#table-of-contents)
 - [Introduction](#introduction)
 - [Installation](#installation)
 - [Get Started](#get-started)
