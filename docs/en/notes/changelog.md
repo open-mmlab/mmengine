@@ -43,6 +43,7 @@
 - Fix doc typo our_dir in LoggerHook by [@wangg12](https://github.com/wangg12) in https://github.com/open-mmlab/mmengine/pull/1373
 - Add the contributing doc in pr template by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1380
 - Update the version info by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1383
+- Fix typo by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1385
 
 ### Bug Fixes
 
