@@ -254,8 +254,8 @@ workflows:
             - lint
       - build_cpu:
           name: minimum_version_cpu
-          torch: 1.6.0
-          torchvision: 0.7.0
+          torch: 1.8.0
+          torchvision: 0.9.0
           python: 3.7.4
           requires:
             - lint
@@ -302,7 +302,7 @@ workflows:
     jobs:
       - build_cuda:
           name: minimum_version_gpu
-          torch: 1.6.0
+          torch: 1.8.0
           # Use double quotation mark to explicitly specify its type
           # as string instead of number
           cuda: "10.1"
