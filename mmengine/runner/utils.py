@@ -5,6 +5,7 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
 
 from mmengine.dist import get_rank, sync_random_seed
 from mmengine.logging import print_log
@@ -84,3 +85,20 @@ def set_random_seed(seed: Optional[int] = None,
         if digit_version(TORCH_VERSION) >= digit_version('1.10.0'):
             torch.use_deterministic_algorithms(True)
     return seed
+
+
+def _get_batch_size(dataloader: dict):
+    if isinstance(dataloader, dict):
+        if 'batch_size' in dataloader:
+            return dataloader['batch_size']
+        elif ('batch_sampler' in dataloader
+              and 'batch_size' in dataloader['batch_sampler']):
+            return dataloader['batch_sampler']['batch_size']
+        else:
+            raise ValueError('Please set batch_size in `Dataloader` or '
+                             '`batch_sampler`')
+    elif isinstance(dataloader, DataLoader):
+        return dataloader.batch_sampler.batch_size
+    else:
+        raise ValueError('dataloader should be a dict or a Dataloader '
+                         f'instance, but got {type(dataloader)}')

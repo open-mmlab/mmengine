@@ -12,6 +12,7 @@ from collections import OrderedDict, abc
 from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple, Union
 
+import yapf
 from addict import Dict
 from rich.console import Console
 from rich.text import Text
@@ -658,8 +659,11 @@ class Config(metaclass=ABCMeta):
                 blank_line_before_nested_class_or_def=True,
                 split_before_expression_after_opening_paren=True)
             try:
-                text, _ = FormatCode(
-                    text, style_config=yapf_style, verify=True)
+                if digit_version(yapf.__version__) >= digit_version('0.40.2'):
+                    text, _ = FormatCode(text, style_config=yapf_style)
+                else:
+                    text, _ = FormatCode(
+                        text, style_config=yapf_style, verify=True)
             except:  # noqa: E722
                 raise SyntaxError('Failed to format the config file, please '
                                   f'check the syntax of: \n{text}')

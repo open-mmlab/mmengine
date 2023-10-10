@@ -7,7 +7,7 @@ import pytest
 from mmengine.config import Config, ConfigDict  # type: ignore
 from mmengine.registry import (DefaultScope, Registry, build_from_cfg,
                                build_model_from_cfg)
-from mmengine.utils import ManagerMixin
+from mmengine.utils import ManagerMixin, is_installed
 
 
 class TestRegistry:
@@ -637,11 +637,9 @@ def test_build_from_cfg(cfg_type):
     Visualizer.get_current_instance()
 
 
+@pytest.mark.skipif(not is_installed('torch'), reason='tests requires torch')
 def test_build_model_from_cfg():
-    try:
-        import torch.nn as nn
-    except ImportError:
-        pytest.skip('require torch')
+    import torch.nn as nn
 
     BACKBONES = Registry('backbone', build_func=build_model_from_cfg)
 

@@ -14,10 +14,12 @@ from mmengine.logging import MMLogger
 from mmengine.optim import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS,
                             DefaultOptimWrapperConstructor, OptimWrapper,
                             build_optim_wrapper)
-from mmengine.optim.optimizer.builder import (DADAPTATION_OPTIMIZERS,
+from mmengine.optim.optimizer.builder import (BITSANDBYTES_OPTIMIZERS,
+                                              DADAPTATION_OPTIMIZERS,
                                               LION_OPTIMIZERS,
-                                              TORCH_OPTIMIZERS)
-from mmengine.registry import build_from_cfg
+                                              TORCH_OPTIMIZERS,
+                                              TRANSFORMERS_OPTIMIZERS)
+from mmengine.registry import DefaultScope, Registry, build_from_cfg
 from mmengine.testing._internal import MultiProcessTestCase
 from mmengine.utils.dl_utils import TORCH_VERSION, mmcv_full_available
 from mmengine.utils.version_utils import digit_version
@@ -39,6 +41,22 @@ def has_dadaptation() -> bool:
 def has_lion() -> bool:
     try:
         import lion_pytorch  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def has_bitsandbytes() -> bool:
+    try:
+        import bitsandbytes  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def has_transformers() -> bool:
+    try:
+        import transformers  # noqa: F401
         return True
     except ImportError:
         return False
@@ -235,6 +253,22 @@ class TestBuilder(TestCase):
     def test_lion_optimizers(self):
         assert 'Lion' in LION_OPTIMIZERS
 
+    @unittest.skipIf(not has_bitsandbytes(), 'bitsandbytes is not installed')
+    def test_bitsandbytes_optimizers(self):
+        bitsandbytes_optimizers = [
+            'AdamW8bit', 'Adam8bit', 'Adagrad8bit', 'PagedAdam8bit',
+            'PagedAdamW8bit', 'LAMB8bit', 'LARS8bit', 'RMSprop8bit',
+            'Lion8bit', 'PagedLion8bit', 'SGD8bit'
+        ]
+        assert set(bitsandbytes_optimizers).issubset(
+            set(BITSANDBYTES_OPTIMIZERS))
+
+    @unittest.skipIf(not has_transformers(), 'transformers is not installed')
+    def test_transformers_optimizers(self):
+        transformers_optimizers = ['Adafactor']
+        assert set(transformers_optimizers).issubset(
+            set(TRANSFORMERS_OPTIMIZERS))
+
     def test_build_optimizer(self):
         # test build function without ``constructor`` and ``paramwise_cfg``
         optim_wrapper_cfg = dict(
@@ -390,6 +424,22 @@ class TestBuilder(TestCase):
         optim_constructor = DefaultOptimWrapperConstructor(optimizer_cfg)
         optim_wrapper = optim_constructor(self.model)
         self._check_default_optimizer(optim_wrapper.optimizer, self.model)
+
+        # Support building custom optimizers
+        CUSTOM_OPTIMIZERS = Registry(
+            'custom optimizer', scope='custom optimizer', parent=OPTIMIZERS)
+
+        class CustomOptimizer(torch.optim.SGD):
+
+            def __init__(self, model_params, *args, **kwargs):
+                super().__init__(params=model_params, *args, **kwargs)
+
+        CUSTOM_OPTIMIZERS.register_module()(CustomOptimizer)
+        optimizer_cfg = dict(optimizer=dict(type='CustomOptimizer', lr=0.1), )
+        with DefaultScope.overwrite_default_scope('custom optimizer'):
+            optim_constructor = DefaultOptimWrapperConstructor(optimizer_cfg)
+            optim_wrapper = optim_constructor(self.model)
+        OPTIMIZERS.children.pop('custom optimizer')
 
     def test_default_optimizer_constructor_with_model_wrapper(self):
         # basic config with pseudo data parallel

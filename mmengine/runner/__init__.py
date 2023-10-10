@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from ._flexible_runner import FlexibleRunner
+from .activation_checkpointing import turn_on_activation_checkpointing
 from .amp import autocast
 from .base_loop import BaseLoop
 from .checkpoint import (CheckpointLoader, find_latest_checkpoint,
@@ -19,5 +20,6 @@ __all__ = [
     'CheckpointLoader', 'load_checkpoint', 'weights_to_cpu', 'get_state_dict',
     'save_checkpoint', 'EpochBasedTrainLoop', 'IterBasedTrainLoop', 'ValLoop',
     'TestLoop', 'Runner', 'get_priority', 'Priority', 'find_latest_checkpoint',
-    'autocast', 'LogProcessor', 'set_random_seed', 'FlexibleRunner'
+    'autocast', 'LogProcessor', 'set_random_seed', 'FlexibleRunner',
+    'turn_on_activation_checkpointing'
 ]

@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
+import platform
 import shutil
 import sys
 import warnings
@@ -12,7 +13,9 @@ import torch
 from mmengine import Config
 from mmengine.fileio import load
 from mmengine.registry import VISBACKENDS
-from mmengine.visualization import (ClearMLVisBackend, LocalVisBackend,
+from mmengine.utils import digit_version
+from mmengine.visualization import (AimVisBackend, ClearMLVisBackend,
+                                    DVCLiveVisBackend, LocalVisBackend,
                                     MLflowVisBackend, NeptuneVisBackend,
                                     TensorboardVisBackend, WandbVisBackend)
 
@@ -391,3 +394,95 @@ class TestNeptuneVisBackend:
         neptune_vis_backend = NeptuneVisBackend()
         neptune_vis_backend._init_env()
         neptune_vis_backend.close()
+
+
+@pytest.mark.skipif(
+    digit_version(platform.python_version()) < digit_version('3.8'),
+    reason='DVCLiveVisBackend does not support python version < 3.8')
+class TestDVCLiveVisBackend:
+
+    def test_init(self):
+        DVCLiveVisBackend('temp_dir')
+        VISBACKENDS.build(dict(type='DVCLiveVisBackend', save_dir='temp_dir'))
+
+    def test_experiment(self):
+        dvclive_vis_backend = DVCLiveVisBackend('temp_dir')
+        assert dvclive_vis_backend.experiment == dvclive_vis_backend._dvclive
+        shutil.rmtree('temp_dir')
+
+    def test_add_config(self):
+        cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        dvclive_vis_backend = DVCLiveVisBackend('temp_dir')
+        dvclive_vis_backend.add_config(cfg)
+        shutil.rmtree('temp_dir')
+
+    def test_add_image(self):
+        img = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
+        dvclive_vis_backend = DVCLiveVisBackend('temp_dir')
+        dvclive_vis_backend.add_image('img', img)
+        shutil.rmtree('temp_dir')
+
+    def test_add_scalar(self):
+        dvclive_vis_backend = DVCLiveVisBackend('temp_dir')
+        dvclive_vis_backend.add_scalar('mAP', 0.9)
+        # test append mode
+        dvclive_vis_backend.add_scalar('mAP', 0.9)
+        dvclive_vis_backend.add_scalar('mAP', 0.95)
+        shutil.rmtree('temp_dir')
+
+    def test_add_scalars(self):
+        dvclive_vis_backend = DVCLiveVisBackend('temp_dir')
+        input_dict = {'map': 0.7, 'acc': 0.9}
+        dvclive_vis_backend.add_scalars(input_dict)
+        # test append mode
+        dvclive_vis_backend.add_scalars({'map': 0.8, 'acc': 0.8})
+        shutil.rmtree('temp_dir')
+
+    def test_close(self):
+        cfg = Config(dict(work_dir='temp_dir'))
+        dvclive_vis_backend = DVCLiveVisBackend('temp_dir')
+        dvclive_vis_backend._init_env()
+        dvclive_vis_backend.add_config(cfg)
+        dvclive_vis_backend.close()
+        shutil.rmtree('temp_dir')
+
+
+@pytest.mark.skipif(
+    platform.system() == 'Windows',
+    reason='Aim does not support Windows for now.')
+class TestAimVisBackend:
+
+    def test_init(self):
+        AimVisBackend()
+        VISBACKENDS.build(dict(type='AimVisBackend'))
+
+    def test_experiment(self):
+        aim_vis_backend = AimVisBackend()
+        assert aim_vis_backend.experiment == aim_vis_backend._aim_run
+
+    def test_add_config(self):
+        cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        aim_vis_backend = AimVisBackend()
+        aim_vis_backend.add_config(cfg)
+
+    def test_add_image(self):
+        image = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
+        aim_vis_backend = AimVisBackend()
+        aim_vis_backend.add_image('img', image)
+        aim_vis_backend.add_image('img', image, step=1)
+
+    def test_add_scalar(self):
+        aim_vis_backend = AimVisBackend()
+        aim_vis_backend.add_scalar('map', 0.9)
+        aim_vis_backend.add_scalar('map', 0.9, step=1)
+        aim_vis_backend.add_scalar('map', 0.95, step=2)
+
+    def test_add_scalars(self):
+        aim_vis_backend = AimVisBackend()
+        input_dict = {'map': 0.7, 'acc': 0.9}
+        aim_vis_backend.add_scalars(input_dict)
+
+    def test_close(self):
+        aim_vis_backend = AimVisBackend()
+        aim_vis_backend._init_env()
+        aim_vis_backend.close()
