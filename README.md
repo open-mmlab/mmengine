@@ -62,11 +62,11 @@ v0.9.0 was released on 2023-10-10.
 
 Highlights:
 
-- Support training with [ColossalAI](https://colossalai.org/). Refer to the [Training Large Models](https://github.com/open-mmlab/mmengine/blob/main/docs/en/common_usage/large_model_training.md#colossalai) for more detailed usages.
+- Support training with [ColossalAI](https://colossalai.org/). Refer to the [Training Large Models](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html#colossalai) for more detailed usages.
 
-- Support gradient checkpointing. Refer to the [usage](https://github.com/open-mmlab/mmengine/blob/main/docs/en/common_usage/save_gpu_memory.md#gradient-checkpointing) for more details.
+- Support gradient checkpointing. Refer to the [Save Memory on GPU](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#gradient-checkpointing) for more details.
 
-- Supports multiple visualization backends, including `NeptuneVisBackend`, `DVCLiveVisBackend` and `AimVisBackend`.
+- Supports multiple visualization backends, including `NeptuneVisBackend`, `DVCLiveVisBackend` and `AimVisBackend`. Refer to [Visualization Backends](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html) for more details.
 
 Read [Changelog](./docs/en/notes/changelog.md#v090-10102023) for more details.
 
