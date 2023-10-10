@@ -62,7 +62,7 @@ v0.9.0 was released on 2023-10-10.
 
 Highlights:
 
-- Support training with [ColossalAI](https://colossalai.org/). Refer to the [example](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training_with_flexible_runner.py) for more detailed usages.
+- Support training with [ColossalAI](https://colossalai.org/). Refer to the [Training Large Models](https://github.com/open-mmlab/mmengine/blob/main/docs/en/common_usage/large_model_training.md#colossalai) for more detailed usages.
 
 - Support gradient checkpointing. Refer to the [usage](https://github.com/open-mmlab/mmengine/blob/main/docs/en/common_usage/save_gpu_memory.md#gradient-checkpointing) for more details.
 
