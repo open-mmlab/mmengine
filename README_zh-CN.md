@@ -68,6 +68,24 @@
 
 - 支持多种可视化后端，包括`NeptuneVisBackend`、`DVCLiveVisBackend` 和 `AimVisBackend`。
 
+- 支持使用 `efficient_conv_bn_eval` 参数开启更高效的 `ConvBN` 推理模式。详见[节省显存文档](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/save_gpu_memory.html)
+
+- 新增微调 Llama2 的[示例](./examples/llama2/)。
+
+- 支持使用 [FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp) 和 [DeepSpeed](https://www.deepspeed.ai/) 进行训练。可阅读[大模型训练](https://mmengine.readthedocs.io/zh_cn/latest/common_usage/large_model_training.html)了解用法。
+
+- 引入纯 Python 风格的配置文件：
+
+  - 支持在 IDE 中导航到基础配置文件
+  - 支持在 IDE 中导航到基础变量
+  - 支持在 IDE 中导航到类的源代码
+  - 支持继承包含相同字段的两个配置文件
+  - 在加载配置文件时不需要其他第三方依赖
+
+  请参考[教程](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/config.html#python-beta)以获取更详细的用法说明。
+
+  ![new-config-zh_cn](https://github.com/open-mmlab/mmengine/assets/57566630/c2da9a73-c911-4f78-8253-e3f29496d9f8)
+
 如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v090-10102023)
 
 ## 目录
