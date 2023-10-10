@@ -4,6 +4,10 @@
 
 ### Highlights
 
+- Support training with [ColossalAI](https://colossalai.org/). Refer to the [example](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training_with_flexible_runner.py) for more detailed usages.
+- Support gradient checkpointing. Refer to the [usage](https://github.com/open-mmlab/mmengine/blob/main/docs/en/common_usage/save_gpu_memory.md#gradient-checkpointing) for more details.
+- Supports multiple visualization backends, including `NeptuneVisBackend`, `DVCLiveVisBackend` and `AimVisBackend`.
+
 ### New Features & Enhancements
 
 - Add a text translation example by [@Desjajja](https://github.com/Desjajja) in https://github.com/open-mmlab/mmengine/pull/1283
