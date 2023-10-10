@@ -3,6 +3,7 @@ from .checkpoint_hook import CheckpointHook
 from .early_stopping_hook import EarlyStoppingHook
 from .ema_hook import EMAHook
 from .empty_cache_hook import EmptyCacheHook
+from .freeze_hook import FreezeHook
 from .hook import Hook
 from .iter_timer_hook import IterTimerHook
 from .logger_hook import LoggerHook
@@ -18,5 +19,5 @@ __all__ = [
     'Hook', 'IterTimerHook', 'DistSamplerSeedHook', 'ParamSchedulerHook',
     'SyncBuffersHook', 'EmptyCacheHook', 'CheckpointHook', 'LoggerHook',
     'NaiveVisualizationHook', 'EMAHook', 'RuntimeInfoHook', 'ProfilerHook',
-    'PrepareTTAHook', 'NPUProfilerHook', 'EarlyStoppingHook'
+    'PrepareTTAHook', 'NPUProfilerHook', 'EarlyStoppingHook', 'FreezeHook'
 ]
