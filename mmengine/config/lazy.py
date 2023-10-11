@@ -89,11 +89,11 @@ class LazyObject:
 
     @property
     def dump_str(self) -> str:
-        return f'<{str(self)}>'
+        return f'<imp {str(self)}>'
 
     @classmethod
     def from_str(cls, string):
-        match_ = re.match(r'<([\w\.]+)>', string)
+        match_ = re.match(r'^<imp ([\w\.]+)>$', string)
         if match_ and '.' in match_.group(1):
             source, _, name = match_.group(1).rpartition('.')
             return cls(name, cls(source))
