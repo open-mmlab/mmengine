@@ -187,9 +187,9 @@ def _init_dist_slurm(backend,
         local_rank = int(local_rank_env)
     else:
         if is_mlu_available():
-            import torch_mlu
+            import torch_mlu  # noqa: F401
             num_gpus = torch.mlu.device_count()
-        else: 
+        else:
             num_gpus = torch.cuda.device_count()
         local_rank = proc_id % num_gpus
     addr = subprocess.getoutput(
@@ -211,7 +211,7 @@ def _init_dist_slurm(backend,
 
     rank = int(os.environ['RANK'])
     if is_mlu_available():
-        import torch_mlu
+        import torch_mlu  # noqa: F401
         torch.mlu.set_device(local_rank)
         torch_dist.init_process_group(
             backend='cncl',
@@ -219,6 +219,8 @@ def _init_dist_slurm(backend,
             world_size=int(os.environ['WORLD_SIZE']),
             **kwargs)
     else:
+        torch.cuda.set_device(local_rank)
+
         if init_backend == 'torch':
             torch_dist.init_process_group(backend=backend, **kwargs)
         elif init_backend == 'deepspeed':
@@ -233,7 +235,7 @@ def _init_dist_slurm(backend,
                 **kwargs,
             )
         else:
-            raise ValueError('supported "init_backend" is "torch" or "deepspeed", '
+            raise ValueError('supported "init_backend" is "torch" or "deepspeed", ' \
                             f'but got {init_backend}')
 
 
