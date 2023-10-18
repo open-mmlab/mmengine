@@ -208,9 +208,7 @@ def _init_dist_slurm(backend,
     if is_mlu_available():
         import torch_mlu  # noqa: F401
         torch.mlu.set_device(local_rank)
-        torch_dist.init_process_group(
-            backend='cncl',
-            **kwargs)
+        torch_dist.init_process_group(backend='cncl', **kwargs)
     else:
         torch.cuda.set_device(local_rank)
 
