@@ -205,14 +205,11 @@ def _init_dist_slurm(backend,
     os.environ['LOCAL_RANK'] = str(local_rank)
     os.environ['RANK'] = str(proc_id)
 
-    rank = int(os.environ['RANK'])
     if is_mlu_available():
         import torch_mlu  # noqa: F401
         torch.mlu.set_device(local_rank)
         torch_dist.init_process_group(
             backend='cncl',
-            rank=rank,
-            world_size=int(os.environ['WORLD_SIZE']),
             **kwargs)
     else:
         torch.cuda.set_device(local_rank)
