@@ -1,7 +1,7 @@
 name: merge_stage_test
 
 on:
-  pull_request:
+  push:
     paths-ignore:
       - ".github/**.md"
       - "docker/**"
@@ -236,7 +236,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: [3.7]
+        python-version: [3.8]
         torch: [1.6.0, 1.8.1, 1.13.0, 2.1.0]
         include:
           - torch: 1.6.0
@@ -290,9 +290,10 @@ jobs:
             platform: cu117
             torch: 2.0.0
             torchvision: 0.15.1
-          - torch: 2.1.0
+          - python-version: 3.8
+            platform: cu118
+            torch: 2.1.0
             torchvision: 0.16.0
-            python-version: 3.8
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}

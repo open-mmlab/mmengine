@@ -142,11 +142,17 @@ jobs:
         type: integer
         default: 7
     machine:
-      image: ubuntu-2004-cuda-11.4:202110-01
+      image: linux-cuda-11:default
       docker_layer_caching: true
-    resource_class: gpu.nvidia.small
+    resource_class: gpu.nvidia.small.multi
     steps:
       - checkout
+      - run:
+          name: Install nvidia-container-toolkit and Restart Docker
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y nvidia-container-toolkit
+            sudo systemctl restart docker
       - run:
           name: Build Docker image
           command: |
@@ -306,7 +312,7 @@ workflows:
           # Use double quotation mark to explicitly specify its type
           # as string instead of number
           cuda: "10.1"
-          # filters:
-          #   branches:
-          #     only:
-          #       - main
+          filters:
+            branches:
+              only:
+                - main
