@@ -50,6 +50,56 @@ As we can see, the number of iterations has changed to `313`. Compared to before
 02/20 14:45:01 - mmengine - INFO - Epoch(train)   [1][300/313]  lr: 1.0000e-01  eta: 0:20:39  time: 0.0143  data_time: 0.0003  memory: 214  loss: 1.814
 ```
 
+## Training for a fixed number of iterations (epoch-based training)
+
+During the process of debugging code, sometimes it is necessary to train for several epochs, such as debugging the validation process or checking whether the checkpoint saving meets expectations. However, if the dataset is too large, it may take a long time to complete one epoch. In such cases, you can configure the `num_batch_per_epoch` parameter of the dataloader.
+
+```{note}
+The `num_batch_per_epoch` parameter is not a native parameter of PyTorch dataloaders but an additional parameter added by MMEngine to achieve this functionality.
+```
+
+Let's take the model defined in [5 minutes to get started with MMEngine](../get_started/15_minutes.md) as an example. By setting `num_batch_per_epoch=5` in both `train_dataloader` and `val_dataloader`, you can ensure that one epoch consists of only 5 iterations.
+
+```python
+train_dataloader = dict(
+    batch_size=32,
+    dataset=train_set,
+    sampler=dict(type='DefaultSampler', shuffle=True),
+    collate_fn=dict(type='default_collate'),
+    num_batch_per_epoch=5)
+val_dataloader = dict(
+    batch_size=32,
+    dataset=valid_set,
+    sampler=dict(type='DefaultSampler', shuffle=False),
+    collate_fn=dict(type='default_collate'),
+    num_batch_per_epoch=5)
+runner = Runner(
+    model=MMResNet50(),
+    work_dir='./work_dir',
+    train_dataloader=train_dataloader,
+    optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+    train_cfg=dict(by_epoch=True, max_epochs=2, val_interval=1),
+    val_dataloader=val_dataloader,
+    val_cfg=dict(),
+    val_evaluator=dict(type=Accuracy),
+    launcher=args.launcher,
+)
+runner.train()
+```
+
+As we can see, the number of iterations has been reduced to 5. Compared to the original setting, this allows you to complete one epoch more quickly.
+
+```
+08/18 20:27:22 - mmengine - INFO - Epoch(train) [1][5/5]  lr: 1.0000e-03  eta: 0:00:02  time: 0.4566  data_time: 0.0074  memory: 477  loss: 6.7576
+08/18 20:27:22 - mmengine - INFO - Saving checkpoint at 1 epochs
+08/18 20:27:22 - mmengine - WARNING - `save_param_scheduler` is True but `self.param_schedulers` is None, so skip saving parameter schedulers
+08/18 20:27:23 - mmengine - INFO - Epoch(val) [1][5/5]    accuracy: 7.5000  data_time: 0.0044  time: 0.0146
+08/18 20:27:23 - mmengine - INFO - Exp name: 20230818_202715
+08/18 20:27:23 - mmengine - INFO - Epoch(train) [2][5/5]  lr: 1.0000e-03  eta: 0:00:00  time: 0.2501  data_time: 0.0077  memory: 477  loss: 5.3044
+08/18 20:27:23 - mmengine - INFO - Saving checkpoint at 2 epochs
+08/18 20:27:24 - mmengine - INFO - Epoch(val) [2][5/5]    accuracy: 12.5000  data_time: 0.0058  time: 0.0175
+```
+
 ## Find Unused Parameters
 
 When using multiple GPUs training, if model's parameters are involved in forward computation but are not used in producing loss, the program may throw the following error:

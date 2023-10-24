@@ -71,7 +71,7 @@ runner.train()
 ## Gradient Checkpointing
 
 ```{note}
-Starting from MMEngine v0.8.5, gradient checkpointing is supported. For performance comparisons, you can click on [#1319](https://github.com/open-mmlab/mmengine/pull/1319). If you encounter any issues during usage, feel free to provide feedback in [#1319](https://github.com/open-mmlab/mmengine/pull/1319).
+Starting from MMEngine v0.9.0, gradient checkpointing is supported. For performance comparisons, you can click on [#1319](https://github.com/open-mmlab/mmengine/pull/1319). If you encounter any issues during usage, feel free to provide feedback in [#1319](https://github.com/open-mmlab/mmengine/pull/1319).
 ```
 
 You can simply enable gradient checkpointing by configuring activation_checkpointing in the Runner's cfg parameters.
@@ -100,7 +100,7 @@ runner.train()
 ## Large Model Training
 
 ```{warning}
-If you have the requirement to train large models, we recommend reading [Traning Big Models](./large_model_training.md).
+If you have the requirement to train large models, we recommend reading [Training Big Models](./large_model_training.md).
 ```
 
 `FSDP` is officially supported from PyTorch 1.11. The config can be written in this way:

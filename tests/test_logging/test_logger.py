@@ -11,6 +11,7 @@ import pytest
 
 from mmengine.logging import MMLogger, print_log
 from mmengine.logging.logger import _get_device_id
+from mmengine.utils import is_installed
 
 
 class TestLogger:
@@ -237,6 +238,7 @@ class TestLogger:
         MMLogger._instance_dict.clear()
 
 
+@pytest.mark.skipif(not is_installed('torch'), reason='tests requires torch')
 @patch('torch.cuda.device_count', lambda: 4)
 def test_get_device_id():
 

@@ -96,7 +96,7 @@ runner.train()
 [bitsandbytes](https://github.com/TimDettmers/bitsandbytes) 提供了 `AdamW8bit`、`Adam8bit`、`Adagrad8bit`、`PagedAdam8bit`、`PagedAdamW8bit`、`LAMB8bit`、 `LARS8bit`、`RMSprop8bit`、`Lion8bit`、`PagedLion8bit` 和 `SGD8bit` 优化器。
 
 ```{note}
-如使用 D-Adaptation 提供的优化器，需将 mmengine 升级至 `0.8.5`。
+如使用 D-Adaptation 提供的优化器，需将 mmengine 升级至 `0.9.0`。
 ```
 
 - 安装

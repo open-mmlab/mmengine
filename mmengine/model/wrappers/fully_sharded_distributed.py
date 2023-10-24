@@ -146,51 +146,53 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
                 '`cpu_offload` should be `None`, `bool`'
                 f'or `CPUOffload`, but has type {type(cpu_offload)}')
 
-        if isinstance(auto_wrap_policy, str):
-            auto_wrap_policy = FUNCTIONS.get(  # type: ignore
-                auto_wrap_policy)
-            if auto_wrap_policy is None:
-                raise ValueError('`auto_wrap_policy` is not registered!')
-        elif isinstance(auto_wrap_policy, dict):
-            policy = auto_wrap_policy.pop('type')
-            if isinstance(policy, str):
-                policy = FUNCTIONS.get(policy)  # type: ignore
-            if policy is None:
-                raise ValueError('`auto_wrap_policy` is not registered!')
-            auto_wrap_policy = partial(policy, **auto_wrap_policy)
+        with FUNCTIONS.switch_scope_and_registry(None):
+            if isinstance(auto_wrap_policy, str):
+                auto_wrap_policy = FUNCTIONS.get(  # type: ignore
+                    auto_wrap_policy)
+                if auto_wrap_policy is None:
+                    raise ValueError('`auto_wrap_policy` is not registered!')
+            elif isinstance(auto_wrap_policy, dict):
+                policy = auto_wrap_policy.pop('type')
+                if isinstance(policy, str):
+                    policy = FUNCTIONS.get(policy)  # type: ignore
+                if policy is None:
+                    raise ValueError('`auto_wrap_policy` is not registered!')
+                auto_wrap_policy = partial(policy, **auto_wrap_policy)
 
-        if not (auto_wrap_policy is None
-                or callable(auto_wrap_policy)):  # type: ignore
-            raise TypeError('`auto_wrap_policy` should be a str, a '
-                            'callable, a dict or None, but has type '
-                            f'{type(auto_wrap_policy)}')
+            if not (auto_wrap_policy is None
+                    or callable(auto_wrap_policy)):  # type: ignore
+                raise TypeError('`auto_wrap_policy` should be a str, a '
+                                'callable, a dict or None, but has type '
+                                f'{type(auto_wrap_policy)}')
 
-        if isinstance(backward_prefetch, str):
-            backward_prefetch = BackwardPrefetch[backward_prefetch]
-        if not (isinstance(backward_prefetch, BackwardPrefetch)
-                or backward_prefetch is None):
-            raise TypeError(
-                '`backward_prefetch` should be `None`, string of '
-                '"BACKWARD_PRE" and "BACKWARD_POST", or '
-                f'`BackwardPrefetch`, but has type {type(backward_prefetch)}')
+            if isinstance(backward_prefetch, str):
+                backward_prefetch = BackwardPrefetch[backward_prefetch]
+            if not (isinstance(backward_prefetch, BackwardPrefetch)
+                    or backward_prefetch is None):
+                raise TypeError(
+                    '`backward_prefetch` should be `None`, string of '
+                    '"BACKWARD_PRE" and "BACKWARD_POST", or '
+                    f'`BackwardPrefetch`, but has type {type(backward_prefetch)}'  # noqa: E501
+                )
 
-        if isinstance(param_init_fn, str):
-            param_init_fn = FUNCTIONS.get(  # type: ignore
-                param_init_fn)
-            if param_init_fn is None:
-                raise ValueError('`param_init_fn` is not registered!')
-        elif isinstance(param_init_fn, dict):
-            init_fn = param_init_fn.pop('type')
             if isinstance(param_init_fn, str):
-                init_fn = FUNCTIONS.get(init_fn)  # type: ignore
-            if init_fn is None:
-                raise ValueError('`param_init_fn` is not registered!')
-            param_init_fn = partial(init_fn, **param_init_fn)
+                param_init_fn = FUNCTIONS.get(  # type: ignore
+                    param_init_fn)
+                if param_init_fn is None:
+                    raise ValueError('`param_init_fn` is not registered!')
+            elif isinstance(param_init_fn, dict):
+                init_fn = param_init_fn.pop('type')
+                if isinstance(param_init_fn, str):
+                    init_fn = FUNCTIONS.get(init_fn)  # type: ignore
+                if init_fn is None:
+                    raise ValueError('`param_init_fn` is not registered!')
+                param_init_fn = partial(init_fn, **param_init_fn)
 
-        if not (callable(param_init_fn) or param_init_fn is None):
-            raise TypeError('`param_init_fn` should be a str, a '
-                            'callable, a dict or None, but has type '
-                            f'{type(param_init_fn)}')
+            if not (callable(param_init_fn) or param_init_fn is None):
+                raise TypeError('`param_init_fn` should be a str, a '
+                                'callable, a dict or None, but has type '
+                                f'{type(param_init_fn)}')
 
         def parse_dtype(dtype):
             if dtype is None:
