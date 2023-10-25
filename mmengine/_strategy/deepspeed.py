@@ -18,7 +18,7 @@ from mmengine.dist import init_dist
 from mmengine.optim import BaseOptimWrapper, _ParamScheduler
 from mmengine.registry import (MODEL_WRAPPERS, OPTIM_WRAPPERS, OPTIMIZERS,
                                STRATEGIES)
-from mmengine.utils import get_git_hash
+from mmengine.utils import apply_to, get_git_hash
 from .base import BaseStrategy
 
 
@@ -192,14 +192,15 @@ class MMDeepSpeedEngineWrapper:
             new_inputs = []
             for i, v in enumerate(inputs):
                 if i in self._inputs_to_half:
-                    new_inputs.append(v.half())
+                    new_inputs.append(
+                        apply_to(v, lambda _: True, lambda x: x.half()))
                 else:
                     new_inputs.append(v)
             return inputs.__class__(new_inputs)
         elif isinstance(inputs, dict):
             for k, v in inputs.items():
                 if k in self._inputs_to_half:
-                    inputs[k] = v.half()
+                    inputs[k] = apply_to(v, lambda _: True, lambda x: x.half())
             return inputs
         else:
             raise TypeError('inputs should be list, tuple or dict, '
