@@ -915,7 +915,7 @@ class ClearMLVisBackend(BaseVisBackend):
             config (Config): The Config object
         """
         self.cfg = config
-        self._task.connect_configuration(vars(config.to_dict()))
+        self._task.connect_configuration(config.to_dict())
 
     @force_init_env
     def add_image(self,
