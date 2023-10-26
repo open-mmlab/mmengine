@@ -5,6 +5,7 @@ import inspect
 import os
 import platform
 import sys
+from contextlib import contextmanager
 from importlib.machinery import PathFinder
 from pathlib import Path
 from types import BuiltinFunctionType, FunctionType, ModuleType
@@ -12,7 +13,7 @@ from typing import Optional, Tuple, Union
 
 from yapf.yapflib.yapf_api import FormatCode
 
-from .config import Config, ConfigDict
+from .config import Config, ConfigDict, ConfigList, ConfigSet, ConfigTuple
 from .lazy import LazyImportContext, LazyObject, recover_lazy_field
 
 RESERVED_KEYS = ['filename', 'text', 'pretty_text']
@@ -177,8 +178,7 @@ class ConfigV2(Config):
         # Using try-except to make sure ``ConfigDict.lazy`` will be reset
         # to False. See more details about lazy in the docstring of
         # ConfigDict
-        ConfigDict.lazy = True
-        try:
+        with ConfigV2._lazy_context():
             module = ConfigV2._get_config_module(filename)
             module_dict = {
                 k: getattr(module, k)
@@ -193,7 +193,6 @@ class ConfigV2(Config):
                 cfg_dict,
                 filename=filename,
                 format_python_code=format_python_code)
-        finally:
             ConfigDict.lazy = False
             global _CFG_UID
             _CFG_UID = 0
@@ -202,6 +201,21 @@ class ConfigV2(Config):
                     del sys.modules[mod]
 
         return cfg
+
+    @staticmethod
+    @contextmanager
+    def _lazy_context():
+        ConfigDict.lazy = True
+        ConfigSet.lazy = True
+        ConfigList.lazy = True
+        ConfigTuple.lazy = True
+
+        yield
+
+        ConfigDict.lazy = False
+        ConfigSet.lazy = False
+        ConfigList.lazy = False
+        ConfigTuple.lazy = False
 
     @staticmethod
     def _get_config_module(filename: Union[str, Path]):
@@ -222,7 +236,7 @@ class ConfigV2(Config):
         return module
 
     @staticmethod
-    def _dict_to_config_dict_lazy(cfg: dict):
+    def _to_lazy_container(cfg: dict):
         """Recursively converts ``dict`` to :obj:`ConfigDict`. The only
         difference between ``_dict_to_config_dict_lazy`` and
         ``_dict_to_config_dict_lazy`` is that the former one does not consider
@@ -238,11 +252,17 @@ class ConfigV2(Config):
         if isinstance(cfg, dict):
             cfg_dict = ConfigDict()
             for key, value in cfg.items():
-                cfg_dict[key] = ConfigV2._dict_to_config_dict_lazy(value)
+                cfg_dict[key] = ConfigV2._to_lazy_container(value)
             return cfg_dict
-        if isinstance(cfg, (tuple, list)):
-            return type(cfg)(
-                ConfigV2._dict_to_config_dict_lazy(_cfg) for _cfg in cfg)
+        if isinstance(cfg, list):
+            return ConfigList(
+                ConfigV2._to_lazy_container(_cfg) for _cfg in cfg)
+        if isinstance(cfg, tuple):
+            return ConfigTuple(
+                ConfigV2._to_lazy_container(_cfg) for _cfg in cfg)
+        if isinstance(cfg, set):
+            return ConfigSet(ConfigV2._to_lazy_container(_cfg) for _cfg in cfg)
+
         return cfg
 
     @property
@@ -433,7 +453,7 @@ class BaseImportContext():
                 mod = ConfigV2._get_config_module(cur_file)
 
                 for k in dir(mod):
-                    mod.__dict__[k] = ConfigV2._dict_to_config_dict_lazy(
+                    mod.__dict__[k] = ConfigV2._to_lazy_container(
                         getattr(mod, k))
             else:
                 mod = old_import(

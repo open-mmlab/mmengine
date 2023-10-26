@@ -15,7 +15,7 @@ from unittest.mock import patch
 import pytest
 
 import mmengine
-from mmengine import Config, ConfigDict, DictAction
+from mmengine import Config, ConfigDict, ConfigList, DictAction
 from mmengine.config.lazy import LazyObject
 from mmengine.config.old_config import ConfigV1
 from mmengine.fileio import dump, load
@@ -1002,10 +1002,10 @@ class TestConfig:
         cfg = Config.fromfile(lazy_import_cfg_path)
         cfg_dict = cfg.to_dict()
         assert (cfg_dict['train_dataloader']['dataset']['type'] ==
-                '<mmengine.testing.runner_test_case.ToyDataset>')
+                '<imp mmengine.testing.runner_test_case.ToyDataset>')
         assert (cfg_dict['custom_hooks'][0]['type']
-                in ('<mmengine.hooks.EMAHook>',
-                    '<mmengine.hooks.ema_hook.EMAHook>'))
+                in ('<imp mmengine.hooks.EMAHook>',
+                    '<imp mmengine.hooks.ema_hook.EMAHook>'))
         # Dumped config
         dumped_cfg_path = tmp_path / 'test_dump_lazy.py'
         cfg.dump(dumped_cfg_path)
@@ -1220,3 +1220,44 @@ class TestConfigDict(TestCase):
             [self._recursive_check_lazy(value, expr) for value in cfg]
         else:
             self.assertTrue(expr(cfg))
+
+
+class TestConfigList(TestCase):
+
+    def test_getitem(self):
+        cfg_list = ConfigList([
+            1, 2,
+            ConfigDict(type=LazyObject('mmengine')),
+            LazyObject('mmengine')
+        ])
+        self.assertIs(cfg_list[2]['type'], mmengine)
+        self.assertIs(cfg_list[3], mmengine)
+
+    def test_star(self):
+
+        def check_star(a, b, c):
+            self.assertIs(c, mmengine)
+
+        cfg_list = ConfigList([1, 2, LazyObject('mmengine')])
+        check_star(*cfg_list)
+
+    def check_for_loop(self):
+        cfg_list = ConfigList([LazyObject('mmengine')])
+        for i in cfg_list:
+            self.assertIs(i, mmengine)
+
+    def test_copy(self):
+        cfg_list = ConfigList([
+            1, 2,
+            ConfigDict(type=LazyObject('mmengine')),
+            LazyObject('mmengine')
+        ])
+        cfg_copy = cfg_list.copy()
+        self.assertIsInstance(cfg_copy, ConfigList)
+        self.assertEqual(cfg_list, cfg_copy)
+        self.assertIs(cfg_list[2], cfg_copy[2])
+
+        cfg_copy = copy.deepcopy(cfg_list)
+        self.assertIsInstance(cfg_copy, ConfigList)
+        self.assertEqual(cfg_list, cfg_copy)
+        self.assertIsNot(cfg_list[2], cfg_copy[2])
