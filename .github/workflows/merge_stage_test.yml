@@ -58,7 +58,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.7]
-        torch: [1.6.0, 1.7.1, 1.8.1, 1.9.1, 1.10.1, 1.11.0, 1.12.0, 1.13.0]
+        torch: [1.6.0, 1.7.1, 1.8.1, 1.9.1, 1.10.1, 1.11.0, 1.12.0, 1.13.0, 2.0.0, 2.1.0]
         include:
           - torch: 1.6.0
             torchvision: 0.7.0
@@ -79,6 +79,14 @@ jobs:
           - torch: 2.0.0
             torchvision: 0.15.1
             python-version: 3.8
+          - torch: 2.1.0
+            torchvision: 0.16.0
+            python-version: 3.8
+        exclude:
+          - torch: 2.0.0
+            python-version: 3.7
+          - torch: 2.1.0
+            python-version: 3.7
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
@@ -228,8 +236,8 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: [3.7]
-        torch: [1.6.0, 1.8.1, 1.13.0]
+        python-version: [3.8]
+        torch: [1.6.0, 1.8.1, 1.13.0, 2.1.0]
         include:
           - torch: 1.6.0
             torchvision: 0.7.0
@@ -237,6 +245,8 @@ jobs:
             torchvision: 0.9.1
           - torch: 1.13.0
             torchvision: 0.14.0
+          - torch: 2.1.0
+            torchvision: 0.16.0
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python 3.7
@@ -273,13 +283,17 @@ jobs:
       matrix:
         python-version: [3.7]
         platform: [cpu, cu111]
-        torch: [1.8.1]
-        torchvision: [0.9.1]
+        torch: [1.8.1, 2.1.0]
+        torchvision: [0.9.1, 0.16.0]
         include:
           - python-version: 3.8
             platform: cu117
             torch: 2.0.0
             torchvision: 0.15.1
+          - python-version: 3.8
+            platform: cu118
+            torch: 2.1.0
+            torchvision: 0.16.0
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}

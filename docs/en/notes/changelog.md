@@ -1,5 +1,69 @@
 # Changelog of v0.x
 
+## v0.9.0 (10/10/2023)
+
+### Highlights
+
+- Support training with [ColossalAI](https://colossalai.org/). Refer to the [Training Large Models](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html#colossalai) for more detailed usages.
+- Support gradient checkpointing. Refer to the [Save Memory on GPU](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#gradient-checkpointing) for more details.
+- Supports multiple visualization backends, including `NeptuneVisBackend`, `DVCLiveVisBackend` and `AimVisBackend`. Refer to [Visualization Backends](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html) for more details.
+
+### New Features & Enhancements
+
+- Add a text translation example by [@Desjajja](https://github.com/Desjajja) in https://github.com/open-mmlab/mmengine/pull/1283
+- Add `NeptuneVisBackend` by [@wangerlie](https://github.com/wangerlie) in https://github.com/open-mmlab/mmengine/pull/1311
+- Add ColossalAI strategy by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1299
+- Add collect_results support for Ascend NPU by [@xuuyangg](https://github.com/xuuyangg) in https://github.com/open-mmlab/mmengine/pull/1309
+- Unify the parameter style of DeepSpeedStrategy by [@LZHgrla](https://github.com/LZHgrla) in https://github.com/open-mmlab/mmengine/pull/1320
+- Add progressbar rich by [@Dominic23331](https://github.com/Dominic23331) in https://github.com/open-mmlab/mmengine/pull/1157
+- Support using other file handlers by [@KevinNuNu](https://github.com/KevinNuNu) in https://github.com/open-mmlab/mmengine/pull/1188
+- Refine error message by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1338
+- Implement gradient checkpointing by [@zeyuanyin](https://github.com/zeyuanyin) in https://github.com/open-mmlab/mmengine/pull/1319
+- Add `DVCLiveVisBackend` by [@RangeKing](https://github.com/RangeKing) in https://github.com/open-mmlab/mmengine/pull/1336
+- Add `AimVisBackend` by [@RangeKing](https://github.com/RangeKing) in https://github.com/open-mmlab/mmengine/pull/1347
+- Support bitsandbytes by [@okotaku](https://github.com/okotaku) in https://github.com/open-mmlab/mmengine/pull/1357
+- Support `Adafactor` Optimizer by [@okotaku](https://github.com/okotaku) in https://github.com/open-mmlab/mmengine/pull/1361
+- Add unit tests for autocast with Ascend device by [@6Vvv](https://github.com/6Vvv) in https://github.com/open-mmlab/mmengine/pull/1363
+- Support metainfo of dataset can be a generic dict-like Mapping by [@hiyyg](https://github.com/hiyyg) in https://github.com/open-mmlab/mmengine/pull/1378
+- Support for installing minimal runtime dependencies by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1362
+- Support setting the number of iterations in `Runner` for each epoch by [@ShuRaymond](https://github.com/ShuRaymond) in https://github.com/open-mmlab/mmengine/pull/1292
+- Support using gradient checkpointing in FSDP by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1382
+
+### Docs
+
+- Add README for examples by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1295
+- Add a new ecosystem in README by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1296
+- Fix typo by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1298
+- Add an image for Neptune by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1312
+- Fix docs of ColossalAI by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1315
+- Update QRCode by [@crazysteeaam](https://github.com/crazysteeaam) in https://github.com/open-mmlab/mmengine/pull/1328
+- Add activation checkpointing usage by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1341
+- Fix typo by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1348
+- Update the usage of bitsandbytes in Chinese documents by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1359
+- Fix doc typo our_dir in LoggerHook by [@wangg12](https://github.com/wangg12) in https://github.com/open-mmlab/mmengine/pull/1373
+- Add the contributing doc in pr template by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1380
+- Update the version info by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1383
+- Fix typo by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1385
+
+### Bug Fixes
+
+- Ignore examples in CI by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1297
+- Fix multi-card issue in PyTorch v2.1 on Ascend by [@LRJKD](https://github.com/LRJKD) in https://github.com/open-mmlab/mmengine/pull/1321
+- Fix get `optimizer_cls` by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1324
+- Fix ndarray metainfo check in ConcatDataset by [@NrealLzx](https://github.com/NrealLzx) in https://github.com/open-mmlab/mmengine/pull/1333
+- Adapt to PyTorch v2.1 on Ascend by [@LRJKD](https://github.com/LRJKD) in https://github.com/open-mmlab/mmengine/pull/1332
+- Fix the type check of tasks in progress bar by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1340
+- The keyword mode appears nested multiple times in the log by [@huaibovip](https://github.com/huaibovip) in https://github.com/open-mmlab/mmengine/pull/1305
+- Fix pydantic version to fix mlflow unit tests by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1351
+- Fix get class attribute from a string by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1345
+- Delete yapf verify by [@okotaku](https://github.com/okotaku) in https://github.com/open-mmlab/mmengine/pull/1365
+- Ensure from_cfg of Runner have the same defaults values as its __init__ by [@YinAoXiong](https://github.com/YinAoXiong) in https://github.com/open-mmlab/mmengine/pull/1368
+- Fix docs building error caused by deepspeed by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1379
+
+### Contributors
+
+A total of 21 developers contributed to this release. Thanks [@LZHgrla](https://github.com/LZHgrla), [@wangerlie](https://github.com/wangerlie), [@wangg12](https://github.com/wangg12), [@RangeKing](https://github.com/RangeKing), [@hiyyg](https://github.com/hiyyg), [@LRJKD](https://github.com/LRJKD), [@KevinNuNu](https://github.com/KevinNuNu), [@zeyuanyin](https://github.com/zeyuanyin), [@Desjajja](https://github.com/Desjajja), [@ShuRaymond](https://github.com/ShuRaymond), [@okotaku](https://github.com/okotaku), [@crazysteeaam](https://github.com/crazysteeaam), [@6Vvv](https://github.com/6Vvv), [@NrealLzx](https://github.com/NrealLzx), [@YinAoXiong](https://github.com/YinAoXiong), [@huaibovip](https://github.com/huaibovip), [@xuuyangg](https://github.com/xuuyangg), [@Dominic23331](https://github.com/Dominic23331), [@fanqiNO1](https://github.com/fanqiNO1), [@HAOCHENYE](https://github.com/HAOCHENYE), [@zhouzaida](https://github.com/zhouzaida)
+
 ## v0.8.4 (03/08/2023)
 
 ### New Features & Enhancements
