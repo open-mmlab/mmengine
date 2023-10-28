@@ -4,6 +4,7 @@ from typing import List, Sequence, Union
 
 import numpy as np
 import torch
+from torch.nn.functional import interpolate
 
 from .base_data_element import BaseDataElement
 
@@ -128,3 +129,40 @@ class PixelData(BaseDataElement):
             return None
 
     # TODO padding, resize
+    def resize(self,
+               size: Sequence[int],
+               interpolation: str = 'bilinear') -> 'PixelData':
+        """Resize all values to the given `size`, and return a new `PixelData`.
+
+        Args:
+            size (Sequence[int]): Output spatial size,
+              should be (height, width)
+            interpolation (str, optional): The algorithm used in interpolation.
+              available for resizing are: `nearest`, `bilinear`, `bicubic`,
+              `area`, `nearest-exact`. Defaults to 'bilinear'.
+
+        Returns:
+            PixelData: A resized new `PixelData`
+        """
+        assert len(size) == 2, 'Size should be (height, width)'
+        new_h, new_w = size
+        old_h, old_w = self.shape
+        if new_h == old_h and new_w == old_w:
+            return self.clone()
+        new_data = self.__class__(metainfo=self.metainfo)
+        for k, v in self.items():
+            if isinstance(v, np.ndarray):
+                data = torch.from_numpy(v)
+            else:
+                data = v
+            # torch.nn.functional need a batch dim,
+            # and do not support some dtype
+            data = data.unsqueeze(0).to(torch.float32)
+            resized_data = interpolate(
+                data, size=size, mode=interpolation).squeeze()
+            if isinstance(v, np.ndarray):
+                resized_data = resized_data.numpy().astype(v.dtype)
+            else:
+                resized_data = resized_data.to(v.dtype)
+            setattr(new_data, k, resized_data)
+        return new_data
