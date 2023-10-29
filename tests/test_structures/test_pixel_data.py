@@ -81,3 +81,37 @@ class TestPixelData(TestCase):
         assert pixel_data.shape == (20, 40)
         pixel_data = PixelData()
         assert pixel_data.shape is None
+
+    def test_resize(self):
+        pixel_data = self.setup_data()
+        resized_pixel_data = pixel_data.resize((40, 20),
+                                               interpolation='bilinear')
+        assert resized_pixel_data.shape == (40, 20)
+        resized_pixel_data = pixel_data.resize((40, 20),
+                                               interpolation='nearest')
+        assert resized_pixel_data.shape == (40, 20)
+        resized_pixel_data = pixel_data.resize((40, 20),
+                                               interpolation='bicubic')
+        assert resized_pixel_data.shape == (40, 20)
+        resized_pixel_data = pixel_data.resize((40, 20), interpolation='area')
+        assert resized_pixel_data.shape == (40, 20)
+        resized_pixel_data = pixel_data.resize((40, 20),
+                                               interpolation='nearest-exact')
+        assert resized_pixel_data.shape == (40, 20)
+
+        # only support 5 interpolation mode above
+        with self.assertRaises(NotImplementedError):
+            resized_pixel_data = pixel_data.resize((40, 20),
+                                                   interpolation='linear')
+        with self.assertRaises(NotImplementedError):
+            resized_pixel_data = pixel_data.resize((40, 20),
+                                                   interpolation='trilinear')
+        with self.assertRaises(NotImplementedError):
+            resized_pixel_data = pixel_data.resize((40, 20),
+                                                   interpolation='otherstr')
+
+        # size should be (height, width)
+        with self.assertRaises(TypeError):
+            resized_pixel_data = pixel_data.resize(20)
+        with self.assertRaises(AssertionError):
+            resized_pixel_data = pixel_data.resize((1, 20, 20))
