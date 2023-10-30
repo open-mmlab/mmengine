@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import ast
+import importlib
 import os.path as osp
 import re
 import sys
@@ -131,9 +132,15 @@ def _get_package_and_cfg_path(cfg_path: str) -> Tuple[str, str]:
                          'config name, but found multiple `::` in '
                          f'{cfg_path}')
     package, cfg_path = package_cfg
-    assert package in MODULE2PACKAGE, (
-        f'mmengine does not support to load {package} config.')
-    package = MODULE2PACKAGE[package]
+
+    if package in MODULE2PACKAGE:
+        package = MODULE2PACKAGE[package]
+    else:
+        try:
+            importlib.import_module(package)
+        except ModuleNotFoundError:
+            raise ValueError(f'Cannot find package `{package}`')
+    
     return package, cfg_path
 
 
