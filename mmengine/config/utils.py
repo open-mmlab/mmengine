@@ -140,7 +140,7 @@ def _get_package_and_cfg_path(cfg_path: str) -> Tuple[str, str]:
             importlib.import_module(package)
         except ModuleNotFoundError:
             raise ValueError(f'Cannot find package `{package}`')
-    
+
     return package, cfg_path
 
 
