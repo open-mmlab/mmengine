@@ -6,8 +6,8 @@ import warnings
 from functools import partial
 from queue import Queue
 from threading import Event, Thread, current_thread
-from typing import (Any, Dict, Iterator, List,
-                    Optional, Set, Tuple, TypedDict, Union)
+from typing import (Any, Dict, Iterator, List, Optional, Set, Tuple, TypedDict,
+                    Union)
 
 import numpy as np
 import psutil
@@ -166,7 +166,7 @@ class MMPipelineParallel(nn.Module):
         self.language_module_class = language_module_class
         self.lm_offset = 0
         self.module_tree = self._get_model_tree()
-        self.device_map = device_map
+        self.device_map_policy = device_map
 
         # init offload directory
         if offload_directory is not None:
@@ -182,10 +182,12 @@ class MMPipelineParallel(nn.Module):
         self.events = self._init_events()
 
     def _prepare_forward(self, chunked_data: dict):
-        if not isinstance(self.device_map, dict):
+        if isinstance(self.device_map_policy, dict):
+            self.device_map = self.device_map_policy
+        else:
             self._get_flops_and_exec_order(chunked_data)
             self._find_tied_weights()
-            self.device_map = self._init_device_map(self.device_map)
+            self.device_map = self._init_device_map(self.device_map_policy)
         self.offload_map = self._init_offload_map()
         self.module_map = self._init_module_map()
         self._load_and_dispatch()
@@ -204,9 +206,8 @@ class MMPipelineParallel(nn.Module):
     def _get_model_tree(self) -> Dict[str, Any]:
         """Init the model tree for many usages."""
 
-        def _generate_model_tree(module: Optional[nn.Module],
-                                 prefix: str,
-                                 info: Dict[str, Any]) -> TreeNode:
+        def _generate_model_tree(module: Optional[nn.Module], prefix: str,
+                                 info: Dict[str, Any]):
             """BFS the module to generate the model tree.
 
             First, register the module self as a node. Then, register the
@@ -415,16 +416,16 @@ class MMPipelineParallel(nn.Module):
                 'init': None,
                 'exec': None
             })
-            
-        def _update(part_pointer: int, name: str,
-                    flops: int, parameter_size: int, cuda_pointer: int):
+
+        def _update(part_pointer: int, name: str, flops: int,
+                    parameter_size: int, cuda_pointer: int):
             modules_info[part_pointer]['modules'].append(name)
             modules_info[part_pointer]['flops'] += flops
             modules_info[part_pointer]['parameter_size'] += parameter_size
             modules_info[part_pointer]['exec'] = cuda_devices[cuda_pointer]
 
-        def _get_device_map(tree: Dict[str, Any],
-                            name: str, meta_info: Dict[str, int]):
+        def _get_device_map(tree: Dict[str, Any], name: str,
+                            meta_info: Dict[str, int]):
             """DFS the model tree to get the device map.
 
             First, handle language model. Second, get the current module flops
@@ -456,17 +457,18 @@ class MMPipelineParallel(nn.Module):
             # if it is the last part
             if part_pointer == self.num_pipelines - 1:
                 if is_memory_enough:
-                    _update(part_pointer, name, module_flops, module_size, cuda_pointer)
+                    _update(part_pointer, name, module_flops, module_size,
+                            cuda_pointer)
                 else:
-                    raise RuntimeError(
-                        'The model if too large to fit into' +
-                        f'{cuda_devices[cuda_pointer]}' +
-                        'Please use more GPUs')
+                    raise RuntimeError('The model if too large to fit into' +
+                                       f'{cuda_devices[cuda_pointer]}' +
+                                       'Please use more GPUs')
                 return
             # otherwise, handle self
             if is_memory_enough:
                 if module_flops + curr_flops < upper_flops:
-                    _update(part_pointer, name, module_flops, module_size, cuda_pointer)
+                    _update(part_pointer, name, module_flops, module_size,
+                            cuda_pointer)
                     if module_flops + curr_flops > lower_flops:
                         meta_info['part_pointer'] += 1
                         meta_info['cuda_pointer'] += 1
@@ -486,14 +488,13 @@ class MMPipelineParallel(nn.Module):
                 meta_info['cuda_pointer'] += 1
                 meta_info['cuda_pointer'] %= len(cuda_devices)
                 _get_device_map(tree, name, meta_info)
-                
+
         _get_device_map(self.module_tree, '', meta_info)
         # check part_pointer
         if meta_info['part_pointer'] != self.num_pipelines:
-            raise RuntimeError(
-                'The model cannot be split into' + 
-                f'{self.num_pipelines} parts. ' +
-                'Try to reduce the number of pipelines.')
+            raise RuntimeError('The model cannot be split into' +
+                               f'{self.num_pipelines} parts. ' +
+                               'Try to reduce the number of pipelines.')
         # infer init
         cpu_used = 0
         for i in range(self.num_pipelines):
@@ -673,9 +674,7 @@ class MMPipelineParallel(nn.Module):
             module = self.module_map[module_name]['module']
             # update the curr_device
             self.module_map[module_name]['curr_device'] = init_device
-            self._load_state_dict(module,
-                                  module_weights,
-                                  module_name,
+            self._load_state_dict(module, module_weights, module_name,
                                   init_device)
         del self.module_state_dict
 
@@ -714,8 +713,10 @@ class MMPipelineParallel(nn.Module):
             device = self.device_map['data_preprocessor']['exec_device']
 
             def send_back(module: nn.Module, input: Any, output: Any):
-                output = apply_to(output, lambda _: True, lambda x: x.to(device))
+                output = apply_to(output, lambda _: True,
+                                  lambda x: x.to(device))
                 return output
+
             module.register_forward_hook(send_back)
 
     @staticmethod
@@ -781,8 +782,7 @@ class MMPipelineParallel(nn.Module):
                 yield schedule
 
     def _load_state_dict(self, module: nn.Module,
-                         state_dict: Dict[str, torch.Tensor],
-                         module_name: str,
+                         state_dict: Dict[str, torch.Tensor], module_name: str,
                          device: str):
         """Load the state dict to the module on meta device."""
         if len(state_dict) == 0:
@@ -791,7 +791,7 @@ class MMPipelineParallel(nn.Module):
             # remove prefix
             # when pipelines = 1, module_name is ''
             if name.startswith(module_name) and module_name != '':
-                name = name[len(module_name)+1:]
+                name = name[len(module_name) + 1:]
             if name == '':
                 # because they are parameters or buffers
                 # they cannot be stored by pointers
@@ -858,9 +858,7 @@ class MMPipelineParallel(nn.Module):
                     weight = weight.to(target_device)
                     state_dict[full_name] = weight
                 # load
-                self._load_state_dict(info['module'],
-                                      state_dict,
-                                      module_name,
+                self._load_state_dict(info['module'], state_dict, module_name,
                                       target_device)
             elif target_device == 'disk':
                 # disk offload
@@ -901,7 +899,7 @@ class MMPipelineParallel(nn.Module):
         """The forward function of the model."""
         exec_info = None
         chunked_data = _chunk_data(data, self.num_chunks)
-        results = [None for _ in range(len(chunked_data))]
+        results: List[List[Any]] = [[] for _ in range(len(chunked_data))]
         # get flops, init device map, offload map, module map and exec order
         # we should get the shape of input data, so we can
         # get the flops of each module and the execution order
@@ -979,13 +977,11 @@ class MMPipelineParallel(nn.Module):
                         if part_id == 0:
                             curr_data = chunked_data[chunk_id]
                             task = partial(self.module.test_step, curr_data)
-                            self.in_queues[
-                                f'chunk-{chunk_id}'].put(task)
+                            self.in_queues[f'chunk-{chunk_id}'].put(task)
             if isinstance(schedules, str):
                 if schedules == 'offload':
                     # receive the success signal
-                    success, result = self.out_queues[
-                        'move-out'].get()
+                    success, result = self.out_queues['move-out'].get()
                     if exec_info is not None:
                         continue
                     elif not success:
@@ -993,8 +989,7 @@ class MMPipelineParallel(nn.Module):
                         continue
                 elif schedules == 'onload':
                     # receive the success signal
-                    success, result = self.out_queues[
-                        'move-in'].get()
+                    success, result = self.out_queues['move-in'].get()
                     if exec_info is not None:
                         continue
                     elif not success:
@@ -1021,7 +1016,7 @@ class MMPipelineParallel(nn.Module):
             if exec_info is not None:
                 raise exec_info[0].with_traceback(exec_info[1], exec_info[2])
         # merge results
-        merged_results = []
+        merged_results: List[Any] = []
         for result_item in results:
             merged_results.extend(result_item)
         return merged_results
@@ -1192,8 +1187,7 @@ class _MMPipelineParallelHook:
         # wait
         self.events[chunk_id][self.part_id].wait()
 
-    def _check_device(self, args: tuple,
-                      kwargs: dict) -> Tuple[tuple, dict]:
+    def _check_device(self, args: tuple, kwargs: dict) -> Tuple[tuple, dict]:
         """Check the device and move the data to the execution device."""
         args = apply_to(args, lambda _: True, lambda x: x.to(self.exec_device))
         kwargs = apply_to(kwargs, lambda _: True,
