@@ -9,12 +9,11 @@ from collections import defaultdict
 from importlib.util import find_spec
 from typing import List, Optional, Tuple, Union
 
-from mmengine.utils.package_utils import MODULE2PACKAGE
 from mmengine.fileio import load
 from mmengine.utils import check_file_exist
+from mmengine.utils.package_utils import MODULE2PACKAGE
 
 PYTHON_ROOT_DIR = osp.dirname(osp.dirname(sys.executable))
-
 
 # PKG2PROJECT is not a proper name to represent the mapping between module name
 # (module import from) and package name (used by pip install). Therefore,
