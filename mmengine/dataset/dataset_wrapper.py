@@ -84,7 +84,8 @@ class ConcatDataset(_ConcatDataset):
                 if (isinstance(self._metainfo[key], np.ndarray)
                         and not np.array_equal(self._metainfo[key],
                                                dataset.metainfo[key])
-                        or self._metainfo[key] != dataset.metainfo[key]):
+                        or (not isinstance(self._metainfo[key], np.ndarray)
+                            and self._metainfo[key] != dataset.metainfo[key])):
                     raise ValueError(
                         f'The meta information of the {i}-th dataset does not '
                         'match meta information of the first dataset')
