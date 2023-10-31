@@ -15,7 +15,7 @@ import torch.nn as nn
 from rich.progress import track
 
 from mmengine.config import Config, ConfigDict
-from mmengine.config.utils import MODULE2PACKAGE
+from mmengine.utils.package_utils import MODULE2PACKAGE
 from mmengine.dataset import pseudo_collate
 from mmengine.device import get_device
 from mmengine.fileio import (get_file_backend, isdir, join_path,

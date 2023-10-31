@@ -2,6 +2,36 @@
 import os.path as osp
 import subprocess
 
+from importlib.metadata import entry_points
+
+
+MODULE2PACKAGE = {
+    'mmcls': 'mmcls',
+    'mmdet': 'mmdet',
+    'mmdet3d': 'mmdet3d',
+    'mmseg': 'mmsegmentation',
+    'mmaction': 'mmaction2',
+    'mmtrack': 'mmtrack',
+    'mmpose': 'mmpose',
+    'mmedit': 'mmedit',
+    'mmocr': 'mmocr',
+    'mmgen': 'mmgen',
+    'mmfewshot': 'mmfewshot',
+    'mmrazor': 'mmrazor',
+    'mmflow': 'mmflow',
+    'mmhuman3d': 'mmhuman3d',
+    'mmrotate': 'mmrotate',
+    'mmselfsup': 'mmselfsup',
+    'mmyolo': 'mmyolo',
+    'mmpretrain': 'mmpretrain',
+    'mmagic': 'mmagic',
+}
+
+module_names_entry = entry_points(group='mmengine.module_names')
+
+for row in module_names_entry:
+    MODULE2PACKAGE[row.name] = row.value
+
 
 def is_installed(package: str) -> bool:
     """Check package whether installed.
