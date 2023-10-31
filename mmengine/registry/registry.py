@@ -13,7 +13,6 @@ from rich.table import Table
 from mmengine.utils import get_object_from_string, is_seq_of
 from .default_scope import DefaultScope
 
-
 MMLAB_PACKAGES = {
     'mmcls': 'mmcls',
     'mmdet': 'mmdet',
