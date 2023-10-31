@@ -12,26 +12,26 @@ class TestFreezeHook(RunnerTestCase):
 
     def test_init(self):
         # Test FreezeHook TypeError.
-        FreezeHook(freeze_layers=('backbone.*', ), freeze_epoch=0)
+        FreezeHook(freeze_layers='backbone.*', freeze_epoch=0)
 
         with self.assertRaisesRegex(TypeError, '`freeze_layers`'):
             FreezeHook(freeze_layers=1, freeze_epoch=0)
 
         with self.assertRaisesRegex(TypeError, '`freeze_layers`'):
-            FreezeHook(freeze_layers=(), freeze_epoch=0)
+            FreezeHook(freeze_layers=(1, 2), freeze_epoch=0)
 
         with self.assertRaisesRegex(TypeError, '`freeze_layers`'):
-            FreezeHook(freeze_layers=(1, ), freeze_epoch=0)
+            FreezeHook(freeze_layers=('backbone.*', ), freeze_epoch=0)
 
         with self.assertRaisesRegex(TypeError, '`freeze_iter`'):
-            FreezeHook(freeze_layers=('backbone.*', ), freeze_iter='0')
+            FreezeHook(freeze_layers='backbone.*', freeze_iter='0')
 
         with self.assertRaisesRegex(TypeError, '`freeze_epoch`'):
-            FreezeHook(freeze_layers=('backbone.*', ), freeze_epoch='0')
+            FreezeHook(freeze_layers='backbone.*', freeze_epoch='0')
 
         with self.assertRaisesRegex(TypeError, '`unfreeze_layers`'):
             FreezeHook(
-                freeze_layers=('backbone.*', ),
+                freeze_layers='backbone.*',
                 freeze_epoch=0,
                 unfreeze_layers=1,
                 unfreeze_epoch=0,
@@ -39,33 +39,33 @@ class TestFreezeHook(RunnerTestCase):
 
         with self.assertRaisesRegex(TypeError, '`unfreeze_layers`'):
             FreezeHook(
-                freeze_layers=('backbone.*', ),
+                freeze_layers='backbone.*',
                 freeze_epoch=0,
-                unfreeze_layers=(),
+                unfreeze_layers=(1, 2),
                 unfreeze_epoch=0,
             )
 
         with self.assertRaisesRegex(TypeError, '`unfreeze_layers`'):
             FreezeHook(
-                freeze_layers=('backbone.*', ),
+                freeze_layers='backbone.*',
                 freeze_epoch=0,
-                unfreeze_layers=(1, ),
+                unfreeze_layers=('backbone.*', ),
                 unfreeze_epoch=0,
             )
 
         with self.assertRaisesRegex(TypeError, '`unfreeze_iter`'):
             FreezeHook(
-                freeze_layers=('backbone.*', ),
+                freeze_layers='backbone.*',
                 freeze_iter=0,
-                unfreeze_layers=('backbone.*', ),
+                unfreeze_layers='backbone.*',
                 unfreeze_iter='0',
             )
 
         with self.assertRaisesRegex(TypeError, '`unfreeze_epoch`'):
             FreezeHook(
-                freeze_layers=('backbone.*', ),
+                freeze_layers='backbone.*',
                 freeze_epoch=0,
-                unfreeze_layers=('backbone.*', ),
+                unfreeze_layers='backbone.*',
                 unfreeze_epoch='0',
             )
 
@@ -74,82 +74,82 @@ class TestFreezeHook(RunnerTestCase):
 
         # Test FreezeHook ValueError.
         with self.assertRaisesRegex(ValueError, '`freeze_iter`'):
-            FreezeHook(freeze_layers=('backbone.*', ), freeze_iter=-1)
+            FreezeHook(freeze_layers='backbone.*', freeze_iter=-1)
 
         with self.assertRaisesRegex(ValueError, '`freeze_epoch`'):
-            FreezeHook(freeze_layers=('backbone.*', ), freeze_epoch=-1)
+            FreezeHook(freeze_layers='backbone.*', freeze_epoch=-1)
 
         with self.assertRaisesRegex(ValueError,
                                     '`freeze_iter` and `freeze_epoch`'):
-            FreezeHook(freeze_layers=('backbone.*', ))
+            FreezeHook(freeze_layers='backbone.*', )
 
         with self.assertRaisesRegex(ValueError,
                                     '`freeze_iter` and `freeze_epoch`'):
             FreezeHook(
-                freeze_layers=('backbone.*', ), freeze_iter=0, freeze_epoch=0)
+                freeze_layers='backbone.*', freeze_iter=0, freeze_epoch=0)
 
         with self.assertRaisesRegex(ValueError,
                                     '`unfreeze_iter` and `unfreeze_epoch`'):
             FreezeHook(
-                freeze_layers=('backbone.*', ),
+                freeze_layers='backbone.*',
                 freeze_epoch=0,
-                unfreeze_layers=('backbone.*', ))
+                unfreeze_layers='backbone.*')
 
         with self.assertRaisesRegex(ValueError,
                                     '`unfreeze_iter` and `unfreeze_epoch`'):
             FreezeHook(
-                freeze_layers=('backbone.*', ),
+                freeze_layers='backbone.*',
                 freeze_epoch=0,
-                unfreeze_layers=('backbone.*', ),
+                unfreeze_layers='backbone.*',
                 unfreeze_iter=1,
                 unfreeze_epoch=2,
             )
 
         with self.assertRaisesRegex(ValueError, '`unfreeze_iter`'):
             FreezeHook(
-                freeze_layers=('backbone.*', ),
+                freeze_layers='backbone.*',
                 freeze_iter=0,
-                unfreeze_layers=('backbone.*', ),
+                unfreeze_layers='backbone.*',
                 unfreeze_iter=-1,
             )
 
         with self.assertRaisesRegex(ValueError, '`freeze_iter`'):
             FreezeHook(
-                freeze_layers=('backbone.*', ),
+                freeze_layers='backbone.*',
                 freeze_iter=None,
-                unfreeze_layers=('backbone.*', ),
+                unfreeze_layers='backbone.*',
                 unfreeze_iter=1,
             )
 
         with self.assertRaisesRegex(ValueError, '`unfreeze_iter`'):
             FreezeHook(
-                freeze_layers=('backbone.*', ),
+                freeze_layers='backbone.*',
                 freeze_iter=2,
-                unfreeze_layers=('backbone.*', ),
+                unfreeze_layers='backbone.*',
                 unfreeze_iter=1,
             )
 
         with self.assertRaisesRegex(ValueError, '`unfreeze_epoch`'):
             FreezeHook(
-                freeze_layers=('backbone.*', ),
+                freeze_layers='backbone.*',
                 freeze_epoch=0,
-                unfreeze_layers=('backbone.*', ),
+                unfreeze_layers='backbone.*',
                 unfreeze_epoch=-1,
             )
 
         with self.assertRaisesRegex(ValueError, '`freeze_epoch`'):
             FreezeHook(
-                freeze_layers=('backbone.*', ),
+                freeze_layers='backbone.*',
                 freeze_epoch=None,
-                unfreeze_layers=('backbone.*', ),
+                unfreeze_layers='backbone.*',
                 unfreeze_epoch=1,
             )
 
         with self.assertRaisesRegex(ValueError, '`unfreeze_epoch`'):
             FreezeHook(
-                freeze_layers=('backbone.*', ),
+                freeze_layers='backbone.*',
                 freeze_epoch=2,
-                unfreeze_layers=('backbone.*', ),
+                unfreeze_layers='backbone.*',
                 unfreeze_epoch=1,
             )
 
@@ -158,9 +158,9 @@ class TestFreezeHook(RunnerTestCase):
         runner = self.build_runner(cfg)
 
         freeze_hook = FreezeHook(
-            freeze_layers=('linear1.*', 'linear2.*'),
+            freeze_layers='linear1.*|linear2.*',
             freeze_iter=1,
-            unfreeze_layers=('linear2.*', ),
+            unfreeze_layers='linear2.*',
             unfreeze_iter=3,
         )
         # Collect network layers that will be freeze or unfreeze.
@@ -194,9 +194,9 @@ class TestFreezeHook(RunnerTestCase):
         runner = self.build_runner(cfg)
 
         freeze_hook = FreezeHook(
-            freeze_layers=('linear1.*', 'linear2.*'),
+            freeze_layers='linear1.*|linear2.*',
             freeze_epoch=1,
-            unfreeze_layers=('linear2.*', ),
+            unfreeze_layers='linear2.*',
             unfreeze_epoch=3,
         )
         # Collect network layers that will be freeze or unfreeze.
