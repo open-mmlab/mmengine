@@ -984,7 +984,7 @@ class OneCycleParamScheduler(_ParamScheduler):
                                  f'but got {total_steps}')
             self.total_steps = total_steps
         else:
-            self.total_steps = self.end - self.begin
+            self.total_steps = end - begin
 
         # Validate pct_start
         if pct_start < 0 or pct_start > 1 or not isinstance(pct_start, float):
