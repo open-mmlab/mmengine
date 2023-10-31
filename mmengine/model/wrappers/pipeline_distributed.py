@@ -119,7 +119,7 @@ class MMPipelineParallel(nn.Module):
                  offload_directory: Optional[str] = None,
                  input_key: str = 'inputs'):
 
-        if digit_version(TORCH_VERSION) <= digit_version('2.0.0'):
+        if digit_version(TORCH_VERSION) < digit_version('2.0.0'):
             raise RuntimeError(
                 'MMPipelineParallel should work with PyTorch >= 2.0.0')
 
@@ -128,7 +128,6 @@ class MMPipelineParallel(nn.Module):
         # init model
         self.module_state_dict: Dict[str, torch.Tensor] = {}
         self.module = self._init_model(module)
-        self.module.to_empty(device='cpu')
         self.weights = weights
         self.input_key = input_key
         if not hasattr(self.module, 'test_step'):
@@ -167,6 +166,7 @@ class MMPipelineParallel(nn.Module):
         self.lm_offset = 0
         self.module_tree = self._get_model_tree()
         self.device_map_policy = device_map
+        self.is_inited = False
 
         # init offload directory
         if offload_directory is not None:
@@ -341,19 +341,40 @@ class MMPipelineParallel(nn.Module):
         handle = nn.modules.module.register_module_forward_pre_hook(
             return_module_name_hook)
 
+        # prevent circular import
+        from mmengine.model import BaseDataPreprocessor
+
+        def empty_hook(module: nn.Module, input: Any):
+            if not isinstance(module, BaseDataPreprocessor):
+                module.to_empty(device='cpu')
+
+        def meta_hook(module: nn.Module, input: Any, output: Any):
+            # avoid meta device when post processing
+            if not isinstance(module, BaseDataPreprocessor):
+                module.to('meta')
+
+        empty_handle = nn.modules.module.register_module_forward_pre_hook(
+            empty_hook)
+
+        meta_handle = nn.modules.module.register_module_forward_hook(meta_hook)
+
         # hack the forward
         old_forward = self.module.forward
 
         def new_forward():
-            input = inputs[self.input_key]
+            input_data = inputs[self.input_key]
             data_samples = inputs['data_samples']
-            result = old_forward(input, data_samples, 'predict')
+            data_sample_dict = data_samples[0].to_dict()
+            result = old_forward(input_data, data_samples, 'predict')
             result = result[0].to_dict()
             results = []
-            for v in result.values():
-                if isinstance(v, torch.Tensor):
-                    # clone to make it in the graph
-                    results.append(v.clone())
+            for k, v in result.items():
+                if k in data_sample_dict:
+                    # remove input keys
+                    continue
+                if isinstance(v, (tuple, list, dict, str, torch.Tensor)):
+                    # JIT Trace supports these types
+                    results.append(v)
             return results
 
         self.module.forward = new_forward
@@ -362,6 +383,8 @@ class MMPipelineParallel(nn.Module):
             flop_analyzer = FlopAnalyzer(self.module, inputs=())
         flops = flop_analyzer.by_module()
         handle.remove()
+        empty_handle.remove()
+        meta_handle.remove()
         # merge exec order into model tree
         for order, name in enumerate(exec_order):
             tree = self._iter_tree(name)
@@ -417,13 +440,6 @@ class MMPipelineParallel(nn.Module):
                 'exec': None
             })
 
-        def _update(part_pointer: int, name: str, flops: int,
-                    parameter_size: int, cuda_pointer: int):
-            modules_info[part_pointer]['modules'].append(name)
-            modules_info[part_pointer]['flops'] += flops
-            modules_info[part_pointer]['parameter_size'] += parameter_size
-            modules_info[part_pointer]['exec'] = cuda_devices[cuda_pointer]
-
         def _get_device_map(tree: Dict[str, Any], name: str,
                             meta_info: Dict[str, int]):
             """DFS the model tree to get the device map.
@@ -442,7 +458,7 @@ class MMPipelineParallel(nn.Module):
                 if meta_info['cuda_pointer'] != 0:
                     meta_info['cuda_pointer'] += 1
                     meta_info['cuda_pointer'] %= len(cuda_devices)
-                    self.lm_offset = meta_info['module_pointer']
+                    self.lm_offset = meta_info['part_pointer']
             # prepare
             part_pointer = meta_info['part_pointer']
             cuda_pointer = meta_info['cuda_pointer']
@@ -457,8 +473,11 @@ class MMPipelineParallel(nn.Module):
             # if it is the last part
             if part_pointer == self.num_pipelines - 1:
                 if is_memory_enough:
-                    _update(part_pointer, name, module_flops, module_size,
-                            cuda_pointer)
+                    modules_info[part_pointer]['modules'].append(name)
+                    modules_info[part_pointer]['flops'] += module_flops
+                    modules_info[part_pointer]['parameter_size'] += module_size
+                    modules_info[part_pointer]['exec'] = cuda_devices[
+                        cuda_pointer]
                 else:
                     raise RuntimeError('The model if too large to fit into' +
                                        f'{cuda_devices[cuda_pointer]}' +
@@ -467,19 +486,25 @@ class MMPipelineParallel(nn.Module):
             # otherwise, handle self
             if is_memory_enough:
                 if module_flops + curr_flops < upper_flops:
-                    _update(part_pointer, name, module_flops, module_size,
-                            cuda_pointer)
+                    modules_info[part_pointer]['modules'].append(name)
+                    modules_info[part_pointer]['flops'] += module_flops
+                    modules_info[part_pointer]['parameter_size'] += module_size
+                    modules_info[part_pointer]['exec'] = cuda_devices[
+                        cuda_pointer]
                     if module_flops + curr_flops > lower_flops:
                         meta_info['part_pointer'] += 1
                         meta_info['cuda_pointer'] += 1
                         meta_info['cuda_pointer'] %= len(cuda_devices)
-                return
+                    return
             # handle submodules when
             # memory is not enough / flops is too large
-            if 'subomodules' in tree:
+            if 'submodules' in tree:
+                if 'parameters' in tree:
+                    for name, _ in tree['parameters'].items():
+                        modules_info[part_pointer]['modules'].append(name)
                 if 'buffers' in tree:
                     for name, _ in tree['buffers'].items():
-                        _update(part_pointer, name, 0, 0, cuda_pointer)
+                        modules_info[part_pointer]['modules'].append(name)
                 for name, submodule in tree['submodules'].items():
                     _get_device_map(submodule, name, meta_info)
             else:
@@ -491,8 +516,11 @@ class MMPipelineParallel(nn.Module):
 
         _get_device_map(self.module_tree, '', meta_info)
         # check part_pointer
-        if meta_info['part_pointer'] != self.num_pipelines:
-            raise RuntimeError('The model cannot be split into' +
+        num_non_empty_parts = 0
+        for i in range(self.num_pipelines):
+            num_non_empty_parts += (len(modules_info[i]['modules']) != 0)
+        if num_non_empty_parts != self.num_pipelines:
+            raise RuntimeError('The model cannot be split into ' +
                                f'{self.num_pipelines} parts. ' +
                                'Try to reduce the number of pipelines.')
         # infer init
@@ -522,13 +550,16 @@ class MMPipelineParallel(nn.Module):
                     'exec_device': modules_i['exec']
                 }
         # handle tied weights
-        tied_weights = self.model_tree['tied_parameters']
+        tied_weights = self.module_tree['tied_parameters']
         for source, targets in tied_weights.items():
             source_info = device_map[source]
             for target in targets:
                 target_info = device_map[target]
                 target_info['init_device'] = source_info['init_device']
                 target_info['exec_device'] = source_info['exec_device']
+        import json
+        with open(f'../{self.module.__class__.__name__}.json', 'w') as f:
+            json.dump(device_map, f, indent=4)
         return device_map
 
     def _init_offload_map(self) -> Dict[int, int]:
@@ -713,7 +744,7 @@ class MMPipelineParallel(nn.Module):
             device = self.device_map['data_preprocessor']['exec_device']
 
             def send_back(module: nn.Module, input: Any, output: Any):
-                output = apply_to(output, lambda _: True,
+                output = apply_to(output, lambda x: hasattr(x, 'to'),
                                   lambda x: x.to(device))
                 return output
 
@@ -786,6 +817,9 @@ class MMPipelineParallel(nn.Module):
                          device: str):
         """Load the state dict to the module on meta device."""
         if len(state_dict) == 0:
+            # for some data_preprocessors without params
+            if hasattr(module, 'device'):
+                module.to(device)
             return
         for name, param in state_dict.items():
             # remove prefix
@@ -905,7 +939,9 @@ class MMPipelineParallel(nn.Module):
         # get the flops of each module and the execution order
         # after that, we can init the device map, offload map
         # load the weights and dispatch them to the corresponding devices
-        self._prepare_forward(chunked_data[0])
+        if not self.is_inited:
+            self._prepare_forward(chunked_data[0])
+            self.is_inited = True
 
         num_chunks = min(len(chunked_data), self.num_chunks)
         # record finished chunks
@@ -1165,10 +1201,9 @@ class _MMPipelineParallelHook:
 
     def __call__(self, module: nn.Module, args: tuple,
                  kwargs: dict) -> Tuple[tuple, dict]:
-        if not self.is_part_begin:
-            return args, kwargs
-        # send exit signal
-        self._send_signal()
+        if self.is_part_begin:
+            # send exit signal
+            self._send_signal()
         # check device
         args, kwargs = self._check_device(args, kwargs)
         return args, kwargs
@@ -1189,7 +1224,8 @@ class _MMPipelineParallelHook:
 
     def _check_device(self, args: tuple, kwargs: dict) -> Tuple[tuple, dict]:
         """Check the device and move the data to the execution device."""
-        args = apply_to(args, lambda _: True, lambda x: x.to(self.exec_device))
-        kwargs = apply_to(kwargs, lambda _: True,
+        args = apply_to(args, lambda x: hasattr(x, 'to'),
+                        lambda x: x.to(self.exec_device))
+        kwargs = apply_to(kwargs, lambda x: hasattr(x, 'to'),
                           lambda x: x.to(self.exec_device))
         return args, kwargs
