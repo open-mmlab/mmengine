@@ -78,10 +78,10 @@ class FreezeHook(Hook):
             raise ValueError(
                 '`freeze_epoch` must be greater than or equal to 0')
         if unfreeze_layers is not None:
-            if unfreeze_epoch is None and unfreeze_iter is None:
+            if unfreeze_iter is None and unfreeze_epoch is None:
                 raise ValueError('`unfreeze_iter` and `unfreeze_epoch` \
                                  should not be both None.')
-            if unfreeze_epoch is not None and unfreeze_iter is not None:
+            if unfreeze_iter is not None and unfreeze_epoch is not None:
                 raise ValueError('`unfreeze_iter` and `unfreeze_epoch` \
                         should not be both set.')
         if unfreeze_iter is not None:
@@ -187,11 +187,11 @@ class FreezeHook(Hook):
             layer_names += f'{k}\n'
 
         freeze_names = re.findall(self.freeze_layers, layer_names)
-        self.freeze_layer_names += freeze_names
+        self.freeze_layer_names = freeze_names
 
         if self.unfreeze_layers is not None:
             unfreeze_names = re.findall(self.unfreeze_layers, layer_names)
-            self.unfreeze_layer_names += unfreeze_names
+            self.unfreeze_layer_names = unfreeze_names
 
     def before_train_iter(
         self,
