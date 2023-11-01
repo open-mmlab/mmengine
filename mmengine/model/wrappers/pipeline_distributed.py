@@ -364,7 +364,11 @@ class MMPipelineParallel(nn.Module):
         def new_forward():
             input_data = inputs[self.input_key]
             data_samples = inputs['data_samples']
-            data_sample_dict = data_samples[0].to_dict()
+            # data_sample or list of data_sample
+            if isinstance(data_samples, list):
+                data_sample_dict = data_samples[0].to_dict()
+            else:
+                data_sample_dict = data_samples.to_dict()
             result = old_forward(input_data, data_samples, 'predict')
             result = result[0].to_dict()
             results = []
@@ -522,7 +526,8 @@ class MMPipelineParallel(nn.Module):
         if num_non_empty_parts != self.num_pipelines:
             raise RuntimeError('The model cannot be split into ' +
                                f'{self.num_pipelines} parts. ' +
-                               'Try to reduce the number of pipelines.')
+                               'Try to reduce the number of pipelines to' +
+                               f'less or equal than {num_non_empty_parts}')
         # infer init
         cpu_used = 0
         for i in range(self.num_pipelines):
@@ -790,7 +795,7 @@ class MMPipelineParallel(nn.Module):
                     first_part_id = blocked_part_id
                 if chunk_id < num_chunks:
                     # create schedules
-                    schedules.insert(0, [chunk_id, first_part_id])
+                    schedules.append([chunk_id, first_part_id])
                 for i in range(len(schedules)):
                     # check whether schedules can be executed
                     curr_part_id = schedules[i][1]
