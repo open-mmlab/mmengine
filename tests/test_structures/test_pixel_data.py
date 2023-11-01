@@ -115,3 +115,52 @@ class TestPixelData(TestCase):
             resized_pixel_data = pixel_data.resize(20)
         with self.assertRaises(AssertionError):
             resized_pixel_data = pixel_data.resize((1, 20, 20))
+
+    def test_padding(self):
+        pixel_data = self.setup_data()
+
+        # left=5, right=10
+        padded_pixel_data = pixel_data.padding((5, 10))
+        assert padded_pixel_data.shape == (20, 55)
+
+        # left=5, right=10, top=15, bottom=20
+        padded_pixel_data = pixel_data.padding((5, 10, 15, 20))
+        assert padded_pixel_data.shape == (55, 55)
+
+        # left=5, right=10, top=15, bottom=20, front=2, back=3
+        padded_pixel_data = pixel_data.padding((5, 10, 15, 20, 2, 3))
+        assert padded_pixel_data.shape == (55, 55)
+        assert padded_pixel_data.image.shape == (9, 55, 55)
+        assert padded_pixel_data.featmap.shape == (15, 55, 55)
+
+        with self.assertRaises(TypeError):
+            padded_pixel_data = pixel_data.padding(5)
+
+        # different mode
+        # reflect support width, height
+        padded_pixel_data = pixel_data.padding((5, 10), mode='reflect')
+        assert padded_pixel_data.shape == (20, 55)
+        padded_pixel_data = pixel_data.padding((5, 10, 2, 4), mode='reflect')
+        assert padded_pixel_data.shape == (26, 55)
+        with self.assertRaises(RuntimeError):
+            padded_pixel_data = pixel_data.padding((5, 10, 2, 4, 6, 8),
+                                                   mode='reflect')
+
+        # replicate support width, height
+        padded_pixel_data = pixel_data.padding((5, 10), mode='replicate')
+        assert padded_pixel_data.shape == (20, 55)
+        padded_pixel_data = pixel_data.padding((5, 10, 2, 4), mode='replicate')
+        assert padded_pixel_data.shape == (26, 55)
+        with self.assertRaises(RuntimeError):
+            padded_pixel_data = pixel_data.padding((5, 10, 2, 4, 6, 8),
+                                                   mode='replicate')
+
+        # circular support width
+        padded_pixel_data = pixel_data.padding((5, 10), mode='circular')
+        assert padded_pixel_data.shape == (20, 55)
+        with self.assertRaises(RuntimeError):
+            padded_pixel_data = pixel_data.padding((5, 10, 2, 4),
+                                                   mode='circular')
+        with self.assertRaises(RuntimeError):
+            padded_pixel_data = pixel_data.padding((5, 10, 2, 4, 6, 8),
+                                                   mode='circular')

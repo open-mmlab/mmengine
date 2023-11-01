@@ -128,7 +128,6 @@ class PixelData(BaseDataElement):
         else:
             return None
 
-    # TODO padding, resize
     def resize(self,
                size: Sequence[int],
                interpolation: str = 'bilinear') -> 'PixelData':
