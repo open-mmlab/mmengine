@@ -245,6 +245,8 @@ class DeepSpeedStrategy(BaseStrategy):
         gradient_accumulation_steps (int, optional): Number of training steps
             to accumulate gradients before averaging and applying them.
             Defaults to None.
+        save_exclude_frozen_parameters (bool): Exclude frozen parameters from
+            saved checkpointed state.
     """
 
     def __init__(
@@ -265,6 +267,7 @@ class DeepSpeedStrategy(BaseStrategy):
         # disable the log printed by deepseed
         steps_per_print: int = 10000000000000,
         # the following args are for BaseStrategy
+        save_exclude_frozen_parameters: bool = False,
         **kwargs,
     ):
         assert deepspeed is not None, \
@@ -298,6 +301,7 @@ class DeepSpeedStrategy(BaseStrategy):
             self.config.setdefault('gradient_accumulation_steps', 1)
         self.config['steps_per_print'] = steps_per_print
         self._inputs_to_half = inputs_to_half
+        self.save_exclude_frozen_parameters = save_exclude_frozen_parameters
 
         register_deepspeed_optimizers()
 
@@ -511,4 +515,8 @@ class DeepSpeedStrategy(BaseStrategy):
 
         dirname, basename = osp.split(filename)
         self.model.save_checkpoint(
-            dirname, tag=basename, client_state=extra_ckpt, save_latest=False)
+            dirname,
+            tag=basename,
+            client_state=extra_ckpt,
+            save_latest=False,
+            exclude_frozen_parameters=self.save_exclude_frozen_parameters)
