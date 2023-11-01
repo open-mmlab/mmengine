@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
 import subprocess
-from importlib.metadata import entry_points
+from importlib_metadata import entry_points
 
 MODULE2PACKAGE = {
     'mmcls': 'mmcls',
