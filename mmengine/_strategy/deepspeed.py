@@ -246,7 +246,7 @@ class DeepSpeedStrategy(BaseStrategy):
             to accumulate gradients before averaging and applying them.
             Defaults to None.
         save_exclude_frozen_parameters (bool): Exclude frozen parameters from
-            saved checkpointed state.
+            saved checkpoint.
     """
 
     def __init__(
