@@ -1,7 +1,7 @@
 name: merge_stage_test
 
 on:
-  push:
+  pull_request:
     paths-ignore:
       - ".github/**.md"
       - "docker/**"
@@ -292,6 +292,11 @@ jobs:
             torchvision: 0.15.1
           - python-version: 3.8
             platform: cu118
+            torch: 2.1.0
+            torchvision: 0.16.0
+        exclude:
+          - python-version: 3.7
+            platform: cu111
             torch: 2.1.0
             torchvision: 0.16.0
     steps:

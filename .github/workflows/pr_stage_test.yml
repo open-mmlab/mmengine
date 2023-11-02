@@ -136,11 +136,22 @@ jobs:
     runs-on: windows-2022
     strategy:
       matrix:
-        torch: [2.1.0]
-        torchvision: [0.16.0]
+        python-version: [3.7]
+        platform: [cpu, cu111]
+        torch: [1.8.1, 2.1.0]
+        torchvision: [0.9.1, 0.16.0]
         include:
           - python-version: 3.8
+            platform: cu117
+            torch: 2.0.0
+            torchvision: 0.15.1
+          - python-version: 3.8
             platform: cu118
+            torch: 2.1.0
+            torchvision: 0.16.0
+        exclude:
+          - python-version: 3.7
+            platform: cu111
             torch: 2.1.0
             torchvision: 0.16.0
     steps:
