@@ -188,19 +188,21 @@ class MMDeepSpeedEngineWrapper:
         if self._inputs_to_half is None:
             return inputs
 
+        dtype = next(self.model.parameters()).dtype
         if isinstance(inputs, (list, tuple)):
             new_inputs = []
             for i, v in enumerate(inputs):
                 if i in self._inputs_to_half:
                     new_inputs.append(
-                        apply_to(v, lambda _: True, lambda x: x.half()))
+                        apply_to(v, lambda _: True, lambda x: x.to(dtype)))
                 else:
                     new_inputs.append(v)
             return inputs.__class__(new_inputs)
         elif isinstance(inputs, dict):
             for k, v in inputs.items():
                 if k in self._inputs_to_half:
-                    inputs[k] = apply_to(v, lambda _: True, lambda x: x.half())
+                    inputs[k] = apply_to(v, lambda _: True,
+                                         lambda x: x.to(dtype))
             return inputs
         else:
             raise TypeError('inputs should be list, tuple or dict, '
