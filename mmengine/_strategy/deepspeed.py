@@ -194,14 +194,15 @@ class MMDeepSpeedEngineWrapper:
             for i, v in enumerate(inputs):
                 if i in self._inputs_to_half:
                     new_inputs.append(
-                        apply_to(v, lambda _: True, lambda x: x.to(dtype)))
+                        apply_to(v, lambda x: hasattr(x, 'to'),
+                                 lambda x: x.to(dtype)))
                 else:
                     new_inputs.append(v)
             return inputs.__class__(new_inputs)
         elif isinstance(inputs, dict):
             for k, v in inputs.items():
                 if k in self._inputs_to_half:
-                    inputs[k] = apply_to(v, lambda _: True,
+                    inputs[k] = apply_to(v, lambda x: hasattr(x, 'to'),
                                          lambda x: x.to(dtype))
             return inputs
         else:
