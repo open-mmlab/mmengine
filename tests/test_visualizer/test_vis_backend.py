@@ -358,6 +358,16 @@ class TestClearMLVisBackend:
         clearml_vis_backend.close()
 
 
+# skip if neptune is not installed
+try:
+    import neptune  # noqa: F401
+    is_neptune_installed = True
+except ImportError:
+    is_neptune_installed = False
+
+
+@pytest.mark.skipif(
+    not is_neptune_installed, reason='Neptune is not installed.')
 class TestNeptuneVisBackend:
 
     def test_init(self):
