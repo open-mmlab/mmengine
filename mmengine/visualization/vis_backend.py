@@ -438,7 +438,7 @@ class WandbVisBackend(BaseVisBackend):
         assert isinstance(self._init_kwargs, dict)
         allow_val_change = self._init_kwargs.get('allow_val_change', False)
         self._wandb.config.update(
-            dict(config), allow_val_change=allow_val_change)
+            config.to_dict(), allow_val_change=allow_val_change)
         self._wandb.run.log_code(name=self._log_code_name)
 
     @force_init_env
@@ -752,7 +752,7 @@ class MLflowVisBackend(BaseVisBackend):
         """
         self.cfg = config
         if self._tracked_config_keys is None:
-            self._mlflow.log_params(self._flatten(self.cfg))
+            self._mlflow.log_params(self._flatten(self.cfg.to_dict()))
         else:
             tracked_cfg = dict()
             for k in self._tracked_config_keys:
@@ -915,7 +915,7 @@ class ClearMLVisBackend(BaseVisBackend):
             config (Config): The Config object
         """
         self.cfg = config
-        self._task.connect_configuration(vars(config))
+        self._task.connect_configuration(config.to_dict())
 
     @force_init_env
     def add_image(self,
@@ -1216,7 +1216,7 @@ class DVCLiveVisBackend(BaseVisBackend):
         """
         assert isinstance(config, Config)
         self.cfg = config
-        self._dvclive.log_params(self._to_dvc_paramlike(self.cfg))
+        self._dvclive.log_params(self._to_dvc_paramlike(self.cfg.to_dict()))
 
     @force_init_env
     def add_image(self,
