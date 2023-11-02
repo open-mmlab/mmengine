@@ -296,6 +296,14 @@ jobs:
             torchvision: 0.16.0
         exclude:
           - python-version: 3.7
+            platform: cpu
+            torch: 1.8.1
+            torchvision: 0.16.0
+          - python-version: 3.7
+            platform: cu111
+            torch: 1.8.1
+            torchvision: 0.16.0
+          - python-version: 3.7
             platform: cu111
             torch: 2.1.0
             torchvision: 0.16.0
