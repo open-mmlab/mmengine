@@ -94,6 +94,9 @@ def main():
                 initial_scale_power=15,
             ),
             inputs_to_half=[0],
+            # bf16=dict(
+            #     enabled=True,
+            # ),
             zero_optimization=dict(
                 stage=3,
                 allgather_partitions=True,

@@ -18,7 +18,6 @@ from mmengine.dist import init_dist
 from mmengine.optim import BaseOptimWrapper, _ParamScheduler
 from mmengine.registry import (MODEL_WRAPPERS, OPTIM_WRAPPERS, OPTIMIZERS,
                                STRATEGIES)
-
 from mmengine.utils import apply_to, digit_version, get_git_hash
 from .base import BaseStrategy
 
