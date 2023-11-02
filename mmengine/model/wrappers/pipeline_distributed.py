@@ -13,7 +13,6 @@ import numpy as np
 import psutil
 import torch
 import torch.nn as nn
-from torch._subclasses.fake_tensor import FakeTensorMode
 
 from mmengine.analysis import FlopAnalyzer
 from mmengine.registry import MODEL_WRAPPERS
@@ -330,6 +329,9 @@ class MMPipelineParallel(nn.Module):
 
     def _get_flops_and_exec_order(self, data: dict):
         """Get the flops of each module."""
+
+        from torch._subclasses.fake_tensor import FakeTensorMode
+
         # preprocess
         self.module.data_preprocessor.to_empty(device='cpu')  # type: ignore
         self.module.data_preprocessor.to('cpu')
