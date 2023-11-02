@@ -3,11 +3,11 @@ import os
 import sys
 import tempfile
 import warnings
+from dataclasses import dataclass
 from functools import partial
 from queue import Queue
 from threading import Event, Thread, current_thread
-from typing import (Any, Dict, Iterator, List, Optional, Set, Tuple, TypedDict,
-                    Union)
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union
 
 import numpy as np
 import psutil
@@ -22,15 +22,19 @@ from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.utils.version_utils import digit_version
 
 
-class TreeNode(TypedDict):
-    self: nn.Module
-    parameter_size: int
-    flops: int
-    exec_order: int
-    parameters: Optional[Dict[str, nn.Parameter]]
-    buffers: Optional[Dict[str, torch.Tensor]]
-    submodules: Optional[Dict[str, 'TreeNode']]
-    tied_parameters: Optional[Dict[str, List[str]]]
+@dataclass
+class TreeNode:
+    """The tree node for the model tree。"""
+    # All the attributes have default values for
+    # empty initialization and later modification
+    module: Optional[nn.Module] = None
+    parameter_size: int = 0
+    flops: int = 0
+    exec_order: Optional[int] = None
+    parameters: Optional[Dict[str, Optional[nn.Parameter]]] = None
+    buffers: Optional[Dict[str, Optional[torch.Tensor]]] = None
+    submodules: Optional[Dict[str, 'TreeNode']] = None
+    tied_parameters: Optional[Dict[str, List[str]]] = None
 
 
 @MODEL_WRAPPERS.register_module()
@@ -203,11 +207,11 @@ class MMPipelineParallel(nn.Module):
             self.module_state_dict[n] = b
         return model.to('meta')
 
-    def _get_model_tree(self) -> Dict[str, Any]:
+    def _get_model_tree(self) -> TreeNode:
         """Init the model tree for many usages."""
 
         def _generate_model_tree(module: Optional[nn.Module], prefix: str,
-                                 info: Dict[str, Any]):
+                                 info: TreeNode):
             """BFS the module to generate the model tree.
 
             First, register the module self as a node. Then, register the
@@ -219,38 +223,40 @@ class MMPipelineParallel(nn.Module):
             if module is None:
                 return
             # self
-            info['self'] = module
-            info['parameter_size'] = _parameter_size(module)
-            info['flops'] = None
-            info['exec_order'] = None
+            info.module = module
+            info.parameter_size = _parameter_size(module)
+            info.flops = 0
+            info.exec_order = None
             # parameter
             if len(module._parameters) != 0:
-                info['parameters'] = {}
+                info.parameters = {}
                 for name, param in module._parameters.items():
                     curr_name = name if prefix == '' else f'{prefix}.{name}'
-                    info['parameters'][curr_name] = param
+                    info.parameters[curr_name] = param
             # buffer
             if len(module._buffers) != 0:
-                info['buffers'] = {}
+                info.buffers = {}
                 for name, buffer in module._buffers.items():
                     curr_name = name if prefix == '' else f'{prefix}.{name}'
-                    info['buffers'][curr_name] = buffer
+                    info.buffers[curr_name] = buffer
             # submodule
             module_class_name = module.__class__.__name__
             if not (len(module._modules) == 0
                     or module_class_name in self.no_split_module_classes):
-                info['submodules'] = {}
+                info.submodules = {}
                 for name, submodule in module._modules.items():
                     curr_name = name if prefix == '' else f'{prefix}.{name}'
-                    info['submodules'][curr_name] = TreeNode()
+                    info.submodules[curr_name] = TreeNode()
                     _generate_model_tree(submodule, curr_name,
-                                         info['submodules'][curr_name])
+                                         info.submodules[curr_name])
 
         tree: TreeNode = TreeNode()
         _generate_model_tree(self.module, '', tree)
         return tree
 
-    def _iter_tree(self, module_name: str) -> Optional[Dict[str, Any]]:
+    def _iter_tree(
+        self, module_name: str
+    ) -> Optional[Union[nn.Parameter, torch.Tensor, TreeNode]]:
         """Get the tree where the name of its root is module_name."""
         tree = self.module_tree
         if module_name == '':
@@ -261,25 +267,25 @@ class MMPipelineParallel(nn.Module):
                 curr_name = '.'.join(name_split[:i + 1])
                 if i == len(name_split) - 1:
                     # leaf node
-                    if 'parameters' in tree:
-                        if curr_name in tree['parameters']:
+                    if tree.parameters is not None:
+                        if curr_name in tree.parameters:
                             # it is parameter
-                            return tree['parameters'][curr_name]
-                    if 'buffers' in tree:
-                        if curr_name in tree['buffers']:
+                            return tree.parameters[curr_name]
+                    if tree.buffers is not None:
+                        if curr_name in tree.buffers:
                             # it is buffer
-                            return tree['buffers'][curr_name]
+                            return tree.buffers[curr_name]
                     # it is submodule
-                    if 'submodules' not in tree:
+                    if tree.submodules is None:
                         break
                     else:
-                        return tree['submodules'][curr_name]
+                        return tree.submodules[curr_name]
                 else:
                     # due to no_split_module_classes
-                    if 'submodules' not in tree:
+                    if tree.submodules is None:
                         break
                     else:
-                        tree = tree['submodules'][curr_name]
+                        tree = tree.submodules[curr_name]
         # if not found
         return None
 
@@ -320,14 +326,15 @@ class MMPipelineParallel(nn.Module):
             new_k = '.'.join(k.split('.')[:-1])
             new_result[new_k] = v
         # merge into model tree
-        self.module_tree['tied_parameters'] = result
+        self.module_tree.tied_parameters = new_result
 
     def _get_flops_and_exec_order(self, data: dict):
         """Get the flops of each module."""
         # preprocess
-        self.module.data_preprocessor.to_empty(device='cpu')
+        self.module.data_preprocessor.to_empty(device='cpu')  # type: ignore
         self.module.data_preprocessor.to('cpu')
-        inputs = self.module.data_preprocessor(data, training=False)
+        inputs = self.module.data_preprocessor(  # type: ignore
+            data, training=False)
         # prepare exec order
         exec_order = []
         module_name_map = {m: n for n, m in self.module.named_modules()}
@@ -383,7 +390,7 @@ class MMPipelineParallel(nn.Module):
 
         self.module.forward = new_forward
 
-        with FakeTensorMode(allow_non_fake_inputs=True):
+        with FakeTensorMode(allow_non_fake_inputs=True):  # type: ignore
             flop_analyzer = FlopAnalyzer(self.module, inputs=())
         flops = flop_analyzer.by_module()
         handle.remove()
@@ -392,17 +399,13 @@ class MMPipelineParallel(nn.Module):
         # merge exec order into model tree
         for order, name in enumerate(exec_order):
             tree = self._iter_tree(name)
-            if tree is None:
-                continue
-            else:
-                tree['exec_order'] = order
+            if isinstance(tree, TreeNode):
+                tree.exec_order = order
         # merge flops into model tree
         for name, num_flops in flops.items():
             tree = self._iter_tree(name)
-            if tree is None:
-                continue
-            else:
-                tree['flops'] = num_flops
+            if isinstance(tree, TreeNode):
+                tree.flops = num_flops
 
         self.module.forward = old_forward
 
@@ -416,7 +419,7 @@ class MMPipelineParallel(nn.Module):
 
     def _init_device_map_balanced(self) -> Dict[str, dict]:
         """Init the device map of the model with balanced policy."""
-        avg_flops = self.module_tree['flops'] / self.num_pipelines
+        avg_flops = self.module_tree.flops / self.num_pipelines
         # To get approximate solution
         # we choose 1.2 * avg_flops as the upper bound
         # 1 * avg_flops as the lower bound
@@ -444,8 +447,8 @@ class MMPipelineParallel(nn.Module):
                 'exec': None
             })
 
-        def _get_device_map(tree: Dict[str, Any], name: str,
-                            meta_info: Dict[str, int]):
+        def _get_device_map(tree: TreeNode, name: str, meta_info: Dict[str,
+                                                                       int]):
             """DFS the model tree to get the device map.
 
             First, handle language model. Second, get the current module flops
@@ -456,7 +459,7 @@ class MMPipelineParallel(nn.Module):
             buffers and do the dfs recursively.
             """
             # handle language model
-            if tree['self'].__class__.__name__ == self.language_module_class:
+            if tree.module.__class__.__name__ == self.language_module_class:
                 if meta_info['part_pointer'] != 0:
                     meta_info['part_pointer'] += 1
                 if meta_info['cuda_pointer'] != 0:
@@ -467,9 +470,9 @@ class MMPipelineParallel(nn.Module):
             part_pointer = meta_info['part_pointer']
             cuda_pointer = meta_info['cuda_pointer']
             # handle self
-            module_flops = tree['flops']
+            module_flops = tree.flops
             curr_flops = modules_info[part_pointer]['flops']
-            module_size = tree['parameter_size']
+            module_size = tree.parameter_size
             curr_size = modules_info[part_pointer]['parameter_size']
             curr_cuda_memory = self.memory_map[cuda_devices[cuda_pointer]]
             is_memory_enough = curr_size + module_size <= curr_cuda_memory
@@ -502,14 +505,14 @@ class MMPipelineParallel(nn.Module):
                     return
             # handle submodules when
             # memory is not enough / flops is too large
-            if 'submodules' in tree:
-                if 'parameters' in tree:
-                    for name, _ in tree['parameters'].items():
+            if tree.submodules is not None:
+                if tree.parameters is not None:
+                    for name, _ in tree.parameters.items():
                         modules_info[part_pointer]['modules'].append(name)
-                if 'buffers' in tree:
-                    for name, _ in tree['buffers'].items():
+                if tree.buffers is not None:
+                    for name, _ in tree.buffers.items():
                         modules_info[part_pointer]['modules'].append(name)
-                for name, submodule in tree['submodules'].items():
+                for name, submodule in tree.submodules.items():
                     _get_device_map(submodule, name, meta_info)
             else:
                 # put it into the next part
@@ -555,7 +558,7 @@ class MMPipelineParallel(nn.Module):
                     'exec_device': modules_i['exec']
                 }
         # handle tied weights
-        tied_weights = self.module_tree['tied_parameters']
+        tied_weights = self.module_tree.tied_parameters or {}
         for source, targets in tied_weights.items():
             source_info = device_map[source]
             for target in targets:
@@ -1017,7 +1020,9 @@ class MMPipelineParallel(nn.Module):
                         # new task
                         if part_id == 0:
                             curr_data = chunked_data[chunk_id]
-                            task = partial(self.module.test_step, curr_data)
+                            task = partial(
+                                self.module.test_step,  # type: ignore
+                                curr_data)
                             self.in_queues[f'chunk-{chunk_id}'].put(task)
             if isinstance(schedules, str):
                 if schedules == 'offload':
@@ -1076,9 +1081,9 @@ class MMPipelineParallel(nn.Module):
 
 
 def _init_memory_map(memory_map: Optional[Dict[str, str]],
-                     memory_threshold: float) -> Dict[str, int]:
+                     memory_threshold: float) -> Dict[str, float]:
     """Check or get the memory map of the cpu and gpus."""
-    new_memory_map = {}
+    new_memory_map: Dict[str, float] = {}
     # cpu
     cpu_memory = psutil.virtual_memory().available
     new_memory_map['cpu'] = cpu_memory
