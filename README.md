@@ -58,7 +58,7 @@ English | [简体中文](README_zh-CN.md)
 
 ## What's New
 
-v0.9.0 was released on 2023-10-10.
+v0.9.1 was released on 2023-11-03.
 
 Highlights:
 
@@ -68,7 +68,7 @@ Highlights:
 
 - Supports multiple visualization backends, including `NeptuneVisBackend`, `DVCLiveVisBackend` and `AimVisBackend`. Refer to [Visualization Backends](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html) for more details.
 
-Read [Changelog](./docs/en/notes/changelog.md#v090-10102023) for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v091-03112023) for more details.
 
 ## Table of Contents
 
