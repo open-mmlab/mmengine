@@ -1,5 +1,29 @@
 # Changelog of v0.x
 
+## v0.9.1 (03/11/2023)
+
+### New Features & Enhancements
+
+- Support slurm distributed training for mlu devices by [@POI-WX](https://github.com/POI-WX) in https://github.com/open-mmlab/mmengine/pull/1396
+- Add torch 2.1.0 checking in CI by [@YiyaoYang1](https://github.com/YiyaoYang1) in https://github.com/open-mmlab/mmengine/pull/1389
+- Add `exclude_frozen_parameters` for `DeepSpeedStrategy` by [@LZHgrla](https://github.com/LZHgrla) in https://github.com/open-mmlab/mmengine/pull/1415
+- Enhance inputs_to_half in DeepSpeedStrategy by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1400
+
+### Bug Fixes
+
+- Fix new config in visualizer by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1390
+- Fix func params using without init in OneCycleLR (#1401) by [@whlook](https://github.com/whlook) in https://github.com/open-mmlab/mmengine/pull/1403
+- Fix a bug when module is missing in low version of bitsandbytes by [@Ben-Louis](https://github.com/Ben-Louis) in https://github.com/open-mmlab/mmengine/pull/1388
+- Fix ConcatDataset raising error when metainfo is np.array by [@jonbakerfish](https://github.com/jonbakerfish) in https://github.com/open-mmlab/mmengine/pull/1407
+
+### Docs
+
+- Rename master to main by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1397
+
+### Contributors
+
+A total of 9 developers contributed to this release. Thanks [@POI-WX](https://github.com/POI-WX),  [@whlook](https://github.com/whlook), [@jonbakerfish](https://github.com/jonbakerfish), [@LZHgrla](https://github.com/LZHgrla), [@Ben-Louis](https://github.com/Ben-Louis), [@YiyaoYang1](https://github.com/YiyaoYang1), [@fanqiNO1](https://github.com/fanqiNO1), [@HAOCHENYE](https://github.com/HAOCHENYE), [@zhouzaida](https://github.com/zhouzaida)
+
 ## v0.9.0 (10/10/2023)
 
 ### Highlights
