@@ -237,7 +237,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.8]
-        torch: [1.6.0, 1.8.1, 1.13.0, 2.0.0]
+        torch: [1.6.0, 1.8.1, 1.13.0, 2.1.0]
         include:
           - torch: 1.6.0
             torchvision: 0.7.0
@@ -245,8 +245,8 @@ jobs:
             torchvision: 0.9.1
           - torch: 1.13.0
             torchvision: 0.14.0
-          - torch: 2.0.0
-            torchvision: 0.15.1
+          - torch: 2.1.0
+            torchvision: 0.16.0
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python 3.7
@@ -273,7 +273,7 @@ jobs:
       # Skip testing setup_env since it does not work in the current CI environment # TODO
       - name: Run unittests and generate coverage report
         run: |
-          coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist/ --ignore tests/test_utils/test_dl_utils/test_setup_env.py
+          PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist/ --ignore tests/test_utils/test_dl_utils/test_setup_env.py
           coverage xml
           coverage report -m
 
