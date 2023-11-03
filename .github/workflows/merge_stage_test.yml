@@ -237,7 +237,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.8]
-        torch: [1.6.0, 1.8.1, 1.13.0, 2.1.0]
+        torch: [1.6.0, 1.8.1, 1.13.0, 2.0.0]
         include:
           - torch: 1.6.0
             torchvision: 0.7.0
@@ -245,7 +245,7 @@ jobs:
             torchvision: 0.9.1
           - torch: 1.13.0
             torchvision: 0.14.0
-          - torch: 2.1.0
+          - torch: 2.0.0
             torchvision: 0.16.0
     steps:
       - uses: actions/checkout@v3

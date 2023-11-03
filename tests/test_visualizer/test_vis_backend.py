@@ -13,7 +13,7 @@ import torch
 from mmengine import Config
 from mmengine.fileio import load
 from mmengine.registry import VISBACKENDS
-from mmengine.utils import digit_version
+from mmengine.utils import digit_version, is_installed
 from mmengine.visualization import (AimVisBackend, ClearMLVisBackend,
                                     DVCLiveVisBackend, LocalVisBackend,
                                     MLflowVisBackend, NeptuneVisBackend,
@@ -358,16 +358,8 @@ class TestClearMLVisBackend:
         clearml_vis_backend.close()
 
 
-# skip if neptune is not installed
-try:
-    import neptune  # noqa: F401
-    is_neptune_installed = True
-except ImportError:
-    is_neptune_installed = False
-
-
 @pytest.mark.skipif(
-    not is_neptune_installed, reason='Neptune is not installed.')
+    not is_installed('neptune'), reason='Neptune is not installed.')
 class TestNeptuneVisBackend:
 
     def test_init(self):
