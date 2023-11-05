@@ -33,7 +33,6 @@ class TreeNode:
     parameters: Optional[Dict[str, Optional[nn.Parameter]]] = None
     buffers: Optional[Dict[str, Optional[torch.Tensor]]] = None
     submodules: Optional[Dict[str, 'TreeNode']] = None
-    tied_parameters: Optional[Dict[str, List[str]]] = None
 
 
 @MODEL_WRAPPERS.register_module()
@@ -189,7 +188,6 @@ class MMPipelineParallel(nn.Module):
             self.device_map = self.device_map_policy
         else:
             self._get_flops_and_exec_order(chunked_data)
-            self._find_tied_weights()
             self.device_map = self._init_device_map(self.device_map_policy)
         self.offload_map = self._init_offload_map()
         self.module_map = self._init_module_map()
@@ -287,45 +285,6 @@ class MMPipelineParallel(nn.Module):
                         tree = tree.submodules[curr_name]
         # if not found
         return None
-
-    def _find_tied_weights(self):
-        """Find the tied weights in the model."""
-
-        def _find_tied_parameters(module: nn.Module,
-                                  named_parameters: Dict[str, torch.Tensor],
-                                  prefix: str = '',
-                                  result: Dict[str, List[str]] = {}):
-            # The tied parameters will not be in the full named_parameters
-            # but in the named_parameters of the submodule.
-            if named_parameters is None:
-                named_parameters = {n: p for n, p in module.named_parameters()}
-            else:
-                for name, param in module.named_parameters():
-                    full_name = name if prefix == '' else f'{prefix}.{name}'
-                    if full_name in named_parameters:
-                        continue
-                    for new_name, new_param in named_parameters.items():
-                        if new_param is param:
-                            if new_name not in result:
-                                result[new_name] = []
-                            full_name_split = full_name.split('.')
-                            module_name = '.'.join(full_name_split[:-1])
-                            result[new_name].append(module_name)
-            # handle submodule
-            for name, submodule in module.named_children():
-                sub_name = name if prefix == '' else f'{prefix}.{name}'
-                _find_tied_parameters(submodule, named_parameters, sub_name,
-                                      result)
-
-        result = {}
-        _find_tied_parameters(self.module, None, '', result)
-        # remove suffix of keys
-        new_result = {}
-        for k, v in result.items():
-            new_k = '.'.join(k.split('.')[:-1])
-            new_result[new_k] = v
-        # merge into model tree
-        self.module_tree.tied_parameters = new_result
 
     def _get_flops_and_exec_order(self, data: dict):
         """Get the flops of each module."""
@@ -559,14 +518,6 @@ class MMPipelineParallel(nn.Module):
                     'init_device': modules_i['init'],
                     'exec_device': modules_i['exec']
                 }
-        # handle tied weights
-        tied_weights = self.module_tree.tied_parameters or {}
-        for source, targets in tied_weights.items():
-            source_info = device_map[source]
-            for target in targets:
-                target_info = device_map[target]
-                target_info['init_device'] = source_info['init_device']
-                target_info['exec_device'] = source_info['exec_device']
         import json
         with open(f'../{self.module.__class__.__name__}.json', 'w') as f:
             json.dump(device_map, f, indent=4)
