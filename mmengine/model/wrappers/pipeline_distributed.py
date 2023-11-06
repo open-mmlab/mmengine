@@ -33,6 +33,7 @@ class TreeNode:
     parameters: Optional[Dict[str, Optional[nn.Parameter]]] = None
     buffers: Optional[Dict[str, Optional[torch.Tensor]]] = None
     submodules: Optional[Dict[str, 'TreeNode']] = None
+    max_exec_order: Optional[int] = None
 
 
 @MODEL_WRAPPERS.register_module()
@@ -362,6 +363,11 @@ class MMPipelineParallel(nn.Module):
             tree = self._iter_tree(name)
             if isinstance(tree, TreeNode):
                 tree.exec_order = order
+        self.module_tree.max_exec_order = len(exec_order)
+        data_preprocessor_tree = self._iter_tree('data_preprocessor')
+        # set as first
+        if isinstance(data_preprocessor_tree, TreeNode):
+            data_preprocessor_tree.exec_order = -1
         # merge flops into model tree
         for name, num_flops in flops.items():
             tree = self._iter_tree(name)
@@ -421,12 +427,14 @@ class MMPipelineParallel(nn.Module):
             """
             # handle language model
             if tree.module.__class__.__name__ == self.language_module_class:
-                if meta_info['part_pointer'] != 0:
-                    meta_info['part_pointer'] += 1
-                if meta_info['cuda_pointer'] != 0:
-                    meta_info['cuda_pointer'] += 1
-                    meta_info['cuda_pointer'] %= len(cuda_devices)
-                    self.lm_offset = meta_info['part_pointer']
+                part_pointer = meta_info['part_pointer']
+                if len(modules_info[part_pointer]['modules']) != 0:
+                    if part_pointer != 0:
+                        meta_info['part_pointer'] += 1
+                    if meta_info['cuda_pointer'] != 0:
+                        meta_info['cuda_pointer'] += 1
+                        meta_info['cuda_pointer'] %= len(cuda_devices)
+                        self.lm_offset = meta_info['part_pointer']
             # prepare
             part_pointer = meta_info['part_pointer']
             cuda_pointer = meta_info['cuda_pointer']
@@ -467,6 +475,13 @@ class MMPipelineParallel(nn.Module):
             # handle submodules when
             # memory is not enough / flops is too large
             if tree.submodules is not None:
+                # sort the submodules by exec_order
+                tree.submodules = dict(
+                    sorted(
+                        tree.submodules.items(),
+                        key=lambda x:  # type: ignore
+                        x[1].exec_order or  # type: ignore
+                        self.module_tree.max_exec_order))  # type: ignore
                 if tree.parameters is not None:
                     for name, _ in tree.parameters.items():
                         modules_info[part_pointer]['modules'].append(name)
@@ -543,9 +558,9 @@ class MMPipelineParallel(nn.Module):
         module_map = {}
         for name, info in self.device_map.items():
             tree = self._iter_tree(name)
-            if isinstance(tree, dict):
+            if isinstance(tree, TreeNode):
                 # it is a submodule
-                module = tree['self']
+                module = tree.module
             else:
                 # it is a buffer or parameter
                 module = tree
