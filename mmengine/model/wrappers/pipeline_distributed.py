@@ -646,7 +646,7 @@ class MMPipelineParallel(nn.Module):
                         if param.dtype == torch.bfloat16:
                             param = param.to(torch.int16)
                             dtype = 'bfloat16'
-                        array = param.cpu().numpy()
+                        array = param.detach().cpu().numpy()
                         if array.ndim == 0:
                             array = array[None]
                         if not os.path.exists(self.offload_directory):
@@ -794,7 +794,7 @@ class MMPipelineParallel(nn.Module):
         """Load the state dict to the module on meta device."""
         if len(state_dict) == 0:
             # for some data_preprocessors without params
-            if hasattr(module, 'device'):
+            if hasattr(module, 'device') and device != 'disk':
                 module.to(device)
             return
         for name, param in state_dict.items():
@@ -830,7 +830,7 @@ class MMPipelineParallel(nn.Module):
                 new_module._parameters[param_name] = new_tensor
         # because data_preprocessor needs device to cast data
         # we have to set it
-        if hasattr(new_module, 'device'):
+        if hasattr(new_module, 'device') and device != 'disk':
             new_module.to(device)
 
     def _move_part(self, part_id: int, target_device: str):
@@ -842,14 +842,23 @@ class MMPipelineParallel(nn.Module):
                 continue
             if info['curr_device'] == 'disk':
                 # load from disk
-                param_names = [n for n, _ in info['module'].named_parameters()]
+                if isinstance(info['module'], torch.Tensor):
+                    # it is buffer
+                    param_names = ['']
+                else:
+                    param_names = [
+                        n for n, _ in info['module'].named_parameters()
+                    ]
                 state_dict = {}
                 # prepare the state dict
                 for param_name in param_names:
-                    full_name = f'{module_name}.{param_name}'
+                    if param_name == '':
+                        full_name = module_name
+                    else:
+                        full_name = f'{module_name}.{param_name}'
                     param_info = self.offloaded_weights[full_name]
                     param_path = os.path.join(self.offload_directory,
-                                              full_name)
+                                              f'{full_name}.npy')
                     dtype = param_info['dtype']
                     shape = tuple(param_info['shape'])
                     if shape == ():
@@ -878,7 +887,7 @@ class MMPipelineParallel(nn.Module):
                     if param.dtype == torch.bfloat16:
                         param = param.to(torch.int16)
                         dtype = 'bfloat16'
-                    array = param.cpu().numpy()
+                    array = param.detach().cpu().numpy()
                     if array.ndim == 0:
                         array = array[None]
                     if not os.path.exists(self.offload_directory):
