@@ -292,6 +292,9 @@ class MMPipelineParallel(nn.Module):
 
         from torch._subclasses.fake_tensor import FakeTensorMode
 
+        # prevent circular import
+        from mmengine.model import BaseDataPreprocessor
+
         # preprocess
         self.module.data_preprocessor.to_empty(device='cpu')  # type: ignore
         self.module.data_preprocessor.to('cpu')
@@ -309,9 +312,6 @@ class MMPipelineParallel(nn.Module):
 
         handle = nn.modules.module.register_module_forward_pre_hook(
             return_module_name_hook)
-
-        # prevent circular import
-        from mmengine.model import BaseDataPreprocessor
 
         def empty_hook(module: nn.Module, input: Any):
             if not isinstance(module, BaseDataPreprocessor):
@@ -455,8 +455,8 @@ class MMPipelineParallel(nn.Module):
                     modules_info[part_pointer]['exec'] = cuda_devices[
                         cuda_pointer]
                 else:
-                    raise RuntimeError('The model if too large to fit into' +
-                                       f'{cuda_devices[cuda_pointer]}' +
+                    raise RuntimeError('The model if too large to fit into ' +
+                                       f'{cuda_devices[cuda_pointer]} ' +
                                        'Please use more GPUs')
                 return
             # otherwise, handle self
@@ -767,6 +767,7 @@ class MMPipelineParallel(nn.Module):
                 if chunk_id < num_chunks:
                     # create schedules
                     schedules.append([chunk_id, first_part_id])
+                final_schedules = []
                 for i in range(len(schedules)):
                     # check whether schedules can be executed
                     curr_part_id = schedules[i][1]
@@ -776,15 +777,15 @@ class MMPipelineParallel(nn.Module):
                     if self.offload_map[next_part_id] == 0:
                         waiting_offload_chunks.add(curr_chunk_id)
                         blocked_part_id = curr_part_id
-                        schedules.pop(i)
                     else:
                         schedules[i][1] += 1
+                        final_schedules.append(schedules[i])
                 chunk_id += 1
             if len(waiting_offload_chunks) == num_chunks:
                 schedule = 'offload'
                 waiting_offload_chunks = set()
             if schedule == 'exec':
-                yield schedules
+                yield final_schedules
             else:
                 yield schedule
 
@@ -821,6 +822,8 @@ class MMPipelineParallel(nn.Module):
             if is_buffer:
                 # just replace the old buffer
                 new_module._buffers[param_name] = param
+                # update module map
+                self.module_map[module_name]['module'] = param
             else:
                 # create a new tensor because the old tensor is
                 # on the meta device, we cannot call `load_state_dict`
@@ -836,6 +839,8 @@ class MMPipelineParallel(nn.Module):
     def _move_part(self, part_id: int, target_device: str):
         """Move the part to the target device."""
         for module_name, info in self.module_map.items():
+            if module_name == 'data_preprocessor':
+                continue
             if info['part_id'] != part_id:
                 continue
             if info['curr_device'] == target_device:
@@ -844,26 +849,23 @@ class MMPipelineParallel(nn.Module):
                 # load from disk
                 if isinstance(info['module'], torch.Tensor):
                     # it is buffer
-                    param_names = ['']
+                    param_names = [module_name]
                 else:
                     param_names = [
-                        n for n, _ in info['module'].named_parameters()
+                        f'{module_name}.{n}'
+                        for n, _ in info['module'].named_parameters()
                     ]
                 state_dict = {}
                 # prepare the state dict
                 for param_name in param_names:
-                    if param_name == '':
-                        full_name = module_name
-                    else:
-                        full_name = f'{module_name}.{param_name}'
-                    param_info = self.offloaded_weights[full_name]
+                    param_info = self.offloaded_weights[param_name]
                     param_path = os.path.join(self.offload_directory,
-                                              f'{full_name}.npy')
+                                              f'{param_name}.npy')
                     dtype = param_info['dtype']
                     shape = tuple(param_info['shape'])
                     if shape == ():
                         shape = (1, )
-                    if param_info['dtype'] == torch.bfloat16:
+                    if param_info['dtype'] == 'bfloat16':
                         dtype = 'int16'
                     # load from disk
                     array: np.memmap = np.memmap(
@@ -875,14 +877,20 @@ class MMPipelineParallel(nn.Module):
                     if param_info['dtype'] == 'bfloat16':
                         weight = weight.to(torch.bfloat16)
                     weight = weight.to(target_device)
-                    state_dict[full_name] = weight
+                    state_dict[param_name] = weight
                 # load
                 self._load_state_dict(info['module'], state_dict, module_name,
                                       target_device)
             elif target_device == 'disk':
                 # disk offload
-                for param_name, param in info['module'].named_paramters():
-                    full_name = f'{module_name}.{param_name}'
+                if isinstance(info['module'], torch.Tensor):
+                    params = {module_name: info['module']}
+                else:
+                    params = {
+                        f'{module_name}.{n}': p
+                        for n, p in info['module'].named_parameters()
+                    }
+                for param_name, param in params.items():
                     dtype = None
                     if param.dtype == torch.bfloat16:
                         param = param.to(torch.int16)
@@ -893,12 +901,12 @@ class MMPipelineParallel(nn.Module):
                     if not os.path.exists(self.offload_directory):
                         os.makedirs(self.offload_directory, exist_ok=True)
                     # save the param info
-                    self.offloaded_weights[full_name] = {
+                    self.offloaded_weights[param_name] = {
                         'dtype': array.dtype if dtype is None else dtype,
                         'shape': list(array.shape),
                     }
                     offload_path = os.path.join(self.offload_directory,
-                                                f'{full_name}.npy')
+                                                f'{param_name}.npy')
                     # offload
                     file_array: np.memmap
                     file_array = np.memmap(
@@ -954,7 +962,7 @@ class MMPipelineParallel(nn.Module):
                         target_device = None
                         for info in self.device_map.values():
                             if info['part_id'] == offloaded_part_id:
-                                target_device = info['exec_device']
+                                target_device = info['init_device']
                                 break
                         # offload the first onloaded part
                         task = partial(self._move_part, onloaded_part_id,
@@ -967,7 +975,7 @@ class MMPipelineParallel(nn.Module):
                     target_device = None
                     for info in self.device_map.values():
                         if info['part_id'] == onloaded_part_id:
-                            target_device = info['init_device']
+                            target_device = info['exec_device']
                             break
                     # onload the first offloaded part
                     task = partial(self._move_part, offloaded_part_id,
