@@ -463,8 +463,15 @@ class DeepSpeedStrategy(BaseStrategy):
         self.logger.info(f'Resume checkpoint from {filename}')
 
         dirname, basename = osp.split(filename)
-        _, extra_ckpt = self.model.load_checkpoint(
-            dirname, tag=basename, load_optimizer_states=resume_optimizer)
+        if digit_version(deepspeed.__version__) >= digit_version('0.10.1'):
+            _, extra_ckpt = self.model.load_checkpoint(
+                dirname,
+                tag=basename,
+                load_optimizer_states=resume_optimizer,
+                load_module_strict=not self.exclude_frozen_parameters)
+        else:
+            _, extra_ckpt = self.model.load_checkpoint(
+                dirname, tag=basename, load_optimizer_states=resume_optimizer)
 
         if resume_optimizer:
             self.load_optim_state_dict(extra_ckpt.pop('optim_wrapper'))
