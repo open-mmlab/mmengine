@@ -92,12 +92,13 @@ class ColossalAIOptimWrapper(OptimWrapper):
     .. _colossalai tutorial: https://github.com/hpcaitech/ColossalAI/tree/main/colossalai/nn/optimizer
     """  # noqa: E501
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 booster: Booster,
-                 accumulative_counts: int = 1):
-        super().__init__(optimizer, accumulative_counts=accumulative_counts)
-        self.booster = booster
+    @property
+    def booster(self):
+        return self._booster
+
+    @booster.setter
+    def booster(self, booster: Booster):
+        self._booster = booster
 
     @contextmanager
     def optim_context(self, model: nn.Module):
@@ -305,7 +306,6 @@ class ColossalAIStrategy(BaseStrategy):
         # optim_wrapper is required by booster
         if optim_wrapper is not None and isinstance(optim_wrapper, dict):
             optim_wrapper.setdefault('type', 'ColossalAIOptimWrapper')
-            optim_wrapper.setdefault('booster', self.booster)
             optim_wrapper_type = OPTIM_WRAPPERS.get(optim_wrapper['type'])
             if optim_wrapper_type is None:
                 raise ValueError(f'Failed to find {optim_wrapper["type"]} in '
@@ -318,6 +318,7 @@ class ColossalAIStrategy(BaseStrategy):
                     '`ColossalAIOptimWrapper` (or subclass), but got '
                     f'{optim_wrapper_type}')
             optim_wrapper = self.build_optim_wrapper(optim_wrapper, model)
+            optim_wrapper.booster = self.booster  # type: ignore
 
         if optim_wrapper is not None:
             self.model, self.optim_wrapper = self._wrap(
