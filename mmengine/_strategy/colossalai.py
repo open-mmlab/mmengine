@@ -103,12 +103,14 @@ class ColossalAIOptimWrapper(OptimWrapper):
     @contextmanager
     def optim_context(self, model: nn.Module):
         if self.booster.plugin.support_no_sync():
-            sync_context = self.booster.no_sync(model, self.optimizer)
+            no_sync_context = self.booster.no_sync(model, self.optimizer)
         else:
             yield
             return
-        if not self.should_sync():
-            with sync_context:
+        if self.should_sync():
+            yield
+        else:
+            with no_sync_context:
                 yield
 
     def backward(self, loss: torch.Tensor, **kwargs) -> None:
