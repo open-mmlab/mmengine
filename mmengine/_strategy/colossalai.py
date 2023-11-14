@@ -92,16 +92,18 @@ class ColossalAIOptimWrapper(OptimWrapper):
     .. _colossalai tutorial: https://github.com/hpcaitech/ColossalAI/tree/main/colossalai/nn/optimizer
     """  # noqa: E501
 
-    @property
-    def booster(self):
-        return self._booster
-
-    @booster.setter
-    def booster(self, booster: Booster):
-        self._booster = booster
+    def __init__(self,
+                 optimizer: torch.optim.Optimizer,
+                 booster: Optional[Booster] = None,
+                 accumulative_counts: int = 1):
+        super().__init__(optimizer, accumulative_counts=accumulative_counts)
+        self.booster = booster
 
     @contextmanager
     def optim_context(self, model: nn.Module):
+        assert isinstance(self.booster, Booster), \
+            'Please set the booster attribute before using ' \
+            '`ColossalAIOptimWrapper`.'
         if self.booster.plugin.support_no_sync():
             no_sync_context = self.booster.no_sync(model, self.optimizer)
         else:
