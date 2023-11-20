@@ -126,7 +126,8 @@ else:
             install_requires.append(choose_requirement(main, secondary))
 
 setup(
-    name='mmengine' if os.getenv('MMENGINE_LITE', '0') == '0' else 'mmengine-lite',
+    name='mmengine'
+    if os.getenv('MMENGINE_LITE', '0') == '0' else 'mmengine-lite',
     version=get_version(),
     description='Engine of OpenMMLab projects',
     long_description=readme(),
