@@ -27,10 +27,10 @@
 ## 安装 MMEngine
 
 :::{note}
-如果你只想使用 MMEngine 中的 fileio、registry 和 config 模块，你可以设置 `MMENGINE_LITE` 环境变量，它只会安装必须的几个第三方库依赖（例如不会安装 opencv、matplotlib）：
+如果你只想使用 MMEngine 中的 fileio、registry 和 config 模块，你可以安装`mmengine-lite`，它只会安装必须的几个第三方库依赖（例如不会安装 opencv、matplotlib）：
 
 ```bash
-MMENGINE_LITE=1 pip install mmengine
+pip install mmengine-lite
 ```
 
 :::

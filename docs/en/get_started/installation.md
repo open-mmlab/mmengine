@@ -27,10 +27,10 @@
 ## Install MMEngine
 
 :::{note}
-If you only want to use the fileio, registry, and config modules in MMEngine, you can set the `MMENGINE_LITE` environment variable, which will only install the few third-party library dependencies that are necessary (e.g., it will not install opencv, matplotlib):
+If you only want to use the fileio, registry, and config modules in MMEngine, you can install `mmengine-lite`, which will only install the few third-party library dependencies that are necessary (e.g., it will not install opencv, matplotlib):
 
 ```bash
-MMENGINE_LITE=1 pip install mmengine
+pip install mmengine-lite
 ```
 
 :::
