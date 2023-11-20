@@ -63,12 +63,6 @@ class SingleDeviceStrategy(BaseStrategy):
 
         if optim_wrapper is not None:
             self.optim_wrapper = self.build_optim_wrapper(optim_wrapper, model)
-
-        if param_scheduler is not None:
-            self.param_schedulers = self.build_param_scheduler(
-                param_scheduler, self.optim_wrapper)
-
-        if optim_wrapper is not None:
             self._scale_lr()
 
             accumulative_counts = getattr(self.optim_wrapper,
@@ -82,6 +76,11 @@ class SingleDeviceStrategy(BaseStrategy):
 
                 self.optim_wrapper.initialize_count_status(  # type: ignore
                     self.model, 0, self.dispatch_kwargs['max_iters'])
+
+        if param_scheduler is not None:
+            self.param_schedulers = self.build_param_scheduler(
+                param_scheduler, self.optim_wrapper)
+
         self._prepared = True
         return self._prepared_components()
 
