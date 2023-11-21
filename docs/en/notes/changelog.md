@@ -1,6 +1,6 @@
 # Changelog of v0.x
 
-## v0.9.2 (20/11/2023)
+## v0.10.0 (21/11/2023)
 
 ### New Features & Enhancements
 
