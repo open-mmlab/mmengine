@@ -1,5 +1,22 @@
 # Changelog of v0.x
 
+## v0.10.0 (21/11/2023)
+
+### New Features & Enhancements
+
+- Support for installing mmengine without opencv by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1429
+
+### Bug Fixes
+
+- Fix bugs in colo optimwrapper by [@HIT-cwh](https://github.com/HIT-cwh) in https://github.com/open-mmlab/mmengine/pull/1426
+- Support `exclude_frozen_parameters` for `DeepSpeedStrategy`'s `resume` by [@LZHgrla](https://github.com/LZHgrla) in https://github.com/open-mmlab/mmengine/pull/1424
+- Fix `scale_lr` in `SingleDeviceStrategy` by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1428
+- Fix CI for torch2.1.0 by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1418
+
+### Contributors
+
+A total of 3 developers contributed to this release. Thanks [@HIT-cwh](https://github.com/HIT-cwh), [@LZHgrla](https://github.com/LZHgrla), [@fanqiNO1](https://github.com/fanqiNO1)
+
 ## v0.9.1 (03/11/2023)
 
 ### New Features & Enhancements

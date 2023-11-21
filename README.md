@@ -58,9 +58,11 @@ English | [简体中文](README_zh-CN.md)
 
 ## What's New
 
-v0.9.1 was released on 2023-11-03.
+v0.10.0 was released on 2023-11-21.
 
 Highlights:
+
+- Support installing mmengine-lite with no dependency on opencv. Refer to the [Installation](https://mmengine.readthedocs.io/en/latest/get_started/installation.html#install-mmengine) for more details.
 
 - Support training with [ColossalAI](https://colossalai.org/). Refer to the [Training Large Models](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html#colossalai) for more detailed usages.
 
@@ -68,7 +70,7 @@ Highlights:
 
 - Supports multiple visualization backends, including `NeptuneVisBackend`, `DVCLiveVisBackend` and `AimVisBackend`. Refer to [Visualization Backends](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html) for more details.
 
-Read [Changelog](./docs/en/notes/changelog.md#v091-03112023) for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v0100-21112023) for more details.
 
 ## Table of Contents
 
