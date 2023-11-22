@@ -68,11 +68,22 @@ pip install mmengine
 
 ### 源码安装
 
+#### 安装 mmengine
+
 ```bash
 # 如果克隆代码仓库的速度过慢，可以从 https://gitee.com/open-mmlab/mmengine.git 克隆
 git clone https://github.com/open-mmlab/mmengine.git
 cd mmengine
 pip install -e . -v
+```
+
+#### 安装 mmengine-lite
+
+```bash
+# 如果克隆代码仓库的速度过慢，可以从 https://gitee.com/open-mmlab/mmengine.git 克隆
+git clone https://github.com/open-mmlab/mmengine.git
+cd mmengine
+MMENGINE_LITE=1 pip install -e . -v
 ```
 
 ## 验证安装
