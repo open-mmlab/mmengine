@@ -5,7 +5,6 @@ import subprocess
 import sys
 from collections import OrderedDict, defaultdict
 
-import cv2
 import numpy as np
 import torch
 
@@ -136,7 +135,12 @@ def collect_env():
     except ModuleNotFoundError:
         pass
 
-    env_info['OpenCV'] = cv2.__version__
+    try:
+        import cv2
+        env_info['OpenCV'] = cv2.__version__
+    except ModuleNotFoundError:
+        pass
+
     env_info['MMEngine'] = mmengine.__version__
 
     return env_info
