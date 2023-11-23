@@ -132,7 +132,7 @@ def collect_env():
     try:
         import torchvision
         env_info['TorchVision'] = torchvision.__version__
-    except ModuleNotFoundError:
+    except ImportError:
         pass
 
     try:
