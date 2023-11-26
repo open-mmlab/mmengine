@@ -121,7 +121,7 @@ class ColossalAIOptimWrapper(OptimWrapper):
 
 
 @MODEL_WRAPPERS.register_module()
-class CollosalAIModelWrapper:
+class ColosalAIModelWrapper:
 
     def __init__(self, model_wrapper: ModelWrapper, model: nn.Module):
         self.model_wrapper = model_wrapper
@@ -238,7 +238,7 @@ class ColossalAIStrategy(BaseStrategy):
     OPTIMIZER_DIR = 'optimizer'  # directory to save optimizer state.
     MODEL_DIR = 'model'  # directory to save model
     SCHEDULER_DIR = 'scheduler'  # directory to save scheduelrs
-    model: CollosalAIModelWrapper  # type: ignore
+    model: ColosalAIModelWrapper  # type: ignore
     optim_wrapper: ColossalAIOptimWrapper  # type: ignore
 
     def __init__(
@@ -469,7 +469,7 @@ class ColossalAIStrategy(BaseStrategy):
         if isinstance(plugin, str):
             if plugin == 'gemini':
                 plugin = colo_plugin.GeminiPlugin(
-                    precision='bf16', placement_policy='cuda')
+                    precision='bf16', placement_policy='auto')
             elif plugin == 'lowlevel-zero':
                 plugin = colo_plugin.LowLevelZeroPlugin()
             else:
@@ -508,11 +508,11 @@ class ColossalAIStrategy(BaseStrategy):
         self,
         model: nn.Module,
         optim_wrapper: Optional[OptimWrapper] = None,
-    ) -> Union[Tuple[CollosalAIModelWrapper, ColossalAIOptimWrapper],
-               CollosalAIModelWrapper]:  # type: ignore
+    ) -> Union[Tuple[ColosalAIModelWrapper, ColossalAIOptimWrapper],
+               ColosalAIModelWrapper]:  # type: ignore
         """Wrap model with :class:`ModelWrapper`."""
         if self.model_wrapper is None:
-            self.model_wrapper = {'type': 'CollosalAIModelWrapper'}
+            self.model_wrapper = {'type': 'ColosalAIModelWrapper'}
 
         # For zero series parallel, move `data_preprocessor` to current device
         # is reasonable. We need to `BaseDataPreprocessor.to` manually since
