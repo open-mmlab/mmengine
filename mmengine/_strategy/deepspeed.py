@@ -378,6 +378,13 @@ class DeepSpeedStrategy(BaseStrategy):
 
         if optim_wrapper is not None:
             self.optim_wrapper = self.build_optim_wrapper(optim_wrapper, model)
+            # Remove param_groups whose all parameters do not requires
+            # gradient, to ensure compatibility with DeepSpeed
+            self.optim_wrapper.optimizer.param_groups = [
+                group for group in self.optim_wrapper.optimizer.param_groups
+                if any(param.requires_grad for param in group['params'])
+            ]
+
             self.model = self._wrap_model(model)
 
             self.optim_wrapper.model = self.model  # type: ignore
