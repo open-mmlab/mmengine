@@ -6,7 +6,7 @@ from typing import Optional
 import torch
 
 from mmengine.device import (get_device, is_cuda_available, is_mlu_available,
-                             is_npu_available)
+                             is_npu_available, is_musa_available)
 from mmengine.logging import print_log
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
@@ -135,7 +135,15 @@ def autocast(device_type: Optional[str] = None,
 
         elif device_type == 'npu':
             pass
-
+        elif device_type == 'musa':
+            if dtype is None:
+                dtype = torch.get_autocast_gpu_dtype()
+            with torch.musa.amp.autocast(
+                    enabled=enabled,
+                    dtype=dtype,
+                    cache_enabled=cache_enabled):
+                yield
+                return
         else:
             # Device like MPS does not support fp16 training or testing.
             # If an inappropriate device is set and fp16 is enabled, an error

@@ -18,6 +18,9 @@ if get_device() == 'npu':
 elif get_device() == 'mlu':
     BoolTypeTensor = Union[torch.BoolTensor, torch.mlu.BoolTensor]
     LongTypeTensor = Union[torch.LongTensor, torch.mlu.LongTensor]
+elif get_device() == 'musa':
+    BoolTypeTensor = Union[torch.BoolTensor, torch.musa.BoolTensor]
+    LongTypeTensor = Union[torch.LongTensor, torch.musa.LongTensor]
 else:
     BoolTypeTensor = Union[torch.BoolTensor, torch.cuda.BoolTensor]
     LongTypeTensor = Union[torch.LongTensor, torch.cuda.LongTensor]

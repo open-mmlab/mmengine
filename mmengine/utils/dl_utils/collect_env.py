@@ -3,6 +3,7 @@
 import os.path as osp
 import subprocess
 import sys
+import os
 from collections import OrderedDict, defaultdict
 
 import numpy as np
@@ -10,7 +11,7 @@ import torch
 
 import mmengine
 from .parrots_wrapper import TORCH_VERSION, get_build_config, is_rocm_pytorch
-
+from mmengine.device import is_musa_available
 
 def _get_cuda_home():
     if TORCH_VERSION == 'parrots':
@@ -23,6 +24,8 @@ def _get_cuda_home():
             from torch.utils.cpp_extension import CUDA_HOME
     return CUDA_HOME
 
+def _get_musa_home():
+    return os.environ.get('MUSA_HOME')
 
 def collect_env():
     """Collect the information of the running environments.
@@ -52,8 +55,9 @@ def collect_env():
     env_info['Python'] = sys.version.replace('\n', '')
 
     cuda_available = torch.cuda.is_available()
+    musa_available = is_musa_available()
     env_info['CUDA available'] = cuda_available
-
+    env_info['MUSA available'] = musa_available
     env_info['numpy_random_seed'] = np.random.get_state()[1][0]
 
     if cuda_available:
@@ -89,7 +93,23 @@ def collect_env():
                 except subprocess.SubprocessError:
                     nvcc = 'Not Available'
             env_info['NVCC'] = nvcc
+    elif musa_available:
+        devices = defaultdict(list)
+        for k in range(torch.musa.device_count()):
+            devices[torch.musa.get_device_name(k)].append(str(k))
+        for name, device_ids in devices.items():
+            env_info['GPU ' + ','.join(device_ids)] = name
 
+        MUSA_HOME = _get_musa_home()
+        env_info['MUSA_HOME'] = MUSA_HOME
+
+        if MUSA_HOME is not None and osp.isdir(MUSA_HOME):
+            try:
+                mcc = osp.join(MUSA_HOME, 'bin/mcc')
+                subprocess.check_output(f'"{mcc}" -v', shell=True)
+            except subprocess.SubprocessError:
+                mcc = 'Not Available'
+            env_info['mcc'] = mcc
     try:
         # Check C++ Compiler.
         # For Unix-like, sysconfig has 'CC' variable like 'gcc -pthread ...',

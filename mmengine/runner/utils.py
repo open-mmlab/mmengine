@@ -6,7 +6,7 @@ from typing import List, Optional, Tuple
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-
+from mmengine.device import is_musa_available
 from mmengine.dist import get_rank, sync_random_seed
 from mmengine.logging import print_log
 from mmengine.utils import digit_version, is_list_of
@@ -70,6 +70,8 @@ def set_random_seed(seed: Optional[int] = None,
     torch.manual_seed(seed)
     # torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+    if is_musa_available():
+        torch.musa.manual_seed_all(seed)
     # os.environ['PYTHONHASHSEED'] = str(seed)
     if deterministic:
         if torch.backends.cudnn.benchmark:

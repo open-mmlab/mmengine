@@ -6,7 +6,7 @@ import torch
 
 from mmengine.dist.utils import master_only
 from mmengine.logging import MMLogger, print_log
-
+from mmengine.device import is_musa_available
 
 class TimeCounter:
     """A tool that counts the average running time of a function or a method.
@@ -84,15 +84,20 @@ class TimeCounter:
         def wrapper(*args, **kwargs):
             self.__count += 1
 
-            if self.with_sync and torch.cuda.is_available():
-                torch.cuda.synchronize()
+            if self.with_sync:
+                if torch.cuda.is_available():
+                    torch.cuda.synchronize()
+                elif is_musa_available():
+                    torch.musa.synchronize()
             start_time = time.perf_counter()
 
             result = fn(*args, **kwargs)
 
-            if self.with_sync and torch.cuda.is_available():
-                torch.cuda.synchronize()
-
+            if self.with_sync:
+                if torch.cuda.is_available():
+                    torch.cuda.synchronize()
+                elif is_musa_available():
+                    torch.musa.synchronize()    
             elapsed = time.perf_counter() - start_time
             self.print_time(elapsed)
 
