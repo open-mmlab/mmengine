@@ -120,7 +120,8 @@ class ColossalAIOptimWrapper(OptimWrapper):
         self.optimizer.backward(loss, **kwargs)
 
 
-@MODEL_WRAPPERS.register_module()
+@MODEL_WRAPPERS.register_module(
+    name=['ColossalAIModelWrapper', 'CollosalAIModelWrapper'])
 class ColossalAIModelWrapper:
 
     def __init__(self, model_wrapper: ModelWrapper, model: nn.Module):
@@ -468,8 +469,14 @@ class ColossalAIStrategy(BaseStrategy):
     def _build_plugin(self, plugin: Union[str, dict]):
         if isinstance(plugin, str):
             if plugin == 'gemini':
-                plugin = colo_plugin.GeminiPlugin(
-                    precision='bf16', placement_policy='auto')
+                try:
+                    plugin = colo_plugin.GeminiPlugin(
+                        precision='bf16', placement_policy='auto')
+                except AssertionError:
+                    from colossalai.zero.gemini.placement_policy import \
+                        PlacementPolicyFactory as colo_placement
+                    raise ValueError('placement policy must be one of ' +
+                                     f'{list(colo_placement.policies.keys())}')
             elif plugin == 'lowlevel-zero':
                 plugin = colo_plugin.LowLevelZeroPlugin()
             else:
