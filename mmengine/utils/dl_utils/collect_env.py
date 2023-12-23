@@ -138,7 +138,7 @@ def collect_env():
     try:
         import cv2
         env_info['OpenCV'] = cv2.__version__
-    except ModuleNotFoundError:
+    except ImportError:
         pass
 
     env_info['MMEngine'] = mmengine.__version__
