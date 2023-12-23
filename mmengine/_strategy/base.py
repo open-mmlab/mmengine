@@ -799,7 +799,8 @@ class BaseStrategy(metaclass=ABCMeta):
         else:
             model = self.model
 
-        _load_checkpoint_to_model(model, state_dict, strict, revise_keys)
+        _load_checkpoint_to_model(
+            model, state_dict, strict=strict, revise_keys=revise_keys)
 
     def load_optim_state_dict(self, state_dict: dict) -> None:
         """Load optimizer state from dict."""
