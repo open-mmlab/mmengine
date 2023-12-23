@@ -1,15 +1,30 @@
 # Changelog of v0.x
 
+## v0.10.1 (22/11/2023)
+
+### Bug Fixes
+
+- Fix collect_env without opencv by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1434
+- Fix deploy.yml by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1431
+
+### Docs
+
+- Add build mmengine-lite from source by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1435
+
+### Contributors
+
+A total of 1 developers contributed to this release. Thanks [@fanqiNO1](https://github.com/fanqiNO1)
+
 ## v0.10.0 (21/11/2023)
 
 ### New Features & Enhancements
 
 - Support for installing mmengine without opencv by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1429
+- Support `exclude_frozen_parameters` for `DeepSpeedStrategy`'s `resume` by [@LZHgrla](https://github.com/LZHgrla) in https://github.com/open-mmlab/mmengine/pull/1424
 
 ### Bug Fixes
 
 - Fix bugs in colo optimwrapper by [@HIT-cwh](https://github.com/HIT-cwh) in https://github.com/open-mmlab/mmengine/pull/1426
-- Support `exclude_frozen_parameters` for `DeepSpeedStrategy`'s `resume` by [@LZHgrla](https://github.com/LZHgrla) in https://github.com/open-mmlab/mmengine/pull/1424
 - Fix `scale_lr` in `SingleDeviceStrategy` by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1428
 - Fix CI for torch2.1.0 by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1418
 
