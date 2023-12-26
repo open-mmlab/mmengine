@@ -110,7 +110,8 @@ def _init_dist_pytorch(backend, init_backend='torch', **kwargs) -> None:
             **kwargs)
     elif is_npu_available():
         import torch_npu  # noqa: F401
-        torch.npu.set_device(rank)
+        local_rank = int(os.environ['LOCAL_RANK'])
+        torch.npu.set_device(local_rank)
         torch_dist.init_process_group(
             backend='hccl',
             rank=rank,
