@@ -1,5 +1,21 @@
 # Changelog of v0.x
 
+## v0.10.2 (26/12/2023)
+
+### New Features & Enhancements
+
+- Support multi-node distributed training with NPU backend by [@shun001](https://github.com/shun001) in https://github.com/open-mmlab/mmengine/pull/1459
+- Use `ImportError` to cover `ModuleNotFoundError` by [@del-zhenwu](https://github.com/del-zhenwu) in https://github.com/open-mmlab/mmengine/pull/1438
+
+### Bug Fixes
+
+- Fix bug in `load_model_state_dict` of `BaseStrategy` by [@SCZwangxiao](https://github.com/SCZwangxiao) in https://github.com/open-mmlab/mmengine/pull/1447
+- Fix placement policy in ColossalAIStrategy by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1440
+
+### Contributors
+
+A total of 4 developers contributed to this release. Thanks [@shun001](https://github.com/shun001), [@del-zhenwu](https://github.com/del-zhenwu), [@SCZwangxiao](https://github.com/SCZwangxiao), [@fanqiNO1](https://github.com/fanqiNO1)
+
 ## v0.10.1 (22/11/2023)
 
 ### Bug Fixes

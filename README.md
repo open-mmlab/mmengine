@@ -58,7 +58,7 @@ English | [简体中文](README_zh-CN.md)
 
 ## What's New
 
-v0.10.1 was released on 2023-11-22.
+v0.10.2 was released on 2023-12-26.
 
 Highlights:
 
