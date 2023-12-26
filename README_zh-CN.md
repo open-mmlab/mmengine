@@ -58,7 +58,7 @@
 
 ## 最近进展
 
-最新版本 v0.10.1 在 2023.11.22 发布。
+最新版本 v0.10.2 在 2023.12.26 发布。
 
 亮点：
 
@@ -70,7 +70,7 @@
 
 - 支持多种可视化后端，包括`NeptuneVisBackend`、`DVCLiveVisBackend` 和 `AimVisBackend`。可阅读[可视化后端](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/visualize_training_log.html)了解用法。
 
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v0101-22112023)
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v0102-26122023)
 
 ## 目录
 
