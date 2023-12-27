@@ -15,6 +15,7 @@ PYTHON_ROOT_DIR = osp.dirname(osp.dirname(sys.executable))
 
 MODULE2PACKAGE = {
     'mmcls': 'mmcls',
+    'mmdeploy': 'mmdeploy',
     'mmdet': 'mmdet',
     'mmdet3d': 'mmdet3d',
     'mmseg': 'mmsegmentation',
