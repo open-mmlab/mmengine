@@ -1,4 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from torch.distributed.fsdp.wrap import (size_based_auto_wrap_policy,
+                                         transformer_auto_wrap_policy)
+
+from mmengine._strategy import ColossalAIStrategy
 from mmengine.config import read_base
 from mmengine.dataset import DefaultSampler
 from mmengine.hooks import EMAHook
@@ -46,4 +50,7 @@ custom_hooks = [
         priority=49)
 ]
 
+# illegal model wrapper config, just for unit test.
+strategy = dict(type=ColossalAIStrategy, model_wrapper=dict(
+    auto_wrap_policy=(size_based_auto_wrap_policy, transformer_auto_wrap_policy)))
 runner_type = FlexibleRunner
