@@ -285,9 +285,9 @@ class FlexibleRunner:
             if isinstance(cfg, Config):
                 self.cfg = copy.deepcopy(cfg)
             elif isinstance(cfg, dict):
-                self.cfg = Config(cfg)
+                self.cfg = Config(cfg)  # type: ignore
         else:
-            self.cfg = Config(dict())
+            self.cfg = Config(dict())  # type: ignore
 
         # lazy initialization
         training_related = [train_dataloader, train_cfg, optim_wrapper]
