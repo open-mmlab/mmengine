@@ -31,11 +31,12 @@ Each hook has a corresponding priority. At each mount point, hooks with higher p
 
 **custom hooks**
 
-|                Name                 |                                 Function                                 |  Priority   |
-| :---------------------------------: | :----------------------------------------------------------------------: | :---------: |
-|         [EMAHook](#emahook)         |   apply Exponential Moving Average (EMA) on the model during training    | NORMAL (50) |
-|  [EmptyCacheHook](#emptycachehook)  | Releases all unoccupied cached GPU memory during the process of training | NORMAL (50) |
-| [SyncBuffersHook](#syncbuffershook) |            Synchronize model buffers at the end of each epoch            | NORMAL (50) |
+|                Name                 |                                 Function                                 |   Priority    |
+| :---------------------------------: | :----------------------------------------------------------------------: | :-----------: |
+|         [EMAHook](#emahook)         |   Apply Exponential Moving Average (EMA) on the model during training    |  NORMAL (50)  |
+|  [EmptyCacheHook](#emptycachehook)  | Releases all unoccupied cached GPU memory during the process of training |  NORMAL (50)  |
+| [SyncBuffersHook](#syncbuffershook) |            Synchronize model buffers at the end of each epoch            |  NORMAL (50)  |
+|    [ProfilerHook](#profilerhook)    |    Analyze the execution time and GPU memory usage of model operators    | VERY_LOW (90) |
 
 ```{note}
 It is not recommended to modify the priority of the default hooks, as hooks with lower priority may depend on hooks with higher priority. For example, `CheckpointHook` needs to have a lower priority than ParamSchedulerHook so that the saved optimizer state is correct. Also, the priority of custom hooks defaults to `NORMAL (50)`.
@@ -210,6 +211,20 @@ custom_hooks = [dict(type='SyncBuffersHook')]
 runner = Runner(custom_hooks=custom_hooks, ...)
 runner.train()
 ```
+
+### ProfilerHook
+
+The [ProfilerHook](mmengine.hooks.ProfilerHook) is used to analyze the execution time and GPU memory occupancy of model operators.
+
+```python
+custom_hooks = [dict(type='ProfilerHook', on_trace_ready=dict(type='tb_trace'))]
+runner = Runner(custom_hooks=custom_hooks, ...)
+runner.train()
+```
+
+The profiling results will be saved in the tf_tracing_logs directory under `work_dirs/{timestamp}`, and can be visualized using TensorBoard with the command `tensorboard --logdir work_dirs/{timestamp}/tf_tracing_logs`.
+
+For more information on the usage of the ProfilerHook, please refer to the [ProfilerHook](mmengine.hooks.ProfilerHook) documentation.
 
 ## Customize Your Hooks
 
