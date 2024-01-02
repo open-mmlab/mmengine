@@ -52,7 +52,7 @@ def _lazy2string(cfg_dict, dict_type=None):
             {k: _lazy2string(v, dict_type)
              for k, v in dict.items(cfg_dict)})
     elif isinstance(cfg_dict, (tuple, list)):
-        return type(cfg_dict)(_lazy2string(v) for v in cfg_dict)
+        return type(cfg_dict)(_lazy2string(v, dict_type) for v in cfg_dict)
     elif isinstance(cfg_dict, (LazyAttr, LazyObject)):
         return f'{cfg_dict.module}.{str(cfg_dict)}'
     else:
