@@ -31,11 +31,12 @@ MMEngine 提供了很多内置的钩子，将钩子分为两类，分别是默�
 
 **自定义钩子**
 
-|                名称                 |         用途          |   优先级    |
-| :---------------------------------: | :-------------------: | :---------: |
-|         [EMAHook](#emahook)         | 模型参数指数滑动平均  | NORMAL (50) |
-|  [EmptyCacheHook](#emptycachehook)  | PyTorch CUDA 缓存清理 | NORMAL (50) |
-| [SyncBuffersHook](#syncbuffershook) |   同步模型的 buffer   | NORMAL (50) |
+|                名称                 |                用途                |    优先级     |
+| :---------------------------------: | :--------------------------------: | :-----------: |
+|         [EMAHook](#emahook)         |        模型参数指数滑动平均        |  NORMAL (50)  |
+|  [EmptyCacheHook](#emptycachehook)  |       PyTorch CUDA 缓存清理        |  NORMAL (50)  |
+| [SyncBuffersHook](#syncbuffershook) |         同步模型的 buffer          |  NORMAL (50)  |
+|    [ProfilerHook](#profilerhook)    | 分析算子的执行时间以及占用显存情况 | VERY_LOW (90) |
 
 ```{note}
 不建议修改默认钩子的优先级，因为优先级低的钩子可能会依赖优先级高的钩子。例如 CheckpointHook 的优先级需要比 ParamSchedulerHook 低，这样保存的优化器状态才是正确的状态。另外，自定义钩子的优先级默认为 `NORMAL (50)`。
@@ -205,6 +206,20 @@ custom_hooks = [dict(type='SyncBuffersHook')]
 runner = Runner(custom_hooks=custom_hooks, ...)
 runner.train()
 ```
+
+### ProfilerHook
+
+[ProfilerHook](mmengine.hooks.ProfilerHook) 用于分析模型算子的执行时间以及显存占用情况。
+
+```python
+custom_hooks = [dict(type='ProfilerHook', on_trace_ready=dict(type='tb_trace'))]
+runner = Runner(custom_hooks=custom_hooks, ...)
+runner.train()
+```
+
+profile 的结果会保存在 `work_dirs/{timestamp}` 下的 `tf_tracing_logs` 目录，通过 `tensorboard --logdir work_dirs/{timestamp}tf_tracing_logs`。
+
+更多关于 ProfilerHook 的用法请阅读 [ProfilerHook](mmengine.hooks.ProfilerHook) 文档。
 
 ## 自定义钩子
 
