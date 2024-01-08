@@ -4,9 +4,10 @@ from typing import Optional, Union
 
 import torch
 
+from mmengine.device import is_musa_available
 from mmengine.dist.utils import master_only
 from mmengine.logging import MMLogger, print_log
-from mmengine.device import is_musa_available
+
 
 class TimeCounter:
     """A tool that counts the average running time of a function or a method.
@@ -97,7 +98,7 @@ class TimeCounter:
                 if torch.cuda.is_available():
                     torch.cuda.synchronize()
                 elif is_musa_available():
-                    torch.musa.synchronize()    
+                    torch.musa.synchronize()
             elapsed = time.perf_counter() - start_time
             self.print_time(elapsed)
 

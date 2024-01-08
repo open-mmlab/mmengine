@@ -6,7 +6,7 @@ from typing import Optional
 import torch
 
 from mmengine.device import (get_device, is_cuda_available, is_mlu_available,
-                             is_npu_available, is_musa_available)
+                             is_npu_available)
 from mmengine.logging import print_log
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
@@ -139,9 +139,7 @@ def autocast(device_type: Optional[str] = None,
             if dtype is None:
                 dtype = torch.get_autocast_gpu_dtype()
             with torch.musa.amp.autocast(
-                    enabled=enabled,
-                    dtype=dtype,
-                    cache_enabled=cache_enabled):
+                    enabled=enabled, dtype=dtype, cache_enabled=cache_enabled):
                 yield
                 return
         else:

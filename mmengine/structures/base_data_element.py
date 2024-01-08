@@ -520,7 +520,7 @@ class BaseDataElement:
                 data = {k: v}
                 new_data.set_data(data)
         return new_data
-    
+
     # Tensor-like methods
     def npu(self) -> 'BaseDataElement':
         """Convert all tensors to NPU in data."""

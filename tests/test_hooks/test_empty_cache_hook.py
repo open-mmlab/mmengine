@@ -1,11 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import unittest
 from unittest.mock import patch
 
-from mmengine.testing import RunnerTestCase
 from mmengine.device import is_musa_available
-import unittest
-#TODO:haowen.han@mthreads.com
-@unittest.skipIf(is_musa_available(), "torch_musa do not support torch.musa.reset_peak_memory_stats() yet")
+from mmengine.testing import RunnerTestCase
+
+
+# TODO:haowen.han@mthreads.com
+@unittest.skipIf(
+    is_musa_available(),
+    'torch_musa do not support torch.musa.reset_peak_memory_stats() yet')
 class TestEmptyCacheHook(RunnerTestCase):
 
     def test_with_runner(self):

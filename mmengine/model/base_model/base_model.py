@@ -221,7 +221,7 @@ class BaseModel(BaseModule):
             device = torch.device('cuda', index=device)
         self._set_device(torch.device(device))
         return super().cuda(device)
-    
+
     def musa(
         self,
         device: Optional[Union[int, str, torch.device]] = None,
@@ -236,7 +236,7 @@ class BaseModel(BaseModule):
             device = torch.device('musa', index=device)
         self._set_device(torch.device(device))
         return super().musa(device)
-    
+
     def mlu(
         self,
         device: Union[int, str, torch.device, None] = None,

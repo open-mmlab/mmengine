@@ -4,8 +4,8 @@ from typing import Optional, Sequence, Union
 import torch
 
 from mmengine.registry import HOOKS
-from .hook import Hook
 from ..device import is_cuda_available, is_musa_available
+from .hook import Hook
 
 DATA_BATCH = Optional[Union[dict, tuple, list]]
 
@@ -54,7 +54,7 @@ class EmptyCacheHook(Hook):
                 torch.cuda.empty_cache()
             elif is_musa_available():
                 torch.musa.empty_cache()
-                
+
     def _before_epoch(self, runner, mode: str = 'train') -> None:
         """Empty cache before an epoch.
 
@@ -67,7 +67,7 @@ class EmptyCacheHook(Hook):
                 torch.cuda.empty_cache()
             elif is_musa_available():
                 torch.musa.empty_cache()
-                
+
     def _after_epoch(self, runner, mode: str = 'train') -> None:
         """Empty cache after an epoch.
 

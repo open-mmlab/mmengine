@@ -16,6 +16,7 @@ from mmengine.utils import ManagerMixin
 from mmengine.utils.manager import _accquire_lock, _release_lock
 from ..device import is_cuda_available, is_musa_available
 
+
 class FilterDuplicateWarning(logging.Filter):
     """Filter the repeated warning message.
 
@@ -424,10 +425,11 @@ def _get_device_id():
             except ValueError:
                 # handle case for Multi-Instance GPUs
                 # see #1148 for details
-                return musa_visible_devices[local_rank] 
+                return musa_visible_devices[local_rank]
         else:
             # TODO: return device id of npu and mlu.
             return local_rank
+
 
 def _get_host_info() -> str:
     """Get hostname and username.

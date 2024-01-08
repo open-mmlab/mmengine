@@ -1,17 +1,18 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 """This file holding some environment constant for sharing by other files."""
+import os
 import os.path as osp
 import subprocess
 import sys
-import os
 from collections import OrderedDict, defaultdict
 
 import numpy as np
 import torch
 
 import mmengine
-from .parrots_wrapper import TORCH_VERSION, get_build_config, is_rocm_pytorch
 from mmengine.device import is_musa_available
+from .parrots_wrapper import TORCH_VERSION, get_build_config, is_rocm_pytorch
+
 
 def _get_cuda_home():
     if TORCH_VERSION == 'parrots':
@@ -24,8 +25,10 @@ def _get_cuda_home():
             from torch.utils.cpp_extension import CUDA_HOME
     return CUDA_HOME
 
+
 def _get_musa_home():
     return os.environ.get('MUSA_HOME')
+
 
 def collect_env():
     """Collect the information of the running environments.

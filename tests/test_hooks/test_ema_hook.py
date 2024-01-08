@@ -1,18 +1,18 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import os.path as osp
+import unittest
 
 import torch
 import torch.nn as nn
 
 from mmengine.config import ConfigDict
+from mmengine.device import is_musa_available
 from mmengine.hooks import EMAHook
 from mmengine.model import BaseModel, ExponentialMovingAverage
 from mmengine.registry import MODELS
 from mmengine.testing import RunnerTestCase, assert_allclose
 from mmengine.testing.runner_test_case import ToyModel
-from mmengine.device import is_musa_available
-import unittest
 
 
 class DummyWrapper(BaseModel):
@@ -46,8 +46,10 @@ class ToyModel3(ToyModel):
     def forward(self, *args, **kwargs):
         return super().forward(*args, **kwargs)
 
-#TODO:haowen.han@mtheads.com
-@unittest.skipIf(is_musa_available(), "musa backend do not support 'aten::lerp.Scalar_out'")
+
+# TODO:haowen.han@mtheads.com
+@unittest.skipIf(is_musa_available(),
+                 "musa backend do not support 'aten::lerp.Scalar_out'")
 class TestEMAHook(RunnerTestCase):
 
     def setUp(self) -> None:

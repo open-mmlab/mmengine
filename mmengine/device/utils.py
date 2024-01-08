@@ -3,6 +3,7 @@ import os
 from typing import Optional
 
 import torch
+
 try:
     import torch_npu  # noqa: F401
     import torch_npu.npu.utils as npu_utils
@@ -26,6 +27,7 @@ try:
     IS_MUSA_AVAILABLE = True
 except Exception:
     IS_MUSA_AVAILABLE = False
+
 
 def get_max_cuda_memory(device: Optional[torch.device] = None) -> int:
     """Returns the maximum GPU memory occupied by tensors in megabytes (MB) for
@@ -76,6 +78,7 @@ def is_mps_available() -> bool:
 def is_dipu_available() -> bool:
     return IS_DIPU_AVAILABLE
 
+
 def get_max_musa_memory(device: Optional[torch.device] = None) -> int:
     """Returns the maximum GPU memory occupied by tensors in megabytes (MB) for
     a given device. By default, this returns the peak allocated memory since
@@ -95,12 +98,14 @@ def get_max_musa_memory(device: Optional[torch.device] = None) -> int:
     mem_mb = torch.tensor([int(mem) // (1024 * 1024)],
                           dtype=torch.int,
                           device=device)
-    #TODO:haowen.han@mthreads.com: This function is not supported by musa yet.
-    #torch.musa.reset_peak_memory_stats()
+    # TODO:haowen.han@mthreads.com: This function is not supported by musa yet.
+    # torch.musa.reset_peak_memory_stats()
     return int(mem_mb.item())
+
 
 def is_musa_available() -> bool:
     return IS_MUSA_AVAILABLE
+
 
 def is_npu_support_full_precision() -> bool:
     """Returns True if npu devices support full precision training."""
@@ -122,6 +127,7 @@ elif is_dipu_available():
     DEVICE = 'dipu'
 elif is_musa_available():
     DEVICE = 'musa'
+
 
 def get_device() -> str:
     """Returns the currently existing device type.

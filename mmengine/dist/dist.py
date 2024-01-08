@@ -796,7 +796,7 @@ def _gather_object(obj: Any,
     elif is_mccl_backend:
         current_device = torch.device('', torch.musa.current_device())
         input_tensor = input_tensor.to(current_device)
-        local_size = local_size.to(current_device)       
+        local_size = local_size.to(current_device)
     # Gather all local sizes. This is so that we can find the max size, and
     # index until the correct size when deserializing the tensors.
     group_size = get_world_size(group=group)

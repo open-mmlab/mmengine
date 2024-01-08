@@ -9,7 +9,8 @@ from typing import List, Optional, Tuple
 import numpy as np
 import torch
 
-from mmengine.device import get_max_cuda_memory, is_cuda_available, get_max_musa_memory, is_musa_available
+from mmengine.device import (get_max_cuda_memory, get_max_musa_memory,
+                             is_cuda_available, is_musa_available)
 from mmengine.registry import LOG_PROCESSORS
 
 
@@ -507,7 +508,9 @@ class LogProcessor:
             return get_max_cuda_memory(device)
         elif is_musa_available():
             return get_max_musa_memory(device)
-        
+        else:
+            return 0
+
     def _get_iter(self, runner, batch_idx: int) -> int:
         """Get current iteration index.
 
