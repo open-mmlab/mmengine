@@ -253,8 +253,8 @@ class TestLogProcessor(RunnerTestCase):
 
     # TODO:haowen.han@mtheads.com
     @unittest.skipIf(
-        is_musa_available(),
-        'musa backend do not support torch.cuda.reset_peak_memory_stats')
+         is_musa_available(),
+         'musa backend do not support torch.cuda.reset_peak_memory_stats')
     @patch('torch.cuda.max_memory_allocated', MagicMock())
     @patch('torch.cuda.reset_peak_memory_stats', MagicMock())
     def test_get_max_memory(self):
