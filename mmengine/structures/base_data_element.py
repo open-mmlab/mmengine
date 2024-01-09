@@ -229,7 +229,12 @@ class BaseDataElement:
             metainfo,
             dict), f'metainfo should be a ``dict`` but got {type(metainfo)}'
         # meta = copy.deepcopy(metainfo)
-        meta = metainfo.clone()
+        meta = {}
+        for key in metainfo:
+            if isinstance(metainfo[key], torch.Tensor):
+                meta[key] = metainfo[key].clone()
+            else:
+                meta[key] = copy.deepcopy(metainfo[key])
         for k, v in meta.items():
             self.set_field(name=k, value=v, field_type='metainfo', dtype=None)
 
