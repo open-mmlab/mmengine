@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
-import unittest
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -251,10 +250,7 @@ class TestLogProcessor(RunnerTestCase):
         assert tag['metric1'] is metric1
         assert tag['metric2'] is metric2
 
-    # TODO:haowen.han@mtheads.com
-    @unittest.skipIf(
-         is_musa_available(),
-         'musa backend do not support torch.cuda.reset_peak_memory_stats')
+    # TODO:haowen.han@mtheads.com MUSA does not support it yet!
     @patch('torch.cuda.max_memory_allocated', MagicMock())
     @patch('torch.cuda.reset_peak_memory_stats', MagicMock())
     def test_get_max_memory(self):

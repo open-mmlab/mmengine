@@ -504,12 +504,10 @@ class LogProcessor:
         """
 
         device = getattr(runner.model, 'output_device', None)
-        if is_cuda_available():
-            return get_max_cuda_memory(device)
-        elif is_musa_available():
+
+        if is_musa_available():
             return get_max_musa_memory(device)
-        else:
-            return 0
+        return get_max_cuda_memory(device)
 
     def _get_iter(self, runner, batch_idx: int) -> int:
         """Get current iteration index.

@@ -14,7 +14,6 @@ from termcolor import colored
 
 from mmengine.utils import ManagerMixin
 from mmengine.utils.manager import _accquire_lock, _release_lock
-from ..device import is_cuda_available, is_musa_available
 
 
 class FilterDuplicateWarning(logging.Filter):
@@ -399,8 +398,31 @@ def _get_device_id():
     except ImportError:
         return 0
     else:
-        local_rank = int(os.getenv('LOCAL_RANK', '0'))
-        if is_cuda_available():
+        MUSA_AVAILABLE = False
+        try:
+            import torch_musa
+            MUSA_AVAILABLE = True
+        except ImportError:
+            pass
+        if MUSA_AVAILABLE:
+            local_rank = int(os.getenv('LOCAL_RANK', '0'))
+            musa_visible_devices = os.getenv('MUSA_VISIBLE_DEVICES', None)
+            if musa_visible_devices is None:
+                num_device = torch_musa.device_count()
+                musa_visible_devices = list(range(num_device))
+            else:
+                musa_visible_devices = musa_visible_devices.split(',')
+            try:
+                return int(musa_visible_devices[local_rank])
+            except ValueError:
+                # handle case for Multi-Instance GPUs
+                # see #1148 for details
+                return musa_visible_devices[local_rank]
+        else:
+            local_rank = int(os.getenv('LOCAL_RANK', '0'))
+            # TODO: return device id of npu and mlu.
+            if not torch.cuda.is_available():
+                return local_rank
             cuda_visible_devices = os.getenv('CUDA_VISIBLE_DEVICES', None)
             if cuda_visible_devices is None:
                 num_device = torch.cuda.device_count()
@@ -413,22 +435,6 @@ def _get_device_id():
                 # handle case for Multi-Instance GPUs
                 # see #1148 for details
                 return cuda_visible_devices[local_rank]
-        elif is_musa_available():
-            musa_visible_devices = os.getenv('MUSA_VISIBLE_DEVICES', None)
-            if musa_visible_devices is None:
-                num_device = torch.musa.device_count()
-                musa_visible_devices = list(range(num_device))
-            else:
-                musa_visible_devices = musa_visible_devices.split(',')
-            try:
-                return int(musa_visible_devices[local_rank])
-            except ValueError:
-                # handle case for Multi-Instance GPUs
-                # see #1148 for details
-                return musa_visible_devices[local_rank]
-        else:
-            # TODO: return device id of npu and mlu.
-            return local_rank
 
 
 def _get_host_info() -> str:
