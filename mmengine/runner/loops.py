@@ -274,7 +274,9 @@ class IterBasedTrainLoop(BaseLoop):
         if self._iter > 0:
             print_log(
                 f'Advance dataloader {self._iter} steps to skip data '
-                'that has already been trained', 'current')
+                'that has already been trained',
+                logger='current',
+                level=logging.WARNING)
             for _ in range(self._iter):
                 next(self.dataloader_iterator)
         while self._iter < self._max_iters and not self.stop_training:
