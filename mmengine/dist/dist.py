@@ -790,11 +790,11 @@ def _gather_object(obj: Any,
     is_nccl_backend = group_backend == torch_dist.Backend.NCCL
     is_mccl_backend = group_backend == 'mccl'
     if is_nccl_backend:
-        current_device = torch.device('', torch.cuda.current_device())
+        current_device = torch.device('cuda', torch.cuda.current_device())
         input_tensor = input_tensor.to(current_device)
         local_size = local_size.to(current_device)
     elif is_mccl_backend:
-        current_device = torch.device('', torch.musa.current_device())
+        current_device = torch.device('musa', torch.musa.current_device())
         input_tensor = input_tensor.to(current_device)
         local_size = local_size.to(current_device)
     # Gather all local sizes. This is so that we can find the max size, and

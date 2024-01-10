@@ -412,12 +412,7 @@ def _get_device_id():
                 musa_visible_devices = list(range(num_device))
             else:
                 musa_visible_devices = musa_visible_devices.split(',')
-            try:
-                return int(musa_visible_devices[local_rank])
-            except ValueError:
-                # handle case for Multi-Instance GPUs
-                # see #1148 for details
-                return musa_visible_devices[local_rank]
+            return int(musa_visible_devices[local_rank])
         else:
             local_rank = int(os.getenv('LOCAL_RANK', '0'))
             # TODO: return device id of npu and mlu.

@@ -512,7 +512,7 @@ class BaseDataElement:
 
     # Tensor-like methods
     def musa(self) -> 'BaseDataElement':
-        """Convert all tensors to GPU in data."""
+        """Convert all tensors to musa in data."""
         new_data = self.new()
         for k, v in self.items():
             if isinstance(v, (torch.Tensor, BaseDataElement)):

@@ -227,16 +227,13 @@ class LogProcessor:
             log_tag.pop('time')
             log_tag.pop('data_time')
 
-        # If cuda is available, the max memory occupied should be calculated.
-        if is_cuda_available():
+        # If cuda/musa is available,
+        # the max memory occupied should be calculated.
+        if is_cuda_available() or is_musa_available():
             max_memory = self._get_max_memory(runner)
             log_str += f'memory: {max_memory}  '
             tag['memory'] = max_memory
-        # If musa is available, the max memory occupied should be calculated.
-        if is_musa_available():
-            max_memory = self._get_max_memory(runner)
-            log_str += f'memory: {max_memory}  '
-            tag['memory'] = max_memory
+
         # Loop left keys to fill `log_str`.
         if mode in ('train', 'val'):
             log_items = []

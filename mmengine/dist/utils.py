@@ -11,8 +11,8 @@ import torch.multiprocessing as mp
 from torch import Tensor
 from torch import distributed as torch_dist
 from torch.distributed import ProcessGroup
-from mmengine.device import is_mlu_available, is_npu_available
-from mmengine.device import is_musa_available
+from mmengine.device import (is_mlu_available, is_npu_available,
+                             is_musa_available)
 
 from collections.abc import Iterable, Mapping
 

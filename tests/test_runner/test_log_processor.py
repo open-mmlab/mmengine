@@ -7,7 +7,7 @@ import pytest
 import torch
 from parameterized import parameterized
 
-from mmengine.device import is_musa_available
+from mmengine.device import is_cuda_available, is_musa_available
 from mmengine.logging import HistoryBuffer, MessageHub, MMLogger
 from mmengine.runner import LogProcessor
 from mmengine.testing import RunnerTestCase
@@ -114,7 +114,7 @@ class TestLogProcessor(RunnerTestCase):
                         f"time: {train_logs['time']:.4f}  "
                         f"data_time: {train_logs['data_time']:.4f}  ")
 
-            if torch.cuda.is_available() or is_musa_available():
+            if is_cuda_available() or is_musa_available():
                 log_str += 'memory: 100  '
             if mode == 'train':
                 log_str += f"loss_cls: {train_logs['loss_cls']:.4f}"
@@ -142,7 +142,7 @@ class TestLogProcessor(RunnerTestCase):
                         f"time: {train_logs['time']:.4f}  "
                         f"data_time: {train_logs['data_time']:.4f}  ")
 
-            if torch.cuda.is_available() or is_musa_available():
+            if is_cuda_available() or is_musa_available():
                 log_str += 'memory: 100  '
 
             if mode == 'train':

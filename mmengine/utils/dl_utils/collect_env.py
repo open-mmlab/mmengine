@@ -10,7 +10,7 @@ import numpy as np
 import torch
 
 import mmengine
-from mmengine.device import is_musa_available
+from mmengine.device import is_cuda_available, is_musa_available
 from .parrots_wrapper import TORCH_VERSION, get_build_config, is_rocm_pytorch
 
 
@@ -57,7 +57,7 @@ def collect_env():
     env_info['sys.platform'] = sys.platform
     env_info['Python'] = sys.version.replace('\n', '')
 
-    cuda_available = torch.cuda.is_available()
+    cuda_available = is_cuda_available()
     musa_available = is_musa_available()
     env_info['CUDA available'] = cuda_available
     env_info['MUSA available'] = musa_available
