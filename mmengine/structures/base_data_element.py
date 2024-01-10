@@ -228,17 +228,8 @@ class BaseDataElement:
         assert isinstance(
             metainfo,
             dict), f'metainfo should be a ``dict`` but got {type(metainfo)}'
-        # meta = copy.deepcopy(metainfo)
-        meta = {}
-        for key, value in metainfo.items():
-            print("VALUE", value)
-            print("TYPE(VALUE)", type(value))
-            if isinstance(value, (torch.Tensor, torch.Size)):
-                print("CLONE")
-                meta[key] = value.clone()
-            else:
-                print("DEEPCOPY")
-                meta[key] = copy.deepcopy(value)
+        print("METAINFO", metainfo)
+        meta = copy.deepcopy(metainfo)
         for k, v in meta.items():
             self.set_field(name=k, value=v, field_type='metainfo', dtype=None)
 
