@@ -894,6 +894,15 @@ class BaseStrategy(metaclass=ABCMeta):
         """
 
     @abstractmethod
+    def resume_seed(self, filename: str):
+        """Resume seed from given ``filename``.
+
+        Args:
+            filename (str): Accept local filepath, URL, ``torchvision://xxx``,
+                ``open-mmlab://xxx``.
+        """
+
+    @abstractmethod
     def resume(
         self,
         filename: str,

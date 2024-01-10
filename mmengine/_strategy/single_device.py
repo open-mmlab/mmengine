@@ -9,6 +9,7 @@ from mmengine.device import get_device
 from mmengine.model import revert_sync_batchnorm
 from mmengine.optim import BaseOptimWrapper, _ParamScheduler
 from mmengine.registry import STRATEGIES
+from mmengine.runner.checkpoint import _load_checkpoint
 from mmengine.utils import get_git_hash
 from .base import BaseStrategy
 
@@ -135,7 +136,6 @@ class SingleDeviceStrategy(BaseStrategy):
                 checkpoint after loading the checkpoint.
                 Defaults to None.
         """
-        from mmengine.runner.checkpoint import _load_checkpoint
 
         self.logger.info(f'Load checkpoint from {filename}')
 
@@ -154,6 +154,28 @@ class SingleDeviceStrategy(BaseStrategy):
             state_dict, strict=strict, revise_keys=revise_keys)
 
         return checkpoint
+
+    def resume_seed(self, filename: str):
+        """Resume seed from given ``filename``.
+
+        Args:
+            filename (str): Accept local filepath, URL, ``torchvision://xxx``,
+                ``open-mmlab://xxx``.
+        """
+        self.logger.info(f'Resume seed from {filename}')
+
+        checkpoint = _load_checkpoint(filename, map_location='cpu')
+
+        resumed_seed = checkpoint['meta'].get('seed', None)
+        current_seed = self._randomness.get('seed')
+        if resumed_seed is not None and resumed_seed != current_seed:
+            if current_seed is not None:
+                self.logger.warning(f'The value of random seed in the '
+                                    f'checkpoint "{resumed_seed}" is '
+                                    f'different from the value in '
+                                    f'`randomness` config "{current_seed}"')
+            self._randomness.update(seed=resumed_seed)
+            self._set_randomness(**self._randomness)
 
     def resume(
         self,
@@ -199,18 +221,6 @@ class SingleDeviceStrategy(BaseStrategy):
 
         if resume_param_scheduler and hasattr(self, 'param_schedulers'):
             self.load_scheduler_state_dict(checkpoint.pop('param_schedulers'))
-
-        # resume random seed
-        resumed_seed = checkpoint['meta'].get('seed', None)
-        current_seed = self._randomness.get('seed')
-        if resumed_seed is not None and resumed_seed != current_seed:
-            if current_seed is not None:
-                self.logger.warning(f'The value of random seed in the '
-                                    f'checkpoint "{resumed_seed}" is '
-                                    f'different from the value in '
-                                    f'`randomness` config "{current_seed}"')
-            self._randomness.update(seed=resumed_seed)
-            self._set_randomness(**self._randomness)
 
         # resume iter
         cur_iter = checkpoint['meta']['iter']

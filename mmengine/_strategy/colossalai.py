@@ -352,6 +352,29 @@ class ColossalAIStrategy(BaseStrategy):
         self._prepared = True
         return self._prepared_components()
 
+    def resume_seed(self, filename: str):
+        """Resume seed from given ``filename``.
+
+        Args:
+            filename (str): Accept local filepath, URL, ``torchvision://xxx``,
+                ``open-mmlab://xxx``.
+        """
+        self.logger.info(f'Resume seed from {filename}')
+
+        checkpoint = _load_checkpoint(
+            osp.join(filename, 'meta.pth'), map_location='cpu')
+
+        resumed_seed = checkpoint['meta'].get('seed', None)
+        current_seed = self._randomness.get('seed')
+        if resumed_seed is not None and resumed_seed != current_seed:
+            if current_seed is not None:
+                self.logger.warning(f'The value of random seed in the '
+                                    f'checkpoint "{resumed_seed}" is '
+                                    f'different from the value in '
+                                    f'`randomness` config "{current_seed}"')
+            self._randomness.update(seed=resumed_seed)
+            self._set_randomness(**self._randomness)
+
     def resume(
         self,
         filename: str,
@@ -379,18 +402,6 @@ class ColossalAIStrategy(BaseStrategy):
                 self.booster.load_lr_scheduler(
                     scheduler, f'{schedulers_dir}/scheduler_{i}.pth')
 
-        # resume random seed
-        resumed_seed = extra_ckpt['meta'].get('seed', None)
-        current_seed = self._randomness.get('seed')
-        if resumed_seed is not None and resumed_seed != current_seed:
-            if current_seed is not None:
-                self.logger.warning(f'The value of random seed in the '
-                                    f'checkpoint "{resumed_seed}" is '
-                                    f'different from the value in '
-                                    f'`randomness` config "{current_seed}"')
-            self._randomness.update(seed=resumed_seed)
-            self._set_randomness(**self._randomness)
-
         # resume iter
         self.dispatch_kwargs['cur_iter'] = extra_ckpt['meta']['iter']
 
@@ -408,7 +419,7 @@ class ColossalAIStrategy(BaseStrategy):
         """Load checkpoint from given ``filename``.
 
         Warning:
-            `map_localtion` and `callback` parameters are not supported yet.
+            `map_location` and `callback` parameters are not supported yet.
 
         Args:
             filename (str): Accept local filepath, URL, ``torchvision://xxx``,
