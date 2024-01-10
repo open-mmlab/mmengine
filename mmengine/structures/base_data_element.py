@@ -233,7 +233,7 @@ class BaseDataElement:
         for key, value in metainfo.items():
             print("VALUE", value)
             print("TYPE(VALUE)", type(value))
-            if isinstance(value, torch.Tensor):
+            if isinstance(value, (torch.Tensor, torch.Size)):
                 print("CLONE")
                 meta[key] = value.clone()
             else:
