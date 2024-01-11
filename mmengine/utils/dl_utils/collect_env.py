@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 """This file holding some environment constant for sharing by other files."""
+import os
 import os.path as osp
 import subprocess
 import sys
@@ -9,6 +10,7 @@ import numpy as np
 import torch
 
 import mmengine
+from mmengine.device import is_cuda_available, is_musa_available
 from .parrots_wrapper import TORCH_VERSION, get_build_config, is_rocm_pytorch
 
 
@@ -22,6 +24,10 @@ def _get_cuda_home():
         else:
             from torch.utils.cpp_extension import CUDA_HOME
     return CUDA_HOME
+
+
+def _get_musa_home():
+    return os.environ.get('MUSA_HOME')
 
 
 def collect_env():
@@ -51,9 +57,10 @@ def collect_env():
     env_info['sys.platform'] = sys.platform
     env_info['Python'] = sys.version.replace('\n', '')
 
-    cuda_available = torch.cuda.is_available()
+    cuda_available = is_cuda_available()
+    musa_available = is_musa_available()
     env_info['CUDA available'] = cuda_available
-
+    env_info['MUSA available'] = musa_available
     env_info['numpy_random_seed'] = np.random.get_state()[1][0]
 
     if cuda_available:
@@ -89,7 +96,23 @@ def collect_env():
                 except subprocess.SubprocessError:
                     nvcc = 'Not Available'
             env_info['NVCC'] = nvcc
+    elif musa_available:
+        devices = defaultdict(list)
+        for k in range(torch.musa.device_count()):
+            devices[torch.musa.get_device_name(k)].append(str(k))
+        for name, device_ids in devices.items():
+            env_info['GPU ' + ','.join(device_ids)] = name
 
+        MUSA_HOME = _get_musa_home()
+        env_info['MUSA_HOME'] = MUSA_HOME
+
+        if MUSA_HOME is not None and osp.isdir(MUSA_HOME):
+            try:
+                mcc = osp.join(MUSA_HOME, 'bin/mcc')
+                subprocess.check_output(f'"{mcc}" -v', shell=True)
+            except subprocess.SubprocessError:
+                mcc = 'Not Available'
+            env_info['mcc'] = mcc
     try:
         # Check C++ Compiler.
         # For Unix-like, sysconfig has 'CC' variable like 'gcc -pthread ...',

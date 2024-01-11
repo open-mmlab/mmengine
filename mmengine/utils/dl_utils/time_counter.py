@@ -4,6 +4,7 @@ from typing import Optional, Union
 
 import torch
 
+from mmengine.device import is_cuda_available, is_musa_available
 from mmengine.dist.utils import master_only
 from mmengine.logging import MMLogger, print_log
 
@@ -84,15 +85,20 @@ class TimeCounter:
         def wrapper(*args, **kwargs):
             self.__count += 1
 
-            if self.with_sync and torch.cuda.is_available():
-                torch.cuda.synchronize()
+            if self.with_sync:
+                if is_cuda_available():
+                    torch.cuda.synchronize()
+                elif is_musa_available():
+                    torch.musa.synchronize()
             start_time = time.perf_counter()
 
             result = fn(*args, **kwargs)
 
-            if self.with_sync and torch.cuda.is_available():
-                torch.cuda.synchronize()
-
+            if self.with_sync:
+                if is_cuda_available():
+                    torch.cuda.synchronize()
+                elif is_musa_available():
+                    torch.musa.synchronize()
             elapsed = time.perf_counter() - start_time
             self.print_time(elapsed)
 
