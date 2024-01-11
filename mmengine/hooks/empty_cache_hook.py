@@ -52,7 +52,7 @@ class EmptyCacheHook(Hook):
         if self._do_after_iter:
             if is_cuda_available():
                 torch.cuda.empty_cache()
-            if is_musa_available():
+            elif is_musa_available():
                 torch.musa.empty_cache()
 
     def _before_epoch(self, runner, mode: str = 'train') -> None:
@@ -65,7 +65,7 @@ class EmptyCacheHook(Hook):
         if self._do_before_epoch:
             if is_cuda_available():
                 torch.cuda.empty_cache()
-            if is_musa_available():
+            elif is_musa_available():
                 torch.musa.empty_cache()
 
     def _after_epoch(self, runner, mode: str = 'train') -> None:
@@ -78,5 +78,5 @@ class EmptyCacheHook(Hook):
         if self._do_after_epoch:
             if is_cuda_available():
                 torch.cuda.empty_cache()
-            if is_musa_available():
+            elif is_musa_available():
                 torch.musa.empty_cache()

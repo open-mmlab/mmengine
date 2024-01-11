@@ -72,7 +72,7 @@ def set_random_seed(seed: Optional[int] = None,
     # torch.cuda.manual_seed(seed)
     if is_cuda_available():
         torch.cuda.manual_seed_all(seed)
-    if is_musa_available():
+    elif is_musa_available():
         torch.musa.manual_seed_all(seed)
     # os.environ['PYTHONHASHSEED'] = str(seed)
     if deterministic:
