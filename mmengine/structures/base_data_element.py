@@ -228,9 +228,7 @@ class BaseDataElement:
         assert isinstance(
             metainfo,
             dict), f'metainfo should be a ``dict`` but got {type(metainfo)}'
-        print("METAINFO", metainfo)
         meta = metainfo.copy()
-        # meta = copy.deepcopy(metainfo)
         for k, v in meta.items():
             self.set_field(name=k, value=v, field_type='metainfo', dtype=None)
 
