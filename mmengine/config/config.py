@@ -48,9 +48,11 @@ else:
 def _lazy2string(cfg_dict, dict_type=None):
     if isinstance(cfg_dict, dict):
         dict_type = dict_type or type(cfg_dict)
-        return dict_type({k: _lazy2string(v) for k, v in dict.items(cfg_dict)})
+        return dict_type(
+            {k: _lazy2string(v, dict_type)
+             for k, v in dict.items(cfg_dict)})
     elif isinstance(cfg_dict, (tuple, list)):
-        return type(cfg_dict)(_lazy2string(v) for v in cfg_dict)
+        return type(cfg_dict)(_lazy2string(v, dict_type) for v in cfg_dict)
     elif isinstance(cfg_dict, (LazyAttr, LazyObject)):
         return f'{cfg_dict.module}.{str(cfg_dict)}'
     else:

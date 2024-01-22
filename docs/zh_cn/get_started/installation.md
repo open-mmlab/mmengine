@@ -27,10 +27,10 @@
 ## 安装 MMEngine
 
 :::{note}
-如果你只想使用 MMEngine 中的 fileio、registry 和 config 模块，你可以设置 `MMENGINE_LITE` 环境变量，它只会安装必须的几个第三方库依赖（例如不会安装 opencv、matplotlib）：
+如果你只想使用 MMEngine 中的 fileio、registry 和 config 模块，你可以安装`mmengine-lite`，它只会安装必须的几个第三方库依赖（例如不会安装 opencv、matplotlib）：
 
 ```bash
-MMENGINE_LITE=1 pip install mmengine
+pip install mmengine-lite
 ```
 
 :::
@@ -68,11 +68,22 @@ pip install mmengine
 
 ### 源码安装
 
+#### 安装 mmengine
+
 ```bash
 # 如果克隆代码仓库的速度过慢，可以从 https://gitee.com/open-mmlab/mmengine.git 克隆
 git clone https://github.com/open-mmlab/mmengine.git
 cd mmengine
 pip install -e . -v
+```
+
+#### 安装 mmengine-lite
+
+```bash
+# 如果克隆代码仓库的速度过慢，可以从 https://gitee.com/open-mmlab/mmengine.git 克隆
+git clone https://github.com/open-mmlab/mmengine.git
+cd mmengine
+MMENGINE_LITE=1 pip install -e . -v
 ```
 
 ## 验证安装

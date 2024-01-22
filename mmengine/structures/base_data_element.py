@@ -511,6 +511,17 @@ class BaseDataElement:
         return new_data
 
     # Tensor-like methods
+    def musa(self) -> 'BaseDataElement':
+        """Convert all tensors to musa in data."""
+        new_data = self.new()
+        for k, v in self.items():
+            if isinstance(v, (torch.Tensor, BaseDataElement)):
+                v = v.musa()
+                data = {k: v}
+                new_data.set_data(data)
+        return new_data
+
+    # Tensor-like methods
     def npu(self) -> 'BaseDataElement':
         """Convert all tensors to NPU in data."""
         new_data = self.new()

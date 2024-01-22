@@ -271,6 +271,14 @@ class IterBasedTrainLoop(BaseLoop):
         # In iteration-based training loop, we treat the whole training process
         # as a big epoch and execute the corresponding hook.
         self.runner.call_hook('before_train_epoch')
+        if self._iter > 0:
+            print_log(
+                f'Advance dataloader {self._iter} steps to skip data '
+                'that has already been trained',
+                logger='current',
+                level=logging.WARNING)
+            for _ in range(self._iter):
+                next(self.dataloader_iterator)
         while self._iter < self._max_iters and not self.stop_training:
             self.runner.model.train()
 

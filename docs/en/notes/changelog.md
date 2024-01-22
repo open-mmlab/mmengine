@@ -1,5 +1,77 @@
 # Changelog of v0.x
 
+## v0.10.2 (26/12/2023)
+
+### New Features & Enhancements
+
+- Support multi-node distributed training with NPU backend by [@shun001](https://github.com/shun001) in https://github.com/open-mmlab/mmengine/pull/1459
+- Use `ImportError` to cover `ModuleNotFoundError` by [@del-zhenwu](https://github.com/del-zhenwu) in https://github.com/open-mmlab/mmengine/pull/1438
+
+### Bug Fixes
+
+- Fix bug in `load_model_state_dict` of `BaseStrategy` by [@SCZwangxiao](https://github.com/SCZwangxiao) in https://github.com/open-mmlab/mmengine/pull/1447
+- Fix placement policy in ColossalAIStrategy by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1440
+
+### Contributors
+
+A total of 4 developers contributed to this release. Thanks [@shun001](https://github.com/shun001), [@del-zhenwu](https://github.com/del-zhenwu), [@SCZwangxiao](https://github.com/SCZwangxiao), [@fanqiNO1](https://github.com/fanqiNO1)
+
+## v0.10.1 (22/11/2023)
+
+### Bug Fixes
+
+- Fix collect_env without opencv by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1434
+- Fix deploy.yml by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1431
+
+### Docs
+
+- Add build mmengine-lite from source by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1435
+
+### Contributors
+
+A total of 1 developers contributed to this release. Thanks [@fanqiNO1](https://github.com/fanqiNO1)
+
+## v0.10.0 (21/11/2023)
+
+### New Features & Enhancements
+
+- Support for installing mmengine without opencv by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1429
+- Support `exclude_frozen_parameters` for `DeepSpeedStrategy`'s `resume` by [@LZHgrla](https://github.com/LZHgrla) in https://github.com/open-mmlab/mmengine/pull/1424
+
+### Bug Fixes
+
+- Fix bugs in colo optimwrapper by [@HIT-cwh](https://github.com/HIT-cwh) in https://github.com/open-mmlab/mmengine/pull/1426
+- Fix `scale_lr` in `SingleDeviceStrategy` by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1428
+- Fix CI for torch2.1.0 by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1418
+
+### Contributors
+
+A total of 3 developers contributed to this release. Thanks [@HIT-cwh](https://github.com/HIT-cwh), [@LZHgrla](https://github.com/LZHgrla), [@fanqiNO1](https://github.com/fanqiNO1)
+
+## v0.9.1 (03/11/2023)
+
+### New Features & Enhancements
+
+- Support slurm distributed training for mlu devices by [@POI-WX](https://github.com/POI-WX) in https://github.com/open-mmlab/mmengine/pull/1396
+- Add torch 2.1.0 checking in CI by [@YiyaoYang1](https://github.com/YiyaoYang1) in https://github.com/open-mmlab/mmengine/pull/1389
+- Add `exclude_frozen_parameters` for `DeepSpeedStrategy` by [@LZHgrla](https://github.com/LZHgrla) in https://github.com/open-mmlab/mmengine/pull/1415
+- Enhance inputs_to_half in DeepSpeedStrategy by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1400
+
+### Bug Fixes
+
+- Fix new config in visualizer by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1390
+- Fix func params using without init in OneCycleLR (#1401) by [@whlook](https://github.com/whlook) in https://github.com/open-mmlab/mmengine/pull/1403
+- Fix a bug when module is missing in low version of bitsandbytes by [@Ben-Louis](https://github.com/Ben-Louis) in https://github.com/open-mmlab/mmengine/pull/1388
+- Fix ConcatDataset raising error when metainfo is np.array by [@jonbakerfish](https://github.com/jonbakerfish) in https://github.com/open-mmlab/mmengine/pull/1407
+
+### Docs
+
+- Rename master to main by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1397
+
+### Contributors
+
+A total of 9 developers contributed to this release. Thanks [@POI-WX](https://github.com/POI-WX),  [@whlook](https://github.com/whlook), [@jonbakerfish](https://github.com/jonbakerfish), [@LZHgrla](https://github.com/LZHgrla), [@Ben-Louis](https://github.com/Ben-Louis), [@YiyaoYang1](https://github.com/YiyaoYang1), [@fanqiNO1](https://github.com/fanqiNO1), [@HAOCHENYE](https://github.com/HAOCHENYE), [@zhouzaida](https://github.com/zhouzaida)
+
 ## v0.9.0 (10/10/2023)
 
 ### Highlights

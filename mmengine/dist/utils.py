@@ -11,7 +11,8 @@ import torch.multiprocessing as mp
 from torch import Tensor
 from torch import distributed as torch_dist
 from torch.distributed import ProcessGroup
-from mmengine.device import is_mlu_available, is_npu_available
+from mmengine.device import (is_mlu_available, is_npu_available,
+                             is_musa_available)
 
 from collections.abc import Iterable, Mapping
 
@@ -99,9 +100,10 @@ def _init_dist_pytorch(backend, init_backend='torch', **kwargs) -> None:
         **kwargs: keyword arguments are passed to ``init_process_group``.
     """
     rank = int(os.environ['RANK'])
+    # LOCAL_RANK is set by `torch.distributed.launch` since PyTorch 1.1
+    local_rank = int(os.environ['LOCAL_RANK'])
     if is_mlu_available():
         import torch_mlu  # noqa: F401
-        local_rank = int(os.environ['LOCAL_RANK'])
         torch.mlu.set_device(local_rank)
         torch_dist.init_process_group(
             backend='cncl',
@@ -110,15 +112,21 @@ def _init_dist_pytorch(backend, init_backend='torch', **kwargs) -> None:
             **kwargs)
     elif is_npu_available():
         import torch_npu  # noqa: F401
-        torch.npu.set_device(rank)
+        torch.npu.set_device(local_rank)
         torch_dist.init_process_group(
             backend='hccl',
             rank=rank,
             world_size=int(os.environ['WORLD_SIZE']),
             **kwargs)
+    elif is_musa_available():
+        import torch_musa  # noqa: F401
+        torch.musa.set_device(rank)
+        torch_dist.init_process_group(
+            backend='mccl',
+            rank=rank,
+            world_size=int(os.environ['WORLD_SIZE']),
+            **kwargs)
     else:
-        # LOCAL_RANK is set by `torch.distributed.launch` since PyTorch 1.1
-        local_rank = int(os.environ['LOCAL_RANK'])
         torch.cuda.set_device(local_rank)
 
         if init_backend == 'torch':
@@ -528,6 +536,9 @@ def get_comm_device(group: Optional[ProcessGroup] = None) -> torch.device:
         return torch.device('mlu', torch.mlu.current_device())
     elif backend == 'smddp':
         return torch.device('cuda', torch.cuda.current_device())
+    elif backend == 'mccl':
+        import torch_musa
+        return torch.device('musa', torch_musa.current_device())
     else:
         # GLOO and MPI backends use cpu device by default
         return torch.device('cpu')

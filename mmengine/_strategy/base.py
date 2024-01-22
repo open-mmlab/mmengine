@@ -707,7 +707,8 @@ class BaseStrategy(metaclass=ABCMeta):
                 return any(_is_built(s) for s in schedulers)
             return isinstance(schedulers, _ParamScheduler)
 
-        if _is_built(self.param_schedulers):
+        if hasattr(self, 'param_schedulers') and _is_built(
+                self.param_schedulers):
             raise RuntimeError('`scale_lr` should be called before building '
                                'ParamScheduler because ParamScheduler will '
                                'store initial lr from optimizer wrappers')
@@ -798,7 +799,8 @@ class BaseStrategy(metaclass=ABCMeta):
         else:
             model = self.model
 
-        _load_checkpoint_to_model(model, state_dict, strict, revise_keys)
+        _load_checkpoint_to_model(
+            model, state_dict, strict=strict, revise_keys=revise_keys)
 
     def load_optim_state_dict(self, state_dict: dict) -> None:
         """Load optimizer state from dict."""

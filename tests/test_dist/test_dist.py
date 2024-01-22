@@ -11,6 +11,7 @@ import torch
 import torch.distributed as torch_dist
 
 import mmengine.dist as dist
+from mmengine.device import is_musa_available
 from mmengine.dist.dist import sync_random_seed
 from mmengine.testing._internal import MultiProcessTestCase
 from mmengine.utils import digit_version
@@ -117,6 +118,7 @@ class TestDist(TestCase):
                 self.assertTrue(torch.allclose(item1, item2))
 
 
+@unittest.skipIf(is_musa_available(), reason='musa do not support gloo yet')
 class TestDistWithGLOOBackend(MultiProcessTestCase):
 
     def _init_dist_env(self, rank, world_size):
