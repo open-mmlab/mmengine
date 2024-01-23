@@ -444,6 +444,9 @@ class Runner:
         self.logger.info(f'Hooks will be executed in the following '
                          f'order:\n{self.get_hooks_info()}')
 
+        # resume seed if needed
+        self.resume_seed()
+
         # dump `cfg` to `work_dir`
         self.dump_config()
 
@@ -1994,6 +1997,42 @@ class Runner:
         if custom_hooks is not None:
             self.register_custom_hooks(custom_hooks)
 
+    def _resume_seed(self, filename: str) -> None:
+        """Resume seed from checkpoint.
+
+        Args:
+            filename (str): Accept local filepath, URL, ``torchvision://xxx``,
+                ``open-mmlab://xxx``.
+        """
+
+        checkpoint = _load_checkpoint(filename, map_location='cpu')
+
+        resumed_seed = checkpoint['meta'].get('seed', None)
+        if resumed_seed is not None and resumed_seed != self.seed:
+            if self.seed is not None:
+                self.logger.warning(f'The value of random seed in the '
+                                    f'checkpoint "{resumed_seed}" is '
+                                    f'different from the value in '
+                                    f'`randomness` config "{self.seed}"')
+            self._randomness_cfg.update(seed=resumed_seed)
+            self.set_randomness(**self._randomness_cfg)
+
+    def resume_seed(self):
+        """resume seed."""
+
+        # decide to load from checkpoint or resume from checkpoint
+        resume_from = None
+        if self._resume and self._load_from is None:
+            # auto resume from the latest checkpoint
+            resume_from = find_latest_checkpoint(self.work_dir)
+            self.logger.info(f'Seed is auto resumed from the latest '
+                             f'checkpoint {resume_from}.')
+        elif self._resume and self._load_from is not None:
+            # resume from the specified checkpoint
+            resume_from = self._load_from
+        if resume_from is not None:
+            self._resume_seed(resume_from)
+
     def resume(self,
                filename: str,
                resume_optimizer: bool = True,
@@ -2046,18 +2085,6 @@ class Runner:
                         'consistent with resuming from checkpoint but the '
                         'leaning rate will be adjusted according to the '
                         f'setting in auto_scale_lr={self.auto_scale_lr}')
-
-        # resume random seed
-        resumed_seed = checkpoint['meta'].get('seed', None)
-        current_seed = self._randomness_cfg.get('seed')
-        if resumed_seed is not None and resumed_seed != current_seed:
-            if current_seed is not None:
-                self.logger.warning(f'The value of random seed in the '
-                                    f'checkpoint "{resumed_seed}" is '
-                                    f'different from the value in '
-                                    f'`randomness` config "{current_seed}"')
-            self._randomness_cfg.update(seed=resumed_seed)
-            self.set_randomness(**self._randomness_cfg)
 
         resumed_dataset_meta = checkpoint['meta'].get('dataset_meta', None)
         dataset_meta = getattr(self.train_dataloader.dataset, 'metainfo', None)

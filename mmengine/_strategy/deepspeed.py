@@ -18,6 +18,7 @@ from mmengine.dist import init_dist
 from mmengine.optim import BaseOptimWrapper, _ParamScheduler
 from mmengine.registry import (MODEL_WRAPPERS, OPTIM_WRAPPERS, OPTIMIZERS,
                                STRATEGIES)
+from mmengine.runner.checkpoint import _load_checkpoint
 from mmengine.utils import apply_to, digit_version, get_git_hash
 from .base import BaseStrategy
 
@@ -416,7 +417,7 @@ class DeepSpeedStrategy(BaseStrategy):
         """Load checkpoint from given ``filename``.
 
         Warning:
-            `map_localtion` and `callback` parameters are not supported yet.
+            `map_location` and `callback` parameters are not supported yet.
 
         Args:
             filename (str): Accept local filepath, URL, ``torchvision://xxx``,
@@ -436,6 +437,29 @@ class DeepSpeedStrategy(BaseStrategy):
                 dirname, tag=basename, load_optimizer_states=False)
 
         return extra_ckpt
+
+    def resume_seed(self, filename: str):
+        """Resume seed from given ``filename``.
+
+        Args:
+            filename (str): Accept local filepath, URL, ``torchvision://xxx``,
+                ``open-mmlab://xxx``.
+        """
+        self.logger.info(f'Resume seed from {filename}')
+
+        from deepspeed.utils.zero_to_fp32 import get_model_state_files
+        filename = get_model_state_files(filename)[0]
+        checkpoint = _load_checkpoint(filename, map_location='cpu')
+
+        resumed_seed = checkpoint['meta'].get('seed', None)
+        if resumed_seed is not None and resumed_seed != self.seed:
+            if self.seed is not None:
+                self.logger.warning(f'The value of random seed in the '
+                                    f'checkpoint "{resumed_seed}" is '
+                                    f'different from the value in '
+                                    f'`randomness` config "{self.seed}"')
+            self._randomness.update(seed=resumed_seed)
+            self._set_randomness(**self._randomness)
 
     def resume(
         self,
@@ -479,18 +503,6 @@ class DeepSpeedStrategy(BaseStrategy):
         if resume_param_scheduler and hasattr(self, 'param_schedulers'):
             param_schedulers = extra_ckpt.pop('param_schedulers')
             self.load_scheduler_state_dict(param_schedulers)
-
-        # resume random seed
-        resumed_seed = extra_ckpt['meta'].get('seed', None)
-        current_seed = self._randomness.get('seed')
-        if resumed_seed is not None and resumed_seed != current_seed:
-            if current_seed is not None:
-                self.logger.warning(f'The value of random seed in the '
-                                    f'checkpoint "{resumed_seed}" is '
-                                    f'different from the value in '
-                                    f'`randomness` config "{current_seed}"')
-            self._randomness.update(seed=resumed_seed)
-            self._set_randomness(**self._randomness)
 
         return extra_ckpt
 

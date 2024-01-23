@@ -2342,7 +2342,7 @@ class TestRunner(TestCase):
         torch.save(ckpt_modified, path_modified)
         # Warning should be raised since seed is not matched
         with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
-            runner.resume(path_modified)
+            runner._resume_seed(path_modified)
 
         # 1.3.3 test resume with no seed and dataset meta
         ckpt_modified = copy.deepcopy(ckpt)

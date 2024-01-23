@@ -405,6 +405,9 @@ class FlexibleRunner:
         self.logger.info(f'Hooks will be executed in the following '
                          f'order:\n{self.get_hooks_info()}')
 
+        # resume seed if needed
+        self.resume_seed()
+
         # dump `cfg` to `work_dir`
         self.dump_config()
 
@@ -1115,6 +1118,24 @@ class FlexibleRunner:
                 info += '\n -------------------- '
                 stage_hook_infos.append(info)
         return '\n'.join(stage_hook_infos)
+
+    def resume_seed(self):
+        """resume seed."""
+
+        # decide to load from checkpoint or resume from checkpoint
+        resume_from = None
+        if isinstance(self._resume, str):
+            resume_from = self._resume
+        elif self._resume and self._load_from is None:
+            # auto resume from the latest checkpoint
+            resume_from = find_latest_checkpoint(self.work_dir)
+            self.logger.info(
+                f'Auto resumed from the latest checkpoint {resume_from}.')
+        elif self._resume and self._load_from is not None:
+            # resume from the specified checkpoint
+            resume_from = self._load_from
+        if resume_from is not None:
+            self.strategy.resume_seed(resume_from)
 
     def load_or_resume(self):
         """load or resume checkpoint."""
