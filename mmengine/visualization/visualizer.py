@@ -961,7 +961,7 @@ class Visualizer(ManagerMixin):
                 if topk <= 0, tensor_chw is assert to be one or three.
                 Defaults to 20.
             arrangement (Tuple[int, int]): The arrangement of featmap when
-                channel_reduction is not None and topk > 0. Defaults to (4, 5).
+                channel_reduction is None and topk > 0. Defaults to (4, 5).
             resize_shape (tuple, optional): The shape to scale the feature map.
                 Defaults to None.
             alpha (Union[int, List[int]]): The transparency of featmap.
