@@ -1,30 +1,29 @@
 # Introduction
 
 MMEngine is a foundational library for training deep learning models based on
-PyTorch. It supports running on Linux, Windows, and macOS. It has the
-following three features:
+PyTorch. It supports running on Linux, Windows, and macOS. Its highlights are as follows:
 
-1. **Universal and powerful executor**:
+**Integrate mainstream large-scale model training frameworks**
 
-   - Supports training different tasks with minimal code, such as training
-     ImageNet with just 80 lines of code (original PyTorch examples require
-     400 lines).
-   - Easily compatible with models from popular algorithm libraries like TIMM,
-     TorchVision, and Detectron2.
+- [ColossalAI](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html#colossalai)
+- [DeepSpeed](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html#deepspeed)
+- [FSDP](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html#fullyshardeddataparallel-fsdp)
 
-2. **Open architecture with unified interfaces**:
+**Supports a variety of training strategies**
 
-   - Handles different tasks with a unified API: you can implement a method
-     once and apply it to all compatible models.
-   - Supports various backend devices through a simple, high-level
-     abstraction. Currently, MMEngine supports model training on Nvidia CUDA,
-     Mac MPS, AMD, MLU, and other devices.
+- [Mixed Precision Training](https://mmengine.readthedocs.io/en/latest/common_usage/speed_up_training.html#id3)
+- [Gradient Accumulation](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#id2)
+- [Gradient Checkpointing](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#id3)
 
-3. **Customizable training process**:
+**Provides a user-friendly configuration system**
 
-   - Defines a highly modular training engine with "Lego"-like composability.
-   - Offers a rich set of components and strategies.
-   - Total control over the training process with different levels of APIs.
+- [Pure Python-style configuration files, easy to navigate](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#python-beta)
+- [Plain-text-style configuration files, supporting JSON and YAML](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#id1)
+
+**Covers mainstream training monitoring platforms**
+
+- [TensorBoard](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#tensorboard) | [WandB](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#wandb) | [MLflow](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#mlflow-wip)
+- [ClearML](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#clearml) | [Neptune](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#neptune) | [DVCLive](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#dvclive) | [Aim](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#aim)
 
 ## Architecture
 

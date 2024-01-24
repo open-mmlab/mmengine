@@ -1,22 +1,33 @@
 # 介绍
 
-MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的基础库，支持在 Linux、Windows、macOS 上运行。它具有如下三个特性：
+MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的基础库，支持在 Linux、Windows、macOS 上运行。它的亮点如下：
 
-1. **通用且强大的执行器**：
+**集成主流的大模型训练框架**
 
-   - 支持用少量代码训练不同的任务，例如仅使用 80 行代码就可以训练 ImageNet（原始 PyTorch 示例需要 400 行）。
-   - 轻松兼容流行的算法库（如 TIMM、TorchVision 和 Detectron2）中的模型。
+- [ColossalAI](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/large_model_training.html#colossalai)
+- [DeepSpeed](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/large_model_training.html#deepspeed)
+- [FSDP](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/large_model_training.html#fullyshardeddataparallel-fsdp)
 
-2. **接口统一的开放架构**：
+**支持丰富的训练策略**
 
-   - 使用统一的接口处理不同的算法任务，例如，实现一个方法并应用于所有的兼容性模型。
-   - 上下游的对接更加统一便捷，在为上层算法库提供统一抽象的同时，支持多种后端设备。目前 MMEngine 支持 Nvidia CUDA、Mac MPS、AMD、MLU 等设备进行模型训练。
+- [混合精度训练（Mixed Precision Training）](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/speed_up_training.html#id3)
+- [梯度累积（Gradient Accumulation）](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/save_gpu_memory.html#id2)
+- [梯度检查点（Gradient Checkpointing）](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/save_gpu_memory.html#id3)
 
-3. **可定制的训练流程**：
+**提供易用的配置系统**
 
-   - 定义了“乐高”式的训练流程。
-   - 提供了丰富的组件和策略。
-   - 使用不同等级的 API 控制训练过程。
+- [纯 Python 风格的配置文件，易于跳转](https://mmengine.readthedocs.io/zh-cn/latest/advanced_tutorials/config.html#python-beta)
+- [纯文本风格的配置文件，支持 JSON 和 YAML](https://mmengine.readthedocs.io/zh-cn/latest/advanced_tutorials/config.html#id1)
+
+**覆盖主流的训练监测平台**
+
+- [TensorBoard](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#tensorboard) | [WandB](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#wandb) | [MLflow](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#mlflow-wip)
+- [ClearML](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#clearml) | [Neptune](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#neptune) | [DVCLive](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#dvclive) | [Aim](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#aim)
+
+**兼容主流的训练芯片**
+
+- 英伟达 CUDA | 苹果 MPS
+- 华为 Ascend | 寒武纪 MLU | 摩尔线程 MUSA
 
 ## 架构
 

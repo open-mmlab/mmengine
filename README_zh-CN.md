@@ -24,6 +24,7 @@
 [![open issues](https://isitmaintained.com/badge/open/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 [![issue resolution](https://isitmaintained.com/badge/resolution/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 
+[简介](#简介) |
 [安装](#安装) |
 [快速上手](#快速上手) |
 [📘用户文档](https://mmengine.readthedocs.io/zh_CN/latest/) |
