@@ -91,7 +91,7 @@ MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的�
 
 **适配主流的训练芯片**
 
-- 英伟达 CUDA | 苹果 MPS | AMD GPU
+- 英伟达 CUDA | 苹果 MPS
 - 华为 Ascend | 寒武纪 MLU | 摩尔线程 MUSA
 
 **覆盖主流的训练监测平台**
