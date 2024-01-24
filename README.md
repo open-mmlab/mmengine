@@ -24,11 +24,11 @@
 [![open issues](https://isitmaintained.com/badge/open/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 [![issue resolution](https://isitmaintained.com/badge/resolution/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 
-- [Introduction](#introduction)
-- [Installation](#installation)
-- [Get Started](#get-started)
-  [📘Documentation](https://mmengine.readthedocs.io/en/latest/) |
-  [🤔Reporting Issues](https://github.com/open-mmlab/mmengine/issues/new/choose)
+[Introduction](#introduction)
+[Installation](#installation)
+[Get Started](#get-started)
+[📘Documentation](https://mmengine.readthedocs.io/en/latest/) |
+[🤔Reporting Issues](https://github.com/open-mmlab/mmengine/issues/new/choose)
 
 </div>
 
