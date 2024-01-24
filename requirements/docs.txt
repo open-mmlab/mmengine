@@ -1,4 +1,4 @@
-docutils==0.20.1
+docutils==0.18.1
 myst-parser
 opencv-python
 -e git+https://github.com/open-mmlab/pytorch_sphinx_theme.git#egg=pytorch_sphinx_theme
