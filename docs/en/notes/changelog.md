@@ -1,5 +1,24 @@
 # Changelog of v0.x
 
+## v0.10.3 (24/1/2024)
+
+### New Features & Enhancements
+
+- Add the support for musa device support by [@hanhaowen-mt](https://github.com/hanhaowen-mt) in https://github.com/open-mmlab/mmengine/pull/1453
+- Support `save_optimizer=False` for DeepSpeed by [@LZHgrla](https://github.com/LZHgrla) in https://github.com/open-mmlab/mmengine/pull/1474
+- Update visualizer.py by [@Anm-pinellia](https://github.com/Anm-pinellia) in https://github.com/open-mmlab/mmengine/pull/1476
+
+### Bug Fixes
+
+- Fix `Config.to_dict` by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1465
+- Fix the resume of iteration by [@LZHgrla](https://github.com/LZHgrla) in https://github.com/open-mmlab/mmengine/pull/1471
+- Fix `dist.collect_results` to keep all ranks' elements by [@LZHgrla](https://github.com/LZHgrla) in https://github.com/open-mmlab/mmengine/pull/1469
+
+### Docs
+
+- Add the usage of ProfilerHook by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1466
+- Fix the nnodes in the doc of ddp training by [@XiwuChen](https://github.com/XiwuChen) in https://github.com/open-mmlab/mmengine/pull/1462
+
 ## v0.10.2 (26/12/2023)
 
 ### New Features & Enhancements
