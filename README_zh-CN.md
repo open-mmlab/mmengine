@@ -63,8 +63,8 @@
 
 版本亮点：
 
-- Add the support for musa device support [#1453](#1453)。
-- Add the usage of ProfilerHook [#1466](#1466)。
+- 适配摩尔线程 [#1453](#1453)
+- 添加 ProfilerHook 使用文档 [#1466](#1466)
 
 如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v0103-2412024)。
 
