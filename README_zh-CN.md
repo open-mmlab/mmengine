@@ -24,8 +24,9 @@
 [![open issues](https://isitmaintained.com/badge/open/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 [![issue resolution](https://isitmaintained.com/badge/resolution/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 
-[📘使用文档](https://mmengine.readthedocs.io/zh_CN/latest/) |
-[🛠️安装教程](https://mmengine.readthedocs.io/zh_CN/latest/get_started/installation.html) |
+[安装](#安装) |
+[快速上手](#快速上手) |
+[📘用户文档](https://mmengine.readthedocs.io/zh_CN/latest/) |
 [🤔报告问题](https://github.com/open-mmlab/mmengine/issues/new/choose)
 
 </div>
@@ -71,10 +72,6 @@
 - 支持多种可视化后端，包括`NeptuneVisBackend`、`DVCLiveVisBackend` 和 `AimVisBackend`。可阅读[可视化后端](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/visualize_training_log.html)了解用法。
 
 如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v0102-26122023)
-
-## 目录
-
-[简介](#简介) | [安装](#安装) | [快速上手](#快速上手) | [了解更多](#了解更多) | [贡献指南](#贡献指南) | [引用](#引用) | [开源许可证](#开源许可证) | [生态项目](#生态项目) | [OpenMMLab 的其他项目](#openmmlab-的其他项目) | [欢迎加入 OpenMMLab 社区](#欢迎加入-openmmlab-社区)
 
 ## 简介
 
