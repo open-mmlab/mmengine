@@ -61,15 +61,13 @@
 
 最新版本 v0.10.2 在 2023.12.26 发布。
 
-亮点：
+版本亮点：
 
 - 支持安装不依赖于 opencv 的 mmengine-lite 版本。可阅读[安装文档](https://mmengine.readthedocs.io/zh-cn/latest/get_started/installation.html#mmengine)了解用法。
 
 - 支持使用 [ColossalAI](https://colossalai.org/) 进行训练。可阅读[大模型训练](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/large_model_training.html#colossalai)了解用法。
 
 - 支持梯度检查点。详见[用法](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/save_gpu_memory.html#id3)。
-
-- 支持多种可视化后端，包括`NeptuneVisBackend`、`DVCLiveVisBackend` 和 `AimVisBackend`。可阅读[可视化后端](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/visualize_training_log.html)了解用法。
 
 如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v0102-26122023)
 
