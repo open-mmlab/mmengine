@@ -24,8 +24,10 @@
 [![open issues](https://isitmaintained.com/badge/open/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 [![issue resolution](https://isitmaintained.com/badge/resolution/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 
+[Introduction](#introduction)
+[Installation](#installation)
+[Get Started](#get-started)
 [📘Documentation](https://mmengine.readthedocs.io/en/latest/) |
-[🛠️Installation](https://mmengine.readthedocs.io/en/latest/get_started/installation.html) |
 [🤔Reporting Issues](https://github.com/open-mmlab/mmengine/issues/new/choose)
 
 </div>
@@ -62,51 +64,36 @@ v0.10.3 was released on 2024-1-24.
 
 Highlights:
 
-- Support installing mmengine-lite with no dependency on opencv. Refer to the [Installation](https://mmengine.readthedocs.io/en/latest/get_started/installation.html#install-mmengine) for more details.
-
-- Support training with [ColossalAI](https://colossalai.org/). Refer to the [Training Large Models](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html#colossalai) for more detailed usages.
-
-- Support gradient checkpointing. Refer to the [Save Memory on GPU](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#gradient-checkpointing) for more details.
-
-- Supports multiple visualization backends, including `NeptuneVisBackend`, `DVCLiveVisBackend` and `AimVisBackend`. Refer to [Visualization Backends](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html) for more details.
+- Add the support for musa device [#1453](#1453)
+- Add the usage of ProfilerHook [#1466](#1466)
 
 Read [Changelog](./docs/en/notes/changelog.md#v0103-2412024) for more details.
 
-## Table of Contents
-
-- [Introduction](#introduction)
-- [Installation](#installation)
-- [Get Started](#get-started)
-- [Learn More](#learn-more)
-- [Contributing](#contributing)
-- [Citation](#citation)
-- [License](#license)
-- [Ecosystem](#ecosystem)
-- [Projects in OpenMMLab](#projects-in-openmmlab)
-
 ## Introduction
 
-MMEngine is a foundational library for training deep learning models based on PyTorch. It provides a solid engineering foundation and frees developers from writing redundant codes on workflows. It serves as the training engine of all OpenMMLab codebases, which support hundreds of algorithms in various research areas. Moreover, MMEngine is also generic to be applied to non-OpenMMLab projects.
+MMEngine is a foundational library for training deep learning models based on PyTorch. It serves as the training engine of all OpenMMLab codebases, which support hundreds of algorithms in various research areas. Moreover, MMEngine is also generic to be applied to non-OpenMMLab projects. Its highlights are as follows:
 
-Major features:
+**Integrate mainstream large-scale model training frameworks**
 
-1. **A universal and powerful runner**:
+- [ColossalAI](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html#colossalai)
+- [DeepSpeed](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html#deepspeed)
+- [FSDP](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html#fullyshardeddataparallel-fsdp)
 
-   - Supports training different tasks with a small amount of code, e.g., ImageNet can be trained with only 80 lines of code (400 lines of the original PyTorch example).
-   - Easily compatible with models from popular algorithm libraries such as TIMM, TorchVision, and Detectron2.
+**Supports a variety of training strategies**
 
-2. **Open architecture with unified interfaces**:
+- [Mixed Precision Training](https://mmengine.readthedocs.io/en/latest/common_usage/speed_up_training.html#mixed-precision-training)
+- [Gradient Accumulation](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#gradient-accumulation)
+- [Gradient Checkpointing](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#gradient-checkpointing)
 
-   - Handles different algorithm tasks with unified APIs, e.g., implement a method and apply it to all compatible models.
-   - Provides a unified abstraction for upper-level algorithm libraries, which supports various back-end devices such as Nvidia CUDA, Mac MPS, AMD, MLU, and more for model training.
+**Provides a user-friendly configuration system**
 
-3. **Customizable training process**:
+- [Pure Python-style configuration files, easy to navigate](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#a-pure-python-style-configuration-file-beta)
+- [Plain-text-style configuration files, supporting JSON and YAML](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html)
 
-   - Defines the training process just like playing with Legos.
-   - Provides rich components and strategies.
-   - Complete controls on the training process with different levels of APIs.
+**Covers mainstream training monitoring platforms**
 
-![mmengine_dataflow](https://github.com/open-mmlab/mmengine/assets/58739961/267db9cb-72e4-4af2-a58b-877b30091acc)
+- [TensorBoard](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#tensorboard) | [WandB](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#wandb) | [MLflow](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#mlflow-wip)
+- [ClearML](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#clearml) | [Neptune](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#neptune) | [DVCLive](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#dvclive) | [Aim](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#aim)
 
 ## Installation
 
