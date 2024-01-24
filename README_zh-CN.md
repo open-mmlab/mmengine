@@ -89,12 +89,6 @@ MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的�
 - [纯 Python 风格的配置文件，易于跳转](https://mmengine.readthedocs.io/zh-cn/latest/advanced_tutorials/config.html#python-beta)
 - [纯文本风格的配置文件，支持 JSON 和 YAML](https://mmengine.readthedocs.io/zh-cn/latest/advanced_tutorials/config.html#id1)
 
-**跨平台支持**
-
-- Linux
-- Windows
-- macOS
-
 **适配主流的训练芯片**
 
 - 英伟达 CUDA | 苹果 MPS | AMD GPU
