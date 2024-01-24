@@ -5,25 +5,25 @@ PyTorch. It supports running on Linux, Windows, and macOS. Its highlights are as
 
 **Integrate mainstream large-scale model training frameworks**
 
-- [ColossalAI](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html#colossalai)
-- [DeepSpeed](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html#deepspeed)
-- [FSDP](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html#fullyshardeddataparallel-fsdp)
+- [ColossalAI](../common_usage/large_model_training.md#colossalai)
+- [DeepSpeed](../common_usage/large_model_training.md#deepspeed)
+- [FSDP](../common_usage/large_model_training.md#fullyshardeddataparallel-fsdp)
 
 **Supports a variety of training strategies**
 
-- [Mixed Precision Training](https://mmengine.readthedocs.io/en/latest/common_usage/speed_up_training.html#id3)
-- [Gradient Accumulation](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#id2)
-- [Gradient Checkpointing](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#id3)
+- [Mixed Precision Training](../common_usage/speed_up_training.md#mixed-precision-training)
+- [Gradient Accumulation](../common_usage/save_gpu_memory.md#gradient-accumulation)
+- [Gradient Checkpointing](../common_usage/save_gpu_memory.md#gradient-checkpointing)
 
 **Provides a user-friendly configuration system**
 
-- [Pure Python-style configuration files, easy to navigate](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#python-beta)
-- [Plain-text-style configuration files, supporting JSON and YAML](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#id1)
+- [Pure Python-style configuration files, easy to navigate](../advanced_tutorials/config.md#a-pure-python-style-configuration-file-beta)
+- [Plain-text-style configuration files, supporting JSON and YAML](../advanced_tutorials/config.html)
 
 **Covers mainstream training monitoring platforms**
 
-- [TensorBoard](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#tensorboard) | [WandB](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#wandb) | [MLflow](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#mlflow-wip)
-- [ClearML](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#clearml) | [Neptune](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#neptune) | [DVCLive](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#dvclive) | [Aim](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#aim)
+- [TensorBoard](../common_usage/visualize_training_log.md#tensorboard) | [WandB](../common_usage/visualize_training_log.md#wandb) | [MLflow](../common_usage/visualize_training_log.md#mlflow-wip)
+- [ClearML](../common_usage/visualize_training_log.md#clearml) | [Neptune](../common_usage/visualize_training_log.md#neptune) | [DVCLive](../common_usage/visualize_training_log.md#dvclive) | [Aim](../common_usage/visualize_training_log.md#aim)
 
 ## Architecture
 

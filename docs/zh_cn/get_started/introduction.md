@@ -4,25 +4,25 @@ MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的�
 
 **集成主流的大模型训练框架**
 
-- [ColossalAI](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/large_model_training.html#colossalai)
-- [DeepSpeed](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/large_model_training.html#deepspeed)
-- [FSDP](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/large_model_training.html#fullyshardeddataparallel-fsdp)
+- [ColossalAI](../common_usage/large_model_training.md#colossalai)
+- [DeepSpeed](../common_usage/large_model_training.md#deepspeed)
+- [FSDP](../common_usage/large_model_training.md#fullyshardeddataparallel-fsdp)
 
 **支持丰富的训练策略**
 
-- [混合精度训练（Mixed Precision Training）](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/speed_up_training.html#id3)
-- [梯度累积（Gradient Accumulation）](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/save_gpu_memory.html#id2)
-- [梯度检查点（Gradient Checkpointing）](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/save_gpu_memory.html#id3)
+- [混合精度训练（Mixed Precision Training）](../common_usage/speed_up_training.md#混合精度训练)
+- [梯度累积（Gradient Accumulation）](../common_usage/save_gpu_memory.md#梯度累加)
+- [梯度检查点（Gradient Checkpointing）](../common_usage/save_gpu_memory.md#梯度检查点)
 
 **提供易用的配置系统**
 
-- [纯 Python 风格的配置文件，易于跳转](https://mmengine.readthedocs.io/zh-cn/latest/advanced_tutorials/config.html#python-beta)
-- [纯文本风格的配置文件，支持 JSON 和 YAML](https://mmengine.readthedocs.io/zh-cn/latest/advanced_tutorials/config.html#id1)
+- [纯 Python 风格的配置文件，易于跳转](../advanced_tutorials/config.md#纯-python-风格的配置文件beta)
+- [纯文本风格的配置文件，支持 JSON 和 YAML](../advanced_tutorials/config.md)
 
 **覆盖主流的训练监测平台**
 
-- [TensorBoard](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#tensorboard) | [WandB](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#wandb) | [MLflow](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#mlflow-wip)
-- [ClearML](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#clearml) | [Neptune](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#neptune) | [DVCLive](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#dvclive) | [Aim](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#aim)
+- [TensorBoard](../common_usage/visualize_training_log.md#tensorboard) | [WandB](../common_usage/visualize_training_log.md#wandb) | [MLflow](../common_usage/visualize_training_log.md#mlflow-wip)
+- [ClearML](../common_usage/visualize_training_log.md#clearml) | [Neptune](../common_usage/visualize_training_log.md#neptune) | [DVCLive](../common_usage/visualize_training_log.md#dvclive) | [Aim](../common_usage/visualize_training_log.md#aim)
 
 **兼容主流的训练芯片**
 

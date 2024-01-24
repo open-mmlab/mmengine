@@ -34,7 +34,7 @@
 
 <div align="center">
 
-English | [简体中文](README_en.md)
+English | [简体中文](README_zh-CN.md)
 
 </div>
 
@@ -81,14 +81,14 @@ MMEngine is a foundational library for training deep learning models based on Py
 
 **Supports a variety of training strategies**
 
-- [Mixed Precision Training](https://mmengine.readthedocs.io/en/latest/common_usage/speed_up_training.html#id3)
-- [Gradient Accumulation](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#id2)
-- [Gradient Checkpointing](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#id3)
+- [Mixed Precision Training](https://mmengine.readthedocs.io/en/latest/common_usage/speed_up_training.html#mixed-precision-training)
+- [Gradient Accumulation](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#gradient-accumulation)
+- [Gradient Checkpointing](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#gradient-checkpointing)
 
 **Provides a user-friendly configuration system**
 
-- [Pure Python-style configuration files, easy to navigate](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#python-beta)
-- [Plain-text-style configuration files, supporting JSON and YAML](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#id1)
+- [Pure Python-style configuration files, easy to navigate](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#a-pure-python-style-configuration-file-beta)
+- [Plain-text-style configuration files, supporting JSON and YAML](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html)
 
 **Covers mainstream training monitoring platforms**
 
