@@ -26,7 +26,7 @@ On the first machine:
 
 ```bash
 python -m torch.distributed.launch \
-    --nnodes 8 \
+    --nnodes 2 \
     --node_rank 0 \
     --master_addr 127.0.0.1 \
     --master_port 29500 \
@@ -38,9 +38,9 @@ On the second machine:
 
 ```bash
 python -m torch.distributed.launch \
-    --nnodes 8 \
+    --nnodes 2 \
     --node_rank 1 \
-    --master_addr 127.0.0.1 \
+    --master_addr "ip_of_the_first_machine" \
     --master_port 29500 \
     --nproc_per_node=8 \
     examples/distributed_training.py --launcher pytorch

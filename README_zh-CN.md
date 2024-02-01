@@ -24,8 +24,10 @@
 [![open issues](https://isitmaintained.com/badge/open/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 [![issue resolution](https://isitmaintained.com/badge/resolution/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 
-[📘使用文档](https://mmengine.readthedocs.io/zh_CN/latest/) |
-[🛠️安装教程](https://mmengine.readthedocs.io/zh_CN/latest/get_started/installation.html) |
+[简介](#简介) |
+[安装](#安装) |
+[快速上手](#快速上手) |
+[📘用户文档](https://mmengine.readthedocs.io/zh_CN/latest/) |
 [🤔报告问题](https://github.com/open-mmlab/mmengine/issues/new/choose)
 
 </div>
@@ -58,56 +60,45 @@
 
 ## 最近进展
 
-最新版本 v0.10.1 在 2023.11.22 发布。
+最新版本 v0.10.3 在 2024.1.24 发布。
 
-亮点：
+版本亮点：
 
-- 支持安装不依赖于 opencv 的 mmengine-lite 版本。可阅读[安装文档](https://mmengine.readthedocs.io/zh-cn/latest/get_started/installation.html#mmengine)了解用法。
+- 适配摩尔线程 [#1453](#1453)
+- 添加 ProfilerHook 使用文档 [#1466](#1466)
 
-- 支持使用 [ColossalAI](https://colossalai.org/) 进行训练。可阅读[大模型训练](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/large_model_training.html#colossalai)了解用法。
-
-- 支持梯度检查点。详见[用法](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/save_gpu_memory.html#id3)。
-
-- 支持多种可视化后端，包括`NeptuneVisBackend`、`DVCLiveVisBackend` 和 `AimVisBackend`。可阅读[可视化后端](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/visualize_training_log.html)了解用法。
-
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v0101-22112023)
-
-## 目录
-
-- [简介](#简介)
-- [安装](#安装)
-- [快速上手](#快速上手)
-- [了解更多](#了解更多)
-- [贡献指南](#贡献指南)
-- [引用](#引用)
-- [开源许可证](#开源许可证)
-- [生态项目](#生态项目)
-- [OpenMMLab 的其他项目](#openmmlab-的其他项目)
-- [欢迎加入 OpenMMLab 社区](#欢迎加入-openmmlab-社区)
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v0103-2412024)。
 
 ## 简介
 
-MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的基础库。它为开发人员提供了坚实的工程基础，以此避免在工作流上编写冗余代码。作为 OpenMMLab 所有代码库的训练引擎，其在不同研究领域支持了上百个算法。此外，MMEngine 也可以用于非 OpenMMLab 项目中。
+MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的基础库。它作为 OpenMMLab 所有代码库的训练引擎，其在不同研究领域支持了上百个算法。此外，MMEngine 也可以用于非 OpenMMLab 项目中。它的亮点如下：
 
-主要特性：
+**集成主流的大模型训练框架**
 
-1. **通用且强大的执行器**：
+- [ColossalAI](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/large_model_training.html#colossalai)
+- [DeepSpeed](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/large_model_training.html#deepspeed)
+- [FSDP](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/large_model_training.html#fullyshardeddataparallel-fsdp)
 
-   - 支持用少量代码训练不同的任务，例如仅使用 80 行代码就可以训练 ImageNet（原始 PyTorch 示例需要 400 行）。
-   - 轻松兼容流行的算法库（如 TIMM、TorchVision 和 Detectron2）中的模型。
+**支持丰富的训练策略**
 
-2. **接口统一的开放架构**：
+- [混合精度训练（Mixed Precision Training）](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/speed_up_training.html#id3)
+- [梯度累积（Gradient Accumulation）](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/save_gpu_memory.html#id2)
+- [梯度检查点（Gradient Checkpointing）](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/save_gpu_memory.html#id3)
 
-   - 使用统一的接口处理不同的算法任务，例如，实现一个方法并应用于所有的兼容性模型。
-   - 上下游的对接更加统一便捷，在为上层算法库提供统一抽象的同时，支持多种后端设备。目前 MMEngine 支持 Nvidia CUDA、Mac MPS、AMD、MLU 等设备进行模型训练。
+**提供易用的配置系统**
 
-3. **可定制的训练流程**：
+- [纯 Python 风格的配置文件，易于跳转](https://mmengine.readthedocs.io/zh-cn/latest/advanced_tutorials/config.html#python-beta)
+- [纯文本风格的配置文件，支持 JSON 和 YAML](https://mmengine.readthedocs.io/zh-cn/latest/advanced_tutorials/config.html#id1)
 
-   - 定义了“乐高”式的训练流程。
-   - 提供了丰富的组件和策略。
-   - 使用不同等级的 API 控制训练过程。
+**覆盖主流的训练监测平台**
 
-![mmengine_dataflow](https://github.com/open-mmlab/mmengine/assets/58739961/267db9cb-72e4-4af2-a58b-877b30091acc)
+- [TensorBoard](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#tensorboard) | [WandB](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#wandb) | [MLflow](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#mlflow-wip)
+- [ClearML](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#clearml) | [Neptune](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#neptune) | [DVCLive](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#dvclive) | [Aim](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#aim)
+
+**兼容主流的训练芯片**
+
+- 英伟达 CUDA | 苹果 MPS
+- 华为 Ascend | 寒武纪 MLU | 摩尔线程 MUSA
 
 ## 安装
 

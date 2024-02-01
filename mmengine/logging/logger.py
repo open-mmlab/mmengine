@@ -398,22 +398,38 @@ def _get_device_id():
     except ImportError:
         return 0
     else:
-        local_rank = int(os.getenv('LOCAL_RANK', '0'))
-        # TODO: return device id of npu and mlu.
-        if not torch.cuda.is_available():
-            return local_rank
-        cuda_visible_devices = os.getenv('CUDA_VISIBLE_DEVICES', None)
-        if cuda_visible_devices is None:
-            num_device = torch.cuda.device_count()
-            cuda_visible_devices = list(range(num_device))
-        else:
-            cuda_visible_devices = cuda_visible_devices.split(',')
+        MUSA_AVAILABLE = False
         try:
-            return int(cuda_visible_devices[local_rank])
-        except ValueError:
-            # handle case for Multi-Instance GPUs
-            # see #1148 for details
-            return cuda_visible_devices[local_rank]
+            import torch_musa
+            MUSA_AVAILABLE = True
+        except ImportError:
+            pass
+        if MUSA_AVAILABLE:
+            local_rank = int(os.getenv('LOCAL_RANK', '0'))
+            musa_visible_devices = os.getenv('MUSA_VISIBLE_DEVICES', None)
+            if musa_visible_devices is None:
+                num_device = torch_musa.device_count()
+                musa_visible_devices = list(range(num_device))
+            else:
+                musa_visible_devices = musa_visible_devices.split(',')
+            return int(musa_visible_devices[local_rank])
+        else:
+            local_rank = int(os.getenv('LOCAL_RANK', '0'))
+            # TODO: return device id of npu and mlu.
+            if not torch.cuda.is_available():
+                return local_rank
+            cuda_visible_devices = os.getenv('CUDA_VISIBLE_DEVICES', None)
+            if cuda_visible_devices is None:
+                num_device = torch.cuda.device_count()
+                cuda_visible_devices = list(range(num_device))
+            else:
+                cuda_visible_devices = cuda_visible_devices.split(',')
+            try:
+                return int(cuda_visible_devices[local_rank])
+            except ValueError:
+                # handle case for Multi-Instance GPUs
+                # see #1148 for details
+                return cuda_visible_devices[local_rank]
 
 
 def _get_host_info() -> str:

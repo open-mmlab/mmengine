@@ -9,7 +9,8 @@ from typing import List, Optional, Tuple
 import numpy as np
 import torch
 
-from mmengine.device import get_max_cuda_memory, is_cuda_available
+from mmengine.device import (get_max_cuda_memory, get_max_musa_memory,
+                             is_cuda_available, is_musa_available)
 from mmengine.registry import LOG_PROCESSORS
 
 
@@ -226,11 +227,13 @@ class LogProcessor:
             log_tag.pop('time')
             log_tag.pop('data_time')
 
-        # If cuda is available, the max memory occupied should be calculated.
-        if is_cuda_available():
+        # If cuda/musa is available,
+        # the max memory occupied should be calculated.
+        if is_cuda_available() or is_musa_available():
             max_memory = self._get_max_memory(runner)
             log_str += f'memory: {max_memory}  '
             tag['memory'] = max_memory
+
         # Loop left keys to fill `log_str`.
         if mode in ('train', 'val'):
             log_items = []
@@ -498,6 +501,9 @@ class LogProcessor:
         """
 
         device = getattr(runner.model, 'output_device', None)
+
+        if is_musa_available():
+            return get_max_musa_memory(device)
         return get_max_cuda_memory(device)
 
     def _get_iter(self, runner, batch_idx: int) -> int:

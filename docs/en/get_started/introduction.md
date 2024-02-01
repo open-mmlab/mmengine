@@ -1,30 +1,29 @@
 # Introduction
 
 MMEngine is a foundational library for training deep learning models based on
-PyTorch. It supports running on Linux, Windows, and macOS. It has the
-following three features:
+PyTorch. It supports running on Linux, Windows, and macOS. Its highlights are as follows:
 
-1. **Universal and powerful executor**:
+**Integrate mainstream large-scale model training frameworks**
 
-   - Supports training different tasks with minimal code, such as training
-     ImageNet with just 80 lines of code (original PyTorch examples require
-     400 lines).
-   - Easily compatible with models from popular algorithm libraries like TIMM,
-     TorchVision, and Detectron2.
+- [ColossalAI](../common_usage/large_model_training.md#colossalai)
+- [DeepSpeed](../common_usage/large_model_training.md#deepspeed)
+- [FSDP](../common_usage/large_model_training.md#fullyshardeddataparallel-fsdp)
 
-2. **Open architecture with unified interfaces**:
+**Supports a variety of training strategies**
 
-   - Handles different tasks with a unified API: you can implement a method
-     once and apply it to all compatible models.
-   - Supports various backend devices through a simple, high-level
-     abstraction. Currently, MMEngine supports model training on Nvidia CUDA,
-     Mac MPS, AMD, MLU, and other devices.
+- [Mixed Precision Training](../common_usage/speed_up_training.md#mixed-precision-training)
+- [Gradient Accumulation](../common_usage/save_gpu_memory.md#gradient-accumulation)
+- [Gradient Checkpointing](../common_usage/save_gpu_memory.md#gradient-checkpointing)
 
-3. **Customizable training process**:
+**Provides a user-friendly configuration system**
 
-   - Defines a highly modular training engine with "Lego"-like composability.
-   - Offers a rich set of components and strategies.
-   - Total control over the training process with different levels of APIs.
+- [Pure Python-style configuration files, easy to navigate](../advanced_tutorials/config.md#a-pure-python-style-configuration-file-beta)
+- [Plain-text-style configuration files, supporting JSON and YAML](../advanced_tutorials/config.html)
+
+**Covers mainstream training monitoring platforms**
+
+- [TensorBoard](../common_usage/visualize_training_log.md#tensorboard) | [WandB](../common_usage/visualize_training_log.md#wandb) | [MLflow](../common_usage/visualize_training_log.md#mlflow-wip)
+- [ClearML](../common_usage/visualize_training_log.md#clearml) | [Neptune](../common_usage/visualize_training_log.md#neptune) | [DVCLive](../common_usage/visualize_training_log.md#dvclive) | [Aim](../common_usage/visualize_training_log.md#aim)
 
 ## Architecture
 

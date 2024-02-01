@@ -113,6 +113,15 @@ class BaseDataPreprocessor(nn.Module):
         self._device = torch.device(torch.cuda.current_device())
         return super().cuda()
 
+    def musa(self, *args, **kwargs) -> nn.Module:
+        """Overrides this method to set the :attr:`device`
+
+        Returns:
+            nn.Module: The model itself.
+        """
+        self._device = torch.device(torch.musa.current_device())
+        return super().musa()
+
     def npu(self, *args, **kwargs) -> nn.Module:
         """Overrides this method to set the :attr:`device`
 
