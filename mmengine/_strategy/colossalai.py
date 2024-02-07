@@ -120,8 +120,7 @@ class ColossalAIOptimWrapper(OptimWrapper):
         self.optimizer.backward(loss, **kwargs)
 
 
-@MODEL_WRAPPERS.register_module(
-    name=['ColossalAIModelWrapper', 'CollosalAIModelWrapper'])
+@MODEL_WRAPPERS.register_module()
 class ColossalAIModelWrapper:
 
     def __init__(self, model_wrapper: ModelWrapper, model: nn.Module):
