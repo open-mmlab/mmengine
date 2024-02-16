@@ -1,5 +1,6 @@
 import os
 import os.path as osp
+from math import inf
 
 import hashlib
 import pickle
@@ -36,6 +37,113 @@ def _log_artifact(filepath: StrPath,
 
 @HOOKS.register_module()
 class WandbCheckpointHook(CheckpointHook):
+    """Save checkpoints periodically as [Weights & Biases Artifacts](https://docs.wandb.ai/guides/artifacts).
+
+    Args:
+        interval (int): The saving period. If ``by_epoch=True``, interval
+            indicates epochs, otherwise it indicates iterations.
+            Defaults to -1, which means "never".
+        by_epoch (bool): Saving checkpoints by epoch or by iteration.
+            Defaults to True.
+        save_optimizer (bool): Whether to save optimizer state_dict in the
+            checkpoint. It is usually used for resuming experiments.
+            Defaults to True.
+        save_param_scheduler (bool): Whether to save param_scheduler state_dict
+            in the checkpoint. It is usually used for resuming experiments.
+            Defaults to True.
+        out_dir (str, Path, Optional): The root directory to save checkpoints.
+            If not specified, ``runner.work_dir`` will be used by default. If
+            specified, the ``out_dir`` will be the concatenation of ``out_dir``
+            and the last level directory of ``runner.work_dir``. For example,
+            if the input ``our_dir`` is ``./tmp`` and ``runner.work_dir`` is
+            ``./work_dir/cur_exp``, then the ckpt will be saved in
+            ``./tmp/cur_exp``. Defaults to None.
+        max_keep_ckpts (int): The maximum checkpoints to keep.
+            In some cases we want only the latest few checkpoints and would
+            like to delete old ones to save the disk space.
+            Defaults to -1, which means unlimited.
+        save_last (bool): Whether to force the last checkpoint to be
+            saved regardless of interval. Defaults to True.
+        save_best (str, List[str], optional): If a metric is specified, it
+            would measure the best checkpoint during evaluation. If a list of
+            metrics is passed, it would measure a group of best checkpoints
+            corresponding to the passed metrics. The information about best
+            checkpoint(s) would be saved in ``runner.message_hub`` to keep
+            best score value and best checkpoint path, which will be also
+            loaded when resuming checkpoint. Options are the evaluation metrics
+            on the test dataset. e.g., ``bbox_mAP``, ``segm_mAP`` for bbox
+            detection and instance segmentation. ``AR@100`` for proposal
+            recall. If ``save_best`` is ``auto``, the first key of the returned
+            ``OrderedDict`` result will be used. Defaults to None.
+        rule (str, List[str], optional): Comparison rule for best score. If
+            set to None, it will infer a reasonable rule. Keys such as 'acc',
+            'top' .etc will be inferred by 'greater' rule. Keys contain 'loss'
+            will be inferred by 'less' rule. If ``save_best`` is a list of
+            metrics and ``rule`` is a str, all metrics in ``save_best`` will
+            share the comparison rule. If ``save_best`` and ``rule`` are both
+            lists, their length must be the same, and metrics in ``save_best``
+            will use the corresponding comparison rule in ``rule``. Options
+            are 'greater', 'less', None and list which contains 'greater' and
+            'less'. Defaults to None.
+        greater_keys (List[str], optional): Metric keys that will be
+            inferred by 'greater' comparison rule. If ``None``,
+            _default_greater_keys will be used. Defaults to None.
+        less_keys (List[str], optional): Metric keys that will be
+            inferred by 'less' comparison rule. If ``None``, _default_less_keys
+            will be used. Defaults to None.
+        file_client_args (dict, optional): Arguments to instantiate a
+            FileClient. See :class:`mmengine.fileio.FileClient` for details.
+            Defaults to None. It will be deprecated in future. Please use
+            ``backend_args`` instead.
+        filename_tmpl (str, optional): String template to indicate checkpoint
+            name. If specified, must contain one and only one "{}", which will
+            be replaced with ``epoch + 1`` if ``by_epoch=True`` else
+            ``iteration + 1``.
+            Defaults to None, which means "epoch_{}.pth" or "iter_{}.pth"
+            accordingly.
+        backend_args (dict, optional): Arguments to instantiate the
+            prefix of uri corresponding backend. Defaults to None.
+            `New in version 0.2.0.`
+        published_keys (str, List[str], optional): If ``save_last`` is ``True``
+            or ``save_best`` is not ``None``, it will automatically
+            publish model with keys in the list after training.
+            Defaults to None.
+            `New in version 0.7.1.`
+        save_begin (int): Control the epoch number or iteration number
+            at which checkpoint saving begins. Defaults to 0, which means
+            saving at the beginning.
+            `New in version 0.8.3.`
+
+    Examples:
+        >>> # Save best based on single metric
+        >>> WandbCheckpointHook(interval=2, by_epoch=True, save_best='acc',
+        >>>                rule='less')
+        >>> # Save best based on multi metrics with the same comparison rule
+        >>> WandbCheckpointHook(interval=2, by_epoch=True,
+        >>>                save_best=['acc', 'mIoU'], rule='greater')
+        >>> # Save best based on multi metrics with different comparison rule
+        >>> WandbCheckpointHook(interval=2, by_epoch=True,
+        >>>                save_best=['FID', 'IS'], rule=['less', 'greater'])
+        >>> # Save best based on single metric and publish model after training
+        >>> WandbCheckpointHook(interval=2, by_epoch=True, save_best='acc',
+        >>>                rule='less', published_keys=['meta', 'state_dict'])
+    """
+    out_dir: str
+
+    priority = 'VERY_LOW'
+
+    # logic to save best checkpoints
+    # Since the key for determining greater or less is related to the
+    # downstream tasks, downstream repositories may need to overwrite
+    # the following inner variables accordingly.
+
+    rule_map = {'greater': lambda x, y: x > y, 'less': lambda x, y: x < y}
+    init_value_map = {'greater': -inf, 'less': inf}
+    _default_greater_keys = [
+        'acc', 'top', 'AR@', 'auc', 'precision', 'mAP', 'mDice', 'mIoU',
+        'mAcc', 'aAcc'
+    ]
+    _default_less_keys = ['loss']
 
     def __init__(self,
                  init_kwargs: Optional[dict] = None,
