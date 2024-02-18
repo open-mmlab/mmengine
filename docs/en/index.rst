@@ -103,6 +103,7 @@ You can switch between Chinese and English documents in the lower-left corner of
    mmengine.dataset <api/dataset>
    mmengine.infer <api/infer>
    mmengine.device <api/device>
+   mmengine.checkpoint <api/checkpoint>
    mmengine.hub <api/hub>
    mmengine.logging <api/logging>
    mmengine.visualization <api/visualization>

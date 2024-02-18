@@ -39,6 +39,10 @@ Loop
 Checkpoints
 ----------------
 
+.. warn::
+
+   所有的函数和类在这个文件中已经被移动到 `mmengine.checkpoint`。请从 `mmengine.checkpoint` 导入它们。
+
 .. autosummary::
    :toctree: generated
    :nosignatures:

@@ -1,10 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
-import sys
+import re
 import tempfile
 from collections import OrderedDict
 from tempfile import TemporaryDirectory
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 import torch
@@ -12,13 +12,12 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.nn.parallel import DataParallel
 
+from mmengine.checkpoint.io import (_load_checkpoint_with_prefix,
+                                    get_state_dict, load_checkpoint,
+                                    load_state_dict, save_checkpoint)
 from mmengine.fileio.file_client import PetrelBackend
 from mmengine.registry import MODEL_WRAPPERS
-from mmengine.runner.checkpoint import (CheckpointLoader,
-                                        _load_checkpoint_with_prefix,
-                                        get_state_dict, load_checkpoint,
-                                        load_from_local, load_from_pavi,
-                                        load_state_dict, save_checkpoint)
+from mmengine.testing import assert_tensor_equal
 
 
 @MODEL_WRAPPERS.register_module()
@@ -42,19 +41,6 @@ class Model(nn.Module):
         super().__init__()
         self.block = Block()
         self.conv = nn.Conv2d(3, 3, 1)
-
-
-class Mockpavimodel:
-
-    def __init__(self, name='fakename'):
-        self.name = name
-
-    def download(self, file):
-        pass
-
-
-def assert_tensor_equal(tensor_a, tensor_b):
-    assert tensor_a.eq(tensor_b).all()
 
 
 def test_get_state_dict():
@@ -147,57 +133,7 @@ def test_get_state_dict():
                         wrapped_model.module.conv.module.bias)
 
 
-@patch.dict(sys.modules, {'pavi': MagicMock()})
-def test_load_pavimodel_dist():
-    pavimodel = Mockpavimodel()
-    import pavi
-    pavi.modelcloud.get = MagicMock(return_value=pavimodel)
-    with pytest.raises(AssertionError):
-        # test pavi prefix
-        _ = load_from_pavi('MyPaviFolder/checkpoint.pth')
-
-    with pytest.raises(FileNotFoundError):
-        # there is not such checkpoint for us to load
-        _ = load_from_pavi('pavi://checkpoint.pth')
-
-
-def test_load_checkpoint_with_prefix():
-
-    class FooModule(nn.Module):
-
-        def __init__(self):
-            super().__init__()
-            self.linear = nn.Linear(1, 2)
-            self.conv2d = nn.Conv2d(3, 1, 3)
-            self.conv2d_2 = nn.Conv2d(3, 2, 3)
-
-    model = FooModule()
-    nn.init.constant_(model.linear.weight, 1)
-    nn.init.constant_(model.linear.bias, 2)
-    nn.init.constant_(model.conv2d.weight, 3)
-    nn.init.constant_(model.conv2d.bias, 4)
-    nn.init.constant_(model.conv2d_2.weight, 5)
-    nn.init.constant_(model.conv2d_2.bias, 6)
-
-    with TemporaryDirectory():
-        torch.save(model.state_dict(), 'model.pth')
-        prefix = 'conv2d'
-        state_dict = _load_checkpoint_with_prefix(prefix, 'model.pth')
-        assert torch.equal(model.conv2d.state_dict()['weight'],
-                           state_dict['weight'])
-        assert torch.equal(model.conv2d.state_dict()['bias'],
-                           state_dict['bias'])
-
-        # test whether prefix is in pretrained model
-        with pytest.raises(AssertionError):
-            prefix = 'back'
-            _load_checkpoint_with_prefix(prefix, 'model.pth')
-
-
 def test_load_checkpoint():
-    import os
-    import re
-    import tempfile
 
     class PrefixModel(nn.Module):
 
@@ -292,66 +228,37 @@ def test_load_checkpoint_metadata():
     assert torch.allclose(model_v2.conv1.weight, model_v2_conv1_weight)
 
 
-@patch.dict(sys.modules, {'petrel_client': MagicMock()})
-def test_checkpoint_loader():
-    filenames = [
-        'http://xx.xx/xx.pth', 'https://xx.xx/xx.pth',
-        'modelzoo://xx.xx/xx.pth', 'torchvision://xx.xx/xx.pth',
-        'open-mmlab://xx.xx/xx.pth', 'openmmlab://xx.xx/xx.pth',
-        'mmcls://xx.xx/xx.pth', 'pavi://xx.xx/xx.pth', 's3://xx.xx/xx.pth',
-        'ss3://xx.xx/xx.pth', ' s3://xx.xx/xx.pth',
-        'open-mmlab:s3://xx.xx/xx.pth', 'openmmlab:s3://xx.xx/xx.pth',
-        'openmmlabs3://xx.xx/xx.pth', ':s3://xx.xx/xx.path'
-    ]
-    fn_names = [
-        'load_from_http', 'load_from_http', 'load_from_torchvision',
-        'load_from_torchvision', 'load_from_openmmlab', 'load_from_openmmlab',
-        'load_from_mmcls', 'load_from_pavi', 'load_from_ceph',
-        'load_from_local', 'load_from_local', 'load_from_ceph',
-        'load_from_ceph', 'load_from_local', 'load_from_local'
-    ]
+def test_load_checkpoint_with_prefix():
 
-    for filename, fn_name in zip(filenames, fn_names):
-        loader = CheckpointLoader._get_checkpoint_loader(filename)
-        assert loader.__name__ == fn_name
+    class FooModule(nn.Module):
 
-    @CheckpointLoader.register_scheme(prefixes='ftp://')
-    def load_from_ftp(filename, map_location):
-        return dict(filename=filename)
+        def __init__(self):
+            super().__init__()
+            self.linear = nn.Linear(1, 2)
+            self.conv2d = nn.Conv2d(3, 1, 3)
+            self.conv2d_2 = nn.Conv2d(3, 2, 3)
 
-    # test register_loader
-    filename = 'ftp://xx.xx/xx.pth'
-    loader = CheckpointLoader._get_checkpoint_loader(filename)
-    assert loader.__name__ == 'load_from_ftp'
+    model = FooModule()
+    nn.init.constant_(model.linear.weight, 1)
+    nn.init.constant_(model.linear.bias, 2)
+    nn.init.constant_(model.conv2d.weight, 3)
+    nn.init.constant_(model.conv2d.bias, 4)
+    nn.init.constant_(model.conv2d_2.weight, 5)
+    nn.init.constant_(model.conv2d_2.bias, 6)
 
-    def load_from_ftp1(filename, map_location):
-        return dict(filename=filename)
+    with TemporaryDirectory():
+        torch.save(model.state_dict(), 'model.pth')
+        prefix = 'conv2d'
+        state_dict = _load_checkpoint_with_prefix(prefix, 'model.pth')
+        assert torch.equal(model.conv2d.state_dict()['weight'],
+                           state_dict['weight'])
+        assert torch.equal(model.conv2d.state_dict()['bias'],
+                           state_dict['bias'])
 
-    # test duplicate registered error
-    with pytest.raises(KeyError):
-        CheckpointLoader.register_scheme('ftp://', load_from_ftp1)
-
-    # test force param
-    CheckpointLoader.register_scheme('ftp://', load_from_ftp1, force=True)
-    checkpoint = CheckpointLoader.load_checkpoint(filename)
-    assert checkpoint['filename'] == filename
-
-    # test print function name
-    loader = CheckpointLoader._get_checkpoint_loader(filename)
-    assert loader.__name__ == 'load_from_ftp1'
-
-    # test sort
-    @CheckpointLoader.register_scheme(prefixes='a/b')
-    def load_from_ab(filename, map_location):
-        return dict(filename=filename)
-
-    @CheckpointLoader.register_scheme(prefixes='a/b/c')
-    def load_from_abc(filename, map_location):
-        return dict(filename=filename)
-
-    filename = 'a/b/c/d'
-    loader = CheckpointLoader._get_checkpoint_loader(filename)
-    assert loader.__name__ == 'load_from_abc'
+        # test whether prefix is in pretrained model
+        with pytest.raises(AssertionError):
+            prefix = 'back'
+            _load_checkpoint_with_prefix(prefix, 'model.pth')
 
 
 def test_save_checkpoint(tmp_path):
@@ -393,21 +300,6 @@ def test_save_checkpoint(tmp_path):
     mock_method.assert_called()
 
 
-def test_load_from_local():
-    import os
-    home_path = os.path.expanduser('~')
-    checkpoint_path = os.path.join(
-        home_path, 'dummy_checkpoint_used_to_test_load_from_local.pth')
-    model = Model()
-    save_checkpoint(model.state_dict(), checkpoint_path)
-    checkpoint = load_from_local(
-        '~/dummy_checkpoint_used_to_test_load_from_local.pth',
-        map_location=None)
-    assert_tensor_equal(checkpoint['block.conv.weight'],
-                        model.block.conv.weight)
-    os.remove(checkpoint_path)
-
-
 def test_load_state_dict_post_hooks():
     module = Block()
 
@@ -421,7 +313,7 @@ def test_load_state_dict_post_hooks():
     }
     state_dict.pop('norm.running_var')
 
-    with patch('mmengine.runner.checkpoint.print_log') as mock:
+    with patch('mmengine.checkpoint.io.print_log') as mock:
         load_state_dict(module, state_dict, strict=False)
         mock.assert_called_once()
 
@@ -430,6 +322,6 @@ def test_load_state_dict_post_hooks():
 
     module._load_state_dict_post_hooks = {0: post_hook}
 
-    with patch('mmengine.runner.checkpoint.print_log') as mock:
+    with patch('mmengine.checkpoint.io.print_log') as mock:
         load_state_dict(module, state_dict, strict=False)
         mock.assert_not_called()
