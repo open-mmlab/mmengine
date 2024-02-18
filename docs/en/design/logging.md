@@ -74,11 +74,11 @@ history_buffer.min()
 # 1, the global minimum
 
 history_buffer.max(2)
-# 3，the maximum in [2, 3]
+# 3, the maximum in [2, 3]
 history_buffer.min()
 # 3, the global maximum
 history_buffer.mean(2)
-# 2.5，the mean value in [2, 3], (2 + 3) / (1 + 1)
+# 2.5, the mean value in [2, 3], (2 + 3) / (1 + 1)
 history_buffer.mean()
 # 2, the global mean, (1 + 2 + 3) / (1 + 1 + 1)
 history_buffer = HistoryBuffer([1, 2, 3], [2, 2, 2])  # Cases when counts are not 1
@@ -431,7 +431,7 @@ In the case of multiple processes in multiple nodes without storage, logs are or
 
 ```text
 # without shared storage
-# node 0：
+# node 0:
 work_dir/20230228_141908
 ├── 20230306_183634_${hostname}_device0_rank0.log
 ├── 20230306_183634_${hostname}_device1_rank1.log
@@ -442,7 +442,7 @@ work_dir/20230228_141908
 ├── 20230306_183634_${hostname}_device6_rank6.log
 ├── 20230306_183634_${hostname}_device7_rank7.log
 
-# node 7：
+# node 7:
 work_dir/20230228_141908
 ├── 20230306_183634_${hostname}_device0_rank56.log
 ├── 20230306_183634_${hostname}_device1_rank57.log

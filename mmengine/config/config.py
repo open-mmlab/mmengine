@@ -901,7 +901,7 @@ class Config:
                     # 2. Set `_scope_` for the outer dict variable for the base
                     # config.
                     # 3. Set `scope` attribute for each base variable.
-                    # Different from `_scope_`， `scope` is not a key of base
+                    # Different from `_scope_`, `scope` is not a key of base
                     # dict, `scope` attribute will be parsed to key `_scope_`
                     # by function `_parse_scope` only if the base variable is
                     # accessed by the current config.

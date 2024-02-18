@@ -235,7 +235,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         self.pad_value = pad_value
 
     def forward(self, data: dict, training: bool = False) -> Union[dict, list]:
-        """Performs normalization、padding and bgr2rgb conversion based on
+        """Performs normalization, padding and bgr2rgb conversion based on
         ``BaseDataPreprocessor``.
 
         Args:

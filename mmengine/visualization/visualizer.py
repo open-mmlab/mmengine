@@ -989,7 +989,7 @@ class Visualizer(ManagerMixin):
                     f'overlaid_image: {overlaid_image.shape[:2]} and '
                     f'featmap: {featmap.shape[1:]} are not same, '
                     f'the feature map will be interpolated. '
-                    f'This may cause mismatch problems ！')
+                    f'This may cause mismatch problems !')
                 if resize_shape is None:
                     featmap = F.interpolate(
                         featmap[None],
