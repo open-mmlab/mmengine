@@ -247,8 +247,8 @@ def test_load_checkpoint_with_prefix():
     nn.init.constant_(model.conv2d_2.weight, 5)
     nn.init.constant_(model.conv2d_2.bias, 6)
 
-    with TemporaryDirectory() as temp_dir:
-        path = osp.join(temp_dir, 'model.pth')
+    with TemporaryDirectory() as tmp_dir:
+        path = osp.join(tmp_dir, 'model.pth')
         torch.save(model.state_dict(), path)
         prefix = 'conv2d'
         state_dict = _load_checkpoint_with_prefix(prefix, path)
