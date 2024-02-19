@@ -213,7 +213,6 @@ class DefaultOptimWrapperConstructor:
                     level=logging.WARNING)
                 continue
             if not param.requires_grad:
-                params.append(param_group)
                 continue
 
             # if the parameter match one of the custom keys, ignore other rules
