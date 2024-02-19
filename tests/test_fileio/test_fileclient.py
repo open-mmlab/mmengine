@@ -77,7 +77,7 @@ class MockS3Client:
     def __init__(self, enable_mc=True):
         self.enable_mc = enable_mc
 
-    def Get(self, filepath):
+    def Get(self, filepath) -> bytes:
         with open(filepath, 'rb') as f:
             content = f.read()
         return content
@@ -93,7 +93,7 @@ class MockPetrelClient:
         self.enable_multi_cluster = enable_multi_cluster
         self.conf_path = conf_path
 
-    def Get(self, filepath):
+    def Get(self, filepath) -> bytes:
         with open(filepath, 'rb') as f:
             content = f.read()
         return content
@@ -300,6 +300,7 @@ class TestFileClient:
 
         # input path is Path object
         img_bytes = petrel_backend.get(self.img_path)
+        print(img_bytes)
         img = imfrombytes(img_bytes)
         assert img.shape == self.img_shape
         # input path is str
