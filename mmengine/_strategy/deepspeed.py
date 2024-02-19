@@ -383,7 +383,6 @@ class DeepSpeedStrategy(BaseStrategy):
 
         if optim_wrapper is not None:
             self.optim_wrapper = self.build_optim_wrapper(optim_wrapper, model)
-
             self.model = self._wrap_model(model)
 
             self.optim_wrapper.model = self.model  # type: ignore
