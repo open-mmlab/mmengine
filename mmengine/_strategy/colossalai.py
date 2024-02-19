@@ -191,7 +191,7 @@ class ColossalAIModelWrapper:
 class ColossalAIStrategy(BaseStrategy):
     """
     Args:
-        config: (str or dict): The colossalai config file to setup distributed
+        config(str or dict): The colossalai config file to setup distributed
             environment. See more details in the `colossalai config tutorial`_.
         mixed_precision (str or MixedPrecision): The mixed precision to run the
             training. Defaults to None. If the argument is a string, it can be
