@@ -300,6 +300,7 @@ class TestFileClient:
 
         # input path is Path object
         img_bytes = petrel_backend.get(self.img_path)
+        print(f'img_bytes: {img_bytes}')
         img = imfrombytes(img_bytes)
         assert img.shape == self.img_shape
         # input path is str
