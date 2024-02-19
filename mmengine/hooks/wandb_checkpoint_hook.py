@@ -1,9 +1,10 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 import hashlib
 import os.path as osp
 import pickle
 from math import inf
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Union
+from typing import List, Optional, Sequence, Union
 
 from mmengine.dist import is_main_process, master_only
 from mmengine.hooks import CheckpointHook
@@ -12,16 +13,15 @@ from mmengine.registry import HOOKS
 
 try:
     import wandb
-    from wandb.sdk.lib.paths import StrPath
 except ImportError:
     raise ImportError('Please run "pip install wandb" to install wandb')
-
-wandb.log_model
 
 
 @HOOKS.register_module()
 class WandbCheckpointHook(CheckpointHook):
-    """Save checkpoints periodically as [W&B Models Artifact](https://docs.wandb.ai/guides/model_registry/log-model-to-experiment).
+    """Save checkpoints periodically as [W&B Models
+    Artifact](https://docs.wandb.ai/guides/model_registry/log-model-to-
+    experiment).
 
     Args:
         interval (int): The saving period. If ``by_epoch=True``, interval
@@ -97,11 +97,11 @@ class WandbCheckpointHook(CheckpointHook):
             at which checkpoint saving begins. Defaults to 0, which means
             saving at the beginning.
             `New in version 0.8.3.`
-        model_name (str, optional): A name to assign to the model artifact that
-            the model checkpoint files will be added to. The string must contain
-            only the following alphanumeric characters: dashes, underscores, and
-            dots. This will default to ``f'model-run-{wandb.run.id}'`` if left
-            unspecified.
+        model_name (str, optional): A name to assign to the model artifact
+            that the model checkpoint files will be added to. The string must
+            contain only the following alphanumeric characters: dashes,
+            underscores, and dots. This will default to
+            ``f'model-run-{wandb.run.id}'`` if left unspecified.
 
     Examples:
         >>> # Save best based on single metric
@@ -159,11 +159,12 @@ class WandbCheckpointHook(CheckpointHook):
                          save_last, save_best, rule, greater_keys, less_keys,
                          file_client_args, filename_tmpl, backend_args,
                          published_keys, save_begin, **kwargs)
-        self.model_name = model_name if model_name else f'model-run-{wandb.run.id}'
         self.init_kwargs = init_kwargs or {}
         self._wandb = wandb
         if self._wandb.run is None:
             self._wandb.init(**self.init_kwargs)
+        default_model_name = f'model-run-{wandb.run.id}'
+        self.model_name = model_name if model_name else default_model_name
 
     @master_only
     def _publish_model(self, runner, ckpt_path: str) -> None:
@@ -190,7 +191,7 @@ class WandbCheckpointHook(CheckpointHook):
             f'The checkpoint ({ckpt_path}) is published to '
             f'{final_path}.',
             logger='current')
-        runner.logger.info("HERE........_publish_model")
+        runner.logger.info('HERE........_publish_model')
 
         wandb.log_model(
             final_path, name=self.model_name, aliases=['published_model'])
@@ -301,7 +302,7 @@ class WandbCheckpointHook(CheckpointHook):
             wandb.log_model(
                 osp.join(self.out_dir, best_ckpt_name),
                 name=self.model_name,
-                aliases=[f"{key_indicator} best_score"])
+                aliases=[f'{key_indicator} best_score'])
 
         # save checkpoint again to update the best_score and best_ckpt stored
         # in message_hub because the checkpoint saved in `after_train_epoch`
@@ -310,4 +311,4 @@ class WandbCheckpointHook(CheckpointHook):
         # checkpoint can not be removed when resuming training.
         if best_ckpt_updated and self.last_ckpt is not None:
             self._save_checkpoint_with_step(
-                runner, cur_time, meta, addition_aliases=["best_checkpoint"])
+                runner, cur_time, meta, addition_aliases=['best_checkpoint'])
