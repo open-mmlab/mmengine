@@ -1,11 +1,10 @@
-import os
-import os.path as osp
-from math import inf
-
 import hashlib
+import os.path as osp
 import pickle
+from math import inf
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
+
 from mmengine.dist import is_main_process, master_only
 from mmengine.hooks import CheckpointHook
 from mmengine.logging import print_log
@@ -17,27 +16,12 @@ try:
 except ImportError:
     raise ImportError('Please run "pip install wandb" to install wandb')
 
-
-@master_only
-def _log_artifact(filepath: StrPath,
-                  aliases: Optional[List] = None,
-                  metadata: Optional[Dict] = None):
-    aliases = ["latest"] if aliases is None else aliases + ["latest"]
-    metadata = wandb.run.config.as_dict() if metadata is None else metadata
-    model_checkpoint_artifact = wandb.Artifact(
-        f"run_{wandb.run.id}_model", type="model", metadata=metadata)
-    if os.path.isfile(filepath):
-        model_checkpoint_artifact.add_file(filepath)
-    elif os.path.isdir(filepath):
-        model_checkpoint_artifact.add_dir(filepath)
-    else:
-        raise FileNotFoundError(f"No such file or directory {filepath}")
-    wandb.log_artifact(model_checkpoint_artifact, aliases=aliases or [])
+wandb.log_model
 
 
 @HOOKS.register_module()
 class WandbCheckpointHook(CheckpointHook):
-    """Save checkpoints periodically as [Weights & Biases Artifacts](https://docs.wandb.ai/guides/artifacts).
+    """Save checkpoints periodically as [W&B Models Artifact](https://docs.wandb.ai/guides/model_registry/log-model-to-experiment).
 
     Args:
         interval (int): The saving period. If ``by_epoch=True``, interval
@@ -113,6 +97,11 @@ class WandbCheckpointHook(CheckpointHook):
             at which checkpoint saving begins. Defaults to 0, which means
             saving at the beginning.
             `New in version 0.8.3.`
+        model_name (str, optional): A name to assign to the model artifact that
+            the model checkpoint files will be added to. The string must contain
+            only the following alphanumeric characters: dashes, underscores, and
+            dots. This will default to ``f'model-run-{wandb.run.id}'`` if left
+            unspecified.
 
     Examples:
         >>> # Save best based on single metric
@@ -163,12 +152,14 @@ class WandbCheckpointHook(CheckpointHook):
                  backend_args: Optional[dict] = None,
                  published_keys: Union[str, List[str], None] = None,
                  save_begin: int = 0,
+                 model_name: Optional[str] = None,
                  **kwargs) -> None:
         super().__init__(interval, by_epoch, save_optimizer,
                          save_param_scheduler, out_dir, max_keep_ckpts,
                          save_last, save_best, rule, greater_keys, less_keys,
                          file_client_args, filename_tmpl, backend_args,
                          published_keys, save_begin, **kwargs)
+        self.model_name = model_name if model_name else f'model-run-{wandb.run.id}'
         self.init_kwargs = init_kwargs or {}
         self._wandb = wandb
         if self._wandb.run is None:
@@ -200,7 +191,9 @@ class WandbCheckpointHook(CheckpointHook):
             f'{final_path}.',
             logger='current')
         runner.logger.info("HERE........_publish_model")
-        _log_artifact(final_path, aliases=['published_model'])
+
+        wandb.log_model(
+            final_path, name=self.model_name, aliases=['published_model'])
 
     def _save_checkpoint_with_step(
             self,
@@ -212,10 +205,10 @@ class WandbCheckpointHook(CheckpointHook):
         aliases = [f"epoch {meta['epoch']}", f"iteration {meta['iter']}"]
         if addition_aliases:
             aliases += addition_aliases
-        _log_artifact(
+        wandb.log_model(
             osp.join(self.out_dir, self.filename_tmpl.format(step)),
-            aliases=aliases,
-            metadata=meta)
+            name=self.model_name,
+            aliases=aliases)
 
     def _save_best_checkpoint(self, runner, metrics) -> None:
         if not self.save_best:
@@ -305,10 +298,10 @@ class WandbCheckpointHook(CheckpointHook):
             runner.logger.info(
                 f'The best checkpoint with {best_score:0.4f} {key_indicator} '
                 f'at {cur_time} {cur_type} is saved to {best_ckpt_name}.')
-            _log_artifact(
+            wandb.log_model(
                 osp.join(self.out_dir, best_ckpt_name),
-                aliases=[f"{key_indicator} best_score"],
-                metadata=meta)
+                name=self.model_name,
+                aliases=[f"{key_indicator} best_score"])
 
         # save checkpoint again to update the best_score and best_ckpt stored
         # in message_hub because the checkpoint saved in `after_train_epoch`
