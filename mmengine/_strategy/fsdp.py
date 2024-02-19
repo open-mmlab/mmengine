@@ -19,6 +19,7 @@ from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 
 import mmengine
+from mmengine.checkpoint import save_checkpoint
 from mmengine.config import Config, ConfigDict
 from mmengine.device import get_device
 from mmengine.dist import get_rank, is_main_process
@@ -259,8 +260,6 @@ class FSDPStrategy(DDPStrategy):
                 checkpoint before saving the checkpoint.
                 Defaults to None.
         """
-        from mmengine.runner.checkpoint import save_checkpoint
-
         state_dict: dict = dict()
         state_dict['state_dict'] = self.model_state_dict()
 

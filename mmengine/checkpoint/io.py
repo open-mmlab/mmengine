@@ -11,7 +11,6 @@ import torch
 from mmengine.dist import get_dist_info
 from mmengine.fileio import FileClient, get_file_backend
 from mmengine.logging import print_log
-from mmengine.model import BaseTTAModel, is_model_wrapper
 from mmengine.utils import apply_to, deprecated_function
 from .loader import CheckpointLoader
 
@@ -123,6 +122,8 @@ def load_state_dict(module, state_dict, strict=False, logger=None):
         logger (:obj:`logging.Logger`, optional): Logger to log the error
             message. If not specified, print function will be used.
     """
+    from mmengine.model import BaseTTAModel, is_model_wrapper
+
     unexpected_keys = []
     missing_keys = []
     err_msg = []
@@ -291,6 +292,7 @@ def get_state_dict(module, destination=None, prefix='', keep_vars=False):
     """
     # recursively check parallel module in case that the model has a
     # complicated structure, e.g., nn.Module(nn.Module(DDP))
+    from mmengine.model import is_model_wrapper
     if is_model_wrapper(module):
         module = module.module
 

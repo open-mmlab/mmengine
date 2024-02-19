@@ -26,6 +26,7 @@ import torch.nn as nn
 import mmengine
 from mmengine import mkdir_or_exist
 from mmengine._strategy import BaseStrategy
+from mmengine.checkpoint.io import _load_checkpoint, save_checkpoint
 from mmengine.device import get_device
 from mmengine.dist import init_dist, is_main_process
 from mmengine.fileio import join_path
@@ -33,7 +34,6 @@ from mmengine.model import BaseDataPreprocessor
 from mmengine.optim import BaseOptimWrapper, OptimWrapper, _ParamScheduler
 from mmengine.registry import STRATEGIES, Registry
 from mmengine.registry.root import MODEL_WRAPPERS, OPTIM_WRAPPERS, OPTIMIZERS
-from mmengine.runner.checkpoint import _load_checkpoint, save_checkpoint
 from mmengine.utils import get_git_hash
 
 # Component for colossalai `plugins` and `mixed_precisions`
@@ -191,7 +191,7 @@ class ColossalAIModelWrapper:
 class ColossalAIStrategy(BaseStrategy):
     """
     Args:
-        config(str or dict): The colossalai config file to setup distributed
+        config (str or dict): The colossalai config file to setup distributed
             environment. See more details in the `colossalai config tutorial`_.
         mixed_precision (str or MixedPrecision): The mixed precision to run the
             training. Defaults to None. If the argument is a string, it can be

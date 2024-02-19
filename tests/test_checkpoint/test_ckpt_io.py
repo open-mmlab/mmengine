@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
+import os.path as osp
 import re
 import tempfile
 from collections import OrderedDict
@@ -246,10 +247,11 @@ def test_load_checkpoint_with_prefix():
     nn.init.constant_(model.conv2d_2.weight, 5)
     nn.init.constant_(model.conv2d_2.bias, 6)
 
-    with TemporaryDirectory():
-        torch.save(model.state_dict(), 'model.pth')
+    with TemporaryDirectory() as temp_dir:
+        path = osp.join(temp_dir, 'model.pth')
+        torch.save(model.state_dict(), path)
         prefix = 'conv2d'
-        state_dict = _load_checkpoint_with_prefix(prefix, 'model.pth')
+        state_dict = _load_checkpoint_with_prefix(prefix, path)
         assert torch.equal(model.conv2d.state_dict()['weight'],
                            state_dict['weight'])
         assert torch.equal(model.conv2d.state_dict()['bias'],
@@ -258,7 +260,7 @@ def test_load_checkpoint_with_prefix():
         # test whether prefix is in pretrained model
         with pytest.raises(AssertionError):
             prefix = 'back'
-            _load_checkpoint_with_prefix(prefix, 'model.pth')
+            _load_checkpoint_with_prefix(prefix, path)
 
 
 def test_save_checkpoint(tmp_path):

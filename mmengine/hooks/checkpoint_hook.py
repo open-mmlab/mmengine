@@ -8,6 +8,7 @@ from math import inf
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
+from mmengine.checkpoint.io import _load_checkpoint, save_checkpoint
 from mmengine.dist import is_main_process, master_only
 from mmengine.fileio import FileClient, get_file_backend
 from mmengine.logging import print_log
@@ -386,8 +387,6 @@ class CheckpointHook(Hook):
             runner (Runner): The runner of the training process.
             ckpt_path (str): The checkpoint path that ought to be published.
         """
-        from mmengine.runner import save_checkpoint
-        from mmengine.runner.checkpoint import _load_checkpoint
         checkpoint = _load_checkpoint(ckpt_path)
         assert self.published_keys is not None
         removed_keys = []
