@@ -97,7 +97,7 @@ class WandbCheckpointHook(CheckpointHook):
             at which checkpoint saving begins. Defaults to 0, which means
             saving at the beginning.
             `New in version 0.8.3.`
-        model_name (str, optional): A name to assign to the model artifact
+        model_name (str, optional): A name assigned to the model artifact
             that the model checkpoint files will be added to. The string must
             contain only the following alphanumeric characters: dashes,
             underscores, and dots. This will default to
