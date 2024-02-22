@@ -116,7 +116,7 @@ class BaseModel(BaseModule):
         optim_wrapper.update_params(parsed_losses)
         return log_vars
 
-    def val_step(self, data: Union[tuple, dict, list]) -> list:
+    def val_step(self, data: Union[tuple, dict, list]) -> Union[tuple, list]:
         """Gets the predictions of given data.
 
         Calls ``self.data_preprocessor(data, False)`` and
@@ -132,7 +132,7 @@ class BaseModel(BaseModule):
         data = self.data_preprocessor(data, False)
         return self._run_forward(data, mode='predict')  # type: ignore
 
-    def test_step(self, data: Union[dict, tuple, list]) -> list:
+    def test_step(self, data: Union[dict, tuple, list]) -> Union[tuple, list]:
         """``BaseModel`` implements ``test_step`` the same as ``val_step``.
 
         Args:

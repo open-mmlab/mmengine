@@ -399,19 +399,19 @@ class ValLoop(BaseLoop):
             'before_val_iter', batch_idx=idx, data_batch=data_batch)
         # outputs should be sequence of BaseDataElement
         with autocast(enabled=self.fp16):
-            outputs = self.runner.model.val_step(data_batch)
+            results = self.runner.model.test_step(data_batch)
+        if isinstance(results, tuple):
+            outputs, loss = results
+        elif isinstance(results, list):
+            outputs, loss = results, dict()
         # get val loss and avoid breaking change
-        if len(outputs) > len(data_batch):
-            loss = outputs[-1].loss
-            for loss_name, loss_value in loss.items():
-                if loss_name not in self.val_loss:
-                    self.val_loss[loss_name] = []
-                if isinstance(loss_value, torch.Tensor):
-                    self.val_loss[loss_name].append(loss_value.item())
-                elif is_list_of(loss_value, torch.Tensor):
-                    self.val_loss[loss_name].extend(
-                        [v.item() for v in loss_value])
-            outputs = outputs[:-1]
+        for loss_name, loss_value in loss.items():
+            if loss_name not in self.val_loss:
+                self.val_loss[loss_name] = []
+            if isinstance(loss_value, torch.Tensor):
+                self.val_loss[loss_name].append(loss_value.item())
+            elif is_list_of(loss_value, torch.Tensor):
+                self.val_loss[loss_name].extend([v.item() for v in loss_value])
 
         self.evaluator.process(data_samples=outputs, data_batch=data_batch)
         self.runner.call_hook(
@@ -493,19 +493,20 @@ class TestLoop(BaseLoop):
             'before_test_iter', batch_idx=idx, data_batch=data_batch)
         # predictions should be sequence of BaseDataElement
         with autocast(enabled=self.fp16):
-            outputs = self.runner.model.test_step(data_batch)
+            results = self.runner.model.test_step(data_batch)
+        if isinstance(results, tuple):
+            outputs, loss = results
+        elif isinstance(results, list):
+            outputs, loss = results, dict()
         # get val loss and avoid breaking change
-        if len(outputs) > len(data_batch):
-            loss = outputs[-1].loss
-            for loss_name, loss_value in loss.items():
-                if loss_name not in self.test_loss:
-                    self.test_loss[loss_name] = []
-                if isinstance(loss_value, torch.Tensor):
-                    self.test_loss[loss_name].append(loss_value.item())
-                elif is_list_of(loss_value, torch.Tensor):
-                    self.test_loss[loss_name].extend(
-                        [v.item() for v in loss_value])
-            outputs = outputs[:-1]
+        for loss_name, loss_value in loss.items():
+            if loss_name not in self.test_loss:
+                self.test_loss[loss_name] = []
+            if isinstance(loss_value, torch.Tensor):
+                self.test_loss[loss_name].append(loss_value.item())
+            elif is_list_of(loss_value, torch.Tensor):
+                self.test_loss[loss_name].extend(
+                    [v.item() for v in loss_value])
 
         self.evaluator.process(data_samples=outputs, data_batch=data_batch)
         self.runner.call_hook(
