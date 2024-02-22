@@ -10,7 +10,6 @@ from torch.utils.data import DataLoader
 from mmengine.evaluator import Evaluator
 from mmengine.logging import print_log
 from mmengine.registry import LOOPS
-from mmengine.structures import BaseDataElement
 from mmengine.utils import is_list_of
 from .amp import autocast
 from .base_loop import BaseLoop
@@ -363,7 +362,7 @@ class ValLoop(BaseLoop):
                 logger='current',
                 level=logging.WARNING)
         self.fp16 = fp16
-        self.val_loss = dict()
+        self.val_loss: Dict[str, list] = dict()
 
     def run(self) -> dict:
         """Launch validation."""
@@ -381,7 +380,7 @@ class ValLoop(BaseLoop):
             avg_loss = sum(loss_value) / len(loss_value)
             metrics[loss_name] = avg_loss
             if 'loss' in loss_name:
-                val_loss += avg_loss
+                val_loss += avg_loss  # type: ignore
         metrics['val_loss'] = val_loss
 
         self.runner.call_hook('after_val_epoch', metrics=metrics)
@@ -458,7 +457,7 @@ class TestLoop(BaseLoop):
                 logger='current',
                 level=logging.WARNING)
         self.fp16 = fp16
-        self.test_loss = dict()
+        self.test_loss: Dict[str, list] = dict()
 
     def run(self) -> dict:
         """Launch test."""
@@ -476,7 +475,7 @@ class TestLoop(BaseLoop):
             avg_loss = sum(loss_value) / len(loss_value)
             metrics[loss_name] = avg_loss
             if 'loss' in loss_name:
-                test_loss += avg_loss
+                test_loss += avg_loss  # type: ignore
         metrics['test_loss'] = test_loss
 
         self.runner.call_hook('after_test_epoch', metrics=metrics)
