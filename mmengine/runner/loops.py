@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 from mmengine.evaluator import Evaluator
 from mmengine.logging import print_log
 from mmengine.registry import LOOPS
+from mmengine.structures import BaseDataElement
 from mmengine.utils import is_list_of
 from .amp import autocast
 from .base_loop import BaseLoop
@@ -399,12 +400,13 @@ class ValLoop(BaseLoop):
             'before_val_iter', batch_idx=idx, data_batch=data_batch)
         # outputs should be sequence of BaseDataElement
         with autocast(enabled=self.fp16):
-            results = self.runner.model.test_step(data_batch)
-        outputs, loss = list(), dict()
-        if isinstance(results, tuple):
-            outputs, loss = results
-        elif isinstance(results, list):
-            outputs, loss = results, dict()
+            outputs = self.runner.model.test_step(data_batch)
+        if isinstance(outputs[-1],
+                      BaseDataElement) and outputs.keys() == ['loss']:
+            loss = outputs[-1].loss  # type: ignore
+            outputs = outputs[:-1]
+        else:
+            loss = dict()
         # get val loss and avoid breaking change
         for loss_name, loss_value in loss.items():
             if loss_name not in self.val_loss:
@@ -494,12 +496,13 @@ class TestLoop(BaseLoop):
             'before_test_iter', batch_idx=idx, data_batch=data_batch)
         # predictions should be sequence of BaseDataElement
         with autocast(enabled=self.fp16):
-            results = self.runner.model.test_step(data_batch)
-        outputs, loss = list(), dict()
-        if isinstance(results, tuple):
-            outputs, loss = results
-        elif isinstance(results, list):
-            outputs, loss = results, dict()
+            outputs = self.runner.model.test_step(data_batch)
+        if isinstance(outputs[-1],
+                      BaseDataElement) and outputs.keys() == ['loss']:
+            loss = outputs[-1].loss  # type: ignore
+            outputs = outputs[:-1]
+        else:
+            loss = dict()
         # get val loss and avoid breaking change
         for loss_name, loss_value in loss.items():
             if loss_name not in self.test_loss:
