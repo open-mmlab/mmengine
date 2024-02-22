@@ -400,6 +400,7 @@ class ValLoop(BaseLoop):
         # outputs should be sequence of BaseDataElement
         with autocast(enabled=self.fp16):
             results = self.runner.model.test_step(data_batch)
+        outputs, loss = list(), dict()
         if isinstance(results, tuple):
             outputs, loss = results
         elif isinstance(results, list):
@@ -494,6 +495,7 @@ class TestLoop(BaseLoop):
         # predictions should be sequence of BaseDataElement
         with autocast(enabled=self.fp16):
             results = self.runner.model.test_step(data_batch)
+        outputs, loss = list(), dict()
         if isinstance(results, tuple):
             outputs, loss = results
         elif isinstance(results, list):
