@@ -400,7 +400,7 @@ class ValLoop(BaseLoop):
             'before_val_iter', batch_idx=idx, data_batch=data_batch)
         # outputs should be sequence of BaseDataElement
         with autocast(enabled=self.fp16):
-            outputs = self.runner.model.test_step(data_batch)
+            outputs = self.runner.model.val_step(data_batch)
         if isinstance(outputs[-1],
                       BaseDataElement) and outputs.keys() == ['loss']:
             loss = outputs[-1].loss  # type: ignore
