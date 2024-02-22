@@ -10,6 +10,8 @@ from torch.utils.data import DataLoader
 from mmengine.evaluator import Evaluator
 from mmengine.logging import print_log
 from mmengine.registry import LOOPS
+from mmengine.structures import BaseDataElement
+from mmengine.utils import is_list_of
 from .amp import autocast
 from .base_loop import BaseLoop
 from .utils import calc_dynamic_intervals
@@ -361,6 +363,7 @@ class ValLoop(BaseLoop):
                 logger='current',
                 level=logging.WARNING)
         self.fp16 = fp16
+        self.val_loss = dict()
 
     def run(self) -> dict:
         """Launch validation."""
@@ -372,6 +375,15 @@ class ValLoop(BaseLoop):
 
         # compute metrics
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
+        # get val loss and save to metrics
+        val_loss = 0
+        for loss_name, loss_value in self.val_loss.items():
+            avg_loss = sum(loss_value) / len(loss_value)
+            metrics[loss_name] = avg_loss
+            if 'loss' in loss_name:
+                val_loss += avg_loss
+        metrics['val_loss'] = val_loss
+
         self.runner.call_hook('after_val_epoch', metrics=metrics)
         self.runner.call_hook('after_val')
         return metrics
@@ -389,6 +401,19 @@ class ValLoop(BaseLoop):
         # outputs should be sequence of BaseDataElement
         with autocast(enabled=self.fp16):
             outputs = self.runner.model.val_step(data_batch)
+        # get val loss and avoid breaking change
+        if len(outputs) > len(data_batch):
+            loss = outputs[-1].loss
+            for loss_name, loss_value in loss.items():
+                if loss_name not in self.val_loss:
+                    self.val_loss[loss_name] = []
+                if isinstance(loss_value, torch.Tensor):
+                    self.val_loss[loss_name].append(loss_value.item())
+                elif is_list_of(loss_value, torch.Tensor):
+                    self.val_loss[loss_name].extend(
+                        [v.item() for v in loss_value])
+            outputs = outputs[:-1]
+
         self.evaluator.process(data_samples=outputs, data_batch=data_batch)
         self.runner.call_hook(
             'after_val_iter',
@@ -433,6 +458,7 @@ class TestLoop(BaseLoop):
                 logger='current',
                 level=logging.WARNING)
         self.fp16 = fp16
+        self.test_loss = dict()
 
     def run(self) -> dict:
         """Launch test."""
@@ -444,6 +470,15 @@ class TestLoop(BaseLoop):
 
         # compute metrics
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
+        # get test loss and save to metrics
+        test_loss = 0
+        for loss_name, loss_value in self.test_loss.items():
+            avg_loss = sum(loss_value) / len(loss_value)
+            metrics[loss_name] = avg_loss
+            if 'loss' in loss_name:
+                test_loss += avg_loss
+        metrics['test_loss'] = test_loss
+
         self.runner.call_hook('after_test_epoch', metrics=metrics)
         self.runner.call_hook('after_test')
         return metrics
@@ -460,6 +495,19 @@ class TestLoop(BaseLoop):
         # predictions should be sequence of BaseDataElement
         with autocast(enabled=self.fp16):
             outputs = self.runner.model.test_step(data_batch)
+        # get val loss and avoid breaking change
+        if len(outputs) > len(data_batch):
+            loss = outputs[-1].loss
+            for loss_name, loss_value in loss.items():
+                if loss_name not in self.test_loss:
+                    self.test_loss[loss_name] = []
+                if isinstance(loss_value, torch.Tensor):
+                    self.test_loss[loss_name].append(loss_value.item())
+                elif is_list_of(loss_value, torch.Tensor):
+                    self.test_loss[loss_name].extend(
+                        [v.item() for v in loss_value])
+            outputs = outputs[:-1]
+
         self.evaluator.process(data_samples=outputs, data_batch=data_batch)
         self.runner.call_hook(
             'after_test_iter',
