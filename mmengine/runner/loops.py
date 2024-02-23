@@ -8,7 +8,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from mmengine.evaluator import Evaluator
-from mmengine.logging import print_log
+from mmengine.logging import HistoryBuffer, print_log
 from mmengine.registry import LOOPS
 from mmengine.structures import BaseDataElement
 from mmengine.utils import is_list_of
@@ -363,7 +363,7 @@ class ValLoop(BaseLoop):
                 logger='current',
                 level=logging.WARNING)
         self.fp16 = fp16
-        self.val_loss: Dict[str, list] = dict()
+        self.val_loss: Dict[str, HistoryBuffer] = dict()
 
     def run(self) -> dict:
         """Launch validation."""
@@ -378,7 +378,7 @@ class ValLoop(BaseLoop):
         # get val loss and save to metrics
         val_loss = 0
         for loss_name, loss_value in self.val_loss.items():
-            avg_loss = sum(loss_value) / len(loss_value)
+            avg_loss = loss_value.mean()
             metrics[loss_name] = avg_loss
             if 'loss' in loss_name:
                 val_loss += avg_loss  # type: ignore
@@ -408,13 +408,19 @@ class ValLoop(BaseLoop):
         else:
             loss = dict()
         # get val loss and avoid breaking change
+        # similar to MessageHub
         for loss_name, loss_value in loss.items():
             if loss_name not in self.val_loss:
-                self.val_loss[loss_name] = []
+                self.val_loss[loss_name] = HistoryBuffer()
             if isinstance(loss_value, torch.Tensor):
-                self.val_loss[loss_name].append(loss_value.item())
+                loss_value = loss_value.mean().item()
             elif is_list_of(loss_value, torch.Tensor):
-                self.val_loss[loss_name].extend([v.item() for v in loss_value])
+                loss_value = sum([v.mean()
+                                  for v in loss_value]).item()  # type: ignore
+            else:
+                raise TypeError(
+                    f'{loss_name} is not a tensor or list of tensors')
+            self.val_loss[loss_name].update(loss_value)
 
         self.evaluator.process(data_samples=outputs, data_batch=data_batch)
         self.runner.call_hook(
@@ -460,7 +466,7 @@ class TestLoop(BaseLoop):
                 logger='current',
                 level=logging.WARNING)
         self.fp16 = fp16
-        self.test_loss: Dict[str, list] = dict()
+        self.test_loss: Dict[str, HistoryBuffer] = dict()
 
     def run(self) -> dict:
         """Launch test."""
@@ -475,7 +481,7 @@ class TestLoop(BaseLoop):
         # get test loss and save to metrics
         test_loss = 0
         for loss_name, loss_value in self.test_loss.items():
-            avg_loss = sum(loss_value) / len(loss_value)
+            avg_loss = loss_value.mean()
             metrics[loss_name] = avg_loss
             if 'loss' in loss_name:
                 test_loss += avg_loss  # type: ignore
@@ -504,14 +510,19 @@ class TestLoop(BaseLoop):
         else:
             loss = dict()
         # get val loss and avoid breaking change
+        # similar to MessageHub
         for loss_name, loss_value in loss.items():
             if loss_name not in self.test_loss:
-                self.test_loss[loss_name] = []
+                self.test_loss[loss_name] = HistoryBuffer()
             if isinstance(loss_value, torch.Tensor):
-                self.test_loss[loss_name].append(loss_value.item())
+                loss_value = loss_value.mean().item()
             elif is_list_of(loss_value, torch.Tensor):
-                self.test_loss[loss_name].extend(
-                    [v.item() for v in loss_value])
+                loss_value = sum([v.mean()
+                                  for v in loss_value]).item()  # type: ignore
+            else:
+                raise TypeError(
+                    f'{loss_name} is not a tensor or list of tensors')
+            self.test_loss[loss_name].update(loss_value)
 
         self.evaluator.process(data_samples=outputs, data_batch=data_batch)
         self.runner.call_hook(
