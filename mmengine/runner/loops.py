@@ -402,7 +402,7 @@ class ValLoop(BaseLoop):
         with autocast(enabled=self.fp16):
             outputs = self.runner.model.val_step(data_batch)
         if isinstance(outputs[-1],
-                      BaseDataElement) and outputs.keys() == ['loss']:
+                      BaseDataElement) and outputs[-1].keys() == ['loss']:
             loss = outputs[-1].loss  # type: ignore
             outputs = outputs[:-1]
         else:
@@ -498,7 +498,7 @@ class TestLoop(BaseLoop):
         with autocast(enabled=self.fp16):
             outputs = self.runner.model.test_step(data_batch)
         if isinstance(outputs[-1],
-                      BaseDataElement) and outputs.keys() == ['loss']:
+                      BaseDataElement) and outputs[-1].keys() == ['loss']:
             loss = outputs[-1].loss  # type: ignore
             outputs = outputs[:-1]
         else:
