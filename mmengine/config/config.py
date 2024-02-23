@@ -444,6 +444,8 @@ class Config:
                 predefined variables. Defaults to True.
             import_custom_modules (bool, optional): Whether to support
                 importing custom modules in config. Defaults to None.
+            use_environment_variables (bool, optional): Whether to use
+                environment variables. Defaults to True.
             lazy_import (bool): Whether to load config in `lazy_import` mode.
                 If it is `None`, it will be deduced by the content of the
                 config file. Defaults to None.
@@ -831,6 +833,8 @@ class Config:
             filename (str): Name of config file.
             use_predefined_variables (bool, optional): Whether to use
                 predefined variables. Defaults to True.
+            use_environment_variables (bool, optional): Whether to use
+                environment variables. Defaults to True.
             lazy_import (bool): Whether to load config in `lazy_import` mode.
                 If it is `None`, it will be deduced by the content of the
                 config file. Defaults to None.
