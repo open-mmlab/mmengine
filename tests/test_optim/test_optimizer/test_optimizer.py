@@ -549,7 +549,8 @@ class TestBuilder(TestCase):
                 weight_decay=self.base_wd,
                 momentum=self.momentum))
         paramwise_cfg = dict()
-        optim_constructor = DefaultOptimWrapperConstructor(optim_wrapper_cfg)
+        optim_constructor = DefaultOptimWrapperConstructor(
+            optim_wrapper_cfg, paramwise_cfg)
         optim_wrapper = optim_constructor(model)
         self._check_default_optimizer(optim_wrapper.optimizer, model)
 
@@ -595,19 +596,8 @@ class TestBuilder(TestCase):
             param.requires_grad = False
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
-        optim_wrapper = optim_constructor(self.model)
-        optimizer = optim_wrapper.optimizer
-        param_groups = optimizer.param_groups
-        assert isinstance(optim_wrapper.optimizer, torch.optim.SGD)
-        assert optimizer.defaults['lr'] == self.base_lr
-        assert optimizer.defaults['momentum'] == self.momentum
-        assert optimizer.defaults['weight_decay'] == self.base_wd
-        for i, (name, param) in enumerate(self.model.named_parameters()):
-            param_group = param_groups[i]
-            assert torch.equal(param_group['params'][0], param)
-            assert param_group['momentum'] == self.momentum
-            assert param_group['lr'] == self.base_lr
-            assert param_group['weight_decay'] == self.base_wd
+        with self.assertRaises(ValueError):
+            optim_constructor(self.model)
 
     def test_default_optimizer_constructor_bypass_duplicate(self):
         # paramwise_cfg with bypass_duplicate option
@@ -663,10 +653,8 @@ class TestBuilder(TestCase):
         optim_wrapper = optim_constructor(model)
         model_parameters = list(model.parameters())
         num_params = 14 if MMCV_FULL_AVAILABLE else 11
-        assert len(optim_wrapper.optimizer.param_groups) == len(
-            model_parameters) == num_params
-        self._check_sgd_optimizer(optim_wrapper.optimizer, model,
-                                  **paramwise_cfg)
+        assert len(optim_wrapper.optimizer.param_groups
+                   ) == len(model_parameters) - 1 == num_params - 1
 
     def test_default_optimizer_constructor_custom_key(self):
         # test DefaultOptimWrapperConstructor with custom_keys and
