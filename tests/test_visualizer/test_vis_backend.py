@@ -282,6 +282,14 @@ class TestMLflowVisBackend:
         mlflow_vis_backend = MLflowVisBackend('temp_dir')
         assert mlflow_vis_backend.experiment == mlflow_vis_backend._mlflow
 
+    def test_create_experiment(self):
+        with patch('mlflow.create_experiment') as mock_create_experiment:
+            MLflowVisBackend(
+                'temp_dir', exp_name='test',
+                artifact_location='foo')._init_env()
+            mock_create_experiment.assert_any_call(
+                'test', artifact_location='foo')
+
     def test_add_config(self):
         cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
         mlflow_vis_backend = MLflowVisBackend('temp_dir')

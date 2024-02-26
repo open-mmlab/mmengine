@@ -669,6 +669,10 @@ class MLflowVisBackend(BaseVisBackend):
             will be added to the experiment. If it is None, which means all
             the config will be added. Defaults to None.
             `New in version 0.7.4.`
+        artifact_location (str, optional): The location to store run artifacts.
+            If None, the server picks an appropriate default.
+            Defaults to None.
+            `New in version 0.10.4.`
     """
 
     def __init__(self,
@@ -680,7 +684,8 @@ class MLflowVisBackend(BaseVisBackend):
                  tracking_uri: Optional[str] = None,
                  artifact_suffix: SUFFIX_TYPE = ('.json', '.log', '.py',
                                                  'yaml'),
-                 tracked_config_keys: Optional[dict] = None):
+                 tracked_config_keys: Optional[dict] = None,
+                 artifact_location: Optional[str] = None):
         super().__init__(save_dir)
         self._exp_name = exp_name
         self._run_name = run_name
@@ -689,6 +694,7 @@ class MLflowVisBackend(BaseVisBackend):
         self._tracking_uri = tracking_uri
         self._artifact_suffix = artifact_suffix
         self._tracked_config_keys = tracked_config_keys
+        self._artifact_location = artifact_location
 
     def _init_env(self):
         """Setup env for MLflow."""
@@ -726,7 +732,8 @@ class MLflowVisBackend(BaseVisBackend):
         self._exp_name = self._exp_name or 'Default'
 
         if self._mlflow.get_experiment_by_name(self._exp_name) is None:
-            self._mlflow.create_experiment(self._exp_name)
+            self._mlflow.create_experiment(
+                self._exp_name, artifact_location=self._artifact_location)
 
         self._mlflow.set_experiment(self._exp_name)
 
