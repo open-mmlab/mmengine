@@ -669,6 +669,10 @@ class MLflowVisBackend(BaseVisBackend):
             will be added to the experiment. If it is None, which means all
             the config will be added. Defaults to None.
             `New in version 0.7.4.`
+        artifact_location (str, optional): The location to store run artifacts.
+            If None, the server picks an appropriate default.
+            Defaults to None.
+            `New in version 0.10.4.`
     """
 
     def __init__(self,
