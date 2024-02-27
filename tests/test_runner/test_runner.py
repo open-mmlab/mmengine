@@ -336,9 +336,6 @@ class CustomRunner(Runner):
                  cfg=None):
         pass
 
-    def setup_env(self, env_cfg):
-        pass
-
 
 class ToyEvaluator(Evaluator):
 
@@ -762,7 +759,41 @@ class TestRunner(TestCase):
 
     def test_setup_env(self):
         # TODO
-        pass
+        # 1.Test env_variable_cfg.
+        # 1.1 Test valid env_variable_cfg
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        env_variable_cfg = {'torch.backends.cuda.matmul.allow_tf32': True}
+        cfg.env_cfg.env_variable_cfg = env_variable_cfg
+        cfg.experiment_name = 'test_build_logger1'
+        runner = Runner.from_cfg(cfg)
+        self.assertTrue(torch.backends.cuda.matmul.allow_tf32)
+
+        env_variable_cfg['torch.backends.cuda.matmul.allow_tf32'] = False
+        runner.setup_env(cfg.env_cfg)
+        self.assertFalse(torch.backends.cuda.matmul.allow_tf32)
+
+        # Test invalid env_variable_cfg
+        with self.assertRaisesRegex(ValueError,
+                                    'torch.backends.cuda.matmul.allow_tf31'):
+            cfg.env_cfg.env_variable_cfg = {
+                'torch.backends.cuda.matmul.allow_tf31': True
+            }
+            runner.setup_env(cfg.env_cfg)
+
+        # Test set env_variable_cfg with randomness_cfg
+        with self.assertRaisesRegex(ValueError,
+                                    'torch.backends.cudnn.benchmark'):
+            cfg.env_cfg.env_variable_cfg = {
+                'torch.backends.cudnn.benchmark': True
+            }
+            runner.setup_env(cfg.env_cfg)
+
+        # Test invalid module
+        with self.assertRaisesRegex(ImportError, 'Cannot import'):
+            cfg.env_cfg.env_variable_cfg = {
+                'unknown.backends.cudnn.benchmark': True
+            }
+            runner.setup_env(cfg.env_cfg)
 
     def test_build_logger(self):
         self.epoch_based_cfg.experiment_name = 'test_build_logger1'
