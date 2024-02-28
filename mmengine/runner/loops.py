@@ -382,7 +382,8 @@ class ValLoop(BaseLoop):
             metrics[loss_name] = avg_loss
             if 'loss' in loss_name:
                 val_loss += avg_loss  # type: ignore
-        metrics['val_loss'] = val_loss
+        if val_loss != 0:
+            metrics['val_loss'] = val_loss
 
         self.runner.call_hook('after_val_epoch', metrics=metrics)
         self.runner.call_hook('after_val')
@@ -479,7 +480,8 @@ class TestLoop(BaseLoop):
             metrics[loss_name] = avg_loss
             if 'loss' in loss_name:
                 test_loss += avg_loss  # type: ignore
-        metrics['test_loss'] = test_loss
+        if test_loss != 0:
+            metrics['test_loss'] = test_loss
 
         self.runner.call_hook('after_test_epoch', metrics=metrics)
         self.runner.call_hook('after_test')
