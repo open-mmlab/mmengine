@@ -370,6 +370,9 @@ class ValLoop(BaseLoop):
         self.runner.call_hook('before_val')
         self.runner.call_hook('before_val_epoch')
         self.runner.model.eval()
+
+        # clear val loss
+        self.val_loss = dict()
         for idx, data_batch in enumerate(self.dataloader):
             self.run_iter(idx, data_batch)
 
@@ -382,7 +385,7 @@ class ValLoop(BaseLoop):
             metrics[loss_name] = avg_loss
             if 'loss' in loss_name:
                 val_loss += avg_loss  # type: ignore
-        if val_loss != 0:
+        if len(self.val_loss.keys()) != 0:
             metrics['val_loss'] = val_loss
 
         self.runner.call_hook('after_val_epoch', metrics=metrics)
@@ -468,6 +471,9 @@ class TestLoop(BaseLoop):
         self.runner.call_hook('before_test')
         self.runner.call_hook('before_test_epoch')
         self.runner.model.eval()
+
+        # clear test loss
+        self.test_loss = dict()
         for idx, data_batch in enumerate(self.dataloader):
             self.run_iter(idx, data_batch)
 
@@ -480,7 +486,7 @@ class TestLoop(BaseLoop):
             metrics[loss_name] = avg_loss
             if 'loss' in loss_name:
                 test_loss += avg_loss  # type: ignore
-        if test_loss != 0:
+        if len(self.test_loss.keys()) != 0:
             metrics['test_loss'] = test_loss
 
         self.runner.call_hook('after_test_epoch', metrics=metrics)
