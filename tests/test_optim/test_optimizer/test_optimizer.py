@@ -592,12 +592,16 @@ class TestBuilder(TestCase):
             dwconv_decay_mult=0.1,
             dcn_offset_lr_mult=0.1)
 
-        for param in self.model.parameters():
-            param.requires_grad = False
+        self.model.conv1.requires_grad_(False)
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
-        with self.assertRaises(ValueError):
-            optim_constructor(self.model)
+        optim_wrapper = optim_constructor(self.model)
+
+        all_params = []
+        for pg in optim_wrapper.param_groups:
+            all_params.extend(map(id, pg['params']))
+        self.assertNotIn(id(self.model.conv1.weight), all_params)
+        self.assertIn(id(self.model.conv2.weight), all_params)
 
     def test_default_optimizer_constructor_bypass_duplicate(self):
         # paramwise_cfg with bypass_duplicate option
