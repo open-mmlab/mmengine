@@ -482,7 +482,7 @@ class TestLoop(BaseLoop):
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
 
         if self.test_loss:
-            # get test loss and save to metricsexit()
+            # get test loss and save to metrics
             test_loss = 0
             for loss_name, loss_value in self.test_loss.items():
                 avg_loss = sum(loss_value) / len(loss_value)
