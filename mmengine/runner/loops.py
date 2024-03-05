@@ -372,20 +372,21 @@ class ValLoop(BaseLoop):
         self.runner.model.eval()
 
         # clear val loss
-        self.val_loss = dict()
+        self.val_loss.clear()
         for idx, data_batch in enumerate(self.dataloader):
             self.run_iter(idx, data_batch)
 
         # compute metrics
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
-        # get val loss and save to metrics
-        val_loss = 0
-        for loss_name, loss_value in self.val_loss.items():
-            avg_loss = sum(loss_value) / len(loss_value)
-            metrics[loss_name] = avg_loss
-            if 'loss' in loss_name:
-                val_loss += avg_loss  # type: ignore
-        if len(self.val_loss.keys()) != 0:
+
+        if self.val_loss:
+            # get val loss and save to metrics
+            val_loss = 0
+            for loss_name, loss_value in self.val_loss.items():
+                avg_loss = sum(loss_value) / len(loss_value)
+                metrics[loss_name] = avg_loss
+                if 'loss' in loss_name:
+                    val_loss += avg_loss  # type: ignore
             metrics['val_loss'] = val_loss
 
         self.runner.call_hook('after_val_epoch', metrics=metrics)
@@ -473,20 +474,21 @@ class TestLoop(BaseLoop):
         self.runner.model.eval()
 
         # clear test loss
-        self.test_loss = dict()
+        self.test_loss.clear()
         for idx, data_batch in enumerate(self.dataloader):
             self.run_iter(idx, data_batch)
 
         # compute metrics
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
-        # get test loss and save to metrics
-        test_loss = 0
-        for loss_name, loss_value in self.test_loss.items():
-            avg_loss = sum(loss_value) / len(loss_value)
-            metrics[loss_name] = avg_loss
-            if 'loss' in loss_name:
-                test_loss += avg_loss  # type: ignore
-        if len(self.test_loss.keys()) != 0:
+
+        if self.test_loss:
+            # get test loss and save to metricsexit()
+            test_loss = 0
+            for loss_name, loss_value in self.test_loss.items():
+                avg_loss = sum(loss_value) / len(loss_value)
+                metrics[loss_name] = avg_loss
+                if 'loss' in loss_name:
+                    test_loss += avg_loss  # type: ignore
             metrics['test_loss'] = test_loss
 
         self.runner.call_hook('after_test_epoch', metrics=metrics)
