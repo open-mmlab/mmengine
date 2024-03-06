@@ -3,6 +3,9 @@ version: 2
 formats:
     - epub
 
+sphinx:
+  configuration: docs/zh_cn/conf.py
+
 # Set the version of Python and other tools you might need
 build:
   os: ubuntu-22.04
