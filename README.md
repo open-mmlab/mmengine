@@ -19,10 +19,9 @@
   <div>&nbsp;</div>
 
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mmengine)](https://pypi.org/project/mmengine/)
+[![pytorch](https://img.shields.io/badge/pytorch-1.6~2.1-yellow)](#installation)
 [![PyPI](https://img.shields.io/pypi/v/mmengine)](https://pypi.org/project/mmengine)
 [![license](https://img.shields.io/github/license/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/blob/main/LICENSE)
-[![open issues](https://isitmaintained.com/badge/open/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
-[![issue resolution](https://isitmaintained.com/badge/resolution/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 
 [Introduction](#introduction) |
 [Installation](#installation) |
@@ -96,6 +95,16 @@ MMEngine is a foundational library for training deep learning models based on Py
 - [ClearML](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#clearml) | [Neptune](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#neptune) | [DVCLive](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#dvclive) | [Aim](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#aim)
 
 ## Installation
+
+<details>
+<summary>Supported PyTorch Versions</summary>
+
+| MMEngine           | PyTorch      | Python         |
+| ------------------ | ------------ | -------------- |
+| main               | >=1.6 \<=2.1 | >=3.8, \<=3.11 |
+| >=0.9.0, \<=0.10.3 | >=1.6 \<=2.1 | >=3.8, \<=3.11 |
+
+</details>
 
 Before installing MMEngine, please ensure that PyTorch has been successfully installed following the [official guide](https://pytorch.org/get-started/locally/).
 
