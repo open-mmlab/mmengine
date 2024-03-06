@@ -128,9 +128,11 @@ class Runner:
             ``runner.val()`` will be performed under fp16 precision.
             Defaults to None. See :meth:`build_test_loop` for more details.
         auto_scale_lr (dict, Optional): Config to scale the learning rate
-            automatically. It includes ``base_batch_size`` and ``enable``.
-            ``base_batch_size`` is the batch size that the optimizer lr is
-            based on. ``enable`` is the switch to turn on and off the feature.
+            automatically. It includes ``base_batch_size``,
+            ``accumulative_counts`` and ``enable``. ``base_batch_size`` is the
+            batch size that the optimizer lr is based on;
+            ``accumulative_counts`` is the accumulative counts of the gradient.
+            ``enable`` is the switch to turn on and off the feature.
         optim_wrapper (OptimWrapper or dict, optional):
             Computing gradient of model parameters. If specified,
             :attr:`train_dataloader` should also be specified. If automatic
@@ -227,7 +229,8 @@ class Runner:
         >>>         sampler=dict(type='DefaultSampler', shuffle=False),
         >>>         batch_size=1,
         >>>         num_workers=0),
-        >>>     auto_scale_lr=dict(base_batch_size=16, enable=False),
+        >>>     auto_scale_lr=dict(
+        >>>        base_batch_size=16, accumulative_counts=1, enable=False),
         >>>     optim_wrapper=dict(type='OptimizerWrapper', optimizer=dict(
         >>>         type='SGD', lr=0.01)),
         >>>     param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
@@ -958,10 +961,7 @@ class Runner:
             dataloader, DataLoader) else dataloader['batch_size']
         real_bs = self.world_size * bs
         base_bs = auto_scale_lr['base_batch_size']
-        ratio = float(real_bs) / float(base_bs)
-        self.logger.info(f'LR is set based on batch size of {base_bs} '
-                         f'and the current batch size is {real_bs}. '
-                         f'Scaling the original LR by {ratio}.')
+        bs_ratio = float(real_bs) / float(base_bs)
 
         def _is_built(schedulers):
             if isinstance(schedulers, dict):
@@ -980,9 +980,19 @@ class Runner:
             '`scale_lr should be called after building OptimWrapper'
         wrappers = list(optim_wrapper.values()) if isinstance(
             optim_wrapper, OptimWrapperDict) else [optim_wrapper]
+        base_acc_counts = auto_scale_lr.get('accumulative_counts', 1)
         for wrapper in wrappers:
+            real_acc_counts = wrapper._accumulative_counts
+            acc_counts_ratio = (real_acc_counts / base_acc_counts)
+            ratio = acc_counts_ratio * bs_ratio
             for group in wrapper.optimizer.param_groups:
-                group['lr'] = group['lr'] * ratio
+                self.logger.info(
+                    f'LR is set based on batch size of {base_bs}, '
+                    f'accumulative counts of {base_acc_counts}'
+                    f'and the current batch size is {real_bs}, accumulative '
+                    f'counts of {real_acc_counts}. Scaling the original LR '
+                    f'by {ratio}.')
+                group['lr'] = (group['lr'] * ratio)
 
     def build_optim_wrapper(
         self, optim_wrapper: Union[Optimizer, OptimWrapper, Dict]
