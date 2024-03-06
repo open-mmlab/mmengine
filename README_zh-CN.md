@@ -19,10 +19,9 @@
   <div>&nbsp;</div>
 
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mmengine)](https://pypi.org/project/mmengine/)
+[![pytorch](https://img.shields.io/badge/pytorch-1.6~2.1-yellow)](#安装)
 [![PyPI](https://img.shields.io/pypi/v/mmengine)](https://pypi.org/project/mmengine)
 [![license](https://img.shields.io/github/license/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/blob/main/LICENSE)
-[![open issues](https://isitmaintained.com/badge/open/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
-[![issue resolution](https://isitmaintained.com/badge/resolution/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 
 [简介](#简介) |
 [安装](#安装) |
@@ -101,6 +100,16 @@ MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的�
 - 华为 Ascend | 寒武纪 MLU | 摩尔线程 MUSA
 
 ## 安装
+
+<details>
+<summary>支持的 PyTorch 版本</summary>
+
+| MMEngine           | PyTorch      | Python         |
+| ------------------ | ------------ | -------------- |
+| main               | >=1.6 \<=2.1 | >=3.8, \<=3.11 |
+| >=0.9.0, \<=0.10.3 | >=1.6 \<=2.1 | >=3.8, \<=3.11 |
+
+</details>
 
 在安装 MMEngine 之前，请确保 PyTorch 已成功安装在环境中，可以参考 [PyTorch 官方安装文档](https://pytorch.org/get-started/locally/)。
 
