@@ -56,6 +56,10 @@ def assert_allclose(
             actual, expected, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
+def assert_tensor_equal(tensor_a, tensor_b):
+    assert tensor_a.eq(tensor_b).all()
+
+
 def check_python_script(cmd):
     """Run the python cmd script with `__main__`. The difference between
     `os.system` is that, this function exectues code in the current process, so
