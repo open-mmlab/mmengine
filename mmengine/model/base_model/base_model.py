@@ -203,8 +203,11 @@ class BaseModel(BaseModule):
                     torch_npu.npu, 'native_device') else 'privateuseone')
 
         device = torch._C._nn._parse_to(*args, **kwargs)[0]
+        dtype = torch._C._nn._parse_to(*args, **kwargs)[1]
         if device is not None:
             self._set_device(torch.device(device))
+        if dtype is not None:
+            self._set_dtype(dtype)
         return super().to(*args, **kwargs)
 
     def cuda(
@@ -279,6 +282,13 @@ class BaseModel(BaseModule):
         """
         self._set_device(torch.device('cpu'))
         return super().cpu()
+
+    def _set_dtype(self, dtype: torch.dtype) -> None:
+        def apply_fn(module):
+            if not isinstance(module, BaseDataPreprocessor):
+                return
+            module._dtype = dtype
+        self.apply(apply_fn)
 
     def _set_device(self, device: torch.device) -> None:
         """Recursively set device for `BaseDataPreprocessor` instance.
