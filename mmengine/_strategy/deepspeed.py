@@ -553,8 +553,8 @@ class DeepSpeedStrategy(BaseStrategy):
 
         state_dict_kwargs = {}
         if digit_version(deepspeed.__version__) >= digit_version('0.13.2'):
-            state_dict_kwargs.update(
-                {'exclude_frozen_parameters': self.exclude_frozen_parameters})
+            state_dict_kwargs[
+                'exclude_frozen_parameters'] = self.exclude_frozen_parameters
 
         if save_optimizer:
             if hasattr(self, 'optim_wrapper'):
