@@ -563,7 +563,6 @@ class DeepSpeedStrategy(BaseStrategy):
                 extra_ckpt['optim_wrapper'] = self.optim_state_dict()
 
             dirname, basename = osp.split(filename)
-
             self.model.save_checkpoint(
                 dirname,
                 tag=basename,
