@@ -95,7 +95,7 @@ class BaseMetric(metaclass=ABCMeta):
             and the values are corresponding results.
         """
 
-    def evaluate(self, size: int) -> dict:
+    def evaluate(self, dataset) -> dict:
         """Evaluate the model performance of the whole dataset after processing
         all batches.
 
@@ -110,6 +110,7 @@ class BaseMetric(metaclass=ABCMeta):
             dict: Evaluation metrics dict on the val dataset. The keys are the
             names of the metrics, and the values are corresponding results.
         """
+        size = len(dataset)
         if len(self.results) == 0:
             print_log(
                 f'{self.__class__.__name__} got empty `self.results`. Please '
@@ -130,7 +131,26 @@ class BaseMetric(metaclass=ABCMeta):
         if is_main_process():
             # cast all tensors in results list to cpu
             results = _to_cpu(results)
-            _metrics = self.compute_metrics(results)  # type: ignore
+            from mmengine.dataset.dataset_wrapper import ConcatDataset
+            _metrics = dict()
+            if isinstance(dataset, ConcatDataset):
+                base_i = 0
+                for d in dataset.datasets:
+                    dataset_name = d.data_root
+                    print_log(f"Start evaluating {dataset_name} including {len(d)} samples...", logger="current")
+                    t = self.compute_metrics(results[base_i: base_i + len(d)])  # type: ignore
+                    base_i += len(d)
+                    for key in t:
+                        _metrics[f"{key}/{dataset_name}"] = t[key]
+            else:
+                t = self.compute_metrics(results)  # type: ignore
+                if hasattr(dataset, "data_root"):
+                    dataset_name = dataset.data_root
+                else:
+                    dataset_name = "dataset"
+                for key in t:
+                    _metrics[f"{key}/{dataset_name}"] = t[key]
+
             # Add prefix to metric names
             if self.prefix:
                 _metrics = {
