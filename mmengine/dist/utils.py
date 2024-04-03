@@ -199,7 +199,7 @@ def _slurm_extract_first_node(slurm_nodelist):
     return first_node_name
 
 
-def is_scontrol_available():
+def _is_scontrol_available():
     try:
         subprocess.run(["scontrol", "-h"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
         return True
@@ -232,7 +232,7 @@ def _init_dist_slurm(backend,
     else:
         num_gpus = torch.cuda.device_count()
         local_rank = proc_id % num_gpus
-    if (is_scontrol_available()):
+    if (_is_scontrol_available()):
         addr = subprocess.getoutput(
             f'scontrol show hostname {node_list} | head -n1')
     else:
