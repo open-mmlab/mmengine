@@ -98,7 +98,8 @@ class EpochBasedTrainLoop(BaseLoop):
             self._decide_current_val_interval()
             if (self.runner.val_loop is not None
                     and self._epoch >= self.val_begin
-                    and self._epoch % self.val_interval == 0):
+                    and (self._epoch % self.val_interval == 0
+                         or self._epoch == self._max_epochs)):
                 self.runner.val_loop.run()
 
         self.runner.call_hook('after_train')
@@ -288,7 +289,8 @@ class IterBasedTrainLoop(BaseLoop):
             self._decide_current_val_interval()
             if (self.runner.val_loop is not None
                     and self._iter >= self.val_begin
-                    and self._iter % self.val_interval == 0):
+                    and (self._iter % self.val_interval == 0
+                         or self._iter == self._max_iters)):
                 self.runner.val_loop.run()
 
         self.runner.call_hook('after_train_epoch')
