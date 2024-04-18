@@ -905,7 +905,9 @@ class ClearMLVisBackend(BaseVisBackend):
 
         task_kwargs = self._init_kwargs or {}
         self._clearml = clearml
-        self._task = self._clearml.Task.init(**task_kwargs)
+        self._task = self._clearml.Task.current_task()
+        if self._task is None:
+            self._task = self._clearml.Task.init(**task_kwargs)
         self._logger = self._task.get_logger()
 
     @property  # type: ignore
