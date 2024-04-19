@@ -879,7 +879,7 @@ class Visualizer(ManagerMixin):
         if binary_masks.ndim == 2:
             binary_masks = binary_masks[None]
         assert img.shape[:2] == binary_masks.shape[
-                                1:], '`binary_marks` must have ' \
+                                1:], '`binary_masks` must have ' \
                                      'the same shape with image'
         binary_mask_len = binary_masks.shape[0]
 
