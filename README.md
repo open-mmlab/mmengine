@@ -59,14 +59,14 @@ English | [简体中文](README_zh-CN.md)
 
 ## What's New
 
-v0.10.3 was released on 2024-1-24.
+v0.10.4 was released on 2024-4-23.
 
 Highlights:
 
-- Add the support for musa device [#1453](#1453)
-- Add the usage of ProfilerHook [#1466](#1466)
+- Support custom `artifact_location` in MLflowVisBackend [#1505](#1505)
+- Enable `exclude_frozen_parameters` for `DeepSpeedEngine._zero3_consolidated_16bit_state_dict` [#1517](#1517)
 
-Read [Changelog](./docs/en/notes/changelog.md#v0103-2412024) for more details.
+Read [Changelog](./docs/en/notes/changelog.md#v0104-2342024) for more details.
 
 ## Introduction
 
@@ -102,7 +102,7 @@ MMEngine is a foundational library for training deep learning models based on Py
 | MMEngine           | PyTorch      | Python         |
 | ------------------ | ------------ | -------------- |
 | main               | >=1.6 \<=2.1 | >=3.8, \<=3.11 |
-| >=0.9.0, \<=0.10.3 | >=1.6 \<=2.1 | >=3.8, \<=3.11 |
+| >=0.9.0, \<=0.10.4 | >=1.6 \<=2.1 | >=3.8, \<=3.11 |
 
 </details>
 

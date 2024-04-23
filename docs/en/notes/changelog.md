@@ -1,5 +1,29 @@
 # Changelog of v0.x
 
+## v0.10.4 (23/4/2024)
+
+### New Features & Enhancements
+
+- Support custom `artifact_location` in MLflowVisBackend. by [@daavoo](https://github.com/daavoo) in https://github.com/open-mmlab/mmengine/pull/1505
+- Add the supported pytorch versions in README by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1512
+- Perform evaluation upon training completion by [@LZHgrla](https://github.com/LZHgrla) in https://github.com/open-mmlab/mmengine/pull/1529
+- Enable `exclude_frozen_parameters` for `DeepSpeedEngine._zero3_consolidated_16bit_state_dict` by [@LZHgrla](https://github.com/LZHgrla) in https://github.com/open-mmlab/mmengine/pull/1517
+
+### Bug Fixes
+
+- Fix warning capture by [@fanqiNO1](https://github.com/fanqiNO1) in https://github.com/open-mmlab/mmengine/pull/1494
+- Remove codeowners file by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1496
+- Fix config of readthedocs by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1511
+- Delete frozen parameters when using `paramwise_cfg` by [@LZHgrla](https://github.com/LZHgrla) in https://github.com/open-mmlab/mmengine/pull/1441
+
+### Docs
+
+- Refine mmengine intro by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1479
+- Fix typo by [@zhouzaida](https://github.com/zhouzaida) in https://github.com/open-mmlab/mmengine/pull/1481
+- Fix typos and remove fullwidth unicode chars by [@evdcush](https://github.com/evdcush) in https://github.com/open-mmlab/mmengine/pull/1488
+- Fix docstring of Config by [@MambaWong](https://github.com/MambaWong) in https://github.com/open-mmlab/mmengine/pull/1506
+- Fix typo by [@hiramf](https://github.com/hiramf) in https://github.com/open-mmlab/mmengine/pull/1532
+
 ## v0.10.3 (24/1/2024)
 
 ### New Features & Enhancements
