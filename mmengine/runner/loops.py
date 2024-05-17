@@ -504,7 +504,7 @@ def _parse_losses(losses: Dict[str, HistoryBuffer],
 
     Returns:
         dict[str, float]: The key is the loss name, and the value is the
-            average loss.
+        average loss.
     """
     all_loss = 0
     loss_dict: Dict[str, float] = dict()
