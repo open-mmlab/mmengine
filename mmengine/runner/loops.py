@@ -297,8 +297,7 @@ class IterBasedTrainLoop(BaseLoop):
                 'that has already been trained',
                 logger='current',
                 level=logging.WARNING)
-            for _ in range(self._iter):
-                next(self.dataloader_iterator)
+            self.dataloader_iterator.skip_iter(self.iter)
         while self._iter < self._max_iters and not self.stop_training:
             self.runner.model.train()
 
