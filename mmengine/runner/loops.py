@@ -2,7 +2,7 @@
 import bisect
 import logging
 import time
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import torch
 from torch.utils.data import DataLoader
@@ -156,15 +156,26 @@ class _InfiniteDataloaderIterator:
 
     def __init__(self, dataloader: DataLoader) -> None:
         self._dataloader = dataloader
-        self._iterator = iter(self._dataloader)
+        self._iterator: Any = iter(self._dataloader)
         self._epoch = 0
 
     def __iter__(self):
         return self
 
     def __next__(self) -> Sequence[dict]:
+        return self._next_data()
+
+    def skip_iter(self, iter: int) -> None:
+        for _ in range(iter):
+            self._next_data(skip_loading=True)
+
+    def _next_data(self, skip_loading=False) -> Any:
+        data = None
         try:
-            data = next(self._iterator)
+            if skip_loading:
+                self._iterator._next_index()
+            else:
+                data = next(self._iterator)
         except StopIteration:
             print_log(
                 'Reach the end of the dataloader, it will be '
@@ -188,8 +199,14 @@ class _InfiniteDataloaderIterator:
                 # attributes.
                 self._dataloader.batch_sampler.sampler.set_epoch(self._epoch)
             time.sleep(2)  # Prevent possible deadlock during epoch transition
-            self._iterator = iter(self._dataloader)
-            data = next(self._iterator)
+
+            bypass_mypy_checking: Any = iter(self._dataloader)
+            self._iterator = bypass_mypy_checking
+
+            if skip_loading:
+                bypass_mypy_checking._next_index()
+            else:
+                data = next(self._iterator)
         return data
 
 
