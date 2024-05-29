@@ -17,7 +17,7 @@ except Exception:
     IS_NPU_AVAILABLE = False
 
 try:
-    import torch_mlu
+    import torch_mlu  # noqa: F401
     IS_MLU_AVAILABLE = True
 except Exception:
     IS_MLU_AVAILABLE = False
