@@ -18,7 +18,7 @@ except Exception:
 
 try:
     import torch_mlu  # noqa: F401
-    IS_MLU_AVAILABLE = True
+    IS_MLU_AVAILABLE = hasattr(torch, 'mlu') and torch.mlu.is_available()
 except Exception:
     IS_MLU_AVAILABLE = False
 
