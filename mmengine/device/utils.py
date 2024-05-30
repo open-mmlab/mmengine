@@ -10,20 +10,22 @@ try:
 
     # Enable operator support for dynamic shape and
     # binary operator support on the NPU.
-    npu_jit_compile = bool(os.getenv('NPUJITCompile', False))
+    npu_jit_compile = bool(os.getenv("NPUJITCompile", False))
     torch.npu.set_compile_mode(jit_compile=npu_jit_compile)
-    IS_NPU_AVAILABLE = hasattr(torch, 'npu') and torch.npu.is_available()
+    IS_NPU_AVAILABLE = hasattr(torch, "npu") and torch.npu.is_available()
 except Exception:
     IS_NPU_AVAILABLE = False
 
 try:
     import torch_dipu  # noqa: F401
+
     IS_DIPU_AVAILABLE = True
 except Exception:
     IS_DIPU_AVAILABLE = False
 
 try:
     import torch_musa  # noqa: F401
+
     IS_MUSA_AVAILABLE = True
 except Exception:
     IS_MUSA_AVAILABLE = False
@@ -45,9 +47,7 @@ def get_max_cuda_memory(device: Optional[torch.device] = None) -> int:
         for a given device.
     """
     mem = torch.cuda.max_memory_allocated(device=device)
-    mem_mb = torch.tensor([int(mem) // (1024 * 1024)],
-                          dtype=torch.int,
-                          device=device)
+    mem_mb = torch.tensor([int(mem) // (1024 * 1024)], dtype=torch.int, device=device)
     torch.cuda.reset_peak_memory_stats()
     return int(mem_mb.item())
 
@@ -64,7 +64,7 @@ def is_npu_available() -> bool:
 
 def is_mlu_available() -> bool:
     """Returns True if Cambricon PyTorch and mlu devices exist."""
-    return hasattr(torch, 'is_mlu_available') and torch.is_mlu_available()
+    return hasattr(torch, "is_mlu_available") and torch.is_mlu_available()
 
 
 def is_mps_available() -> bool:
@@ -72,7 +72,7 @@ def is_mps_available() -> bool:
 
     It's specialized for mac m1 chips and require torch version 1.12 or higher.
     """
-    return hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
+    return hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
 
 
 def is_dipu_available() -> bool:
@@ -95,9 +95,7 @@ def get_max_musa_memory(device: Optional[torch.device] = None) -> int:
         for a given device.
     """
     mem = torch.musa.max_memory_allocated(device=device)
-    mem_mb = torch.tensor([int(mem) // (1024 * 1024)],
-                          dtype=torch.int,
-                          device=device)
+    mem_mb = torch.tensor([int(mem) // (1024 * 1024)], dtype=torch.int, device=device)
     # TODO:haowen.han@mthreads.com: This function is not supported by musa yet.
     # torch.musa.reset_peak_memory_stats()
     return int(mem_mb.item())
@@ -110,29 +108,37 @@ def is_musa_available() -> bool:
 def is_npu_support_full_precision() -> bool:
     """Returns True if npu devices support full precision training."""
     version_of_support_full_precision = 220
-    return IS_NPU_AVAILABLE and npu_utils.get_soc_version(
-    ) >= version_of_support_full_precision
+    return (
+        IS_NPU_AVAILABLE
+        and npu_utils.get_soc_version() >= version_of_support_full_precision
+    )
 
 
-DEVICE = 'cpu'
+ADVAILABLE_DEVICES = ["cpu"]
 if is_npu_available():
-    DEVICE = 'npu'
+    ADVAILABLE_DEVICES.append("npu")
 elif is_cuda_available():
-    DEVICE = 'cuda'
+    ADVAILABLE_DEVICES.append("cuda")
 elif is_mlu_available():
-    DEVICE = 'mlu'
+    ADVAILABLE_DEVICES.append("mlu")
 elif is_mps_available():
-    DEVICE = 'mps'
+    ADVAILABLE_DEVICES.append("mps")
 elif is_dipu_available():
-    DEVICE = 'dipu'
+    ADVAILABLE_DEVICES.append("dipu")
 elif is_musa_available():
-    DEVICE = 'musa'
+    ADVAILABLE_DEVICES.append("musa")
 
 
-def get_device() -> str:
+def get_device(selected_device: str = None) -> str:
     """Returns the currently existing device type.
 
     Returns:
         str: cuda | npu | mlu | mps | musa | cpu.
     """
-    return DEVICE
+    if selected_device is not None:
+        if selected_device in ADVAILABLE_DEVICES:
+            return selected_device
+        raise ValueError(
+            f"Device {selected_device} is not available, available devices are {ADVAILABLE_DEVICES}."
+        )
+    return ADVAILABLE_DEVICES[-1]
