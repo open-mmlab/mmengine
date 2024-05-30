@@ -39,6 +39,10 @@ Loop
 Checkpoints
 ----------------
 
+.. warn::
+
+   All functions and classes in this file have been moved to `mmengine.checkpoint`. Please import them from `mmengine.checkpoint`.
+
 .. autosummary::
    :toctree: generated
    :nosignatures:

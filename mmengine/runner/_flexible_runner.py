@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 
 import mmengine
 from mmengine._strategy import BaseStrategy
+from mmengine.checkpoint import find_latest_checkpoint
 from mmengine.config import Config, ConfigDict
 from mmengine.dataset import worker_init_fn as default_worker_init_fn
 from mmengine.dist import get_rank, infer_launcher, master_only
@@ -27,7 +28,6 @@ from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.visualization import Visualizer
 from .base_loop import BaseLoop
-from .checkpoint import find_latest_checkpoint
 from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority

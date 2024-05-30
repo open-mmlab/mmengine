@@ -37,5 +37,5 @@ mmengine._strategy
    :nosignatures:
    :template: classtemplate.rst
 
-   CollosalAIModelWrapper
+   ColossalAIModelWrapper
    ColossalAIOptimWrapper

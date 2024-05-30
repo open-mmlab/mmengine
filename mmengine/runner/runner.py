@@ -18,6 +18,9 @@ from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
 import mmengine
+from mmengine.checkpoint import (find_latest_checkpoint, save_checkpoint,
+                                 weights_to_cpu)
+from mmengine.checkpoint.io import _load_checkpoint, _load_checkpoint_to_model
 from mmengine.config import Config, ConfigDict
 from mmengine.dataset import worker_init_fn as default_worker_init_fn
 from mmengine.device import get_device
@@ -43,9 +46,6 @@ from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
 from mmengine.visualization import Visualizer
 from .activation_checkpointing import turn_on_activation_checkpointing
 from .base_loop import BaseLoop
-from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
-                         find_latest_checkpoint, save_checkpoint,
-                         weights_to_cpu)
 from .log_processor import LogProcessor
 from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
 from .priority import Priority, get_priority
