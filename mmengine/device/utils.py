@@ -17,6 +17,12 @@ except Exception:
     IS_NPU_AVAILABLE = False
 
 try:
+    import torch_mlu  # noqa: F401
+    IS_MLU_AVAILABLE = hasattr(torch, 'mlu') and torch.mlu.is_available()
+except Exception:
+    IS_MLU_AVAILABLE = False
+
+try:
     import torch_dipu  # noqa: F401
     IS_DIPU_AVAILABLE = True
 except Exception:
@@ -64,7 +70,7 @@ def is_npu_available() -> bool:
 
 def is_mlu_available() -> bool:
     """Returns True if Cambricon PyTorch and mlu devices exist."""
-    return hasattr(torch, 'is_mlu_available') and torch.is_mlu_available()
+    return IS_MLU_AVAILABLE
 
 
 def is_mps_available() -> bool:
