@@ -104,8 +104,8 @@ class AmpOptimWrapper(OptimWrapper):
                 init_scale=loss_scale, enabled=enable_loss_scaler)
         elif isinstance(loss_scale, dict):
             # More specific configuration.
-            loss_scale[
-                'enabled'] = loss_scale['enabled'] and enable_loss_scaler
+            loss_scale['enabled'] = loss_scale.pop('enabled',
+                                                   True) and enable_loss_scaler
             self.loss_scaler = scaler_type(**loss_scale)
         else:
             raise TypeError('loss_scale must be of type float, dict, or '
