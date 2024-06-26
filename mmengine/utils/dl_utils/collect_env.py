@@ -157,6 +157,8 @@ def collect_env():
         env_info['TorchVision'] = torchvision.__version__
     except ModuleNotFoundError:
         pass
+    except RuntimeError:
+        pass
 
     try:
         import cv2
