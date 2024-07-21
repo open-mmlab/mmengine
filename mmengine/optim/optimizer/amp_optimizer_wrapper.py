@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from contextlib import contextmanager
+from functools import partial
 from typing import Union
 
 import torch
@@ -17,7 +18,9 @@ if is_npu_available():
 elif is_mlu_available():
     from torch.mlu.amp import GradScaler
 else:
-    from torch.cuda.amp import GradScaler
+    # from torch.cuda.amp import GradScaler
+    from torch.amp import GradScaler as amp_GradScaler
+    GradScaler = partial(amp_GradScaler, device='cuda')
 
 
 @OPTIM_WRAPPERS.register_module()
