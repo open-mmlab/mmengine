@@ -322,7 +322,8 @@ class BaseStrategy(metaclass=ABCMeta):
         Returns:
             nn.Module: Compiled model.
         """
-        if isinstance(compile, bool) and not compile:
+        if  isinstance(compile, bool) and not compile or \
+            isinstance(compile, dict) and not compile.get('disable', False):
             return model
 
         assert digit_version(TORCH_VERSION) >= digit_version('2.0.0'), (
