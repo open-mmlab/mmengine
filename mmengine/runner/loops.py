@@ -16,6 +16,7 @@ from .amp import autocast
 from .base_loop import BaseLoop
 from .utils import calc_dynamic_intervals
 
+from rich.progress import track
 
 @LOOPS.register_module()
 class EpochBasedTrainLoop(BaseLoop):
@@ -280,7 +281,7 @@ class IterBasedTrainLoop(BaseLoop):
                 'that has already been trained',
                 logger='current',
                 level=logging.WARNING)
-            for _ in range(self._iter):
+            for _ in track(range(self._iter), description='Forwarding dataloader'):
                 next(self.dataloader_iterator)
         while self._iter < self._max_iters and not self.stop_training:
             self.runner.model.train()
