@@ -12,6 +12,7 @@ from mmengine.fileio import load
 from mmengine.utils import check_file_exist
 
 PYTHON_ROOT_DIR = osp.dirname(osp.dirname(sys.executable))
+SYSTEM_PYTHON_PREFIX = '/usr/lib/python'
 
 MODULE2PACKAGE = {
     'mmcls': 'mmcls',
@@ -176,7 +177,8 @@ def _is_builtin_module(module_name: str) -> bool:
         return False
     origin_path = osp.abspath(origin_path)
     if ('site-package' in origin_path or 'dist-package' in origin_path
-            or not origin_path.startswith(PYTHON_ROOT_DIR)):
+            or not origin_path.startswith(
+                (PYTHON_ROOT_DIR, SYSTEM_PYTHON_PREFIX))):
         return False
     else:
         return True
