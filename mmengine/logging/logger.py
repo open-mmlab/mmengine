@@ -258,7 +258,7 @@ class MMLogger(Logger, ManagerMixin):
                     # change the file mode to the default behavior.
                     # `FileHandler` is not supported to have colors,
                     # otherwise it will appear garbled.
-                    file_handler = logging.FileHandler(log_file, file_mode)
+                    file_handler = logging.FileHandler(log_file, file_mode, encoding='utf-8')
 
                 # `StreamHandler` record year, month, day hour, minute,
                 # and second timestamp. file_handler will only record logs
