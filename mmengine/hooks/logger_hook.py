@@ -288,9 +288,7 @@ class LoggerHook(Hook):
         tag, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.test_dataloader), 'test', with_non_scalar=True)
         runner.logger.info(log_str)
-        dump(
-            self._process_tags(tag),
-            osp.join(runner.log_dir, self.json_log_path))  # type: ignore
+        runner.visualizer.add_scalars(tag, step=iter, file_path=self.json_log_path)
 
     @staticmethod
     def _process_tags(tags: dict):
