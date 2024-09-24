@@ -1571,6 +1571,7 @@ class FlexibleRunner:
         elif not isinstance(meta, dict):
             raise TypeError(
                 f'meta should be a dict or None, but got {type(meta)}')
+        meta['float16'] = False
 
         if by_epoch:
             # self.epoch increments 1 after

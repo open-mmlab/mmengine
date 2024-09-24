@@ -484,6 +484,9 @@ class BaseInferencer(metaclass=InferencerMeta):
         model.cfg = cfg
         self._load_weights_to_model(model, checkpoint, cfg)
         model.to(device)
+        if 'cuda' in device and checkpoint is not None and checkpoint.get(
+                'meta', {}).get('float16', False):
+            model.half()
         model.eval()
         return model
 
