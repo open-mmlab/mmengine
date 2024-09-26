@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from .aws_backend import AWSBackend
 from .base import BaseStorageBackend
 from .http_backend import HTTPBackend
 from .lmdb_backend import LmdbBackend
@@ -9,6 +10,6 @@ from .registry_utils import backends, prefix_to_backends, register_backend
 
 __all__ = [
     'BaseStorageBackend', 'LocalBackend', 'HTTPBackend', 'LmdbBackend',
-    'MemcachedBackend', 'PetrelBackend', 'register_backend', 'backends',
-    'prefix_to_backends'
+    'AWSBackend', 'MemcachedBackend', 'PetrelBackend', 'register_backend',
+    'backends', 'prefix_to_backends'
 ]
