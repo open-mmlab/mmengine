@@ -1,9 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import os.path as osp
-from typing import Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Union
 
-import cv2
-import numpy as np
+import torch
 
 from mmengine.hooks import Hook
 from mmengine.registry import HOOKS
@@ -30,24 +28,16 @@ class NaiveVisualizationHook(Hook):
                  interval: int = 1,
                  draw_gt: bool = True,
                  draw_pred: bool = True):
+        assert isinstance(interval, int) and interval > 0, (
+            f'`interval` must be a positive integer, but got {interval}')
+        assert isinstance(
+            draw_gt, bool), (f'`draw_gt` must be a boolean, but got {draw_gt}')
+        assert isinstance(
+            draw_pred,
+            bool), (f'`draw_pred` must be a boolean, but got {draw_pred}')
         self.draw_gt = draw_gt
         self.draw_pred = draw_pred
         self._interval = interval
-
-    def _unpad(self, input: np.ndarray, unpad_shape: Tuple[int,
-                                                           int]) -> np.ndarray:
-        """Unpad the input image.
-
-        Args:
-            input (np.ndarray): The image to unpad.
-            unpad_shape (tuple): The shape of image before padding.
-
-        Returns:
-            np.ndarray: The image before padding.
-        """
-        unpad_width, unpad_height = unpad_shape
-        unpad_image = input[:unpad_height, :unpad_width]
-        return unpad_image
 
     def before_train(self, runner) -> None:
         """Call add_graph method of visualizer.
@@ -71,20 +61,14 @@ class NaiveVisualizationHook(Hook):
             outputs (Sequence, optional): Outputs from model.
         """
         if self.every_n_inner_iters(batch_idx, self._interval):
-            for data, output in zip(data_batch, outputs):  # type: ignore
-                input = data['inputs']
-                data_sample = data['data_sample']
-                input = tensor2imgs(input,
-                                    **data_sample.get('img_norm_cfg',
-                                                      dict()))[0]
+            for idx, output in enumerate(outputs):  # type: ignore
+                inputs = data_batch['inputs'][idx]  # type: ignore
+                inputs = torch.stack([inputs])
+                data_sample = data_batch['data_samples'][idx]  # type: ignore
                 # TODO We will implement a function to revert the augmentation
                 # in the future.
-                ori_shape = (data_sample.ori_width, data_sample.ori_height)
-                if 'pad_shape' in data_sample:
-                    input = self._unpad(input,
-                                        data_sample.get('scale', ori_shape))
-                origin_image = cv2.resize(input, ori_shape)
-                name = osp.basename(data_sample.img_path)
-                runner.visualizer.add_datasample(name, origin_image,
-                                                 data_sample, output,
-                                                 self.draw_gt, self.draw_pred)
+                inputs = tensor2imgs(inputs)[0]
+                name = f'{batch_idx}_{idx}'
+                runner.visualizer.add_datasample(name, inputs, data_sample,
+                                                 output, self.draw_gt,
+                                                 self.draw_pred)
