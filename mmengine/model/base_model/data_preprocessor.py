@@ -37,6 +37,7 @@ class BaseDataPreprocessor(nn.Module):
         super().__init__()
         self._non_blocking = non_blocking
         self._device = torch.device('cpu')
+        self._dtype = None
 
     def cast_data(self, data: CastData) -> CastData:
         """Copying data to the target device.
@@ -56,7 +57,11 @@ class BaseDataPreprocessor(nn.Module):
             return type(data)(*(self.cast_data(sample) for sample in data))  # type: ignore  # noqa: E501  # yapf:disable
         elif isinstance(data, Sequence):
             return type(data)(self.cast_data(sample) for sample in data)  # type: ignore  # noqa: E501  # yapf:disable
-        elif isinstance(data, (torch.Tensor, BaseDataElement)):
+        elif isinstance(data, (torch.Tensor)):
+            return data.to(
+                self.device, non_blocking=self._non_blocking,
+                dtype=self._dtype if data.is_floating_point() else None)
+        elif isinstance(data, BaseDataElement):
             return data.to(self.device, non_blocking=self._non_blocking)
         else:
             return data
@@ -263,7 +268,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
                     _batch_input = _batch_input[[2, 1, 0], ...]
                 # Convert to float after channel conversion to ensure
                 # efficiency
-                _batch_input = _batch_input.float()
+                _batch_input = _batch_input.to(dtype=self._dtype)
                 # Normalization.
                 if self._enable_normalize:
                     if self.mean.shape[0] == 3:

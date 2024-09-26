@@ -422,6 +422,15 @@ class Runner:
         # flag to mark whether checkpoint has been loaded or resumed
         self._has_loaded = False
 
+        precision = cfg.get('precision')  # type: ignore
+        if not (isinstance(precision,
+                           (str, torch.dtype)) or precision is None):
+            raise TypeError('precision must be a str or torch.dtype')
+        if isinstance(precision, str):
+            precision = getattr(torch, precision)
+
+        self.precision = precision
+
         # build a model
         if isinstance(model, dict) and data_preprocessor is not None:
             # Merge the data_preprocessor to model config.
@@ -443,7 +452,6 @@ class Runner:
         # log hooks information
         self.logger.info(f'Hooks will be executed in the following '
                          f'order:\n{self.get_hooks_info()}')
-
         # dump `cfg` to `work_dir`
         self.dump_config()
 
@@ -831,9 +839,9 @@ class Runner:
             nn.Module: Model build from ``model``.
         """
         if isinstance(model, nn.Module):
-            return model
+            return model.to(dtype=self.precision)
         elif isinstance(model, dict):
-            model = MODELS.build(model)
+            model = MODELS.build(model).to(dtype=self.precision)
             return model  # type: ignore
         else:
             raise TypeError('model should be a nn.Module object or dict, '
@@ -1276,8 +1284,8 @@ class Runner:
 
             return param_schedulers
 
-    def build_evaluator(self, evaluator: Union[Dict, List,
-                                               Evaluator]) -> Evaluator:
+    @staticmethod
+    def build_evaluator(evaluator: Union[Dict, List, Evaluator]) -> Evaluator:
         """Build evaluator.
 
         Examples of ``evaluator``::
