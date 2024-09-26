@@ -12,6 +12,7 @@ import torch.nn as nn
 from torch.optim import Optimizer
 
 import mmengine
+from mmengine.checkpoint.io import _load_checkpoint_to_model
 from mmengine.config import Config, ConfigDict
 from mmengine.dist import (broadcast, get_dist_info, infer_launcher,
                            is_distributed)
@@ -792,8 +793,6 @@ class BaseStrategy(metaclass=ABCMeta):
         revise_keys: list = [(r'^module.', '')],
     ) -> None:
         """Load model state from dict."""
-        from mmengine.runner.checkpoint import _load_checkpoint_to_model
-
         if is_model_wrapper(self.model):
             model = self.model.module
         else:

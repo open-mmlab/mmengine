@@ -18,11 +18,11 @@ import logging
 import torch.nn as nn
 
 import mmengine
+from mmengine.checkpoint import save_checkpoint, weights_to_cpu
 from mmengine.dist import init_dist, is_main_process
 from mmengine.optim import BaseOptimWrapper, _ParamScheduler
 from mmengine.registry import (MODEL_WRAPPERS, OPTIM_WRAPPERS, OPTIMIZERS,
                                STRATEGIES)
-from mmengine.runner.checkpoint import save_checkpoint, weights_to_cpu
 from mmengine.utils import apply_to, digit_version, get_git_hash
 from .base import BaseStrategy
 

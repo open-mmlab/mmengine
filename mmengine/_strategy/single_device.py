@@ -5,6 +5,7 @@ from typing import Callable, Dict, List, Optional, Union
 import torch.nn as nn
 
 import mmengine
+from mmengine.checkpoint.io import _load_checkpoint, save_checkpoint
 from mmengine.device import get_device
 from mmengine.model import revert_sync_batchnorm
 from mmengine.optim import BaseOptimWrapper, _ParamScheduler
@@ -135,8 +136,6 @@ class SingleDeviceStrategy(BaseStrategy):
                 checkpoint after loading the checkpoint.
                 Defaults to None.
         """
-        from mmengine.runner.checkpoint import _load_checkpoint
-
         self.logger.info(f'Load checkpoint from {filename}')
 
         if map_location == 'default':
@@ -255,8 +254,6 @@ class SingleDeviceStrategy(BaseStrategy):
                 checkpoint before saving the checkpoint.
                 Defaults to None.
         """
-        from mmengine.runner.checkpoint import save_checkpoint
-
         state_dict: dict = dict()
         state_dict['state_dict'] = self.model_state_dict()
 
