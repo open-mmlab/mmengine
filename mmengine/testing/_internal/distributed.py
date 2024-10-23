@@ -94,8 +94,14 @@ class MultiProcessTestCase(TestCase):
     # or run the underlying test function.
     def __init__(self, method_name: str = 'runTest') -> None:
         super().__init__(method_name)
-        fn = getattr(self, method_name)
-        setattr(self, method_name, self.join_or_run(fn))
+        try:
+            fn = getattr(self, method_name)
+            setattr(self, method_name, self.join_or_run(fn))
+        except AttributeError as e:
+            if method_name != 'runTest':
+                # we allow instantiation with no explicit method name
+                # but not an *incorrect* or missing method name
+                raise ValueError(f"no such test method in {self.__class__}: {method_name}") from e
 
     def setUp(self) -> None:
         super().setUp()
