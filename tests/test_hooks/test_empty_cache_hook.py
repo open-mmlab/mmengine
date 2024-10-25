@@ -1,11 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from unittest.mock import patch
 
+import pytest
+
+from mmengine.device import is_cuda_available
 from mmengine.testing import RunnerTestCase
 
 
 class TestEmptyCacheHook(RunnerTestCase):
 
+    @pytest.mark.skipif(
+        not is_cuda_available(), reason='cuda should be available')
     def test_with_runner(self):
         with patch('torch.cuda.empty_cache') as mock_empty_cache:
             cfg = self.epoch_based_cfg

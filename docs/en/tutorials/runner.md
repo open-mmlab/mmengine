@@ -20,7 +20,7 @@ Pros and cons lie in both approaches. For the former one, beginners may be lost 
 
 We argue that the key to learning runner is using it as a memo. You should remember its most commonly used arguments and only focus on those less used when in need, since default values usually work fine. In the following, we will provide a beginner-friendly example to illustrate the most commonly used arguments of the runner, along with advanced guidelines for those less used.
 
-### A beginer-friendly example
+### A beginner-friendly example
 
 ```{hint}
 In this tutorial, we hope you can focus more on overall architecture instead of implementation details. This "top-down" way of thinking is exactly what we advocate. Don't worry, you will definitely have plenty of opportunities and guidance afterward to focus on modules you want to improve.

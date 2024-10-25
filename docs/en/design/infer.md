@@ -87,10 +87,10 @@ OpenMMLab requires the `inferencer(img)` to output a `dict` containing two field
 
 When performing inference, the following steps are typically executed:
 
-1. preprocess：Input data preprocessing, including data reading, data preprocessing, data format conversion, etc.
+1. preprocess: Input data preprocessing, including data reading, data preprocessing, data format conversion, etc.
 2. forward: Execute `model.forwward`
-3. visualize：Visualization of predicted results.
-4. postprocess：Post-processing of predicted results, including result format conversion, exporting predicted results, etc.
+3. visualize: Visualization of predicted results.
+4. postprocess: Post-processing of predicted results, including result format conversion, exporting predicted results, etc.
 
 To improve the user experience of the inferencer,  we do not want users to have to configure parameters for each step when performing inference. In other words, we hope that users can simply configure parameters for the `__call__` interface without being aware of the above process and complete the inference.
 
@@ -173,8 +173,8 @@ Initializes and returns the `visualizer` required by the inferencer, which is eq
 
 Input arguments:
 
-- inputs：Input data, passed into `__call__`, usually a list of image paths or image data.
-- batch_size：batch size, passed in by the user when calling `__call__`.
+- inputs: Input data, passed into `__call__`, usually a list of image paths or image data.
+- batch_size: batch size, passed in by the user when calling `__call__`.
 - Other parameters: Passed in by the user and specified in `preprocess_kwargs`.
 
 Return:
@@ -187,7 +187,7 @@ The `preprocess` function is a generator function by default, which applies the 
 
 Input arguments:
 
-- inputs：The batch data processed by `preprocess` function.
+- inputs: The batch data processed by `preprocess` function.
 - Other parameters: Passed in by the user and specified in `forward_kwargs`.
 
 Return:
@@ -204,9 +204,9 @@ This is an abstract method that must be implemented by the subclass.
 
 Input arguments:
 
-- inputs：The input data, which is the raw data without preprocessing.
-- preds：Predicted results of the model.
-- show：Whether to visualize.
+- inputs: The input data, which is the raw data without preprocessing.
+- preds: Predicted results of the model.
+- show: Whether to visualize.
 - Other parameters: Passed in by the user and specified in `visualize_kwargs`.
 
 Return:
@@ -221,12 +221,12 @@ This is an abstract method that must be implemented by the subclass.
 
 Input arguments:
 
-- preds：The predicted results of the model, which is a `list` type. Each element in the list represents the prediction result for a single data item. In the OpenMMLab series of algorithm libraries, the type of each element in the prediction result is `BaseDataElement`.
-- visualization：Visualization results
+- preds: The predicted results of the model, which is a `list` type. Each element in the list represents the prediction result for a single data item. In the OpenMMLab series of algorithm libraries, the type of each element in the prediction result is `BaseDataElement`.
+- visualization: Visualization results
 - return_datasample: Whether to maintain datasample for return. When set to `False`, the returned result is converted to a `dict`.
 - Other parameters: Passed in by the user and specified in `postprocess_kwargs`.
 
-Return：
+Return:
 
 - The type of the returned value is a dictionary containing both the visualization and prediction results. OpenMMLab requires the returned dictionary to have two keys: `predictions` and `visualization`.
 
@@ -234,9 +234,9 @@ Return：
 
 Input arguments:
 
-- inputs：The input data, usually a list of image paths or image data. Each element in `inputs` can also be other types of data as long as it can be processed by the `pipeline` returned by [init_pipeline](#_init_pipeline). When there is only one inference data in `inputs`, it does not have to be a `list`, `__call__` will internally wrap it into a list for further processing.
+- inputs: The input data, usually a list of image paths or image data. Each element in `inputs` can also be other types of data as long as it can be processed by the `pipeline` returned by [init_pipeline](#_init_pipeline). When there is only one inference data in `inputs`, it does not have to be a `list`, `__call__` will internally wrap it into a list for further processing.
 - return_datasample: Whether to convert datasample to dict for return.
-- batch_size：Batch size for inference, which will be further passed to the `preprocess` function.
+- batch_size: Batch size for inference, which will be further passed to the `preprocess` function.
 - Other parameters: Additional parameters assigned to `preprocess`, `forward`, `visualize`, and `postprocess` methods.
 
 Return:

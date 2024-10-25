@@ -94,20 +94,25 @@ class ColossalAIOptimWrapper(OptimWrapper):
 
     def __init__(self,
                  optimizer: torch.optim.Optimizer,
-                 booster: Booster,
+                 booster: Optional[Booster] = None,
                  accumulative_counts: int = 1):
         super().__init__(optimizer, accumulative_counts=accumulative_counts)
         self.booster = booster
 
     @contextmanager
     def optim_context(self, model: nn.Module):
+        assert isinstance(self.booster, Booster), \
+            'Please set the booster attribute before using ' \
+            '`ColossalAIOptimWrapper`.'
         if self.booster.plugin.support_no_sync():
-            sync_context = self.booster.no_sync(model, self.optimizer)
+            no_sync_context = self.booster.no_sync(model, self.optimizer)
         else:
             yield
             return
-        if not self.should_sync():
-            with sync_context:
+        if self.should_sync():
+            yield
+        else:
+            with no_sync_context:
                 yield
 
     def backward(self, loss: torch.Tensor, **kwargs) -> None:
@@ -115,8 +120,9 @@ class ColossalAIOptimWrapper(OptimWrapper):
         self.optimizer.backward(loss, **kwargs)
 
 
-@MODEL_WRAPPERS.register_module()
-class CollosalAIModelWrapper:
+@MODEL_WRAPPERS.register_module(
+    name=['ColossalAIModelWrapper', 'CollosalAIModelWrapper'])
+class ColossalAIModelWrapper:
 
     def __init__(self, model_wrapper: ModelWrapper, model: nn.Module):
         self.model_wrapper = model_wrapper
@@ -233,7 +239,7 @@ class ColossalAIStrategy(BaseStrategy):
     OPTIMIZER_DIR = 'optimizer'  # directory to save optimizer state.
     MODEL_DIR = 'model'  # directory to save model
     SCHEDULER_DIR = 'scheduler'  # directory to save scheduelrs
-    model: CollosalAIModelWrapper  # type: ignore
+    model: ColossalAIModelWrapper  # type: ignore
     optim_wrapper: ColossalAIOptimWrapper  # type: ignore
 
     def __init__(
@@ -305,7 +311,6 @@ class ColossalAIStrategy(BaseStrategy):
         # optim_wrapper is required by booster
         if optim_wrapper is not None and isinstance(optim_wrapper, dict):
             optim_wrapper.setdefault('type', 'ColossalAIOptimWrapper')
-            optim_wrapper.setdefault('booster', self.booster)
             optim_wrapper_type = OPTIM_WRAPPERS.get(optim_wrapper['type'])
             if optim_wrapper_type is None:
                 raise ValueError(f'Failed to find {optim_wrapper["type"]} in '
@@ -318,6 +323,7 @@ class ColossalAIStrategy(BaseStrategy):
                     '`ColossalAIOptimWrapper` (or subclass), but got '
                     f'{optim_wrapper_type}')
             optim_wrapper = self.build_optim_wrapper(optim_wrapper, model)
+            optim_wrapper.booster = self.booster  # type: ignore
 
         if optim_wrapper is not None:
             self.model, self.optim_wrapper = self._wrap(
@@ -463,8 +469,14 @@ class ColossalAIStrategy(BaseStrategy):
     def _build_plugin(self, plugin: Union[str, dict]):
         if isinstance(plugin, str):
             if plugin == 'gemini':
-                plugin = colo_plugin.GeminiPlugin(
-                    precision='bf16', placement_policy='cuda')
+                try:
+                    plugin = colo_plugin.GeminiPlugin(
+                        precision='bf16', placement_policy='auto')
+                except AssertionError:
+                    from colossalai.zero.gemini.placement_policy import \
+                        PlacementPolicyFactory as colo_placement
+                    raise ValueError('placement policy must be one of ' +
+                                     f'{list(colo_placement.policies.keys())}')
             elif plugin == 'lowlevel-zero':
                 plugin = colo_plugin.LowLevelZeroPlugin()
             else:
@@ -503,11 +515,11 @@ class ColossalAIStrategy(BaseStrategy):
         self,
         model: nn.Module,
         optim_wrapper: Optional[OptimWrapper] = None,
-    ) -> Union[Tuple[CollosalAIModelWrapper, ColossalAIOptimWrapper],
-               CollosalAIModelWrapper]:  # type: ignore
+    ) -> Union[Tuple[ColossalAIModelWrapper, ColossalAIOptimWrapper],
+               ColossalAIModelWrapper]:  # type: ignore
         """Wrap model with :class:`ModelWrapper`."""
         if self.model_wrapper is None:
-            self.model_wrapper = {'type': 'CollosalAIModelWrapper'}
+            self.model_wrapper = {'type': 'ColossalAIModelWrapper'}
 
         # For zero series parallel, move `data_preprocessor` to current device
         # is reasonable. We need to `BaseDataPreprocessor.to` manually since

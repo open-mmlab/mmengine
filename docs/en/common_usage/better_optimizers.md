@@ -4,7 +4,7 @@ This document provides some third-party optimizers supported by MMEngine, which 
 
 ## D-Adaptation
 
-[D-Adaptation](https://github.com/facebookresearch/dadaptation) provides `DAdaptAdaGrad`, `DAdaptAdam` and `DAdaptSGD` optimziers。
+[D-Adaptation](https://github.com/facebookresearch/dadaptation) provides `DAdaptAdaGrad`, `DAdaptAdam` and `DAdaptSGD` optimizers.
 
 ```{note}
 If you use the optimizer provided by D-Adaptation, you need to upgrade mmengine to `0.6.0`.
@@ -35,7 +35,7 @@ runner.train()
 
 ## Lion-Pytorch
 
-[lion-pytorch](https://github.com/lucidrains/lion-pytorch) provides the `Lion` optimizer。
+[lion-pytorch](https://github.com/lucidrains/lion-pytorch) provides the `Lion` optimizer.
 
 ```{note}
 If you use the optimizer provided by Lion-Pytorch, you need to upgrade mmengine to `0.6.0`.
@@ -93,7 +93,7 @@ runner.train()
 
 ## bitsandbytes
 
-[bitsandbytes](https://github.com/TimDettmers/bitsandbytes) provides `AdamW8bit`, `Adam8bit`, `Adagrad8bit`, `PagedAdam8bit`, `PagedAdamW8bit`, `LAMB8bit`, `LARS8bit`, `RMSprop8bit`, `Lion8bit`, `PagedLion8bit` and `SGD8bit` optimziers。
+[bitsandbytes](https://github.com/TimDettmers/bitsandbytes) provides `AdamW8bit`, `Adam8bit`, `Adagrad8bit`, `PagedAdam8bit`, `PagedAdamW8bit`, `LAMB8bit`, `LARS8bit`, `RMSprop8bit`, `Lion8bit`, `PagedLion8bit` and `SGD8bit` optimizers.
 
 ```{note}
 If you use the optimizer provided by bitsandbytes, you need to upgrade mmengine to `0.9.0`.
@@ -124,7 +124,7 @@ runner.train()
 
 ## transformers
 
-[transformers](https://github.com/huggingface/transformers) provides `Adafactor` optimzier。
+[transformers](https://github.com/huggingface/transformers) provides `Adafactor` optimzier.
 
 ```{note}
 If you use the optimizer provided by transformers, you need to upgrade mmengine to `0.9.0`.

@@ -77,13 +77,16 @@ pre-commit run --all-files
 
 <img src="https://user-images.githubusercontent.com/57566630/202368856-0465a90d-8fce-4345-918e-67b8b9c82614.png" width="1200">
 
-```{note}
+:::{note}
 如果你是中国用户，由于网络原因，可能会出现安装失败的情况，这时可以使用国内源
-pre-commit install -c .pre-commit-config-zh-cn.yaml
+
+```bash
 pre-commit run --all-files -c .pre-commit-config-zh-cn.yaml
 ```
 
-如果安装过程被中断，可以重复执行 `pre-commit run ...` 继续安装。
+:::
+
+如果安装过程被中断，可以重复执行 `pre-commit run --all-files` 继续安装。
 
 如果提交的代码不符合代码风格规范，pre-commit 会发出警告，并自动修复部分错误。
 
@@ -97,16 +100,16 @@ git commit -m "xxx" --no-verify
 
 ### 3. 创建开发分支
 
-安装完 pre-commit 之后，我们需要基于 master 创建开发分支，建议的分支命名规则为 `username/pr_name`。
+安装完 pre-commit 之后，我们需要基于 main 创建开发分支，建议的分支命名规则为 `username/pr_name`。
 
 ```shell
 git checkout -b yhc/refactor_contributing_doc
 ```
 
-在后续的开发中，如果本地仓库的 master 分支落后于 upstream 的 master 分支，我们需要先拉取 upstream 的代码进行同步，再执行上面的命令
+在后续的开发中，如果本地仓库的 main 分支落后于 upstream 的 main 分支，我们需要先拉取 upstream 的代码进行同步，再执行上面的命令
 
 ```shell
-git pull upstream master
+git pull upstream main
 ```
 
 ### 4. 提交代码并在本地通过单元测试
@@ -176,14 +179,14 @@ MMEngine 会在不同的平台（Linux、Window、Mac），基于不同版本的
 
 ```shell
 git fetch --all --prune
-git rebase upstream/master
+git rebase upstream/main
 ```
 
 或者
 
 ```shell
 git fetch --all --prune
-git merge upstream/master
+git merge upstream/main
 ```
 
 如果你非常善于处理冲突，那么可以使用 rebase 的方式来解决冲突，因为这能够保证你的 commit log 的整洁。如果你不太熟悉 `rebase` 的使用，那么可以使用 `merge` 的方式来解决冲突。

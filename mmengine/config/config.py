@@ -31,9 +31,11 @@ DELETE_KEY = '_delete_'
 def _lazy2string(cfg_dict, dict_type=None):
     if isinstance(cfg_dict, dict):
         dict_type = dict_type or type(cfg_dict)
-        return dict_type({k: _lazy2string(v) for k, v in dict.items(cfg_dict)})
+        return dict_type(
+            {k: _lazy2string(v, dict_type)
+             for k, v in dict.items(cfg_dict)})
     elif isinstance(cfg_dict, (tuple, list)):
-        return type(cfg_dict)(_lazy2string(v) for v in cfg_dict)
+        return type(cfg_dict)(_lazy2string(v, dict_type) for v in cfg_dict)
     elif isinstance(cfg_dict, LazyObject):
         return cfg_dict.dump_str
     else:
@@ -392,6 +394,8 @@ class Config(metaclass=ABCMeta):
                 predefined variables. Defaults to True.
             import_custom_modules (bool, optional): Whether to support
                 importing custom modules in config. Defaults to None.
+            use_environment_variables (bool, optional): Whether to use
+                environment variables. Defaults to True.
             lazy_import (bool): Whether to load config in `lazy_import` mode.
                 If it is `None`, it will be deduced by the content of the
                 config file. Defaults to None.

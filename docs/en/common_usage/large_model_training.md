@@ -1,4 +1,4 @@
-# Traning Big Models
+# Training Big Models
 
 When training large models, significant resources are required. A single GPU memory is often insufficient to meet the training needs. As a result, techniques for training large models have been developed, and one typical approach is [DeepSpeed ZeRO](https://www.deepspeed.ai/tutorials/zero/#zero-overview). DeepSpeed ZeRO supports optimizer, gradient, and parameter sharding.
 
@@ -85,7 +85,7 @@ torchrun --nproc-per-node 2 examples/distributed_training_with_flexible_runner.p
 ```
 
 <details>
-<summary>traning log</summary>
+<summary>training log</summary>
 
 ```
 07/03 13:04:17 - mmengine - INFO - Epoch(train)  [1][ 10/196]  lr: 3.3333e-04  eta: 0:13:14  time: 0.4073  data_time: 0.0335  memory: 970  loss: 6.1887
@@ -157,7 +157,7 @@ torchrun --nproc-per-node 2 examples/distributed_training_with_flexible_runner.p
 ```
 
 <details>
-<summary>traning log</summary>
+<summary>training log</summary>
 
 ```
 07/03 13:05:37 - mmengine - INFO - Epoch(train)  [1][ 10/196]  lr: 3.3333e-04  eta: 0:08:28  time: 0.2606  data_time: 0.0330  memory: 954  loss: 6.1265

@@ -879,7 +879,7 @@ class Visualizer(ManagerMixin):
         if binary_masks.ndim == 2:
             binary_masks = binary_masks[None]
         assert img.shape[:2] == binary_masks.shape[
-                                1:], '`binary_marks` must have ' \
+                                1:], '`binary_masks` must have ' \
                                      'the same shape with image'
         binary_mask_len = binary_masks.shape[0]
 
@@ -961,7 +961,7 @@ class Visualizer(ManagerMixin):
                 if topk <= 0, tensor_chw is assert to be one or three.
                 Defaults to 20.
             arrangement (Tuple[int, int]): The arrangement of featmap when
-                channel_reduction is not None and topk > 0. Defaults to (4, 5).
+                channel_reduction is None and topk > 0. Defaults to (4, 5).
             resize_shape (tuple, optional): The shape to scale the feature map.
                 Defaults to None.
             alpha (Union[int, List[int]]): The transparency of featmap.
@@ -989,7 +989,7 @@ class Visualizer(ManagerMixin):
                     f'overlaid_image: {overlaid_image.shape[:2]} and '
                     f'featmap: {featmap.shape[1:]} are not same, '
                     f'the feature map will be interpolated. '
-                    f'This may cause mismatch problems ！')
+                    f'This may cause mismatch problems !')
                 if resize_shape is None:
                     featmap = F.interpolate(
                         featmap[None],

@@ -19,13 +19,14 @@
   <div>&nbsp;</div>
 
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mmengine)](https://pypi.org/project/mmengine/)
+[![pytorch](https://img.shields.io/badge/pytorch-1.6~2.1-yellow)](#installation)
 [![PyPI](https://img.shields.io/pypi/v/mmengine)](https://pypi.org/project/mmengine)
 [![license](https://img.shields.io/github/license/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/blob/main/LICENSE)
-[![open issues](https://isitmaintained.com/badge/open/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
-[![issue resolution](https://isitmaintained.com/badge/resolution/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 
+[Introduction](#introduction) |
+[Installation](#installation) |
+[Get Started](#get-started) |
 [📘Documentation](https://mmengine.readthedocs.io/en/latest/) |
-[🛠️Installation](https://mmengine.readthedocs.io/en/latest/get_started/installation.html) |
 [🤔Reporting Issues](https://github.com/open-mmlab/mmengine/issues/new/choose)
 
 </div>
@@ -58,67 +59,52 @@ English | [简体中文](README_zh-CN.md)
 
 ## What's New
 
-v0.8.4 was released on 2023-08-03.
+v0.10.5 was released on 2024-9-11.
 
 Highlights:
 
-- Support enabling `efficient_conv_bn_eval` for efficient convolution and batch normalization. See [save memory on gpu](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#save-memory-on-gpu) for more details
+- Support custom `artifact_location` in MLflowVisBackend [#1505](#1505)
+- Enable `exclude_frozen_parameters` for `DeepSpeedEngine._zero3_consolidated_16bit_state_dict` [#1517](#1517)
 
-- Add an [example](./examples/llama2/) to finetune Llama2.
-
-- Support training with [FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp) and [DeepSpeed](https://www.deepspeed.ai/). Refer to the [Training Large Models](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html) for more detailed usages.
-
-- Introduce the pure Python style configuration file:
-
-  - Support navigating to base configuration file in IDE
-  - Support navigating to base variable in IDE
-  - Support navigating to source code of class in IDE
-  - Support inheriting two configuration files containing the same field
-  - Load the configuration file without other third-party requirements
-
-  Refer to the [tutorial](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#a-pure-python-style-configuration-file-beta) for more detailed usages.
-
-  ![new-config-en](https://github.com/open-mmlab/mmengine/assets/57566630/7eb41748-9374-488f-901e-fcd7f0d3c8a1)
-
-Read [Changelog](./docs/en/notes/changelog.md#v083-08032023) for more details.
-
-## Table of Contents
-
-- [Introduction](#introduction)
-- [Installation](#installation)
-- [Get Started](#get-started)
-- [Learn More](#learn-more)
-- [Contributing](#contributing)
-- [Citation](#citation)
-- [License](#license)
-- [Ecosystem](#ecosystem)
-- [Projects in OpenMMLab](#projects-in-openmmlab)
+Read [Changelog](./docs/en/notes/changelog.md#v0104-2342024) for more details.
 
 ## Introduction
 
-MMEngine is a foundational library for training deep learning models based on PyTorch. It provides a solid engineering foundation and frees developers from writing redundant codes on workflows. It serves as the training engine of all OpenMMLab codebases, which support hundreds of algorithms in various research areas. Moreover, MMEngine is also generic to be applied to non-OpenMMLab projects.
+MMEngine is a foundational library for training deep learning models based on PyTorch. It serves as the training engine of all OpenMMLab codebases, which support hundreds of algorithms in various research areas. Moreover, MMEngine is also generic to be applied to non-OpenMMLab projects. Its highlights are as follows:
 
-Major features:
+**Integrate mainstream large-scale model training frameworks**
 
-1. **A universal and powerful runner**:
+- [ColossalAI](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html#colossalai)
+- [DeepSpeed](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html#deepspeed)
+- [FSDP](https://mmengine.readthedocs.io/en/latest/common_usage/large_model_training.html#fullyshardeddataparallel-fsdp)
 
-   - Supports training different tasks with a small amount of code, e.g., ImageNet can be trained with only 80 lines of code (400 lines of the original PyTorch example).
-   - Easily compatible with models from popular algorithm libraries such as TIMM, TorchVision, and Detectron2.
+**Supports a variety of training strategies**
 
-2. **Open architecture with unified interfaces**:
+- [Mixed Precision Training](https://mmengine.readthedocs.io/en/latest/common_usage/speed_up_training.html#mixed-precision-training)
+- [Gradient Accumulation](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#gradient-accumulation)
+- [Gradient Checkpointing](https://mmengine.readthedocs.io/en/latest/common_usage/save_gpu_memory.html#gradient-checkpointing)
 
-   - Handles different algorithm tasks with unified APIs, e.g., implement a method and apply it to all compatible models.
-   - Provides a unified abstraction for upper-level algorithm libraries, which supports various back-end devices such as Nvidia CUDA, Mac MPS, AMD, MLU, and more for model training.
+**Provides a user-friendly configuration system**
 
-3. **Customizable training process**:
+- [Pure Python-style configuration files, easy to navigate](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#a-pure-python-style-configuration-file-beta)
+- [Plain-text-style configuration files, supporting JSON and YAML](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html)
 
-   - Defines the training process just like playing with Legos.
-   - Provides rich components and strategies.
-   - Complete controls on the training process with different levels of APIs.
+**Covers mainstream training monitoring platforms**
 
-![mmengine_dataflow](https://github.com/open-mmlab/mmengine/assets/58739961/267db9cb-72e4-4af2-a58b-877b30091acc)
+- [TensorBoard](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#tensorboard) | [WandB](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#wandb) | [MLflow](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#mlflow-wip)
+- [ClearML](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#clearml) | [Neptune](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#neptune) | [DVCLive](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#dvclive) | [Aim](https://mmengine.readthedocs.io/en/latest/common_usage/visualize_training_log.html#aim)
 
 ## Installation
+
+<details>
+<summary>Supported PyTorch Versions</summary>
+
+| MMEngine           | PyTorch      | Python         |
+| ------------------ | ------------ | -------------- |
+| main               | >=1.6 \<=2.1 | >=3.8, \<=3.11 |
+| >=0.9.0, \<=0.10.4 | >=1.6 \<=2.1 | >=3.8, \<=3.11 |
+
+</details>
 
 Before installing MMEngine, please ensure that PyTorch has been successfully installed following the [official guide](https://pytorch.org/get-started/locally/).
 

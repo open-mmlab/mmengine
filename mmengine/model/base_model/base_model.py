@@ -222,6 +222,21 @@ class BaseModel(BaseModule):
         self._set_device(torch.device(device))
         return super().cuda(device)
 
+    def musa(
+        self,
+        device: Optional[Union[int, str, torch.device]] = None,
+    ) -> nn.Module:
+        """Overrides this method to call :meth:`BaseDataPreprocessor.musa`
+        additionally.
+
+        Returns:
+            nn.Module: The model itself.
+        """
+        if device is None or isinstance(device, int):
+            device = torch.device('musa', index=device)
+        self._set_device(torch.device(device))
+        return super().musa(device)
+
     def mlu(
         self,
         device: Union[int, str, torch.device, None] = None,

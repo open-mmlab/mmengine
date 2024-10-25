@@ -6,19 +6,24 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 import torch
 
+from mmengine.logging import print_log
+
 try:
     import deepspeed
 except ImportError:
     deepspeed = None
 
+import logging
+
 import torch.nn as nn
 
 import mmengine
-from mmengine.dist import init_dist
+from mmengine.dist import init_dist, is_main_process
 from mmengine.optim import BaseOptimWrapper, _ParamScheduler
 from mmengine.registry import (MODEL_WRAPPERS, OPTIM_WRAPPERS, OPTIMIZERS,
                                STRATEGIES)
-from mmengine.utils import get_git_hash
+from mmengine.runner.checkpoint import save_checkpoint, weights_to_cpu
+from mmengine.utils import apply_to, digit_version, get_git_hash
 from .base import BaseStrategy
 
 
@@ -188,18 +193,22 @@ class MMDeepSpeedEngineWrapper:
         if self._inputs_to_half is None:
             return inputs
 
+        dtype = next(self.model.parameters()).dtype
         if isinstance(inputs, (list, tuple)):
             new_inputs = []
             for i, v in enumerate(inputs):
                 if i in self._inputs_to_half:
-                    new_inputs.append(v.half())
+                    new_inputs.append(
+                        apply_to(v, lambda x: hasattr(x, 'to'),
+                                 lambda x: x.to(dtype)))
                 else:
                     new_inputs.append(v)
             return inputs.__class__(new_inputs)
         elif isinstance(inputs, dict):
             for k, v in inputs.items():
                 if k in self._inputs_to_half:
-                    inputs[k] = v.half()
+                    inputs[k] = apply_to(v, lambda x: hasattr(x, 'to'),
+                                         lambda x: x.to(dtype))
             return inputs
         else:
             raise TypeError('inputs should be list, tuple or dict, '
@@ -245,6 +254,8 @@ class DeepSpeedStrategy(BaseStrategy):
         gradient_accumulation_steps (int, optional): Number of training steps
             to accumulate gradients before averaging and applying them.
             Defaults to None.
+        exclude_frozen_parameters (bool, optional): Exclude frozen parameters
+            from saved checkpoint.
     """
 
     def __init__(
@@ -265,6 +276,7 @@ class DeepSpeedStrategy(BaseStrategy):
         # disable the log printed by deepseed
         steps_per_print: int = 10000000000000,
         # the following args are for BaseStrategy
+        exclude_frozen_parameters: Optional[bool] = None,
         **kwargs,
     ):
         assert deepspeed is not None, \
@@ -298,6 +310,11 @@ class DeepSpeedStrategy(BaseStrategy):
             self.config.setdefault('gradient_accumulation_steps', 1)
         self.config['steps_per_print'] = steps_per_print
         self._inputs_to_half = inputs_to_half
+        assert (exclude_frozen_parameters is None or
+                digit_version(deepspeed.__version__) >= digit_version('0.13.2')
+                ), ('DeepSpeed >= 0.13.2 is required to enable '
+                    'exclude_frozen_parameters')
+        self.exclude_frozen_parameters = exclude_frozen_parameters
 
         register_deepspeed_optimizers()
 
@@ -413,8 +430,15 @@ class DeepSpeedStrategy(BaseStrategy):
         self.logger.info(f'Load checkpoint from {filename}')
 
         dirname, basename = osp.split(filename)
-        _, extra_ckpt = self.model.load_checkpoint(
-            dirname, tag=basename, load_optimizer_states=False)
+        if digit_version(deepspeed.__version__) >= digit_version('0.13.2'):
+            _, extra_ckpt = self.model.load_checkpoint(
+                dirname,
+                tag=basename,
+                load_optimizer_states=False,
+                load_module_strict=not self.exclude_frozen_parameters)
+        else:
+            _, extra_ckpt = self.model.load_checkpoint(
+                dirname, tag=basename, load_optimizer_states=False)
 
         return extra_ckpt
 
@@ -444,8 +468,15 @@ class DeepSpeedStrategy(BaseStrategy):
         self.logger.info(f'Resume checkpoint from {filename}')
 
         dirname, basename = osp.split(filename)
-        _, extra_ckpt = self.model.load_checkpoint(
-            dirname, tag=basename, load_optimizer_states=resume_optimizer)
+        if digit_version(deepspeed.__version__) >= digit_version('0.13.2'):
+            _, extra_ckpt = self.model.load_checkpoint(
+                dirname,
+                tag=basename,
+                load_optimizer_states=resume_optimizer,
+                load_module_strict=not self.exclude_frozen_parameters)
+        else:
+            _, extra_ckpt = self.model.load_checkpoint(
+                dirname, tag=basename, load_optimizer_states=resume_optimizer)
 
         if resume_optimizer:
             self.load_optim_state_dict(extra_ckpt.pop('optim_wrapper'))
@@ -480,7 +511,7 @@ class DeepSpeedStrategy(BaseStrategy):
         """Save checkpoint to given ``filename``.
 
         Warning:
-            `save_optimizer` and `callback` parameters are not supported yet.
+            `callback` parameter is not supported yet.
 
         Args:
             filename (str): Filename to save checkpoint.
@@ -501,14 +532,50 @@ class DeepSpeedStrategy(BaseStrategy):
             mmengine=mmengine.__version__ + get_git_hash(),
         )
 
-        if save_optimizer and hasattr(self, 'optim_wrapper'):
-            # The key can not be 'optimizer', otherwise error will be thrown
-            # when loading or resuming checkpoint.
-            extra_ckpt['optim_wrapper'] = self.optim_state_dict()
-
         if save_param_scheduler and hasattr(self, 'param_schedulers'):
             extra_ckpt['param_schedulers'] = self.scheduler_state_dict()
 
-        dirname, basename = osp.split(filename)
-        self.model.save_checkpoint(
-            dirname, tag=basename, client_state=extra_ckpt, save_latest=False)
+        if (not save_optimizer
+                and self.model.zero_optimization_partition_weights()
+                and not self.model.zero_gather_16bit_weights_on_model_save()):
+            print_log(
+                'Configured to `save_optimizer=False`, but currently using '
+                "DeepSpeed's ZeRO stage 3 with "
+                '`gather_16bit_weights_on_model_save=False`. In '
+                'this configuration, the model cannot be saved properly '
+                'and will be saved with the optimizer state. '
+                'To support `save_optimizer=False`, please set '
+                '`gather_16bit_weights_on_model_save=True` in your '
+                'DeepSpeed config.',
+                logger='current',
+                level=logging.WARNING)
+            save_optimizer = True
+
+        state_dict_kwargs = {}
+        if digit_version(deepspeed.__version__) >= digit_version('0.13.2'):
+            state_dict_kwargs[
+                'exclude_frozen_parameters'] = self.exclude_frozen_parameters
+
+        if save_optimizer:
+            if hasattr(self, 'optim_wrapper'):
+                # The key can not be 'optimizer', otherwise error will be
+                # thrown when loading or resuming checkpoint.
+                extra_ckpt['optim_wrapper'] = self.optim_state_dict()
+
+            dirname, basename = osp.split(filename)
+            self.model.save_checkpoint(
+                dirname,
+                tag=basename,
+                client_state=extra_ckpt,
+                save_latest=False,
+                **state_dict_kwargs)
+        else:
+            if self.model.zero_optimization_partition_weights():
+                state_dict = self.model._zero3_consolidated_16bit_state_dict(
+                    **state_dict_kwargs)
+            else:
+                state_dict = self.model.module_state_dict(**state_dict_kwargs)
+
+            if is_main_process():
+                ckpt = {'state_dict': weights_to_cpu(state_dict), **extra_ckpt}
+                save_checkpoint(ckpt, filename)

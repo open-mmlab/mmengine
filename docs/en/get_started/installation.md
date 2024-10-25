@@ -27,10 +27,10 @@
 ## Install MMEngine
 
 :::{note}
-If you only want to use the fileio, registry, and config modules in MMEngine, you can set the `MMENGINE_LITE` environment variable, which will only install the few third-party library dependencies that are necessary (e.g., it will not install opencv, matplotlib):
+If you only want to use the fileio, registry, and config modules in MMEngine, you can install `mmengine-lite`, which will only install the few third-party library dependencies that are necessary (e.g., it will not install opencv, matplotlib):
 
 ```bash
-MMENGINE_LITE=1 pip install mmengine
+pip install mmengine-lite
 ```
 
 :::
@@ -66,7 +66,9 @@ pip install mmengine
    docker run --gpus all --shm-size=8g -it mmengine
    ```
 
-#### Build from source
+### Build from source
+
+#### Build mmengine
 
 ```bash
 # if cloning speed is too slow, you can switch the source to https://gitee.com/open-mmlab/mmengine.git
@@ -75,7 +77,16 @@ cd mmengine
 pip install -e . -v
 ```
 
-### Verify the Installation
+#### Build mmengine-lite
+
+```bash
+# if cloning speed is too slow, you can switch the source to https://gitee.com/open-mmlab/mmengine.git
+git clone https://github.com/open-mmlab/mmengine.git
+cd mmengine
+MMENGINE_LITE=1 pip install -e . -v
+```
+
+## Verify the Installation
 
 To verify if `MMEngine` and the necessary environment are successfully installed, we can run this command:
 

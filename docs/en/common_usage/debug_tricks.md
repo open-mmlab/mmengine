@@ -30,7 +30,7 @@ train_dataloader = dict(
         type=dataset_type,
         data_prefix='data/cifar10',
         test_mode=False,
-        indices=5000,  # set indices=5000，represent every epoch only iterator 5000 samples
+        indices=5000,  # set indices=5000, represent every epoch only iterator 5000 samples
         pipeline=train_pipeline),
     sampler=dict(type='DefaultSampler', shuffle=True),
 )

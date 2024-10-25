@@ -19,13 +19,14 @@
   <div>&nbsp;</div>
 
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mmengine)](https://pypi.org/project/mmengine/)
+[![pytorch](https://img.shields.io/badge/pytorch-1.6~2.1-yellow)](#安装)
 [![PyPI](https://img.shields.io/pypi/v/mmengine)](https://pypi.org/project/mmengine)
 [![license](https://img.shields.io/github/license/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/blob/main/LICENSE)
-[![open issues](https://isitmaintained.com/badge/open/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
-[![issue resolution](https://isitmaintained.com/badge/resolution/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/issues)
 
-[📘使用文档](https://mmengine.readthedocs.io/zh_CN/latest/) |
-[🛠️安装教程](https://mmengine.readthedocs.io/zh_CN/latest/get_started/installation.html) |
+[简介](#简介) |
+[安装](#安装) |
+[快速上手](#快速上手) |
+[📘用户文档](https://mmengine.readthedocs.io/zh_CN/latest/) |
 [🤔报告问题](https://github.com/open-mmlab/mmengine/issues/new/choose)
 
 </div>
@@ -58,68 +59,57 @@
 
 ## 最近进展
 
-最新版本 v0.8.4 在 2023.08.03 发布。
+最新版本 v0.10.5 在 2024.9.11 发布。
 
-亮点：
+版本亮点：
 
-- 支持使用 `efficient_conv_bn_eval` 参数开启更高效的 `ConvBN` 推理模式。详见[节省显存文档](https://mmengine.readthedocs.io/zh_CN/latest/common_usage/save_gpu_memory.html)
+- 支持在 MLFlowVisBackend 中自定义 `artifact_location` [#1505](#1505)
+- 支持在 `DeepSpeedEngine._zero3_consolidated_16bit_state_dict` 使用 `exclude_frozen_parameters` [#1517](#1517)
 
-- 新增微调 Llama2 的[示例](./examples/llama2/)。
-
-- 支持使用 [FSDP](https://pytorch.org/tutorials/intermediate/FSDP_adavnced_tutorial.html?highlight=fsdp) 和 [DeepSpeed](https://www.deepspeed.ai/) 进行训练。可阅读[大模型训练](https://mmengine.readthedocs.io/zh_cn/latest/common_usage/large_model_training.html)了解用法。
-
-- 引入纯 Python 风格的配置文件：
-
-  - 支持在 IDE 中导航到基础配置文件
-  - 支持在 IDE 中导航到基础变量
-  - 支持在 IDE 中导航到类的源代码
-  - 支持继承包含相同字段的两个配置文件
-  - 在加载配置文件时不需要其他第三方依赖
-
-  请参考[教程](https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/config.html#python-beta)以获取更详细的用法说明。
-
-  ![new-config-zh_cn](https://github.com/open-mmlab/mmengine/assets/57566630/c2da9a73-c911-4f78-8253-e3f29496d9f8)
-
-如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v083-08032023)
-
-## 目录
-
-- [简介](#简介)
-- [安装](#安装)
-- [快速上手](#快速上手)
-- [了解更多](#了解更多)
-- [贡献指南](#贡献指南)
-- [引用](#引用)
-- [开源许可证](#开源许可证)
-- [生态项目](#生态项目)
-- [OpenMMLab 的其他项目](#openmmlab-的其他项目)
-- [欢迎加入 OpenMMLab 社区](#欢迎加入-openmmlab-社区)
+如果想了解更多版本更新细节和历史信息，请阅读[更新日志](./docs/en/notes/changelog.md#v0104-2342024)。
 
 ## 简介
 
-MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的基础库。它为开发人员提供了坚实的工程基础，以此避免在工作流上编写冗余代码。作为 OpenMMLab 所有代码库的训练引擎，其在不同研究领域支持了上百个算法。此外，MMEngine 也可以用于非 OpenMMLab 项目中。
+MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的基础库。它作为 OpenMMLab 所有代码库的训练引擎，其在不同研究领域支持了上百个算法。此外，MMEngine 也可以用于非 OpenMMLab 项目中。它的亮点如下：
 
-主要特性：
+**集成主流的大模型训练框架**
 
-1. **通用且强大的执行器**：
+- [ColossalAI](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/large_model_training.html#colossalai)
+- [DeepSpeed](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/large_model_training.html#deepspeed)
+- [FSDP](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/large_model_training.html#fullyshardeddataparallel-fsdp)
 
-   - 支持用少量代码训练不同的任务，例如仅使用 80 行代码就可以训练 ImageNet（原始 PyTorch 示例需要 400 行）。
-   - 轻松兼容流行的算法库（如 TIMM、TorchVision 和 Detectron2）中的模型。
+**支持丰富的训练策略**
 
-2. **接口统一的开放架构**：
+- [混合精度训练（Mixed Precision Training）](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/speed_up_training.html#id3)
+- [梯度累积（Gradient Accumulation）](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/save_gpu_memory.html#id2)
+- [梯度检查点（Gradient Checkpointing）](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/save_gpu_memory.html#id3)
 
-   - 使用统一的接口处理不同的算法任务，例如，实现一个方法并应用于所有的兼容性模型。
-   - 上下游的对接更加统一便捷，在为上层算法库提供统一抽象的同时，支持多种后端设备。目前 MMEngine 支持 Nvidia CUDA、Mac MPS、AMD、MLU 等设备进行模型训练。
+**提供易用的配置系统**
 
-3. **可定制的训练流程**：
+- [纯 Python 风格的配置文件，易于跳转](https://mmengine.readthedocs.io/zh-cn/latest/advanced_tutorials/config.html#python-beta)
+- [纯文本风格的配置文件，支持 JSON 和 YAML](https://mmengine.readthedocs.io/zh-cn/latest/advanced_tutorials/config.html#id1)
 
-   - 定义了“乐高”式的训练流程。
-   - 提供了丰富的组件和策略。
-   - 使用不同等级的 API 控制训练过程。
+**覆盖主流的训练监测平台**
 
-![mmengine_dataflow](https://github.com/open-mmlab/mmengine/assets/58739961/267db9cb-72e4-4af2-a58b-877b30091acc)
+- [TensorBoard](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#tensorboard) | [WandB](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#wandb) | [MLflow](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#mlflow-wip)
+- [ClearML](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#clearml) | [Neptune](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#neptune) | [DVCLive](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#dvclive) | [Aim](https://mmengine.readthedocs.io/zh-cn/latest/common_usage/visualize_training_log.html#aim)
+
+**兼容主流的训练芯片**
+
+- 英伟达 CUDA | 苹果 MPS
+- 华为 Ascend | 寒武纪 MLU | 摩尔线程 MUSA
 
 ## 安装
+
+<details>
+<summary>支持的 PyTorch 版本</summary>
+
+| MMEngine           | PyTorch      | Python         |
+| ------------------ | ------------ | -------------- |
+| main               | >=1.6 \<=2.1 | >=3.8, \<=3.11 |
+| >=0.9.0, \<=0.10.4 | >=1.6 \<=2.1 | >=3.8, \<=3.11 |
+
+</details>
 
 在安装 MMEngine 之前，请确保 PyTorch 已成功安装在环境中，可以参考 [PyTorch 官方安装文档](https://pytorch.org/get-started/locally/)。
 

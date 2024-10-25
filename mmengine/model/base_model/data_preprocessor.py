@@ -113,6 +113,15 @@ class BaseDataPreprocessor(nn.Module):
         self._device = torch.device(torch.cuda.current_device())
         return super().cuda()
 
+    def musa(self, *args, **kwargs) -> nn.Module:
+        """Overrides this method to set the :attr:`device`
+
+        Returns:
+            nn.Module: The model itself.
+        """
+        self._device = torch.device(torch.musa.current_device())
+        return super().musa()
+
     def npu(self, *args, **kwargs) -> nn.Module:
         """Overrides this method to set the :attr:`device`
 
@@ -226,7 +235,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         self.pad_value = pad_value
 
     def forward(self, data: dict, training: bool = False) -> Union[dict, list]:
-        """Performs normalization、padding and bgr2rgb conversion based on
+        """Performs normalization, padding and bgr2rgb conversion based on
         ``BaseDataPreprocessor``.
 
         Args:

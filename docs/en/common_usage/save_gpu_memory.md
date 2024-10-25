@@ -100,7 +100,7 @@ runner.train()
 ## Large Model Training
 
 ```{warning}
-If you have the requirement to train large models, we recommend reading [Traning Big Models](./large_model_training.md).
+If you have the requirement to train large models, we recommend reading [Training Big Models](./large_model_training.md).
 ```
 
 `FSDP` is officially supported from PyTorch 1.11. The config can be written in this way:

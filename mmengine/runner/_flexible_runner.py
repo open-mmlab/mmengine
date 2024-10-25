@@ -1176,7 +1176,8 @@ class FlexibleRunner:
             epoch_length=len(self.train_dataloader),
             max_epochs=self.max_epochs,
             max_iters=self.max_iters,
-        )
+            train_micro_batch_size_per_gpu=_get_batch_size(
+                self.train_dataloader))  # type: ignore
 
         self.strategy.prepare(
             self.model,

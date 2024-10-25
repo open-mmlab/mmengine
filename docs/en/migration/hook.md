@@ -156,7 +156,7 @@ This tutorial compares the difference in function, mount point, usage and implem
   <tr>
     <td>after each iteration</td>
     <td>after_train_iter</td>
-    <td>after_train_iter, with additional args: batch_idx、data_batch, and outputs</td>
+    <td>after_train_iter, with additional args: batch_idx, data_batch, and outputs</td>
   </tr>
   <tr>
     <td rowspan="6">Validation related</td>
@@ -187,7 +187,7 @@ This tutorial compares the difference in function, mount point, usage and implem
   <tr>
     <td>after each iteration</td>
     <td>after_val_iter</td>
-    <td>after_val_iter, with additional args: batch_idx、data_batch and outputs</td>
+    <td>after_val_iter, with additional args: batch_idx, data_batch and outputs</td>
   </tr>
   <tr>
     <td rowspan="6">Test related</td>
@@ -218,7 +218,7 @@ This tutorial compares the difference in function, mount point, usage and implem
   <tr>
     <td>after each iteration</td>
     <td>None</td>
-    <td>after_test_iter, with additional args: batch_idx、data_batch and outputs</td>
+    <td>after_test_iter, with additional args: batch_idx, data_batch and outputs</td>
   </tr>
 </tbody>
 </table>
