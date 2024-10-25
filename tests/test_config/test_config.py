@@ -17,6 +17,7 @@ import pytest
 import mmengine
 from mmengine import Config, ConfigDict, DictAction
 from mmengine.config.lazy import LazyObject
+from mmengine.config.old_config import ConfigV1
 from mmengine.fileio import dump, load
 from mmengine.registry import MODELS, DefaultScope, Registry
 from mmengine.utils import is_installed
@@ -220,7 +221,7 @@ class TestConfig:
     def test_dict_to_config_dict(self):
         cfg_dict = dict(
             a=1, b=dict(c=dict()), d=[dict(e=dict(f=(dict(g=1), [])))])
-        cfg_dict = Config._dict_to_config_dict(cfg_dict)
+        cfg_dict = ConfigV1._dict_to_config_dict(cfg_dict)
         assert isinstance(cfg_dict, ConfigDict)
         assert isinstance(cfg_dict.a, int)
         assert isinstance(cfg_dict.b, ConfigDict)
@@ -398,7 +399,7 @@ class TestConfig:
         expected_text = expected_text.replace('\\', '/')
         with open(cfg, 'w') as f:
             f.write(cfg_text)
-        Config._substitute_predefined_vars(cfg, substituted_cfg)
+        ConfigV1._substitute_predefined_vars(cfg, substituted_cfg)
 
         with open(substituted_cfg) as f:
             assert f.read() == expected_text
@@ -411,10 +412,10 @@ class TestConfig:
         with open(cfg, 'w') as f:
             f.write(cfg_text)
         with pytest.raises(KeyError):
-            Config._substitute_env_variables(cfg, substituted_cfg)
+            ConfigV1._substitute_env_variables(cfg, substituted_cfg)
 
         os.environ['A'] = 'text_A'
-        Config._substitute_env_variables(cfg, substituted_cfg)
+        ConfigV1._substitute_env_variables(cfg, substituted_cfg)
         with open(substituted_cfg) as f:
             assert f.read() == 'a=text_A\n'
         os.environ.pop('A')
@@ -422,12 +423,12 @@ class TestConfig:
         cfg_text = 'b={{$B:80}}\n'
         with open(cfg, 'w') as f:
             f.write(cfg_text)
-        Config._substitute_env_variables(cfg, substituted_cfg)
+        ConfigV1._substitute_env_variables(cfg, substituted_cfg)
         with open(substituted_cfg) as f:
             assert f.read() == 'b=80\n'
 
         os.environ['B'] = '100'
-        Config._substitute_env_variables(cfg, substituted_cfg)
+        ConfigV1._substitute_env_variables(cfg, substituted_cfg)
         with open(substituted_cfg) as f:
             assert f.read() == 'b=100\n'
         os.environ.pop('B')
@@ -435,7 +436,7 @@ class TestConfig:
         cfg_text = 'c={{"$C:80"}}\n'
         with open(cfg, 'w') as f:
             f.write(cfg_text)
-        Config._substitute_env_variables(cfg, substituted_cfg)
+        ConfigV1._substitute_env_variables(cfg, substituted_cfg)
         with open(substituted_cfg) as f:
             assert f.read() == 'c=80\n'
 
@@ -443,7 +444,7 @@ class TestConfig:
         cfg_path = osp.join(self.data_path, 'config',
                             'py_config/test_pre_substitute_base_vars.py')
         tmp_cfg = tmp_path / 'tmp_cfg.py'
-        base_var_dict = Config._pre_substitute_base_vars(cfg_path, tmp_cfg)
+        base_var_dict = ConfigV1._pre_substitute_base_vars(cfg_path, tmp_cfg)
         assert 'item6' in base_var_dict.values()
         assert 'item10' in base_var_dict.values()
         assert 'item11' in base_var_dict.values()
@@ -457,7 +458,7 @@ class TestConfig:
         cfg_path = osp.join(self.data_path, 'config',
                             'json_config/test_base.json')
         tmp_cfg = tmp_path / 'tmp_cfg.json'
-        Config._pre_substitute_base_vars(cfg_path, tmp_cfg)
+        ConfigV1._pre_substitute_base_vars(cfg_path, tmp_cfg)
         cfg_module_dict = load(tmp_cfg)
         assert cfg_module_dict['item9'].startswith('_item2')
         assert cfg_module_dict['item10'].startswith('_item7')
@@ -465,7 +466,7 @@ class TestConfig:
         cfg_path = osp.join(self.data_path, 'config',
                             'yaml_config/test_base.yaml')
         tmp_cfg = tmp_path / 'tmp_cfg.yaml'
-        Config._pre_substitute_base_vars(cfg_path, tmp_cfg)
+        ConfigV1._pre_substitute_base_vars(cfg_path, tmp_cfg)
         cfg_module_dict = load(tmp_cfg)
         assert cfg_module_dict['item9'].startswith('_item2')
         assert cfg_module_dict['item10'].startswith('_item7')
@@ -481,7 +482,7 @@ class TestConfig:
             '_item2_.fswf': 'item2',
             '_item0_.12ed21wq': 'item0'
         }
-        cfg = Config._substitute_base_vars(cfg, base_var_dict, cfg_base)
+        cfg = ConfigV1._substitute_base_vars(cfg, base_var_dict, cfg_base)
         assert cfg['item4'] == cfg_base['item1']
         assert cfg['item5']['item2'] == cfg_base['item2']
 
@@ -513,7 +514,7 @@ class TestConfig:
         filename = 'py_config/simple_config.py'
         filename = osp.join(self.data_path, 'config', filename)
         cfg_name = './base.py'
-        cfg_path, scope = Config._get_cfg_path(cfg_name, filename)
+        cfg_path, scope = ConfigV1._get_cfg_path(cfg_name, filename)
         assert scope is None
         osp.isfile(cfg_path)
 
@@ -525,12 +526,12 @@ class TestConfig:
         filename = osp.join(self.data_path, 'config', filename)
 
         cfg_name = 'mmdet::faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py'
-        cfg_path, scope = Config._get_cfg_path(cfg_name, filename)
+        cfg_path, scope = ConfigV1._get_cfg_path(cfg_name, filename)
         assert scope == 'mmdet'
         osp.isfile(cfg_path)
 
         cfg_name = 'mmcls::cspnet/cspresnet50_8xb32_in1k.py'
-        cfg_path, scope = Config._get_cfg_path(cfg_name, filename)
+        cfg_path, scope = ConfigV1._get_cfg_path(cfg_name, filename)
         assert scope == 'mmcls'
         osp.isfile(cfg_path)
 
@@ -541,7 +542,8 @@ class TestConfig:
                 filename = f'{file_format}_config/{name}.{file_format}'
 
                 cfg_file = osp.join(self.data_path, 'config', filename)
-                cfg_dict, cfg_text, env_variables = Config._file2dict(cfg_file)
+                cfg_dict, cfg_text, env_variables = ConfigV1._file2dict(
+                    cfg_file)
                 assert isinstance(cfg_text, str)
                 assert isinstance(cfg_dict, dict)
                 assert isinstance(env_variables, dict)
@@ -564,9 +566,12 @@ class TestConfig:
             item2=path,
             item3='abc_test_predefined_var')
 
-        assert Config._file2dict(cfg_file)[0]['item1'] == cfg_dict_dst['item1']
-        assert Config._file2dict(cfg_file)[0]['item2'] == cfg_dict_dst['item2']
-        assert Config._file2dict(cfg_file)[0]['item3'] == cfg_dict_dst['item3']
+        assert ConfigV1._file2dict(
+            cfg_file)[0]['item1'] == cfg_dict_dst['item1']
+        assert ConfigV1._file2dict(
+            cfg_file)[0]['item2'] == cfg_dict_dst['item2']
+        assert ConfigV1._file2dict(
+            cfg_file)[0]['item3'] == cfg_dict_dst['item3']
 
         # test `use_predefined_variable=False`
         cfg_dict_ori = dict(
@@ -574,28 +579,31 @@ class TestConfig:
             item2='{{ fileDirname}}',
             item3='abc_{{ fileBasenameNoExtension }}')
 
-        assert Config._file2dict(cfg_file,
-                                 False)[0]['item1'] == cfg_dict_ori['item1']
-        assert Config._file2dict(cfg_file,
-                                 False)[0]['item2'] == cfg_dict_ori['item2']
-        assert Config._file2dict(cfg_file,
-                                 False)[0]['item3'] == cfg_dict_ori['item3']
+        assert ConfigV1._file2dict(cfg_file,
+                                   False)[0]['item1'] == cfg_dict_ori['item1']
+        assert ConfigV1._file2dict(cfg_file,
+                                   False)[0]['item2'] == cfg_dict_ori['item2']
+        assert ConfigV1._file2dict(cfg_file,
+                                   False)[0]['item3'] == cfg_dict_ori['item3']
 
         # test test_predefined_var.yaml
         cfg_file = osp.join(self.data_path,
                             'config/yaml_config/test_predefined_var.yaml')
 
         # test `use_predefined_variable=False`
-        assert Config._file2dict(cfg_file,
-                                 False)[0]['item1'] == '{{ fileDirname }}'
-        assert Config._file2dict(cfg_file)[0]['item1'] == self._get_file_path(
-            osp.dirname(cfg_file))
+        assert ConfigV1._file2dict(cfg_file,
+                                   False)[0]['item1'] == '{{ fileDirname }}'
+        assert ConfigV1._file2dict(
+            cfg_file)[0]['item1'] == self._get_file_path(
+                osp.dirname(cfg_file))
 
         # test test_predefined_var.json
         cfg_file = osp.join(self.data_path,
                             'config/json_config/test_predefined_var.json')
 
-        assert Config.fromfile(cfg_file, False)['item1'] == '{{ fileDirname }}'
+        assert Config.fromfile(
+            cfg_file,
+            use_predefined_variables=False)['item1'] == '{{ fileDirname }}'
         assert Config.fromfile(cfg_file)['item1'] == self._get_file_path(
             osp.dirname(cfg_file))
 
@@ -605,20 +613,26 @@ class TestConfig:
                             'config/py_config/test_environment_var.py')
 
         with pytest.raises(KeyError):
-            Config._file2dict(cfg_file)
+            ConfigV1._file2dict(cfg_file)
 
         os.environ['ITEM1'] = '60'
         cfg_dict_dst = dict(item1='60', item2='default_value', item3=80)
-        assert Config._file2dict(cfg_file)[0]['item1'] == cfg_dict_dst['item1']
-        assert Config._file2dict(cfg_file)[0]['item2'] == cfg_dict_dst['item2']
-        assert Config._file2dict(cfg_file)[0]['item3'] == cfg_dict_dst['item3']
+        assert ConfigV1._file2dict(
+            cfg_file)[0]['item1'] == cfg_dict_dst['item1']
+        assert ConfigV1._file2dict(
+            cfg_file)[0]['item2'] == cfg_dict_dst['item2']
+        assert ConfigV1._file2dict(
+            cfg_file)[0]['item3'] == cfg_dict_dst['item3']
 
         os.environ['ITEM2'] = 'new_value'
         os.environ['ITEM3'] = '50'
         cfg_dict_dst = dict(item1='60', item2='new_value', item3=50)
-        assert Config._file2dict(cfg_file)[0]['item1'] == cfg_dict_dst['item1']
-        assert Config._file2dict(cfg_file)[0]['item2'] == cfg_dict_dst['item2']
-        assert Config._file2dict(cfg_file)[0]['item3'] == cfg_dict_dst['item3']
+        assert ConfigV1._file2dict(
+            cfg_file)[0]['item1'] == cfg_dict_dst['item1']
+        assert ConfigV1._file2dict(
+            cfg_file)[0]['item2'] == cfg_dict_dst['item2']
+        assert ConfigV1._file2dict(
+            cfg_file)[0]['item3'] == cfg_dict_dst['item3']
 
         os.environ.pop('ITEM1')
         os.environ.pop('ITEM2')
@@ -627,7 +641,7 @@ class TestConfig:
     def _merge_from_base(self):
         cfg_file = osp.join(self.data_path,
                             'config/py_config/test_merge_from_base_single.py')
-        cfg_dict = Config._file2dict(cfg_file)[0]
+        cfg_dict = ConfigV1._file2dict(cfg_file)[0]
 
         assert cfg_dict['item1'] == [2, 3]
         assert cfg_dict['item2']['a'] == 1
@@ -643,7 +657,7 @@ class TestConfig:
         cfg_file = osp.join(
             self.data_path,
             'config/py_config/test_merge_from_multiple_bases.py')
-        cfg_dict = Config._file2dict(cfg_file)[0]
+        cfg_dict = ConfigV1._file2dict(cfg_file)[0]
 
         # cfg.fcfg_dictd
         assert cfg_dict['item1'] == [1, 2]
@@ -666,7 +680,7 @@ class TestConfig:
                 'json_config/test_base.json', 'yaml_config/test_base.yaml'
         ]:
             cfg_file = osp.join(self.data_path, 'config', file)
-            cfg_dict = Config._file2dict(cfg_file)[0]
+            cfg_dict = ConfigV1._file2dict(cfg_file)[0]
 
             assert cfg_dict['item1'] == [1, 2]
             assert cfg_dict['item2']['a'] == 0
@@ -687,7 +701,7 @@ class TestConfig:
                 'yaml_config/test_base_variables_nested.yaml'
         ]:
             cfg_file = osp.join(self.data_path, 'config', file)
-            cfg_dict = Config._file2dict(cfg_file)[0]
+            cfg_dict = ConfigV1._file2dict(cfg_file)[0]
 
             assert cfg_dict['base'] == '_base_.item8'
             assert cfg_dict['item1'] == [1, 2]
@@ -722,7 +736,7 @@ class TestConfig:
         cfg_file = osp.join(
             self.data_path,
             'config/py_config/test_pre_substitute_base_vars.py')
-        cfg_dict = Config._file2dict(cfg_file)[0]
+        cfg_dict = ConfigV1._file2dict(cfg_file)[0]
 
         assert cfg_dict['item21'] == 'test_base_variables.py'
         assert cfg_dict['item22'] == 'test_base_variables.py'
@@ -796,7 +810,7 @@ class TestConfig:
         # Test use global variable in config function
         cfg_file = osp.join(self.data_path,
                             'config/py_config/test_py_function_global_var.py')
-        cfg = Config._file2dict(cfg_file)[0]
+        cfg = ConfigV1._file2dict(cfg_file)[0]
         assert cfg['item1'] == 1
         assert cfg['item2'] == 2
 
@@ -804,7 +818,7 @@ class TestConfig:
         # config.
         cfg_file = osp.join(self.data_path,
                             'config/py_config/test_py_modify_key.py')
-        cfg = Config._file2dict(cfg_file)[0]
+        cfg = ConfigV1._file2dict(cfg_file)[0]
         assert cfg == dict(item1=dict(a=1))
 
         # Simulate the case that the temporary directory includes `.`, etc.
@@ -819,13 +833,13 @@ class TestConfig:
                    PatchedTempDirectory):
             cfg_file = osp.join(self.data_path,
                                 'config/py_config/test_py_modify_key.py')
-            cfg = Config._file2dict(cfg_file)[0]
+            cfg = ConfigV1._file2dict(cfg_file)[0]
             assert cfg == dict(item1=dict(a=1))
 
     def _merge_recursive_bases(self):
         cfg_file = osp.join(self.data_path,
                             'config/py_config/test_merge_recursive_bases.py')
-        cfg_dict = Config._file2dict(cfg_file)[0]
+        cfg_dict = ConfigV1._file2dict(cfg_file)[0]
 
         assert cfg_dict['item1'] == [2, 3]
         assert cfg_dict['item2']['a'] == 1
@@ -835,7 +849,7 @@ class TestConfig:
     def _merge_delete(self):
         cfg_file = osp.join(self.data_path,
                             'config/py_config/test_merge_delete.py')
-        cfg_dict = Config._file2dict(cfg_file)[0]
+        cfg_dict = ConfigV1._file2dict(cfg_file)[0]
         # cfg.field
         assert cfg_dict['item1'] == dict(a=0)
         assert cfg_dict['item2'] == dict(a=0, b=0)
@@ -851,7 +865,7 @@ class TestConfig:
         cfg_file = osp.join(
             self.data_path,
             'config/py_config/test_merge_intermediate_variable_child.py')
-        cfg_dict = Config._file2dict(cfg_file)[0]
+        cfg_dict = ConfigV1._file2dict(cfg_file)[0]
         # cfg.field
         assert cfg_dict['item1'] == [1, 2]
         assert cfg_dict['item2'] == dict(a=0)
@@ -988,9 +1002,10 @@ class TestConfig:
         cfg = Config.fromfile(lazy_import_cfg_path)
         cfg_dict = cfg.to_dict()
         assert (cfg_dict['train_dataloader']['dataset']['type'] ==
-                'mmengine.testing.runner_test_case.ToyDataset')
-        assert (
-            cfg_dict['custom_hooks'][0]['type'] == 'mmengine.hooks.EMAHook')
+                '<mmengine.testing.runner_test_case.ToyDataset>')
+        assert (cfg_dict['custom_hooks'][0]['type']
+                in ('<mmengine.hooks.EMAHook>',
+                    '<mmengine.hooks.ema_hook.EMAHook>'))
         # Dumped config
         dumped_cfg_path = tmp_path / 'test_dump_lazy.py'
         cfg.dump(dumped_cfg_path)
@@ -1010,6 +1025,8 @@ class TestConfig:
                 assert len(a) == len(b)
                 for item_a, item_b in zip(a, b):
                     _compare_dict(item_a, item_b)
+            elif isinstance(a, type):
+                assert a.__module__ + a.__name__ == str(b)
             else:
                 assert str(a) == str(b)
 
@@ -1032,7 +1049,7 @@ class TestConfig:
         error_obj = tmp_path / 'error_obj.py'
         error_obj.write_text("""from mmengine.fileio import error_obj""")
         # match pattern should be double escaped
-        match = str(error_obj).encode('unicode_escape').decode()
+        match = 'Failed to import mmengine.fileio.error_obj'
         with pytest.raises(ImportError, match=match):
             cfg = Config.fromfile(str(error_obj))
             cfg.error_obj
@@ -1042,17 +1059,17 @@ class TestConfig:
 import mmengine
 error_attr = mmengine.error_attr
 """)  # noqa: E122
-        match = str(error_attr).encode('unicode_escape').decode()
-        with pytest.raises(ImportError, match=match):
+        match = "module 'mmengine' has no attribute 'error_attr'"
+        with pytest.raises(AttributeError, match=match):
             cfg = Config.fromfile(str(error_attr))
             cfg.error_attr
 
         error_module = tmp_path / 'error_module.py'
-        error_module.write_text("""import error_module""")
-        match = str(error_module).encode('unicode_escape').decode()
+        error_module.write_text("""import error_module;a=error_module""")
+        match = 'Failed to import error_module'
         with pytest.raises(ImportError, match=match):
             cfg = Config.fromfile(str(error_module))
-            cfg.error_module
+            cfg.a
 
         # lazy-import and non-lazy-import should not be used mixed.
         # current text config, base lazy-import config
@@ -1061,14 +1078,8 @@ error_attr = mmengine.error_attr
                 osp.join(self.data_path,
                          'config/lazy_module_config/error_mix_using1.py'))
 
-        # Force to import in non-lazy-import mode
-        Config.fromfile(
-            osp.join(self.data_path,
-                     'config/lazy_module_config/error_mix_using1.py'),
-            lazy_import=False)
-
         # current lazy-import config, base text config
-        with pytest.raises(RuntimeError, match='_base_ ='):
+        with pytest.raises(AttributeError, match='item2'):
             Config.fromfile(
                 osp.join(self.data_path,
                          'config/lazy_module_config/error_mix_using2.py'))
@@ -1089,7 +1100,7 @@ error_attr = mmengine.error_attr
         dumped_cfg = Config.fromfile(dumped_cfg_path)
 
         assert set(dumped_cfg.keys()) == {
-            'path', 'name', 'suffix', 'chained', 'existed', 'cfgname'
+            'path', 'name', 'suffix', 'chained', 'existed', 'cfgname', 'ex'
         }
         assert dumped_cfg.to_dict() == cfg.to_dict()
 

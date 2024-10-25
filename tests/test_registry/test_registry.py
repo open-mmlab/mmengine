@@ -323,12 +323,12 @@ class TestRegistry:
         assert LITTLE_HOUNDS.get('mid_hound.PedigreeSamoyedddddd') is None
 
         # Get mmengine.utils by string
-        utils = LITTLE_HOUNDS.get('mmengine.utils')
+        utils = LITTLE_HOUNDS.get('<mmengine.utils>')
         import mmengine.utils
         assert utils is mmengine.utils
 
-        unknown = LITTLE_HOUNDS.get('mmengine.unknown')
-        assert unknown is None
+        with pytest.raises(RuntimeError, match='Failed to get'):
+            LITTLE_HOUNDS.get('<mmengine.unknown>')
 
     def test__search_child(self):
         #        Hierarchical Registry

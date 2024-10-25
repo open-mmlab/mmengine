@@ -133,7 +133,7 @@ class RunnerTestCase(TestCase):
             custom_hooks=[],
             env_cfg=dict(dist_cfg=dict(backend='nccl')),
             experiment_name='test1')
-        self.epoch_based_cfg = Config(epoch_based_cfg)
+        self.epoch_based_cfg = Config(epoch_based_cfg)  # type: ignore
 
         # prepare iter based cfg.
         self.iter_based_cfg: Config = copy.deepcopy(self.epoch_based_cfg)
