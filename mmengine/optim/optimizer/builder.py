@@ -160,15 +160,9 @@ BITSANDBYTES_OPTIMIZERS = register_bitsandbytes_optimizers()
 
 
 def register_transformers_optimizers():
-    transformer_optimizers = []
-    try:
-        from transformers import Adafactor
-    except ImportError:
-        pass
-    else:
-        OPTIMIZERS.register_module(name='Adafactor', module=Adafactor)
-        transformer_optimizers.append('Adafactor')
-    return transformer_optimizers
+    return [
+        'Adafactor',
+    ]
 
 
 TRANSFORMERS_OPTIMIZERS = register_transformers_optimizers()
