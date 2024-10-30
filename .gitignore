@@ -109,6 +109,9 @@ venv.bak/
 .vscode
 .idea
 .DS_Store
+.aim
+.dvc
+.dvcignore
 
 # custom
 *.pkl
