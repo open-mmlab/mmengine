@@ -45,7 +45,7 @@ class MockVisBackend:
         self._add_scalars = True
 
     def close(self) -> None:
-        """close an opened object."""
+        """Close an opened object."""
         self._close = True
 
 

@@ -499,7 +499,7 @@ class BaseStrategy(metaclass=ABCMeta):
                             '"type" and "constructor" are not in '
                             f'optimizer, but got {name}={optim}')
                     optim_wrappers[name] = optim
-                return OptimWrapperDict(**optim_wrappers)
+                return OptimWrapperDict(**optim_wrappers)  # type: ignore
         else:
             raise TypeError('optimizer wrapper should be an OptimWrapper '
                             f'object or dict, but got {optim_wrapper}')

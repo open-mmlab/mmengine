@@ -69,11 +69,11 @@ def get_installed_path(package: str) -> str:
         else:
             raise e
 
-    possible_path = osp.join(pkg.location, package)
+    possible_path = osp.join(pkg.location, package)  # type: ignore
     if osp.exists(possible_path):
         return possible_path
     else:
-        return osp.join(pkg.location, package2module(package))
+        return osp.join(pkg.location, package2module(package))  # type: ignore
 
 
 def package2module(package: str):

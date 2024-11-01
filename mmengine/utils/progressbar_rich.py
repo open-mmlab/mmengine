@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from multiprocessing import Pool
-from typing import Callable, Iterable, Sized
+from typing import Callable, Iterable, Optional, Sized
 
 from rich.progress import (BarColumn, MofNCompleteColumn, Progress, Task,
                            TaskProgressColumn, TextColumn, TimeRemainingColumn)
@@ -47,7 +47,7 @@ def _tasks_with_index(tasks):
 
 def track_progress_rich(func: Callable,
                         tasks: Iterable = tuple(),
-                        task_num: int = None,
+                        task_num: Optional[int] = None,
                         nproc: int = 1,
                         chunksize: int = 1,
                         description: str = 'Processing',

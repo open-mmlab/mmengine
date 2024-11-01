@@ -233,7 +233,7 @@ class ProfilerHook(Hook):
             self._export_chrome_trace(runner)
 
     def after_train_iter(self, runner, batch_idx, data_batch, outputs):
-        """profiler will call `step` method if it is not closed."""
+        """Profiler will call `step` method if it is not closed."""
         if not self._closed:
             self.profiler.step()
         if runner.iter == self.profile_times - 1 and not self.by_epoch:

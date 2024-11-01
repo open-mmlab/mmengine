@@ -109,7 +109,7 @@ def init_default_scope(scope: str) -> None:
     if current_scope.scope_name != scope:  # type: ignore
         print_log(
             'The current default scope '  # type: ignore
-            f'"{current_scope.scope_name}" is not "{scope}", '
+            f'"{current_scope.scope_name}" is not "{scope}", '  # type: ignore
             '`init_default_scope` will force set the current'
             f'default scope to "{scope}".',
             logger='current',

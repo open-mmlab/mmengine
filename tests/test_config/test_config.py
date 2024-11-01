@@ -843,8 +843,8 @@ class TestConfig:
         assert cfg_dict['item4'] == 'test'
         assert '_delete_' not in cfg_dict['item1']
 
-        assert type(cfg_dict['item1']) == ConfigDict
-        assert type(cfg_dict['item2']) == ConfigDict
+        assert type(cfg_dict['item1']) is ConfigDict
+        assert type(cfg_dict['item2']) is ConfigDict
 
     def _merge_intermediate_variable(self):
 

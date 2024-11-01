@@ -131,7 +131,7 @@ def tuple_cast(inputs, dst_type):
 
 def is_seq_of(seq: Any,
               expected_type: Union[Type, tuple],
-              seq_type: Type = None) -> bool:
+              seq_type: Optional[Type] = None) -> bool:
     """Check whether it is a sequence of some type.
 
     Args:

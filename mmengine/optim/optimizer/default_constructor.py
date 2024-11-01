@@ -131,7 +131,7 @@ class DefaultOptimWrapperConstructor:
         self._validate_cfg()
 
     def _validate_cfg(self) -> None:
-        """verify the correctness of the config."""
+        """Verify the correctness of the config."""
         if not isinstance(self.paramwise_cfg, dict):
             raise TypeError('paramwise_cfg should be None or a dict, '
                             f'but got {type(self.paramwise_cfg)}')
@@ -155,7 +155,7 @@ class DefaultOptimWrapperConstructor:
                 raise ValueError('base_wd should not be None')
 
     def _is_in(self, param_group: dict, param_group_list: list) -> bool:
-        """check whether the `param_group` is in the`param_group_list`"""
+        """Check whether the `param_group` is in the`param_group_list`"""
         assert is_list_of(param_group_list, dict)
         param = set(param_group['params'])
         param_set = set()

@@ -175,11 +175,11 @@ class DumpResults(BaseMetric):
         self.out_file_path = out_file_path
 
     def process(self, data_batch: Any, predictions: Sequence[dict]) -> None:
-        """transfer tensors in predictions to CPU."""
+        """Transfer tensors in predictions to CPU."""
         self.results.extend(_to_cpu(predictions))
 
     def compute_metrics(self, results: list) -> dict:
-        """dump the prediction results to a pickle file."""
+        """Dump the prediction results to a pickle file."""
         dump(results, self.out_file_path)
         print_log(
             f'Results has been saved to {self.out_file_path}.',
@@ -188,7 +188,7 @@ class DumpResults(BaseMetric):
 
 
 def _to_cpu(data: Any) -> Any:
-    """transfer all tensors and BaseDataElement to cpu."""
+    """Transfer all tensors and BaseDataElement to cpu."""
     if isinstance(data, (Tensor, BaseDataElement)):
         return data.to('cpu')
     elif isinstance(data, list):
