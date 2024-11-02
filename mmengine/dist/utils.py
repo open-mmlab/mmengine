@@ -563,7 +563,7 @@ def cast_data_device(
         Tensor or list or dict: ``data`` was casted to ``device``.
     """
     if out is not None:
-        if type(data) is type(out):
+        if type(data) is not type(out):
             raise TypeError(
                 'out should be the same type with data, but got data is '
                 f'{type(data)} and out is {type(data)}')
