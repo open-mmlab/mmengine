@@ -300,8 +300,8 @@ except ImportError:
                 get_inputs.append(filepath)
 
             with build_temporary_directory() as tmp_dir, \
-                 patch.object(backend, 'put', side_effect=put),\
-                 patch.object(backend, 'get', side_effect=get),\
+                 patch.object(backend, 'put', side_effect=put), \
+                 patch.object(backend, 'get', side_effect=get), \
                  patch.object(backend, 'exists', return_value=False):
                 tmp_dir = tmp_dir.replace('\\', '/')
                 dst = f'{tmp_dir}/dir'
@@ -351,7 +351,7 @@ except ImportError:
 
             with build_temporary_directory() as tmp_dir, \
                  patch.object(backend, 'copyfile_from_local',
-                              side_effect=copyfile_from_local),\
+                              side_effect=copyfile_from_local), \
                  patch.object(backend, 'exists', return_value=False):
                 backend.copytree_from_local(tmp_dir, self.petrel_dir)
 
@@ -427,7 +427,7 @@ except ImportError:
             def remove(filepath):
                 inputs.append(filepath)
 
-            with build_temporary_directory() as tmp_dir,\
+            with build_temporary_directory() as tmp_dir, \
                  patch.object(backend, 'remove', side_effect=remove):
                 backend.rmtree(tmp_dir)
 

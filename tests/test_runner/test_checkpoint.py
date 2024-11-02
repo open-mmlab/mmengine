@@ -251,7 +251,7 @@ def test_load_checkpoint_metadata():
 
         def _load_from_state_dict(self, state_dict, prefix, local_metadata,
                                   *args, **kwargs):
-            """load checkpoints."""
+            """Load checkpoints."""
 
             # Names of some parameters in has been changed.
             version = local_metadata.get('version', None)

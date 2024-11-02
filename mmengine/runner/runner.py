@@ -579,7 +579,7 @@ class Runner:
 
     @property
     def hooks(self):
-        """list[:obj:`Hook`]: A list of registered hooks."""
+        """List[:obj:`Hook`]: A list of registered hooks."""
         return self._hooks
 
     @property
@@ -720,7 +720,7 @@ class Runner:
 
     def build_logger(self,
                      log_level: Union[int, str] = 'INFO',
-                     log_file: str = None,
+                     log_file: Optional[str] = None,
                      **kwargs) -> MMLogger:
         """Build a global asscessable MMLogger.
 
@@ -1677,7 +1677,7 @@ class Runner:
         return '\n'.join(stage_hook_infos)
 
     def load_or_resume(self) -> None:
-        """load or resume checkpoint."""
+        """Load or resume checkpoint."""
         if self._has_loaded:
             return None
 

@@ -540,7 +540,7 @@ class FlexibleRunner:
 
     @property
     def hooks(self):
-        """list[:obj:`Hook`]: A list of registered hooks."""
+        """List[:obj:`Hook`]: A list of registered hooks."""
         return self._hooks
 
     @property
@@ -1117,7 +1117,7 @@ class FlexibleRunner:
         return '\n'.join(stage_hook_infos)
 
     def load_or_resume(self):
-        """load or resume checkpoint."""
+        """Load or resume checkpoint."""
         if self._has_loaded:
             return None
 
@@ -1539,7 +1539,7 @@ class FlexibleRunner:
         file_client_args: Optional[dict] = None,
         save_optimizer: bool = True,
         save_param_scheduler: bool = True,
-        meta: dict = None,
+        meta: Optional[dict] = None,
         by_epoch: bool = True,
         backend_args: Optional[dict] = None,
     ):

@@ -161,8 +161,7 @@ class OptimWrapperDict(OptimWrapper):
             self.optim_wrappers[name].load_state_dict(_state_dict)
 
     def items(self) -> Iterator[Tuple[str, OptimWrapper]]:
-        """A generator to get the name and corresponding
-        :obj:`OptimWrapper`"""
+        """A generator to get the name and corresponding :obj:`OptimWrapper`"""
         yield from self.optim_wrappers.items()
 
     def values(self) -> Iterator[OptimWrapper]:

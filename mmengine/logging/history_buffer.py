@@ -58,7 +58,7 @@ class HistoryBuffer:
         self._statistics_methods.setdefault('mean', HistoryBuffer.mean)
 
     def update(self, log_val: Union[int, float], count: int = 1) -> None:
-        """update the log history.
+        """Update the log history.
 
         If the length of the buffer exceeds ``self._max_length``, the oldest
         element will be removed from the buffer.

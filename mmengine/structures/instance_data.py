@@ -135,7 +135,7 @@ class InstanceData(BaseDataElement):
     """
 
     def __setattr__(self, name: str, value: Sized):
-        """setattr is only used to set data.
+        """Setattr is only used to set data.
 
         The value must have the attribute of `__len__` and have the same length
         of `InstanceData`.

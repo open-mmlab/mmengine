@@ -309,7 +309,7 @@ class CheckpointLoader:
 
     @classmethod
     def load_checkpoint(cls, filename, map_location=None, logger='current'):
-        """load checkpoint through URL scheme path.
+        """Load checkpoint through URL scheme path.
 
         Args:
             filename (str): checkpoint file name with given prefix
@@ -332,7 +332,7 @@ class CheckpointLoader:
 
 @CheckpointLoader.register_scheme(prefixes='')
 def load_from_local(filename, map_location):
-    """load checkpoint by local file path.
+    """Load checkpoint by local file path.
 
     Args:
         filename (str): local checkpoint file path
@@ -353,7 +353,7 @@ def load_from_http(filename,
                    map_location=None,
                    model_dir=None,
                    progress=os.isatty(0)):
-    """load checkpoint through HTTP or HTTPS scheme path. In distributed
+    """Load checkpoint through HTTP or HTTPS scheme path. In distributed
     setting, this function only download checkpoint at local rank 0.
 
     Args:
@@ -386,7 +386,7 @@ def load_from_http(filename,
 
 @CheckpointLoader.register_scheme(prefixes='pavi://')
 def load_from_pavi(filename, map_location=None):
-    """load checkpoint through the file path prefixed with pavi. In distributed
+    """Load checkpoint through the file path prefixed with pavi. In distributed
     setting, this function download ckpt at all ranks to different temporary
     directories.
 
@@ -419,7 +419,7 @@ def load_from_pavi(filename, map_location=None):
 @CheckpointLoader.register_scheme(
     prefixes=[r'(\S+\:)?s3://', r'(\S+\:)?petrel://'])
 def load_from_ceph(filename, map_location=None, backend='petrel'):
-    """load checkpoint through the file path prefixed with s3.  In distributed
+    """Load checkpoint through the file path prefixed with s3.  In distributed
     setting, this function download ckpt at all ranks to different temporary
     directories.
 
@@ -441,7 +441,7 @@ def load_from_ceph(filename, map_location=None, backend='petrel'):
 
 @CheckpointLoader.register_scheme(prefixes=('modelzoo://', 'torchvision://'))
 def load_from_torchvision(filename, map_location=None):
-    """load checkpoint through the file path prefixed with modelzoo or
+    """Load checkpoint through the file path prefixed with modelzoo or
     torchvision.
 
     Args:
@@ -467,7 +467,7 @@ def load_from_torchvision(filename, map_location=None):
 
 @CheckpointLoader.register_scheme(prefixes=('open-mmlab://', 'openmmlab://'))
 def load_from_openmmlab(filename, map_location=None):
-    """load checkpoint through the file path prefixed with open-mmlab or
+    """Load checkpoint through the file path prefixed with open-mmlab or
     openmmlab.
 
     Args:
@@ -510,7 +510,7 @@ def load_from_openmmlab(filename, map_location=None):
 
 @CheckpointLoader.register_scheme(prefixes='mmcls://')
 def load_from_mmcls(filename, map_location=None):
-    """load checkpoint through the file path prefixed with mmcls.
+    """Load checkpoint through the file path prefixed with mmcls.
 
     Args:
         filename (str): checkpoint file path with mmcls prefix
