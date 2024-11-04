@@ -94,8 +94,15 @@ class MultiProcessTestCase(TestCase):
     # or run the underlying test function.
     def __init__(self, method_name: str = 'runTest') -> None:
         super().__init__(method_name)
-        fn = getattr(self, method_name)
-        setattr(self, method_name, self.join_or_run(fn))
+        try:
+            fn = getattr(self, method_name)
+            setattr(self, method_name, self.join_or_run(fn))
+        except AttributeError as e:
+            if method_name != 'runTest':
+                # we allow instantiation with no explicit method name
+                # but not an *incorrect* or missing method name
+                raise ValueError(f'no such test method in {self.__class__}:'
+                                 f' {method_name}') from e
 
     def setUp(self) -> None:
         super().setUp()
@@ -345,12 +352,13 @@ class MultiProcessTestCase(TestCase):
             if first_process.exitcode == skip.exit_code:
                 raise unittest.SkipTest(skip.message)
 
-        # Skip the unittest since the raised error maybe not caused by
-        # the tested function. For example, in CI environment, the tested
-        # method could be terminated by system signal for the limited
-        # resources.
-        self.skipTest(f'Skip test {self._testMethodName} due to '
-                      'the program abort')
+        if first_process.exitcode != 0:
+            # Skip the unittest since the raised error maybe not caused by
+            # the tested function. For example, in CI environment, the tested
+            # method could be terminated by system signal for the limited
+            # resources.
+            self.skipTest(f'Skip test {self._testMethodName} due to '
+                          'the program abort')
 
     @property
     def is_master(self) -> bool:

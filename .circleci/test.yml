@@ -108,7 +108,7 @@ jobs:
             pip install wheel
       - run:
           name: Install PyTorch
-          command: pip install torch==<< parameters.torch >>+cpu torchvision==<< parameters.torchvision >>+cpu -f https://download.pytorch.org/whl/torch_stable.html
+          command: pip install torch==<< parameters.torch >>+cpu torchvision==<< parameters.torchvision >>+cpu -f https://download.pytorch.org/whl/torch -f https://download.pytorch.org/whl/torchvision
       - run:
           name: Build MMEngine from source
           command: pip install -e . -v
@@ -137,7 +137,7 @@ jobs:
         type: string
       cuda:
         type: enum
-        enum: ["10.1", "10.2", "11.1", "11.7", "11.8"]
+        enum: ["10.1", "10.2", "11.1", "11.7", "11.8", "12.1", "12.4"]
       cudnn:
         type: integer
         default: 7
@@ -267,9 +267,9 @@ workflows:
             - lint
       - build_cpu:
           name: maximum_version_cpu
-          torch: 2.1.0
-          torchvision: 0.16.0
-          python: 3.9.0
+          torch: 2.5.0
+          torchvision: 0.20.0
+          python: 3.11.9
           requires:
             - minimum_version_cpu
       - hold_integration_test:
@@ -296,9 +296,9 @@ workflows:
             - hold
       - build_cuda:
           name: maximum_version_gpu
-          torch: 2.1.0
-          cuda: "11.8"
-          cudnn: 8
+          torch: 2.5.0
+          cuda: "12.4"
+          cudnn: 9
           requires:
             - hold
   merge_stage_test:
