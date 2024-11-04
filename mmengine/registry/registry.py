@@ -332,7 +332,7 @@ class Registry:
         return root
 
     def import_from_location(self) -> None:
-        """import modules from the pre-defined locations in self._location."""
+        """Import modules from the pre-defined locations in self._location."""
         if not self._imported:
             # Avoid circular import
             from ..logging import print_log

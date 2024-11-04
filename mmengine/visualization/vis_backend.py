@@ -161,7 +161,7 @@ class BaseVisBackend(metaclass=ABCMeta):
         pass
 
     def close(self) -> None:
-        """close an opened object."""
+        """Close an opened object."""
         pass
 
 
@@ -314,7 +314,7 @@ class LocalVisBackend(BaseVisBackend):
 
     def _dump(self, value_dict: dict, file_path: str,
               file_format: str) -> None:
-        """dump dict to file.
+        """Dump dict to file.
 
         Args:
            value_dict (dict) : The dict data to saved.
@@ -505,7 +505,7 @@ class WandbVisBackend(BaseVisBackend):
         self._wandb.log(scalar_dict, commit=self._commit)
 
     def close(self) -> None:
-        """close an opened wandb object."""
+        """Close an opened wandb object."""
         if hasattr(self, '_wandb'):
             self._wandb.join()
 
@@ -629,7 +629,7 @@ class TensorboardVisBackend(BaseVisBackend):
             self.add_scalar(key, value, step)
 
     def close(self):
-        """close an opened tensorboard object."""
+        """Close an opened tensorboard object."""
         if hasattr(self, '_tensorboard'):
             self._tensorboard.close()
 
@@ -1135,7 +1135,7 @@ class NeptuneVisBackend(BaseVisBackend):
             self._neptune[k].append(v, step=step)
 
     def close(self) -> None:
-        """close an opened object."""
+        """Close an opened object."""
         if hasattr(self, '_neptune'):
             self._neptune.stop()
 
@@ -1282,7 +1282,7 @@ class DVCLiveVisBackend(BaseVisBackend):
             self.add_scalar(key, value, step, **kwargs)
 
     def close(self) -> None:
-        """close an opened dvclive object."""
+        """Close an opened dvclive object."""
         if not hasattr(self, '_dvclive'):
             return
 

@@ -67,7 +67,7 @@ class TimeCounter:
 
         instance.log_interval = log_interval
         instance.warmup_interval = warmup_interval
-        instance.with_sync = with_sync
+        instance.with_sync = with_sync  # type: ignore
         instance.tag = tag
         instance.logger = logger
 
@@ -127,7 +127,7 @@ class TimeCounter:
         self.print_time(elapsed)
 
     def print_time(self, elapsed: Union[int, float]) -> None:
-        """print times per count."""
+        """Print times per count."""
         if self.__count >= self.warmup_interval:
             self.__pure_inf_time += elapsed
 

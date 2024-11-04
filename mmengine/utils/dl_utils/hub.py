@@ -57,6 +57,7 @@ if TORCH_VERSION != 'parrots' and digit_version(TORCH_VERSION) < digit_version(
                  check_hash=False,
                  file_name=None):
         r"""Loads the Torch serialized object at the given URL.
+
         If downloaded file is a zip file, it will be automatically decompressed
         If the object is already present in `model_dir`, it's deserialized and
         returned.

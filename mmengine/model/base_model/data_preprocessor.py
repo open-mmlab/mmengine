@@ -253,17 +253,17 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
             dict or list: Data in the same format as the model input.
         """
         data = self.cast_data(data)  # type: ignore
-        _batch_inputs = data['inputs']
+        _batch_inputs = data['inputs']  # type: ignore
         # Process data with `pseudo_collate`.
         if is_seq_of(_batch_inputs, torch.Tensor):
             batch_inputs = []
             for _batch_input in _batch_inputs:
                 # channel transform
                 if self._channel_conversion:
-                    _batch_input = _batch_input[[2, 1, 0], ...]
+                    _batch_input = _batch_input[[2, 1, 0], ...]  # type: ignore
                 # Convert to float after channel conversion to ensure
                 # efficiency
-                _batch_input = _batch_input.float()
+                _batch_input = _batch_input.float()  # type: ignore
                 # Normalization.
                 if self._enable_normalize:
                     if self.mean.shape[0] == 3:
@@ -302,7 +302,7 @@ class ImgDataPreprocessor(BaseDataPreprocessor):
         else:
             raise TypeError('Output of `cast_data` should be a dict of '
                             'list/tuple with inputs and data_samples, '
-                            f'but got {type(data)}: {data}')
-        data['inputs'] = batch_inputs
-        data.setdefault('data_samples', None)
-        return data
+                            f'but got {type(data)}: {data}')  # type: ignore
+        data['inputs'] = batch_inputs  # type: ignore
+        data.setdefault('data_samples', None)  # type: ignore
+        return data  # type: ignore

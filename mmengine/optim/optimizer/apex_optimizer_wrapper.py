@@ -123,8 +123,7 @@ class ApexOptimWrapper(OptimWrapper):
         self._inner_count += 1
 
     def state_dict(self) -> dict:
-        """Get the state dictionary of :attr:`optimizer` and
-        :attr:`apex_amp`.
+        """Get the state dictionary of :attr:`optimizer` and :attr:`apex_amp`.
 
         Based on the state dictionary of the optimizer, the returned state
         dictionary will add a key named "apex_amp".

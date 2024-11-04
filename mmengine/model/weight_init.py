@@ -119,7 +119,7 @@ def caffe2_xavier_init(module, bias=0):
 
 
 def bias_init_with_prob(prior_prob):
-    """initialize conv/fc bias value according to a given probability value."""
+    """Initialize conv/fc bias value according to a given probability value."""
     bias_init = float(-np.log((1 - prior_prob) / prior_prob))
     return bias_init
 
@@ -662,12 +662,12 @@ def trunc_normal_(tensor: Tensor,
                   std: float = 1.,
                   a: float = -2.,
                   b: float = 2.) -> Tensor:
-    r"""Fills the input Tensor with values drawn from a truncated
-    normal distribution. The values are effectively drawn from the
-    normal distribution :math:`\mathcal{N}(\text{mean}, \text{std}^2)`
-    with values outside :math:`[a, b]` redrawn until they are within
-    the bounds. The method used for generating the random values works
-    best when :math:`a \leq \text{mean} \leq b`.
+    r"""Fills the input Tensor with values drawn from a truncated normal
+    distribution. The values are effectively drawn from the normal distribution
+    :math:`\mathcal{N}(\text{mean}, \text{std}^2)` with values outside
+    :math:`[a, b]` redrawn until they are within the bounds. The method used
+    for generating the random values works best when :math:`a \leq \text{mean}
+    \leq b`.
 
     Modified from
     https://github.com/pytorch/pytorch/blob/master/torch/nn/init.py
