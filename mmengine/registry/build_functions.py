@@ -3,8 +3,10 @@ import inspect
 import logging
 from typing import TYPE_CHECKING, Any, Optional, Union
 
+import torch
+
 from mmengine.config import Config, ConfigDict
-from mmengine.utils import ManagerMixin
+from mmengine.utils import ManagerMixin, digit_version
 from .registry import Registry
 
 if TYPE_CHECKING:
@@ -230,6 +232,18 @@ def build_model_from_cfg(
         return Sequential(*modules)
     else:
         return build_from_cfg(cfg, registry, default_args)
+
+
+def build_optimizer_from_cfg(
+        cfg: Union[dict, ConfigDict, Config],
+        registry: Registry,
+        default_args: Optional[Union[dict, ConfigDict, Config]] = None) -> Any:
+    if 'Adafactor' == cfg['type'] and digit_version(
+            torch.__version__) >= digit_version('2.5.0'):
+        from ..logging import print_log
+        print_log(
+            'the torch version of Adafactor is registered as torch_Adafactor')
+    return build_from_cfg(cfg, registry, default_args)
 
 
 def build_scheduler_from_cfg(
