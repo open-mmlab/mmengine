@@ -27,7 +27,7 @@ def register_torch_optimizers() -> List[str]:
                                                   torch.optim.Optimizer):
             if module_name == 'Adafactor':
                 OPTIMIZERS.register_module(
-                    name='torch_Adafactor', module=_optim)
+                    name='TorchAdafactor', module=_optim)
             else:
                 OPTIMIZERS.register_module(module=_optim)
             torch_optimizers.append(module_name)
