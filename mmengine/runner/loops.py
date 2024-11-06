@@ -12,6 +12,7 @@ from mmengine.logging import HistoryBuffer, print_log
 from mmengine.registry import LOOPS
 from mmengine.structures import BaseDataElement
 from mmengine.utils import is_list_of
+from mmengine.dataset.sampler import InfiniteSampler
 from .amp import autocast
 from .base_loop import BaseLoop
 from .utils import calc_dynamic_intervals
@@ -274,14 +275,28 @@ class IterBasedTrainLoop(BaseLoop):
         # In iteration-based training loop, we treat the whole training process
         # as a big epoch and execute the corresponding hook.
         self.runner.call_hook('before_train_epoch')
-        if self._iter > 0:
+        if self._iter > 0 and not isinstance(self.dataloader.sampler, InfiniteSampler):
             print_log(
                 f'Advance dataloader {self._iter} steps to skip data '
                 'that has already been trained',
                 logger='current',
                 level=logging.WARNING)
             for _ in range(self._iter):
+                break # NOTE MGAM: override all preprocessing steps during resume.
                 next(self.dataloader_iterator)
+
+        # with torch.profiler.profile(
+        #     activities=[torch.profiler.ProfilerActivity.CPU,
+        #                 torch.profiler.ProfilerActivity.CUDA],
+        #     schedule=torch.profiler.schedule(wait=1, warmup=1, active=3),
+        #     on_trace_ready=torch.profiler.tensorboard_trace_handler('./profiler_log'),
+        #     record_shapes=True,
+        #     profile_memory=True,
+        #     with_stack=False,
+        #     with_flops=True,
+        #     with_modules=True,
+        # ) as p:
+
         while self._iter < self._max_iters and not self.stop_training:
             self.runner.model.train()
 
@@ -292,8 +307,10 @@ class IterBasedTrainLoop(BaseLoop):
             if (self.runner.val_loop is not None
                     and self._iter >= self.val_begin
                     and (self._iter % self.val_interval == 0
-                         or self._iter == self._max_iters)):
+                        or self._iter == self._max_iters)):
                 self.runner.val_loop.run()
+            
+            # p.step()
 
         self.runner.call_hook('after_train_epoch')
         self.runner.call_hook('after_train')
