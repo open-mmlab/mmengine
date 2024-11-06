@@ -238,10 +238,10 @@ def build_optimizer_from_cfg(
         cfg: Union[dict, ConfigDict, Config],
         registry: Registry,
         default_args: Optional[Union[dict, ConfigDict, Config]] = None) -> Any:
+    from ..logging import print_log
     if 'type' in cfg \
             and 'Adafactor' == cfg['type'] \
             and digit_version(torch.__version__) >= digit_version('2.5.0'):
-        from ..logging import print_log
         print_log(
             'the torch version of Adafactor is registered as TorchAdafactor')
     return build_from_cfg(cfg, registry, default_args)
