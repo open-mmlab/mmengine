@@ -1,6 +1,6 @@
 # 大模型训练
 
-在训练大模型时，需要庞大的资源。单卡显存通常不能满足训练的需要，因此出现了大模型训练技术，其中典型的一种是 [DeepSpeed ZeRO](https://www.deepspeed.ai/tutorials/zero/#zero-overview)。DeepSpedd ZeRO 支持切分优化器、梯度以及参数。
+在训练大模型时，需要庞大的资源。单卡显存通常不能满足训练的需要，因此出现了大模型训练技术，其中典型的一种是 [DeepSpeed ZeRO](https://www.deepspeed.ai/tutorials/zero/#zero-overview)。DeepSpeed ZeRO 支持切分优化器、梯度以及参数。
 
 为了更加灵活地支持大模型训练技术，从 MMEngine v0.8.0 开始，我们提供了新的执行器 [FlexibleRunner](mmengine.runner.FlexibleRunner) 和多个抽象策略 [Strategy](../api/strategy)。
 
