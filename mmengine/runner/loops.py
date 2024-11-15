@@ -288,11 +288,11 @@ class IterBasedTrainLoop(BaseLoop):
         # with torch.profiler.profile(
         #     activities=[torch.profiler.ProfilerActivity.CPU,
         #                 torch.profiler.ProfilerActivity.CUDA],
-        #     schedule=torch.profiler.schedule(wait=1, warmup=1, active=3),
+        #     schedule=torch.profiler.schedule(wait=1, warmup=2, active=3),
         #     on_trace_ready=torch.profiler.tensorboard_trace_handler('./profiler_log'),
         #     record_shapes=True,
         #     profile_memory=True,
-        #     with_stack=False,
+        #     with_stack=True,
         #     with_flops=True,
         #     with_modules=True,
         # ) as p:
