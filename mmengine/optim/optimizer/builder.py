@@ -170,7 +170,7 @@ def register_transformers_optimizers():
     except ImportError:
         pass
     else:
-        OPTIMIZERS.register_module(name='Adafactor', module=Adafactor)
+        OPTIMIZERS.register_module(name='Adafactor', module=Adafactor, force=True) # Same optimizer is introduced in PyTorch but transformers had it prior and forcing transformers one to keepup with backward compatibility.
         transformer_optimizers.append('Adafactor')
     return transformer_optimizers
 
