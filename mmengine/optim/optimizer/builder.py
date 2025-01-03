@@ -166,7 +166,8 @@ def register_transformers_optimizers():
     except ImportError:
         pass
     else:
-        OPTIMIZERS.register_module(name='Adafactor', module=Adafactor)
+        # KeyError: 'Adafactor is already registered in optimizer at torch.optim'
+        # OPTIMIZERS.register_module(name='Adafactor', module=Adafactor)
         transformer_optimizers.append('Adafactor')
     return transformer_optimizers
 
