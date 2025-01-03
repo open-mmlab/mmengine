@@ -92,10 +92,25 @@ class MultiProcessTestCase(TestCase):
     # Constructor patches current instance test method to
     # assume the role of the main process and join its subprocesses,
     # or run the underlying test function.
-    def __init__(self, method_name: str = 'runTest') -> None:
+    def __init__(self,
+                 method_name: str = 'runTest',
+                 methodName: str = 'runTest') -> None:
+        # methodName is the correct naming in unittest
+        # and testslide uses keyword arguments.
+        # So we need to use both to 1) not break BC and, 2) support testslide.
+        if methodName != 'runTest':
+            method_name = methodName
         super().__init__(method_name)
-        fn = getattr(self, method_name)
-        setattr(self, method_name, self.join_or_run(fn))
+        try:
+            fn = getattr(self, method_name)
+            setattr(self, method_name, self.join_or_run(fn))
+        except AttributeError as e:
+            if methodName != 'runTest':
+                # we allow instantiation with no explicit method name
+                # but not an *incorrect* or missing method name
+                raise ValueError(
+                    f'no such test method in {self.__class__}: {methodName}'
+                ) from e
 
     def setUp(self) -> None:
         super().setUp()
