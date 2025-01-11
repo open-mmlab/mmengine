@@ -103,6 +103,7 @@ class BaseAveragedModel(nn.Module):
             for k, p_avg in self.avg_parameters.items():
                 p_avg.data.copy_(src_parameters[k].data)
         elif self.steps % self.interval == 0:
+            print(self.avg_parameters)
             for k, p_avg in self.avg_parameters.items():
                 if p_avg.dtype.is_floating_point:
                     device = p_avg.device

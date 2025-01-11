@@ -1375,120 +1375,122 @@ class Config:
     @property
     def pretty_text(self) -> str:
         """Get formatted python config text."""
+        try:
+            indent = 4
 
-        indent = 4
+            def _indent(s_, num_spaces):
+                s = s_.split('\n')
+                if len(s) == 1:
+                    return s_
+                first = s.pop(0)
+                s = [(num_spaces * ' ') + line for line in s]
+                s = '\n'.join(s)
+                s = first + '\n' + s
+                return s
 
-        def _indent(s_, num_spaces):
-            s = s_.split('\n')
-            if len(s) == 1:
-                return s_
-            first = s.pop(0)
-            s = [(num_spaces * ' ') + line for line in s]
-            s = '\n'.join(s)
-            s = first + '\n' + s
-            return s
-
-        def _format_basic_types(k, v, use_mapping=False):
-            if isinstance(v, str):
-                v_str = repr(v)
-            else:
-                v_str = str(v)
-
-            if use_mapping:
-                k_str = f"'{k}'" if isinstance(k, str) else str(k)
-                attr_str = f'{k_str}: {v_str}'
-            else:
-                attr_str = f'{str(k)}={v_str}'
-            attr_str = _indent(attr_str, indent)
-
-            return attr_str
-
-        def _format_list_tuple(k, v, use_mapping=False):
-            if isinstance(v, list):
-                left = '['
-                right = ']'
-            else:
-                left = '('
-                right = ')'
-
-            v_str = f'{left}\n'
-            # check if all items in the list are dict
-            for item in v:
-                if isinstance(item, dict):
-                    v_str += f'dict({_indent(_format_dict(item), indent)}),\n'
-                elif isinstance(item, tuple):
-                    v_str += f'{_indent(_format_list_tuple(None, item), indent)},\n'  # noqa: 501
-                elif isinstance(item, list):
-                    v_str += f'{_indent(_format_list_tuple(None, item), indent)},\n'  # noqa: 501
-                elif isinstance(item, str):
-                    v_str += f'{_indent(repr(item), indent)},\n'
+            def _format_basic_types(k, v, use_mapping=False):
+                if isinstance(v, str):
+                    v_str = repr(v)
                 else:
-                    v_str += str(item) + ',\n'
-            if k is None:
-                return _indent(v_str, indent) + right
-            if use_mapping:
-                k_str = f"'{k}'" if isinstance(k, str) else str(k)
-                attr_str = f'{k_str}: {v_str}'
-            else:
-                attr_str = f'{str(k)}={v_str}'
-            attr_str = _indent(attr_str, indent) + right
-            return attr_str
+                    v_str = str(v)
 
-        def _contain_invalid_identifier(dict_str):
-            contain_invalid_identifier = False
-            for key_name in dict_str:
-                contain_invalid_identifier |= \
-                    (not str(key_name).isidentifier())
-            return contain_invalid_identifier
+                if use_mapping:
+                    k_str = f"'{k}'" if isinstance(k, str) else str(k)
+                    attr_str = f'{k_str}: {v_str}'
+                else:
+                    attr_str = f'{str(k)}={v_str}'
+                attr_str = _indent(attr_str, indent)
 
-        def _format_dict(input_dict, outest_level=False):
-            r = ''
-            s = []
+                return attr_str
 
-            use_mapping = _contain_invalid_identifier(input_dict)
-            if use_mapping:
-                r += '{'
-            for idx, (k, v) in enumerate(
-                    sorted(input_dict.items(), key=lambda x: str(x[0]))):
-                is_last = idx >= len(input_dict) - 1
-                end = '' if outest_level or is_last else ','
-                if isinstance(v, dict):
-                    v_str = '\n' + _format_dict(v)
-                    if use_mapping:
-                        k_str = f"'{k}'" if isinstance(k, str) else str(k)
-                        attr_str = f'{k_str}: dict({v_str}'
+            def _format_list_tuple(k, v, use_mapping=False):
+                if isinstance(v, list):
+                    left = '['
+                    right = ']'
+                else:
+                    left = '('
+                    right = ')'
+
+                v_str = f'{left}\n'
+                # check if all items in the list are dict
+                for item in v:
+                    if isinstance(item, dict):
+                        v_str += f'dict({_indent(_format_dict(item), indent)}),\n'
+                    elif isinstance(item, tuple):
+                        v_str += f'{_indent(_format_list_tuple(None, item), indent)},\n'  # noqa: 501
+                    elif isinstance(item, list):
+                        v_str += f'{_indent(_format_list_tuple(None, item), indent)},\n'  # noqa: 501
+                    elif isinstance(item, str):
+                        v_str += f'{_indent(repr(item), indent)},\n'
                     else:
-                        attr_str = f'{str(k)}=dict({v_str}'
-                    attr_str = _indent(attr_str, indent) + ')' + end
-                elif isinstance(v, (list, tuple)):
-                    attr_str = _format_list_tuple(k, v, use_mapping) + end
+                        v_str += str(item) + ',\n'
+                if k is None:
+                    return _indent(v_str, indent) + right
+                if use_mapping:
+                    k_str = f"'{k}'" if isinstance(k, str) else str(k)
+                    attr_str = f'{k_str}: {v_str}'
                 else:
-                    attr_str = _format_basic_types(k, v, use_mapping) + end
+                    attr_str = f'{str(k)}={v_str}'
+                attr_str = _indent(attr_str, indent) + right
+                return attr_str
 
-                s.append(attr_str)
-            r += '\n'.join(s)
-            if use_mapping:
-                r += '}'
-            return r
+            def _contain_invalid_identifier(dict_str):
+                contain_invalid_identifier = False
+                for key_name in dict_str:
+                    contain_invalid_identifier |= \
+                        (not str(key_name).isidentifier())
+                return contain_invalid_identifier
 
-        cfg_dict = self.to_dict()
-        text = _format_dict(cfg_dict, outest_level=True)
-        if self._format_python_code:
-            # copied from setup.cfg
-            yapf_style = dict(
-                based_on_style='pep8',
-                blank_line_before_nested_class_or_def=True,
-                split_before_expression_after_opening_paren=True)
-            try:
-                if digit_version(yapf.__version__) >= digit_version('0.40.2'):
-                    text, _ = FormatCode(text, style_config=yapf_style)
-                else:
-                    text, _ = FormatCode(
-                        text, style_config=yapf_style, verify=True)
-            except:  # noqa: E722
-                raise SyntaxError('Failed to format the config file, please '
-                                  f'check the syntax of: \n{text}')
-        return text
+            def _format_dict(input_dict, outest_level=False):
+                r = ''
+                s = []
+
+                use_mapping = _contain_invalid_identifier(input_dict)
+                if use_mapping:
+                    r += '{'
+                for idx, (k, v) in enumerate(
+                        sorted(input_dict.items(), key=lambda x: str(x[0]))):
+                    is_last = idx >= len(input_dict) - 1
+                    end = '' if outest_level or is_last else ','
+                    if isinstance(v, dict):
+                        v_str = '\n' + _format_dict(v)
+                        if use_mapping:
+                            k_str = f"'{k}'" if isinstance(k, str) else str(k)
+                            attr_str = f'{k_str}: dict({v_str}'
+                        else:
+                            attr_str = f'{str(k)}=dict({v_str}'
+                        attr_str = _indent(attr_str, indent) + ')' + end
+                    elif isinstance(v, (list, tuple)):
+                        attr_str = _format_list_tuple(k, v, use_mapping) + end
+                    else:
+                        attr_str = _format_basic_types(k, v, use_mapping) + end
+
+                    s.append(attr_str)
+                r += '\n'.join(s)
+                if use_mapping:
+                    r += '}'
+                return r
+
+            cfg_dict = self.to_dict()
+            text = _format_dict(cfg_dict, outest_level=True)
+            if self._format_python_code:
+                # copied from setup.cfg
+                yapf_style = dict(
+                    based_on_style='pep8',
+                    blank_line_before_nested_class_or_def=True,
+                    split_before_expression_after_opening_paren=True)
+                try:
+                    if digit_version(yapf.__version__) >= digit_version('0.40.2'):
+                        text, _ = FormatCode(text, style_config=yapf_style)
+                    else:
+                        text, _ = FormatCode(
+                            text, style_config=yapf_style, verify=True)
+                except:  # noqa: E722
+                    raise SyntaxError('Failed to format the config file, please '
+                                    f'check the syntax of: \n{text}')
+            return text
+        except Exception as e:
+            return f'Error occurs when formatting config: {e}'
 
     def __repr__(self):
         return f'Config (path: {self.filename}): {self._cfg_dict.__repr__()}'
