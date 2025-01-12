@@ -394,7 +394,6 @@ class ValLoop(BaseLoop):
         self.val_loss.clear()
         for idx, data_batch in enumerate(self.dataloader):
             self.run_iter(idx, data_batch)
-
         # compute metrics
         metrics = self.evaluator.evaluate(len(self.dataloader.dataset))
 

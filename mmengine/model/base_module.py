@@ -65,7 +65,6 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
 
     def init_weights(self):
         """Initialize the weights."""
-
         is_top_level_module = False
         # check if it is top-level module
         if not hasattr(self, '_params_init_info'):
