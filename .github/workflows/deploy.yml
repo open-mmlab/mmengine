@@ -1,6 +1,6 @@
 name: deploy
 
-on: 
+on:
   - push
   - workflow_dispatch
 
@@ -11,7 +11,8 @@ concurrency:
 jobs:
   build-n-publish:
     runs-on: ubuntu-latest
-    if: startsWith(github.event.ref, 'refs/tags')
+    if: |
+      startsWith(github.event.ref, 'refs/tags') || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python 3.10
@@ -29,7 +30,8 @@ jobs:
 
   build-n-publish-lite:
     runs-on: ubuntu-latest
-    if: startsWith(github.event.ref, 'refs/tags')
+    if: |
+      startsWith(github.event.ref, 'refs/tags') || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python 3.10
