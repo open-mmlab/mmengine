@@ -8,6 +8,7 @@ import torch.nn as nn
 
 from mmengine.config import Config, ConfigDict
 from mmengine.device import is_npu_available, is_npu_support_full_precision
+from mmengine.logging.logger import print_log
 from mmengine.registry import OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS
 from .default_constructor import DefaultOptimWrapperConstructor
 from .optimizer_wrapper import OptimWrapper
@@ -171,8 +172,10 @@ def register_transformers_optimizers():
     except ImportError:
         pass
     else:
-        # KeyError: 'Adafactor is already registered in optimizer at torch.optim'
-        # OPTIMIZERS.register_module(name='Adafactor', module=Adafactor)
+        try:
+            OPTIMIZERS.register_module(name='Adafactor', module=Adafactor)
+        except KeyError as e:
+            pass
         transformer_optimizers.append('Adafactor')
     return transformer_optimizers
 
