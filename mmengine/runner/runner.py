@@ -1849,7 +1849,7 @@ class Runner:
                 try:
                     getattr(hook, fn_name)(self, **kwargs)
                 except TypeError as e:
-                    raise TypeError(f'{e} in {hook}') from e
+                    raise TypeError(f'{e} in {hook}') from None
 
     def register_hook(
             self,

@@ -282,19 +282,6 @@ class IterBasedTrainLoop(BaseLoop):
                 level=logging.WARNING)
             for _ in range(self._iter):
                 next(self.dataloader_iterator)
-
-        # with torch.profiler.profile(
-        #     activities=[torch.profiler.ProfilerActivity.CPU,
-        #                 torch.profiler.ProfilerActivity.CUDA],
-        #     schedule=torch.profiler.schedule(wait=1, warmup=2, active=3),
-        #     on_trace_ready=torch.profiler.tensorboard_trace_handler('./profiler_log'),
-        #     record_shapes=True,
-        #     profile_memory=True,
-        #     with_stack=True,
-        #     with_flops=True,
-        #     with_modules=True,
-        # ) as p:
-
         while self._iter < self._max_iters and not self.stop_training:
             self.runner.model.train()
 
@@ -305,10 +292,8 @@ class IterBasedTrainLoop(BaseLoop):
             if (self.runner.val_loop is not None
                     and self._iter >= self.val_begin
                     and (self._iter % self.val_interval == 0
-                        or self._iter == self._max_iters)):
+                         or self._iter == self._max_iters)):
                 self.runner.val_loop.run()
-            
-            # p.step()
 
         self.runner.call_hook('after_train_epoch')
         self.runner.call_hook('after_train')
