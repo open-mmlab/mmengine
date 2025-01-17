@@ -63,11 +63,9 @@ def register_deepspeed_optimizers() -> List[str]:
 @OPTIM_WRAPPERS.register_module()
 class DeepSpeedOptimWrapper(BaseOptimWrapper):
 
-    def __init__(self, optimizer, accumulative_counts):
+    def __init__(self, optimizer):
         super().__init__(optimizer)
         self._model = None
-        self._inner_count = 0
-        self._accumulative_counts = accumulative_counts
 
     @property
     def model(self):
@@ -82,13 +80,11 @@ class DeepSpeedOptimWrapper(BaseOptimWrapper):
     def update_params(self, loss) -> None:  # type: ignore
         """Update parameters in :attr:`optimizer`."""
         self.backward(loss)
-        if self.should_update():
-            self.step()
+        self.step()
 
     def backward(self, loss: torch.Tensor, **kwargs) -> None:
         """"Perform gradient back propagation."""
         self.model.backward(loss)
-        self._inner_count += 1
 
     def zero_grad(self, **kwargs) -> None:
         raise NotImplementedError(
@@ -111,8 +107,6 @@ class DeepSpeedOptimWrapper(BaseOptimWrapper):
         if base_param_settings is not None:
             self.base_param_settings = base_param_settings
 
-    def should_update(self) -> bool:
-        return (self._inner_count % self._accumulative_counts == 0)
 
 @MODEL_WRAPPERS.register_module()
 class MMDeepSpeedEngineWrapper:

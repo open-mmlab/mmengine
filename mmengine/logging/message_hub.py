@@ -342,10 +342,8 @@ class MessageHub(ManagerMixin):
         else:
             # check whether value is torch.Tensor but don't want
             # to import torch in this file
-            if hasattr(value, 'numel') and value.numel() == 1:
-                value = value.item()
-            else:
-                print_log(f"MessageHub got unexpceted log: {value}", level=logging.WARN)
+            assert hasattr(value, 'numel') and value.numel() == 1
+            value = value.item()
         return value  # type: ignore
 
     def state_dict(self) -> dict:
