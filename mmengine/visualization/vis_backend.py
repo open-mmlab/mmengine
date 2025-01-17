@@ -604,7 +604,8 @@ class TensorboardVisBackend(BaseVisBackend):
                       (int, float, torch.Tensor, np.ndarray, np.number)):
             self._tensorboard.add_scalar(name, value, step)
         else:
-            warnings.warn(f'Got {type(value)}, but numpy array, torch tensor, '
+            warnings.warn(f'Got type {type(value)} with name {name}, '
+                           'but numpy array, torch tensor, '
                           f'int or float are expected. skip it!')
 
     @force_init_env
