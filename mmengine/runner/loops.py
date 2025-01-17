@@ -418,9 +418,9 @@ class ValLoop(BaseLoop):
         # outputs should be sequence of BaseDataElement
         with autocast(enabled=self.fp16):
             outputs = self.runner.model.val_step(data_batch)
-        
+
         outputs, self.val_loss = _update_losses(outputs, self.val_loss)
-        
+
         self.evaluator.process(data_samples=outputs, data_batch=data_batch)
         self.runner.call_hook(
             'after_val_iter',

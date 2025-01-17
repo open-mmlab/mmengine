@@ -578,7 +578,7 @@ class TensorboardVisBackend(BaseVisBackend):
                   step: int = 0,
                   **kwargs) -> None:
         """Record the image to tensorboard.
-        
+
         Args:
             name (str): The image identifier.
             image (np.ndarray): The image to be saved. The format
