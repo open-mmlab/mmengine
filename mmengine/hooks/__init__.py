@@ -13,10 +13,12 @@ from .runtime_info_hook import RuntimeInfoHook
 from .sampler_seed_hook import DistSamplerSeedHook
 from .sync_buffer_hook import SyncBuffersHook
 from .test_time_aug_hook import PrepareTTAHook
+from .wandb_checkpoint_hook import WandbCheckpointHook
 
 __all__ = [
     'Hook', 'IterTimerHook', 'DistSamplerSeedHook', 'ParamSchedulerHook',
     'SyncBuffersHook', 'EmptyCacheHook', 'CheckpointHook', 'LoggerHook',
     'NaiveVisualizationHook', 'EMAHook', 'RuntimeInfoHook', 'ProfilerHook',
-    'PrepareTTAHook', 'NPUProfilerHook', 'EarlyStoppingHook'
+    'PrepareTTAHook', 'NPUProfilerHook', 'EarlyStoppingHook',
+    'WandbCheckpointHook'
 ]
