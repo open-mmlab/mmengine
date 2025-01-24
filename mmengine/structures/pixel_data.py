@@ -1,9 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
-from typing import List, Sequence, Union
+from typing import Any, List, Sequence, Union
 
 import numpy as np
 import torch
+from torch.nn.functional import interpolate, pad
 
 from .base_data_element import BaseDataElement
 
@@ -127,4 +128,86 @@ class PixelData(BaseDataElement):
         else:
             return None
 
-    # TODO padding, resize
+    def resize(self,
+               size: Sequence[int],
+               interpolation: str = 'bilinear') -> 'PixelData':
+        """Resize all values to the given `size`, and return a new `PixelData`.
+
+        Args:
+            size (Sequence[int]): Output spatial size,
+              should be (height, width)
+            interpolation (str, optional): The algorithm used in interpolation.
+              available for resizing are: `nearest`, `bilinear`, `bicubic`,
+              `area`, `nearest-exact`. Defaults to 'bilinear'.
+
+        Returns:
+            PixelData: A resized new `PixelData`
+        """
+        assert len(size) == 2, 'Size should be (height, width)'
+        new_h, new_w = size
+        old_h, old_w = self.shape
+        if new_h == old_h and new_w == old_w:
+            return self.clone()
+        new_data = self.__class__(metainfo=self.metainfo)
+        for k, v in self.items():
+            if isinstance(v, np.ndarray):
+                data = torch.from_numpy(v)
+            else:
+                data = v
+            # torch.nn.functional need a batch dim,
+            # and do not support some dtype
+            data = data.unsqueeze(0).to(torch.float32)
+            resized_data = interpolate(
+                data, size=size, mode=interpolation).squeeze()
+            if isinstance(v, np.ndarray):
+                resized_data = resized_data.numpy().astype(v.dtype)
+            else:
+                resized_data = resized_data.to(v.dtype)
+            setattr(new_data, k, resized_data)
+        return new_data
+
+    def padding(self,
+                pad_size: Sequence[int],
+                mode: str = 'constant',
+                value: Any = 0) -> 'PixelData':
+        """Pad all values with the given `pad_size`, and return a new
+        `PixelData`.
+
+        Args:
+            pad_size (Sequence[int]): The size need to pad.
+              See detail in `torch.nn.functional.pad`.
+              length is 2:
+              (padding_left, padding_right),
+              length is 4:
+              (padding_left, padding_right, padding_top, padding_bottom)
+              length is 6:
+              (padding_left, padding_right,
+                padding_top, padding_bottom, padding_front, padding_back)
+            mode (str, optional): Padding mode.
+              'constant', 'reflect', 'replicate' or 'circular'.
+              Defaults to 'constant'.
+            value (Any, optional): Fill value. Defaults to 0.
+
+        Returns:
+            PixelData: A Padded new `PixelData`
+        """
+        assert len(pad_size) in (2, 4,
+                                 6), 'Pad size length should be 2, 4 or 6'
+        if sum(pad_size) == 0:
+            return self.clone()
+        new_data = self.__class__(metainfo=self.metainfo)
+        for k, v in self.items():
+            if isinstance(v, np.ndarray):
+                data = torch.from_numpy(v)
+            else:
+                data = v
+
+            # some pad mode do not support some dtype
+            data = data.to(torch.float32)
+            pad_data = pad(data, pad=pad_size, mode=mode, value=value)
+            if isinstance(v, np.ndarray):
+                pad_data = pad_data.numpy().astype(v.dtype)
+            else:
+                pad_data = pad_data.to(v.dtype)
+            setattr(new_data, k, pad_data)
+        return new_data
