@@ -111,8 +111,7 @@ Before installing MMEngine, please ensure that PyTorch has been successfully ins
 Install MMEngine
 
 ```bash
-pip install -U openmim
-mim install mmengine
+pip install git+https://github.com/open-mmlab/mmengine/
 ```
 
 Verify the installation
