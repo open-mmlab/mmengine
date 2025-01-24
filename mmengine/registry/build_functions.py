@@ -3,8 +3,6 @@ import inspect
 import logging
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-import torch
-
 from mmengine.config import Config, ConfigDict
 from mmengine.utils import ManagerMixin, digit_version
 from .registry import Registry
@@ -238,6 +236,8 @@ def build_optimizer_from_cfg(
         cfg: Union[dict, ConfigDict, Config],
         registry: Registry,
         default_args: Optional[Union[dict, ConfigDict, Config]] = None) -> Any:
+    import torch
+
     from ..logging import print_log
     if 'type' in cfg \
             and 'Adafactor' == cfg['type'] \
