@@ -408,7 +408,7 @@ class FSDPStrategy(DDPStrategy):
                 ``optimizer.state_dict()``
         """
         optim_state_dict = FSDP.optim_state_dict_to_load(
-            state_dict, self.model, self.optim_wrapper.optimizer)
+            self.model, self.optim_wrapper.optimizer, state_dict)
         self.optim_wrapper.load_state_dict(optim_state_dict)
 
     def _init_state_dict_cfg(self, state_dict_cfg: Union[str, dict]) -> None:
