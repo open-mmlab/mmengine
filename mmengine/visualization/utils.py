@@ -95,7 +95,8 @@ def color_val_matplotlib(
     colors: Union[str, tuple, List[Union[str, tuple]]]
 ) -> Union[str, tuple, List[Union[str, tuple]]]:
     """Convert various input in RGB order to normalized RGB matplotlib color
-    tuples,
+    tuples.
+
     Args:
         colors (Union[str, tuple, List[Union[str, tuple]]]): Color inputs
     Returns:
@@ -116,6 +117,35 @@ def color_val_matplotlib(
             for color in colors
         ]
         return colors
+    else:
+        raise TypeError(f'Invalid type for color: {type(colors)}')
+
+
+def color_val_opencv(
+    colors: Union[str, tuple, List[Union[str, tuple]]]
+) -> Union[tuple, List[tuple]]:
+    """Convert various input in RGB order to RGB color tuples.
+
+    Args:
+        colors (Union[str, tuple, List[Union[str, tuple]]]): Color inputs
+    Returns:
+        Union[str, tuple, List[Union[str, tuple]]]: A tuple of 3 ints
+        indicating RGB channels.
+    """
+    if isinstance(colors, str):
+        colors = color_str2rgb(colors)
+        return colors
+    elif isinstance(colors, tuple):
+        assert len(colors) == 3
+        for channel in colors:
+            assert 0 <= channel <= 255
+        return colors
+    elif isinstance(colors, list):
+        colors = [
+            color_val_opencv(color)  # type:ignore
+            for color in colors
+        ]
+        return colors  # type:ignore
     else:
         raise TypeError(f'Invalid type for color: {type(colors)}')
 
