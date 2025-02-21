@@ -2272,7 +2272,7 @@ class TestRunner(TestCase):
         self.assertTrue(osp.exists(path))
         self.assertFalse(osp.exists(osp.join(self.temp_dir, 'epoch_4.pth')))
 
-        ckpt = torch.load(path)
+        ckpt = torch.load(path, weights_only=False)
         self.assertEqual(ckpt['meta']['epoch'], 3)
         self.assertEqual(ckpt['meta']['iter'], 12)
         self.assertEqual(ckpt['meta']['experiment_name'],
@@ -2444,7 +2444,7 @@ class TestRunner(TestCase):
         self.assertTrue(osp.exists(path))
         self.assertFalse(osp.exists(osp.join(self.temp_dir, 'epoch_13.pth')))
 
-        ckpt = torch.load(path)
+        ckpt = torch.load(path, weights_only=False)
         self.assertEqual(ckpt['meta']['epoch'], 0)
         self.assertEqual(ckpt['meta']['iter'], 12)
         assert isinstance(ckpt['optimizer'], dict)
@@ -2455,7 +2455,7 @@ class TestRunner(TestCase):
         self.assertEqual(message_hub.get_info('iter'), 11)
         # 2.1.2 check class attribute _statistic_methods can be saved
         HistoryBuffer._statistics_methods.clear()
-        ckpt = torch.load(path)
+        ckpt = torch.load(path, weights_only=False)
         self.assertIn('min', HistoryBuffer._statistics_methods)
 
         # 2.2 test `load_checkpoint`
