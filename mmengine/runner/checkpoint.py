@@ -344,7 +344,8 @@ def load_from_local(filename, map_location):
     filename = osp.expanduser(filename)
     if not osp.isfile(filename):
         raise FileNotFoundError(f'{filename} can not be found.')
-    checkpoint = torch.load(filename, map_location=map_location)
+    checkpoint = torch.load(
+        filename, map_location=map_location, weights_only=False)
     return checkpoint
 
 
@@ -412,7 +413,8 @@ def load_from_pavi(filename, map_location=None):
     with TemporaryDirectory() as tmp_dir:
         downloaded_file = osp.join(tmp_dir, model.name)
         model.download(downloaded_file)
-        checkpoint = torch.load(downloaded_file, map_location=map_location)
+        checkpoint = torch.load(
+            downloaded_file, map_location=map_location, weights_only=False)
     return checkpoint
 
 
@@ -435,7 +437,8 @@ def load_from_ceph(filename, map_location=None, backend='petrel'):
     file_backend = get_file_backend(
         filename, backend_args={'backend': backend})
     with io.BytesIO(file_backend.get(filename)) as buffer:
-        checkpoint = torch.load(buffer, map_location=map_location)
+        checkpoint = torch.load(
+            buffer, map_location=map_location, weights_only=False)
     return checkpoint
 
 
@@ -504,7 +507,8 @@ def load_from_openmmlab(filename, map_location=None):
         filename = osp.join(_get_mmengine_home(), model_url)
         if not osp.isfile(filename):
             raise FileNotFoundError(f'{filename} can not be found.')
-        checkpoint = torch.load(filename, map_location=map_location)
+        checkpoint = torch.load(
+            filename, map_location=map_location, weights_only=False)
     return checkpoint
 
 
@@ -597,9 +601,10 @@ def _load_checkpoint_to_model(model,
     # strip prefix of state_dict
     metadata = getattr(state_dict, '_metadata', OrderedDict())
     for p, r in revise_keys:
-        state_dict = OrderedDict(
-            {re.sub(p, r, k): v
-             for k, v in state_dict.items()})
+        state_dict = OrderedDict({
+            re.sub(p, r, k): v
+            for k, v in state_dict.items()
+        })
     # Keep metadata in state_dict
     state_dict._metadata = metadata
 

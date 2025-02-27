@@ -634,9 +634,10 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         dummy_flops = {}
         for name, counts in model.flops.items():
-            dummy_flops[name] = Counter(
-                {op: flop
-                 for op, flop in counts.items() if op != self.lin_op})
+            dummy_flops[name] = Counter({
+                op: flop
+                for op, flop in counts.items() if op != self.lin_op
+            })
         dummy_flops[''][dummy_name] = 2 * dummy_out
         dummy_flops['fc'][dummy_name] = dummy_out
         dummy_flops['submod'][dummy_name] = dummy_out

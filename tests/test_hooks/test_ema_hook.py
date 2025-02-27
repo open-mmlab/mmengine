@@ -230,7 +230,8 @@ class TestEMAHook(RunnerTestCase):
         self.assertTrue(
             isinstance(ema_hook.ema_model, ExponentialMovingAverage))
 
-        checkpoint = torch.load(osp.join(self.temp_dir.name, 'epoch_2.pth'))
+        checkpoint = torch.load(
+            osp.join(self.temp_dir.name, 'epoch_2.pth'), weights_only=False)
         self.assertTrue('ema_state_dict' in checkpoint)
         self.assertTrue(checkpoint['ema_state_dict']['steps'] == 8)
 
@@ -245,7 +246,8 @@ class TestEMAHook(RunnerTestCase):
         runner.test()
 
         # Test load checkpoint without ema_state_dict
-        checkpoint = torch.load(osp.join(self.temp_dir.name, 'epoch_2.pth'))
+        checkpoint = torch.load(
+            osp.join(self.temp_dir.name, 'epoch_2.pth'), weights_only=False)
         checkpoint.pop('ema_state_dict')
         torch.save(checkpoint,
                    osp.join(self.temp_dir.name, 'without_ema_state_dict.pth'))
@@ -274,7 +276,9 @@ class TestEMAHook(RunnerTestCase):
         runner = self.build_runner(cfg)
         runner.train()
         state_dict = torch.load(
-            osp.join(self.temp_dir.name, 'epoch_4.pth'), map_location='cpu')
+            osp.join(self.temp_dir.name, 'epoch_4.pth'),
+            map_location='cpu',
+            weights_only=False)
         self.assertIn('ema_state_dict', state_dict)
         for k, v in state_dict['state_dict'].items():
             assert_allclose(v, state_dict['ema_state_dict']['module.' + k])
@@ -287,12 +291,16 @@ class TestEMAHook(RunnerTestCase):
         runner = self.build_runner(cfg)
         runner.train()
         state_dict = torch.load(
-            osp.join(self.temp_dir.name, 'iter_4.pth'), map_location='cpu')
+            osp.join(self.temp_dir.name, 'iter_4.pth'),
+            map_location='cpu',
+            weights_only=False)
         self.assertIn('ema_state_dict', state_dict)
         for k, v in state_dict['state_dict'].items():
             assert_allclose(v, state_dict['ema_state_dict']['module.' + k])
         state_dict = torch.load(
-            osp.join(self.temp_dir.name, 'iter_5.pth'), map_location='cpu')
+            osp.join(self.temp_dir.name, 'iter_5.pth'),
+            map_location='cpu',
+            weights_only=False)
         self.assertIn('ema_state_dict', state_dict)
 
     def _test_swap_parameters(self, func_name, *args, **kwargs):

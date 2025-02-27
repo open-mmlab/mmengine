@@ -754,8 +754,9 @@ class Visualizer(ManagerMixin):
         assert bboxes.shape[-1] == 4, (
             f'The shape of `bboxes` should be (N, 4), but got {bboxes.shape}')
 
-        assert (bboxes[:, 0] <= bboxes[:, 2]).all() and (bboxes[:, 1] <=
-                                                         bboxes[:, 3]).all()
+        assert (bboxes[:, 0] <= bboxes[:, 2]).all() and (bboxes[:, 1]
+                                                         <= bboxes[:,
+                                                                   3]).all()
         if not self._is_posion_valid(bboxes.reshape((-1, 2, 2))):
             warnings.warn(
                 'Warning: The bbox is out of bounds,'

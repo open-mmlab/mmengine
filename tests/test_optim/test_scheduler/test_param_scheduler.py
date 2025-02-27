@@ -685,7 +685,8 @@ class TestParameterScheduler(TestCase):
         scheduler_copy = construct2()
         torch.save(scheduler.state_dict(),
                    osp.join(self.temp_dir.name, 'tmp.pth'))
-        state_dict = torch.load(osp.join(self.temp_dir.name, 'tmp.pth'))
+        state_dict = torch.load(
+            osp.join(self.temp_dir.name, 'tmp.pth'), weights_only=False)
         scheduler_copy.load_state_dict(state_dict)
         for key in scheduler.__dict__.keys():
             if key != 'optimizer':
