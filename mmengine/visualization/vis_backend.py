@@ -836,11 +836,11 @@ class MLflowVisBackend(BaseVisBackend):
 
         self._mlflow.end_run()
 
-    def _flatten(self, d, parent_key='', sep='.') -> dict:
+    def _flatten(self, d: Config, parent_key='', sep='.') -> dict:
         """Flatten the dict."""
         items = dict()
         for k, v in d.items():
-            new_key = parent_key + sep + k if parent_key else k
+            new_key = sep.join([parent_key, str(k)]) if parent_key else str(k)
             if isinstance(v, MutableMapping):
                 items.update(self._flatten(v, new_key, sep=sep))
             elif isinstance(v, list):
