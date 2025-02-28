@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import inspect
 import logging
 import os
 import os.path as osp
@@ -902,8 +903,18 @@ class Runner:
                 find_unused_parameters=find_unused_parameters)
         else:
             model_wrapper_cfg.setdefault('type', 'MMDistributedDataParallel')
-            model_wrapper_type = MODEL_WRAPPERS.get(
-                model_wrapper_cfg.get('type'))  # type: ignore
+            model_wrapper_type = model_wrapper_cfg.get('type')
+            if isinstance(model_wrapper_type, str):
+                model_wrapper_type = MODEL_WRAPPERS.get(model_wrapper_type)  # type: ignore
+            elif inspect.isclass(model_wrapper_type):
+                pass
+            else:
+                raise KeyError(
+                        f'{model_wrapper_type} is not in the '
+                        'registry. Please check whether the value of '
+                        f'`{model_wrapper_type}` is correct or it was registered '
+                        'as expected. More details can be found at https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#import-the-custom-module'  # noqa: E501
+                    )
             default_args: dict = dict()
             if issubclass(
                     model_wrapper_type,  # type: ignore
