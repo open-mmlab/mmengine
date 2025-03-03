@@ -33,3 +33,7 @@ dependencies = [
     "termcolor",
     "yapf",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["mmengine"]
