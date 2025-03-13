@@ -17,7 +17,8 @@ from mmengine.utils import digit_version, is_installed
 from mmengine.visualization import (AimVisBackend, ClearMLVisBackend,
                                     DVCLiveVisBackend, LocalVisBackend,
                                     MLflowVisBackend, NeptuneVisBackend,
-                                    TensorboardVisBackend, WandbVisBackend)
+                                    TensorboardVisBackend, WandbVisBackend, 
+                                    SwanLabVisBackend)
 
 
 class TestLocalVisBackend:
@@ -496,3 +497,50 @@ class TestAimVisBackend:
         aim_vis_backend = AimVisBackend()
         aim_vis_backend._init_env()
         aim_vis_backend.close()
+
+
+class TestSwanLabVisBackend:
+
+    def test_init(self):
+        SwanLabVisBackend('temp_dir')
+        VISBACKENDS.build(dict(type='SwanLabVisBackend', save_dir='temp_dir'))
+
+    def test_experiment(self):
+        swanlab_vis_backend = SwanLabVisBackend('temp_dir')
+        assert swanlab_vis_backend.experiment == swanlab_vis_backend._swanlab
+        shutil.rmtree('temp_dir')
+
+    def test_add_config(self):
+        cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
+        swanlab_vis_backend = SwanLabVisBackend('temp_dir')
+        swanlab_vis_backend.add_config(cfg)
+        shutil.rmtree('temp_dir')
+
+    def test_add_image(self):
+        image = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
+        swanlab_vis_backend = SwanLabVisBackend('temp_dir')
+        swanlab_vis_backend.add_image('img', image)
+        swanlab_vis_backend.add_image('img', image)
+        shutil.rmtree('temp_dir')
+
+    def test_add_scalar(self):
+        swanlab_vis_backend = SwanLabVisBackend('temp_dir')
+        swanlab_vis_backend.add_scalar('map', 0.9)
+        # test append mode
+        swanlab_vis_backend.add_scalar('map', 0.9)
+        swanlab_vis_backend.add_scalar('map', 0.95)
+        shutil.rmtree('temp_dir')
+
+    def test_add_scalars(self):
+        swanlab_vis_backend = SwanLabVisBackend('temp_dir')
+        input_dict = {'map': 0.7, 'acc': 0.9}
+        swanlab_vis_backend.add_scalars(input_dict)
+        # test append mode
+        swanlab_vis_backend.add_scalars({'map': 0.8, 'acc': 0.8})
+        shutil.rmtree('temp_dir')
+
+    def test_close(self):
+        swanlab_vis_backend = SwanLabVisBackend('temp_dir')
+        swanlab_vis_backend._init_env()
+        swanlab_vis_backend.close()
+        shutil.rmtree('temp_dir')
