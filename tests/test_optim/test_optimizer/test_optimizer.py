@@ -726,7 +726,7 @@ class TestBuilder(TestCase):
             'momentum': self.momentum,
             'weight_decay': self.base_wd,
         })
-        # group 3, matches of 'sub'
+        # group 3, matches of 'sub.conv1'
         groups.append(['sub.conv1.weight', 'sub.conv1.bias'])
         group_settings.append({
             'lr': self.base_lr * 0.1,
@@ -764,7 +764,10 @@ class TestBuilder(TestCase):
             type='OptimWrapper',
             optimizer=dict(
                 type='SGD', lr=self.base_lr, momentum=self.momentum))
-        paramwise_cfg = dict(custom_keys={'param1': dict(lr_mult=10)})
+        paramwise_cfg = dict(custom_keys={
+            'param1': dict(lr_mult=10),
+            'sub.gn': dict(requires_grad=False)
+        })
 
         optim_constructor = DefaultOptimWrapperConstructor(
             optim_wrapper_cfg, paramwise_cfg)
@@ -787,11 +790,18 @@ class TestBuilder(TestCase):
             'momentum': self.momentum,
             'weight_decay': 0,
         })
-        # group 2, default group
+        # group 2, matches of 'sub.gn'
+        groups.append(['sub.gn.weight', 'sub.gn.bias'])
+        group_settings.append({
+            'lr': self.base_lr,
+            'momentum': self.momentum,
+            'weight_decay': 0,
+            'requires_grad': False,
+        })
+        # group 3, default group
         groups.append([
-            'sub.conv1.weight', 'sub.conv1.bias', 'sub.gn.weight',
-            'sub.gn.bias', 'conv1.weight', 'conv2.weight', 'conv2.bias',
-            'bn.weight', 'bn.bias'
+            'sub.conv1.weight', 'sub.conv1.bias', 'conv1.weight',
+            'conv2.weight', 'conv2.bias', 'bn.weight', 'bn.bias'
         ])
         group_settings.append({
             'lr': self.base_lr,
@@ -806,8 +816,13 @@ class TestBuilder(TestCase):
             for group, settings in zip(groups, group_settings):
                 if name in group:
                     for setting in settings:
-                        assert param_groups[i][setting] == settings[
-                            setting], f'{name} {setting}'
+                        if setting == 'requires_grad':
+                            assert param_groups[i][setting] == settings[
+                                setting] == param_groups[i]['params'][
+                                    0].requires_grad, f'{name} {setting}'
+                        else:
+                            assert param_groups[i][setting] == settings[
+                                setting], f'{name} {setting}'
 
 
 @unittest.skipIf(
