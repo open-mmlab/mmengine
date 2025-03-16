@@ -1485,9 +1485,9 @@ class SwanLabVisBackend(BaseVisBackend):
         """Return the experiment object associated with this visualization
         backend.
 
-        The experiment attribute can get the swanlab backend. If you want
-        to write other data, such as writing a table, you can directly get
-        the visualization backend through experiment.
+        The experiment attribute can get the swanlab backend. If you want to
+        write other data, such as writing a table, you can directly get the
+        visualization backend through experiment.
         """
         return self._swanlab
 
@@ -1497,15 +1497,16 @@ class SwanLabVisBackend(BaseVisBackend):
             if not os.path.exists(self._save_dir):
                 os.makedirs(self._save_dir, exist_ok=True)  # type: ignore
         if self._init_kwargs is None:
-            self._init_kwargs = {"logdir": self._save_dir}
+            self._init_kwargs = {'logdir': self._save_dir}
         else:
-            self._init_kwargs.setdefault("logdir", self._save_dir)
+            self._init_kwargs.setdefault('logdir', self._save_dir)
         try:
             import swanlab
         except ImportError:
-            raise ImportError('Please run "pip install swanlab" to install swanlab')
+            raise ImportError(
+                'Please run "pip install swanlab" to install swanlab')
 
-        swanlab.config["FRAMEWORK"] = "mmengine"
+        swanlab.config['FRAMEWORK'] = 'mmengine'
         swanlab.init(**self._init_kwargs)
         self._swanlab = swanlab
 
@@ -1517,16 +1518,14 @@ class SwanLabVisBackend(BaseVisBackend):
             config (Config): The Config object
         """
 
-        def repack_dict(a, prefix=""):
-            """
-            Unpack Nested Dictionary func
-            """
+        def repack_dict(a, prefix=''):
+            """Unpack Nested Dictionary func."""
             new_dict = dict()
             for key, value in a.items():
                 key = str(key)
                 if isinstance(value, dict):
-                    if prefix != "":
-                        new_dict.update(repack_dict(value, f"{prefix}/{key}"))
+                    if prefix != '':
+                        new_dict.update(repack_dict(value, f'{prefix}/{key}'))
                     else:
                         new_dict.update(repack_dict(value, key))
                 elif isinstance(value, list) or isinstance(value, tuple):
@@ -1534,9 +1533,9 @@ class SwanLabVisBackend(BaseVisBackend):
                         new_dict[key] = value
                     else:
                         for i, item in enumerate(value):
-                            new_dict.update(repack_dict(item, f"{key}[{i}]"))
-                elif prefix != "":
-                    new_dict[f"{prefix}/{key}"] = value
+                            new_dict.update(repack_dict(item, f'{key}[{i}]'))
+                elif prefix != '':
+                    new_dict[f'{prefix}/{key}'] = value
                 else:
                     new_dict[key] = value
             return new_dict
@@ -1545,7 +1544,11 @@ class SwanLabVisBackend(BaseVisBackend):
         self._swanlab.config.update(repack_dict(config_dict))
 
     @force_init_env
-    def add_image(self, name: str, image: np.ndarray, step: int = 0, **kwargs) -> None:
+    def add_image(self,
+                  name: str,
+                  image: np.ndarray,
+                  step: int = 0,
+                  **kwargs) -> None:
         """Record the image to swanlab.
 
         Args:
@@ -1594,6 +1597,6 @@ class SwanLabVisBackend(BaseVisBackend):
         self._swanlab.log(scalar_dict, step=step)
 
     def close(self) -> None:
-        """close an opened swanlab object."""
-        if hasattr(self, "_swanlab"):
+        """Close an opened swanlab object."""
+        if hasattr(self, '_swanlab'):
             self._swanlab.finish()

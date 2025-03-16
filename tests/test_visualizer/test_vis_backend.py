@@ -17,8 +17,8 @@ from mmengine.utils import digit_version, is_installed
 from mmengine.visualization import (AimVisBackend, ClearMLVisBackend,
                                     DVCLiveVisBackend, LocalVisBackend,
                                     MLflowVisBackend, NeptuneVisBackend,
-                                    TensorboardVisBackend, WandbVisBackend, 
-                                    SwanLabVisBackend)
+                                    SwanLabVisBackend, TensorboardVisBackend,
+                                    WandbVisBackend)
 
 
 class TestLocalVisBackend:

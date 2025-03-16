@@ -235,7 +235,6 @@ to launch the Aim UI as shown below.
 
 Initialization configuration parameters are available at [Aim SDK Reference](https://aimstack.readthedocs.io/en/latest/refs/sdk.html#module-aim.sdk.run).
 
-
 ## SwanLab
 
 Before using SwanLab, you need to install `swanlab` dependency library.
