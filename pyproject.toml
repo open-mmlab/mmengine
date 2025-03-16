@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mmengine"
-version = "0.10.5"
+version = "0.10.7"
 description = "Engine of OpenMMLab projects"
 readme = "README.md"
 license = { text = "Apache License 2.0" }
