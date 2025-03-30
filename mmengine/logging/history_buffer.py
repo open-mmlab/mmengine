@@ -58,7 +58,6 @@ class HistoryBuffer:
         self._statistics_methods.setdefault('current', HistoryBuffer.current)
         self._statistics_methods.setdefault('mean', HistoryBuffer.mean)
 
-    @torch._dynamo.disable()
     def update(self, log_val: Union[int, float], count: int = 1) -> None:
         """Update the log history.
 
