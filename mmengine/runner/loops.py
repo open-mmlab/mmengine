@@ -102,7 +102,7 @@ class EpochBasedTrainLoop(BaseLoop):
                     and self._epoch >= self.val_begin
                     and (self._epoch % self.val_interval == 0
                          or self._epoch == self._max_epochs)):
-                self.runner.val_loop.run()
+                self.runner.val_loop.run()  # ! 验证
 
         self.runner.call_hook('after_train')
         return self.runner.model
