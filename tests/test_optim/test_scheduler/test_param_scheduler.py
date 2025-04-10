@@ -127,7 +127,7 @@ class TestParameterScheduler(TestCase):
                 rtol=0)
 
     def test_scheduler_before_optim_warning(self):
-        """warns if scheduler is used before optimizer."""
+        """Warns if scheduler is used before optimizer."""
 
         def call_sch_before_optim():
             scheduler = StepParamScheduler(

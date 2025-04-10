@@ -356,7 +356,7 @@ class Visualizer(ManagerMixin):
 
     @master_only
     def get_backend(self, name) -> 'BaseVisBackend':
-        """get vis backend by name.
+        """Get vis backend by name.
 
         Args:
             name (str): The name of vis backend
@@ -1145,7 +1145,7 @@ class Visualizer(ManagerMixin):
         pass
 
     def close(self) -> None:
-        """close an opened object."""
+        """Close an opened object."""
         for vis_backend in self._vis_backends.values():
             vis_backend.close()
 

@@ -13,7 +13,8 @@ from mmengine.testing import assert_allclose
 class TestAveragedModel(TestCase):
     """Test the AveragedModel class.
 
-    Some test cases are referenced from https://github.com/pytorch/pytorch/blob/master/test/test_optim.py
+    Some test cases are referenced from
+    https://github.com/pytorch/pytorch/blob/master/test/test_optim.py
     """  # noqa: E501
 
     def _test_swa_model(self, net_device, avg_device):

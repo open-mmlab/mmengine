@@ -59,7 +59,7 @@ English | [简体中文](README_zh-CN.md)
 
 ## What's New
 
-v0.10.4 was released on 2024-4-23.
+v0.10.6 was released on 2025-01-13.
 
 Highlights:
 

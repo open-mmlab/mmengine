@@ -361,7 +361,7 @@ class ColossalAIStrategy(BaseStrategy):
         map_location: Union[str, Callable] = 'default',
         callback: Optional[Callable] = None,
     ) -> dict:
-        """override this method since colossalai resume optimizer from filename
+        """Override this method since colossalai resume optimizer from filename
         directly."""
         self.logger.info(f'Resume checkpoint from {filename}')
 

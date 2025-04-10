@@ -2226,7 +2226,7 @@ class TestRunner(TestCase):
 
         @HOOKS.register_module(force=True)
         class TestWarmupHook(Hook):
-            """test custom train loop."""
+            """Test custom train loop."""
 
             def before_warmup_iter(self, runner, data_batch=None):
                 before_warmup_iter_results.append('before')

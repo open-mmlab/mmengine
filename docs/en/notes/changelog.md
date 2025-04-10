@@ -1,5 +1,9 @@
 # Changelog of v0.x
 
+## v0.10.5 (11/9/2024)
+
+- Fix `_is_builtin_module`. by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1571
+
 ## v0.10.4 (23/4/2024)
 
 ### New Features & Enhancements
