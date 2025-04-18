@@ -397,7 +397,7 @@ class Config:
         cfg_text: Optional[str] = None,
         filename: Optional[Union[str, Path]] = None,
         env_variables: Optional[dict] = None,
-        format_python_code: bool = True,
+        format_python_code: bool = False
     ):
         filename = str(filename) if isinstance(filename, Path) else filename
         if cfg_dict is None:
