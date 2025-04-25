@@ -95,7 +95,6 @@ class MMDistributedDataParallel(DistributedDataParallel):
 
     def train_step(self, data: Union[dict, tuple, list],
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
-        return self.module.train_step(data, optim_wrapper)
         """Interface for model forward, backward and parameters updating during
         training process.
 

@@ -10,8 +10,7 @@ from mmengine.utils import ManagerMixin
 from .history_buffer import HistoryBuffer
 from .logger import print_log
 
-if TYPE_CHECKING:
-    import torch
+import torch
 
 
 class MessageHub(ManagerMixin):
@@ -92,6 +91,7 @@ class MessageHub(ManagerMixin):
             cls.get_instance('mmengine')
         return super().get_current_instance()
 
+    @torch.compiler.disable
     def update_scalar(self,
                       key: str,
                       value: Union[int, float, np.ndarray, 'torch.Tensor'],
