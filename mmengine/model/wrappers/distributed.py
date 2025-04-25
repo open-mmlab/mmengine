@@ -127,7 +127,6 @@ class MMDistributedDataParallel(DistributedDataParallel):
         return log_vars
 
     def val_step(self, data: Union[dict, tuple, list]) -> list:
-        return self.module.val_step(data)
         """Gets the prediction of module during validation process.
 
         Args:
@@ -139,7 +138,6 @@ class MMDistributedDataParallel(DistributedDataParallel):
         return self.module.val_step(data)
 
     def test_step(self, data: Union[dict, tuple, list]) -> list:
-        return self.module.test_step(data)
         """Gets the predictions of module during testing process.
 
         Args:
