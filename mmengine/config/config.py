@@ -17,11 +17,9 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple, Union
 
-import yapf
 from addict import Dict
 from rich.console import Console
 from rich.text import Text
-from yapf.yapflib.yapf_api import FormatCode
 
 from mmengine.fileio import dump, load
 from mmengine.logging import print_log
@@ -1375,6 +1373,8 @@ class Config:
     @property
     def pretty_text(self) -> str:
         """Get formatted python config text."""
+        import yapf
+        from yapf.yapflib.yapf_api import FormatCode
 
         indent = 4
 
