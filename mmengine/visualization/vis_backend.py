@@ -781,7 +781,11 @@ class MLflowVisBackend(BaseVisBackend):
                 should be RGB.
             step (int): Global step value to record. Default to 0.
         """
-        self._mlflow.log_image(image, name)
+        try:
+            self._mlflow.log_image(image, name)
+        except self._mlflow.MlflowException as e:
+            msg = f'Could not log image {name} to mlflow, {e}'
+            print_log(msg, level=logging.WARNING)
 
     @force_init_env
     def add_scalar(self,
@@ -796,7 +800,11 @@ class MLflowVisBackend(BaseVisBackend):
             value (int, float, torch.Tensor, np.ndarray): Value to save.
             step (int): Global step value to record. Default to 0.
         """
-        self._mlflow.log_metric(name, value, step)
+        try:
+            self._mlflow.log_metric(name, value, step)
+        except self._mlflow.MlflowException as e:
+            msg = f'Could not log metric {name} to mlflow, {e}'
+            print_log(msg, level=logging.WARNING)
 
     @force_init_env
     def add_scalars(self,
@@ -816,7 +824,11 @@ class MLflowVisBackend(BaseVisBackend):
         assert isinstance(scalar_dict, dict)
         assert 'step' not in scalar_dict, 'Please set it directly ' \
                                           'through the step parameter'
-        self._mlflow.log_metrics(scalar_dict, step)
+        try:
+            self._mlflow.log_metrics(scalar_dict, step)
+        except self._mlflow.MlflowException as e:
+            msg = f'Could not log metrics to mlflow, {e}'
+            print_log(msg, level=logging.WARNING)
 
     def close(self) -> None:
         """Close the mlflow."""
