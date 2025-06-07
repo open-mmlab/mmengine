@@ -1,6 +1,6 @@
 # Visualize Training Logs
 
-MMEngine integrates experiment management tools such as [TensorBoard](https://www.tensorflow.org/tensorboard), [Weights & Biases (WandB)](https://docs.wandb.ai/), [MLflow](https://mlflow.org/docs/latest/index.html), [ClearML](https://clear.ml/docs/latest/docs), [Neptune](https://docs.neptune.ai/), [DVCLive](https://dvc.org/doc/dvclive) and [Aim](https://aimstack.readthedocs.io/en/latest/overview.html), making it easy to track and visualize metrics like loss and accuracy.
+MMEngine integrates experiment management tools such as [TensorBoard](https://www.tensorflow.org/tensorboard), [Weights & Biases (WandB)](https://docs.wandb.ai/), [MLflow](https://mlflow.org/docs/latest/index.html), [ClearML](https://clear.ml/docs/latest/docs), [Neptune](https://docs.neptune.ai/), [DVCLive](https://dvc.org/doc/dvclive), [Aim](https://aimstack.readthedocs.io/en/latest/overview.html) and [SwanLab](https://docs.swanlab.cn/), making it easy to track and visualize metrics like loss and accuracy.
 
 Below, we'll show you how to configure an experiment management tool in just one line, based on the example from [15 minutes to get started with MMEngine](../get_started/15_minutes.md).
 
@@ -234,3 +234,48 @@ to launch the Aim UI as shown below.
 ![image](https://github.com/open-mmlab/mmengine/assets/58739961/2fc6cdd8-1de7-4125-a20a-c95c1a8bdb1b)
 
 Initialization configuration parameters are available at [Aim SDK Reference](https://aimstack.readthedocs.io/en/latest/refs/sdk.html#module-aim.sdk.run).
+
+## SwanLab
+
+Before using SwanLab, you need to install `swanlab` dependency library.
+
+```bash
+pip install swanlab
+swanlab login
+```
+
+Configure the `visualizer` in the initialization parameters of the Runner, and set `vis_backends` to [SwanLabVisBackend](mmengine.visualization.SwanLabVisBackend).
+
+```python
+runner = Runner(
+    model=MMResNet50(),
+    work_dir='./work_dir',
+    train_dataloader=train_dataloader,
+    optim_wrapper=dict(optimizer=dict(type=SGD, lr=0.001, momentum=0.9)),
+    train_cfg=dict(by_epoch=True, max_epochs=5, val_interval=1),
+    val_dataloader=val_dataloader,
+    val_cfg=dict(),
+    val_evaluator=dict(type=Accuracy),
+    visualizer=dict(type='Visualizer', vis_backends=[dict(type='SwanLabVisBackend')]),
+)
+runner.train()
+```
+
+You can click on [SwanLabVisBackend API](mmengine.visualization.SwanLabVisBackend) to view the configurable parameters for `SwanLabVisBackend`. For example, the `init_kwargs` parameter will be passed to the [swanlab.init](https://docs.swanlab.cn/en/api/py-init.html) method.
+
+```python
+runner = Runner(
+    ...
+    visualizer=dict(
+        type='Visualizer',
+        vis_backends=[
+            dict(
+                type='SwanLabVisBackend',
+                init_kwargs=dict(project='toy-example')
+            ),
+        ],
+    ),
+    ...
+)
+runner.train()
+```
