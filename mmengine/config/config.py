@@ -46,9 +46,10 @@ else:
 def _lazy2string(cfg_dict, dict_type=None):
     if isinstance(cfg_dict, dict):
         dict_type = dict_type or type(cfg_dict)
-        return dict_type(
-            {k: _lazy2string(v, dict_type)
-             for k, v in dict.items(cfg_dict)})
+        return dict_type({
+            k: _lazy2string(v, dict_type)
+            for k, v in dict.items(cfg_dict)
+        })
     elif isinstance(cfg_dict, (tuple, list)):
         return type(cfg_dict)(_lazy2string(v, dict_type) for v in cfg_dict)
     elif isinstance(cfg_dict, (LazyAttr, LazyObject)):
@@ -271,13 +272,15 @@ class ConfigDict(Dict):
         # called by CPython interpreter during pickling. See more details in
         # https://github.com/python/cpython/blob/8d61a71f9c81619e34d4a30b625922ebc83c561b/Objects/typeobject.c#L6196  # noqa: E501
         if digit_version(platform.python_version()) < digit_version('3.8'):
-            return (self.__class__, ({k: v
-                                      for k, v in super().items()}, ), None,
-                    None, None)
+            return (self.__class__, ({
+                k: v
+                for k, v in super().items()
+            }, ), None, None, None)
         else:
-            return (self.__class__, ({k: v
-                                      for k, v in super().items()}, ), None,
-                    None, None, None)
+            return (self.__class__, ({
+                k: v
+                for k, v in super().items()
+            }, ), None, None, None, None)
 
     def __eq__(self, other):
         if isinstance(other, ConfigDict):
