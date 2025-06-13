@@ -27,6 +27,7 @@ File Backend
    LmdbBackend
    MemcachedBackend
    PetrelBackend
+   AWSBackend
 
 .. autosummary::
    :toctree: generated
