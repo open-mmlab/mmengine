@@ -3,6 +3,7 @@ import bisect
 import logging
 import time
 from typing import Dict, List, Optional, Sequence, Tuple, Union
+from itertools import islice
 
 import torch
 from torch.utils.data import DataLoader
@@ -280,8 +281,8 @@ class IterBasedTrainLoop(BaseLoop):
                 'that has already been trained',
                 logger='current',
                 level=logging.WARNING)
-            for _ in range(self._iter):
-                next(self.dataloader_iterator)
+            islice(self.dataloader_iterator, 0, self._iter)
+
         while self._iter < self._max_iters and not self.stop_training:
             self.runner.model.train()
 
