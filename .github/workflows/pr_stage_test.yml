@@ -49,7 +49,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update && apt-get install -y ffmpeg libsm6 libxext6 git ninja-build libglib2.0-0 libsm6 libxrender-dev libxext6
-          python -m pip install torch==${{matrix.torch}}+cpu torchvision==${{matrix.torchvision}}+cpu 
+          python -m pip install torch==${{matrix.torch}}+cpu torchvision==${{matrix.torchvision}}+cpu
           python -m pip install -e . -v
           python -m pip install -r requirements/tests.txt
           python -m pip install openmim
