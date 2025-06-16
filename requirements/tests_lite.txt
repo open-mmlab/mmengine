@@ -1,3 +1,4 @@
 lmdb
+opencv-python
 parameterized
 pytest
