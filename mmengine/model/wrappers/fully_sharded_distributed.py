@@ -127,7 +127,8 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
         auto_wrap_policy: Union[str, Callable, None] = None,
         backward_prefetch: Union[str, BackwardPrefetch, None] = None,
         mixed_precision: Union[dict, MixedPrecision, None] = None,
-        param_init_fn: Union[str, Callable[[nn.Module], None]] = None,
+        param_init_fn: Union[str, Callable[
+            [nn.Module], None]] = None,  # type: ignore # noqa: E501
         use_orig_params: bool = True,
         **kwargs,
     ):
@@ -362,7 +363,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             optim: torch.optim.Optimizer,
             group: Optional[dist.ProcessGroup] = None,
         ) -> Dict[str, Any]:
-            """copied from pytorch 2.0.1 which has fixed some bugs."""
+            """Copied from pytorch 2.0.1 which has fixed some bugs."""
             state_dict_settings = FullyShardedDataParallel.get_state_dict_type(
                 model)
             return FullyShardedDataParallel._optim_state_dict_impl(
@@ -384,7 +385,7 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             state_dict_config: Optional[StateDictConfig] = None,
             optim_state_dict_config: Optional[OptimStateDictConfig] = None,
         ) -> StateDictSettings:
-            """copied from pytorch 2.0.1 which has fixed some bugs."""
+            """Copied from pytorch 2.0.1 which has fixed some bugs."""
             import torch.distributed.fsdp._traversal_utils as traversal_utils
             _state_dict_type_to_config = {
                 StateDictType.FULL_STATE_DICT: FullStateDictConfig,

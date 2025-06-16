@@ -387,7 +387,7 @@ class BaseDataElement:
         return dict(self.metainfo_items())
 
     def __setattr__(self, name: str, value: Any):
-        """setattr is only used to set data."""
+        """Setattr is only used to set data."""
         if name in ('_metainfo_fields', '_data_fields'):
             if not hasattr(self, name):
                 super().__setattr__(name, value)

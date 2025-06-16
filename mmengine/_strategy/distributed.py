@@ -53,7 +53,7 @@ class DDPStrategy(SingleDeviceStrategy):
             init_dist(launcher, backend, **kwargs)
 
     def convert_model(self, model: nn.Module) -> nn.Module:
-        """convert all ``BatchNorm`` layers in the model to ``SyncBatchNorm``
+        """Convert all ``BatchNorm`` layers in the model to ``SyncBatchNorm``
         (SyncBN) or ``mmcv.ops.sync_bn.SyncBatchNorm`` (MMSyncBN) layers.
 
         Args:

@@ -3,7 +3,7 @@ import sys
 from collections.abc import Iterable
 from multiprocessing import Pool
 from shutil import get_terminal_size
-from typing import Callable, Sequence
+from typing import Callable, Optional, Sequence
 
 from .timer import Timer
 
@@ -54,7 +54,7 @@ class ProgressBar:
         self.timer = Timer()
 
     def update(self, num_tasks: int = 1):
-        """update progressbar.
+        """Update progressbar.
 
         Args:
             num_tasks (int): Update step size.
@@ -142,8 +142,8 @@ def init_pool(process_num, initializer=None, initargs=None):
 def track_parallel_progress(func: Callable,
                             tasks: Sequence,
                             nproc: int,
-                            initializer: Callable = None,
-                            initargs: tuple = None,
+                            initializer: Optional[Callable] = None,
+                            initargs: Optional[tuple] = None,
                             bar_width: int = 50,
                             chunksize: int = 1,
                             skip_first: bool = False,

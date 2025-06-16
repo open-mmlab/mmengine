@@ -223,13 +223,13 @@ class PolyLR(LRSchedulerMixin, PolyParamScheduler):
 
 @PARAM_SCHEDULERS.register_module()
 class OneCycleLR(LRSchedulerMixin, OneCycleParamScheduler):
-    r"""Sets the learning rate of each parameter group according to the
-    1cycle learning rate policy. The 1cycle policy anneals the learning
-    rate from an initial learning rate to some maximum learning rate and then
-    from that maximum learning rate to some minimum learning rate much lower
-    than the initial learning rate.
-    This policy was initially described in the paper `Super-Convergence:
-    Very Fast Training of Neural Networks Using Large Learning Rates`_.
+    r"""Sets the learning rate of each parameter group according to the 1cycle
+    learning rate policy. The 1cycle policy anneals the learning rate from an
+    initial learning rate to some maximum learning rate and then from that
+    maximum learning rate to some minimum learning rate much lower than the
+    initial learning rate. This policy was initially described in the paper
+    `Super-Convergence: Very Fast Training of Neural Networks Using Large
+    Learning Rates`_.
 
     The 1cycle learning rate policy changes the learning rate after every
     batch. `step` should be called after a batch has been used for training.

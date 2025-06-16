@@ -64,7 +64,7 @@ class TestBaseDataElement(TestCase):
         return metainfo, data
 
     def is_equal(self, x, y):
-        assert type(x) == type(y)
+        assert type(x) is type(y)
         if isinstance(
                 x, (int, float, str, list, tuple, dict, set, BaseDataElement)):
             return x == y
@@ -141,7 +141,7 @@ class TestBaseDataElement(TestCase):
 
         # test new() with no arguments
         new_instances = instances.new()
-        assert type(new_instances) == type(instances)
+        assert type(new_instances) is type(instances)
         # After deepcopy, the address of new data'element will be same as
         # origin, but when change new data' element will not effect the origin
         # element and will have new address
@@ -154,7 +154,7 @@ class TestBaseDataElement(TestCase):
         # test new() with arguments
         metainfo, data = self.setup_data()
         new_instances = instances.new(metainfo=metainfo, **data)
-        assert type(new_instances) == type(instances)
+        assert type(new_instances) is type(instances)
         assert id(new_instances.gt_instances) != id(instances.gt_instances)
         _, new_data = self.setup_data()
         new_instances.set_data(new_data)
@@ -168,7 +168,7 @@ class TestBaseDataElement(TestCase):
         metainfo, data = self.setup_data()
         instances = BaseDataElement(metainfo=metainfo, **data)
         new_instances = instances.clone()
-        assert type(new_instances) == type(instances)
+        assert type(new_instances) is type(instances)
 
     def test_set_metainfo(self):
         metainfo, _ = self.setup_data()

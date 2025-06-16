@@ -443,8 +443,7 @@ def _get_host_info() -> str:
         host = f'{getuser()}@{gethostname()}'
     except Exception as e:
         warnings.warn(f'Host or user not found: {str(e)}')
-    finally:
-        return host
+    return host
 
 
 def _get_logging_file_handlers() -> Dict:

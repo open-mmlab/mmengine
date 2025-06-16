@@ -17,11 +17,9 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple, Union
 
-import yapf
 from addict import Dict
 from rich.console import Console
 from rich.text import Text
-from yapf.yapflib.yapf_api import FormatCode
 
 from mmengine.fileio import dump, load
 from mmengine.logging import print_log
@@ -393,7 +391,7 @@ class Config:
 
     def __init__(
         self,
-        cfg_dict: dict = None,
+        cfg_dict: Optional[dict] = None,
         cfg_text: Optional[str] = None,
         filename: Optional[Union[str, Path]] = None,
         env_variables: Optional[dict] = None,
@@ -1227,7 +1225,8 @@ class Config:
                 if base_code is not None:
                     base_code = ast.Expression(  # type: ignore
                         body=base_code.value)  # type: ignore
-                    base_files = eval(compile(base_code, '', mode='eval'))
+                    base_files = eval(compile(base_code, '',
+                                              mode='eval'))  # type: ignore
                 else:
                     base_files = []
         elif file_format in ('.yml', '.yaml', '.json'):
@@ -1288,7 +1287,7 @@ class Config:
     def _merge_a_into_b(a: dict,
                         b: dict,
                         allow_list_keys: bool = False) -> dict:
-        """merge dict ``a`` into dict ``b`` (non-inplace).
+        """Merge dict ``a`` into dict ``b`` (non-inplace).
 
         Values in ``a`` will overwrite ``b``. ``b`` is copied first to avoid
         in-place modifications.
@@ -1358,22 +1357,24 @@ class Config:
 
     @property
     def filename(self) -> str:
-        """get file name of config."""
+        """Get file name of config."""
         return self._filename
 
     @property
     def text(self) -> str:
-        """get config text."""
+        """Get config text."""
         return self._text
 
     @property
     def env_variables(self) -> dict:
-        """get used environment variables."""
+        """Get used environment variables."""
         return self._env_variables
 
     @property
     def pretty_text(self) -> str:
-        """get formatted python config text."""
+        """Get formatted python config text."""
+        import yapf
+        from yapf.yapflib.yapf_api import FormatCode
 
         indent = 4
 
@@ -1727,17 +1728,17 @@ class Config:
 
 
 class DictAction(Action):
-    """
-    argparse action to split an argument into KEY=VALUE form
-    on the first = and append to a dictionary. List options can
-    be passed as comma separated values, i.e 'KEY=V1,V2,V3', or with explicit
-    brackets, i.e. 'KEY=[V1,V2,V3]'. It also support nested brackets to build
-    list/tuple values. e.g. 'KEY=[(V1,V2),(V3,V4)]'
+    """Argparse action to split an argument into KEY=VALUE form on the first =
+    and append to a dictionary.
+
+    List options can be passed as comma separated values, i.e 'KEY=V1,V2,V3',
+    or with explicit brackets, i.e. 'KEY=[V1,V2,V3]'. It also support nested
+    brackets to build list/tuple values. e.g. 'KEY=[(V1,V2),(V3,V4)]'
     """
 
     @staticmethod
     def _parse_int_float_bool(val: str) -> Union[int, float, bool, Any]:
-        """parse int/float/bool value in the string."""
+        """Parse int/float/bool value in the string."""
         try:
             return int(val)
         except ValueError:
@@ -1822,7 +1823,7 @@ class DictAction(Action):
                  parser: ArgumentParser,
                  namespace: Namespace,
                  values: Union[str, Sequence[Any], None],
-                 option_string: str = None):
+                 option_string: str = None):  # type: ignore
         """Parse Variables in string and add them into argparser.
 
         Args:
