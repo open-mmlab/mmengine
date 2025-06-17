@@ -18,6 +18,7 @@ on:
       - ".pre-commit-config-zh-cn.yaml"
       - "examples/**"
 
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -98,6 +99,8 @@ jobs:
         python-version: ['3.10']
         torch: ['2.4.1']
         cuda: ['cu118']
+    permissions:
+      pull-requests: write
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
@@ -123,6 +126,14 @@ jobs:
         uses: irongut/CodeCoverageSummary@v1.3.0
         with:
           filename: coverage.xml
+          format: markdown
+          hide_branch_rate: false
+      - name: Add Coverage PR Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        if: github.event_name == 'pull_request'
+        with:
+          recreate: true
+          path: code-coverage-results.md
 
   # build_windows:
   #   runs-on: windows-2022
