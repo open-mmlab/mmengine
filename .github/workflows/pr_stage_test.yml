@@ -84,15 +84,6 @@ jobs:
           mim install mmcv coverage
       - name: Run unit tests with coverage
         run: coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist
-      - name: Upload Coverage to Codecov
-        if: ${{matrix.torch == '2.4.1' && matrix.python-version == '3.10'}}
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.xml
-          flags: unittests
-          env_vars: OS,PYTHON
-          name: codecov-umbrella
-          fail_ci_if_error: false
 
   build_gpu:
     runs-on: ubuntu-22.04
@@ -125,9 +116,13 @@ jobs:
           python -m pip install openmim
           mim install mmcv coverage
       - name: Run unit tests with coverage
-        run: coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist
-      - name: Upload Coverage to Codecov
-        uses: codecov/codecov-action@v3
+        run: |
+          coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist
+          coverage xml
+      - name: Code Coverage Summary Report
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: coverage.xml
 
   # build_windows:
   #   runs-on: windows-2022
