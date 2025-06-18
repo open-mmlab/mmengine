@@ -127,6 +127,7 @@ jobs:
         with:
           filename: coverage.xml
           format: markdown
+          output: both
           hide_branch_rate: false
       - name: Add Coverage PR Comment
         uses: marocchino/sticky-pull-request-comment@v2
