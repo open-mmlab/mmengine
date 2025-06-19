@@ -5,5 +5,4 @@ pyyaml
 regex;sys_platform=='win32'
 rich
 termcolor
-torch<2.6.0
 yapf
