@@ -47,7 +47,8 @@ from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
                          find_latest_checkpoint, save_checkpoint,
                          weights_to_cpu)
 from .log_processor import LogProcessor
-from .loops import EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop
+from .loops import (EpochBasedTrainLoop, IterBasedTrainLoop, TestLoop, ValLoop,
+                    _InfiniteDataloaderIterator)
 from .priority import Priority, get_priority
 from .utils import _get_batch_size, set_random_seed
 
@@ -198,6 +199,8 @@ class Runner:
             Defaults to None.
         cfg (dict or Configdict or :obj:`Config`, optional): Full config.
             Defaults to None.
+        auto_batchsize (bool): Whether to automatically adjust batch size.
+            Defaults to False.
 
     Note:
         Since PyTorch 2.0.0, you can enable ``torch.compile`` by passing in
@@ -288,6 +291,7 @@ class Runner:
         randomness: Dict = dict(seed=None),
         experiment_name: Optional[str] = None,
         cfg: Optional[ConfigType] = None,
+        auto_batchsize: bool = False,
     ):
         self._work_dir = osp.abspath(work_dir)
         mmengine.mkdir_or_exist(self._work_dir)
@@ -446,6 +450,8 @@ class Runner:
 
         # dump `cfg` to `work_dir`
         self.dump_config()
+
+        self._auto_batchsize = auto_batchsize
 
     @classmethod
     def from_cfg(cls, cfg: ConfigType) -> 'Runner':
@@ -1734,6 +1740,18 @@ class Runner:
         # Automatically scaling lr by linear scaling rule
         self.scale_lr(self.optim_wrapper, self.auto_scale_lr)
 
+        # Check GPU usage and automatically adjust batch size
+        if self._auto_batchsize and self._train_dataloader:
+            is_updated = self._check_batchsize(self._train_dataloader)
+            if is_updated:
+                # update dataloader in loop
+                diff_rank_seed = self._randomness_cfg.get(
+                    'diff_rank_seed', False)
+                self._train_loop.dataloader = self.build_dataloader(
+                    self._train_dataloader,
+                    seed=self.seed,
+                    diff_rank_seed=diff_rank_seed)
+
         if self.param_schedulers is not None:
             self.param_schedulers = self.build_param_scheduler(  # type: ignore
                 self.param_schedulers)  # type: ignore
@@ -2411,3 +2429,41 @@ class Runner:
         setattr(self.model, target, compiled_func)
         self.logger.info('Model has been "compiled". The first few iterations'
                          ' will be slow, please be patient.')
+
+    def _check_batchsize(self, dataloader_cfg: Dict) -> bool:
+
+        def is_cuda_out_of_memory(exception):
+            return (isinstance(exception, RuntimeError)
+                    and len(exception.args) == 1
+                    and 'CUDA out of memory.' in exception.args[0])
+
+        def gc_cuda():
+            """garbage collect Torch (CUDA) memory."""
+            import gc
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
+        init_batch_size = dataloader_cfg['batch_size']
+        checked = 0
+        while True:
+            try:
+                dataloader = self.build_dataloader(
+                    dataloader_cfg, seed=self.seed)
+                dataloader_iterator = _InfiniteDataloaderIterator(dataloader)
+                data_iter = next(dataloader_iterator)
+                self.model.train_step(
+                    data_iter, optim_wrapper=self.optim_wrapper)
+                checked += 1
+            except RuntimeError as exception:
+                checked = 0
+                if is_cuda_out_of_memory(exception):
+                    dataloader_cfg['batch_size'] //= 2
+                    print(f'Because of OOM, update batch size to '
+                          f"{dataloader_cfg['batch_size']}.")
+                    gc_cuda()
+                else:
+                    raise
+            finally:
+                if checked >= 10:
+                    return dataloader_cfg['batch_size'] != init_batch_size
