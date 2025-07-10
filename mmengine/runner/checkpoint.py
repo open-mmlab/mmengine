@@ -20,7 +20,58 @@ from mmengine.logging import print_log
 from mmengine.model import BaseTTAModel, is_model_wrapper
 from mmengine.utils import (apply_to, deprecated_function, digit_version,
                             mkdir_or_exist)
-from mmengine.utils.dl_utils import load_url
+from mmengine.utils.dl_utils import load_url, TORCH_VERSION
+
+
+def _safe_torch_load(file, map_location=None, weights_only=None):
+    """Safe torch.load that handles PyTorch 2.6+ weights_only compatibility.
+
+    PyTorch 2.6+ changed the default value of weights_only from False to True
+    for security reasons. This function provides backward compatibility by
+    automatically handling the parameter based on PyTorch version.
+
+    Args:
+        file: File path or file-like object to load from
+        map_location: Device to load the checkpoint to
+        weights_only: Whether to load only weights. If None, auto-detect
+            based on PyTorch version
+
+    Returns:
+        The loaded checkpoint
+    """
+    # Auto-detect weights_only behavior for PyTorch 2.6+
+    if weights_only is None:
+        if digit_version(TORCH_VERSION) >= digit_version('2.6.0'):
+            # For PyTorch 2.6+, first try with weights_only=True
+            # If that fails, fall back to weights_only=False for compatibility
+            try:
+                # Add safe globals for common numpy operations
+                import torch.serialization
+                safe_globals = [
+                    'numpy._core.multiarray._reconstruct',
+                    'numpy.core.multiarray._reconstruct',
+                    'numpy.dtype',
+                    'numpy.ndarray',
+                    'builtins.slice',
+                    'collections.OrderedDict',
+                ]
+
+                with torch.serialization.safe_globals(safe_globals):
+                    return torch.load(file, map_location=map_location,
+                                      weights_only=True)
+            except Exception:
+                # If weights_only=True fails, fall back to weights_only=False
+                # This is safe for checkpoints from trusted sources
+                return torch.load(file, map_location=map_location,
+                                  weights_only=False)
+        else:
+            # For older PyTorch versions, use default behavior
+            return torch.load(file, map_location=map_location)
+    else:
+        # Use explicit weights_only setting
+        return torch.load(file, map_location=map_location,
+                          weights_only=weights_only)
+
 
 # `MMENGINE_HOME` is the highest priority directory to save checkpoints
 # downloaded from Internet. If it is not set, as a workaround, using
@@ -344,7 +395,7 @@ def load_from_local(filename, map_location):
     filename = osp.expanduser(filename)
     if not osp.isfile(filename):
         raise FileNotFoundError(f'{filename} can not be found.')
-    checkpoint = torch.load(filename, map_location=map_location)
+    checkpoint = _safe_torch_load(filename, map_location=map_location)
     return checkpoint
 
 
@@ -412,7 +463,8 @@ def load_from_pavi(filename, map_location=None):
     with TemporaryDirectory() as tmp_dir:
         downloaded_file = osp.join(tmp_dir, model.name)
         model.download(downloaded_file)
-        checkpoint = torch.load(downloaded_file, map_location=map_location)
+        checkpoint = _safe_torch_load(downloaded_file,
+                                      map_location=map_location)
     return checkpoint
 
 
@@ -435,7 +487,7 @@ def load_from_ceph(filename, map_location=None, backend='petrel'):
     file_backend = get_file_backend(
         filename, backend_args={'backend': backend})
     with io.BytesIO(file_backend.get(filename)) as buffer:
-        checkpoint = torch.load(buffer, map_location=map_location)
+        checkpoint = _safe_torch_load(buffer, map_location=map_location)
     return checkpoint
 
 
@@ -504,7 +556,7 @@ def load_from_openmmlab(filename, map_location=None):
         filename = osp.join(_get_mmengine_home(), model_url)
         if not osp.isfile(filename):
             raise FileNotFoundError(f'{filename} can not be found.')
-        checkpoint = torch.load(filename, map_location=map_location)
+        checkpoint = _safe_torch_load(filename, map_location=map_location)
     return checkpoint
 
 
