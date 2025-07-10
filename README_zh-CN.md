@@ -21,13 +21,13 @@
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mmengine)](https://pypi.org/project/mmengine/)
 [![pytorch](https://img.shields.io/badge/pytorch-1.6~2.1-yellow)](#安装)
 [![PyPI](https://img.shields.io/pypi/v/mmengine)](https://pypi.org/project/mmengine)
-[![license](https://img.shields.io/github/license/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/blob/main/LICENSE)
+[![license](https://img.shields.io/github/license/vbti-development/onedl-mmengine.svg)](https://github.com/vbti-development/onedl-mmengine/blob/main/LICENSE)
 
 [简介](#简介) |
 [安装](#安装) |
 [快速上手](#快速上手) |
 [📘用户文档](https://mmengine.readthedocs.io/zh_CN/latest/) |
-[🤔报告问题](https://github.com/open-mmlab/mmengine/issues/new/choose)
+[🤔报告问题](https://github.com/vbti-development/onedl-mmengine/issues/new/choose)
 
 </div>
 
@@ -104,10 +104,10 @@ MMEngine 是一个基于 PyTorch 实现的，用于训练深度学习模型的�
 <details>
 <summary>支持的 PyTorch 版本</summary>
 
-| MMEngine           | PyTorch      | Python         |
-| ------------------ | ------------ | -------------- |
-| main               | >=1.6 \<=2.1 | >=3.8, \<=3.11 |
-| >=0.9.0, \<=0.10.4 | >=1.6 \<=2.1 | >=3.8, \<=3.11 |
+| MMEngine           | PyTorch      | Python          |
+| ------------------ | ------------ | --------------- |
+| main               | >=1.6 \<=2.1 | >=3.10, \<=3.11 |
+| >=0.9.0, \<=0.10.4 | >=1.6 \<=2.1 | >=3.8, \<=3.11  |
 
 </details>
 
@@ -340,7 +340,7 @@ runner.train()
 @article{mmengine2022,
   title   = {{MMEngine}: OpenMMLab Foundational Library for Training Deep Learning Models},
   author  = {MMEngine Contributors},
-  howpublished = {\url{https://github.com/open-mmlab/mmengine}},
+  howpublished = {\url{https://github.com/vbti-development/onedl-mmengine}},
   year={2022}
 }
 ```
@@ -383,7 +383,7 @@ runner.train()
 扫描下方的二维码可关注 OpenMMLab 团队的 [知乎官方账号](https://www.zhihu.com/people/openmmlab)，扫描下方微信二维码添加喵喵好友，进入 MMEngine 微信交流社群。【加好友申请格式：研究方向+地区+学校/公司+姓名】
 
 <div align="center">
-<img src="https://user-images.githubusercontent.com/58739961/187154320-f3312cdf-31f2-4316-9dbb-8d7b0e1b7e08.jpg" height="400" />  <img src="https://github.com/open-mmlab/mmengine/assets/62195058/bd482538-1b1a-4130-af1b-ed788b6cafa8" height="400" />
+<img src="https://user-images.githubusercontent.com/58739961/187154320-f3312cdf-31f2-4316-9dbb-8d7b0e1b7e08.jpg" height="400" />  <img src="https://github.com/vbti-development/onedl-mmengine/assets/62195058/bd482538-1b1a-4130-af1b-ed788b6cafa8" height="400" />
 </div>
 
 我们会在 OpenMMLab 社区为大家

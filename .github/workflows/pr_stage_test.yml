@@ -32,24 +32,23 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.10']
-        build-lite: ['0', '1']
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@v6
         with:
+          activate-environment: true
           python-version: ${{ matrix.python-version }}
-      - name: Update pip
-        run: |
-          python -m pip install --upgrade pip wheel
+
       - name: Build from source
         run: |
-          MMENGINE_LITE=${{ matrix.build-lite }} python -m pip install -e . -v
+          uv pip install -e . -v
       - name: Install dependencies
         run: |
-          python -m pip install -r requirements/tests_lite.txt
+          uv pip install -r pyproject.toml --group test-lite
       - name: Run unit tests with coverage
-        run: pytest tests/test_config tests/test_registry tests/test_fileio tests/test_logging tests/test_utils --ignore=tests/test_utils/test_dl_utils
+        run: |
+          uv run pytest tests/test_config tests/test_registry tests/test_fileio tests/test_logging tests/test_utils --ignore=tests/test_utils/test_dl_utils
 
   build_cpu:
     runs-on: ubuntu-22.04
@@ -63,37 +62,39 @@ jobs:
           - python-version: '3.10'
             torch: 2.4.1
             torchvision: 0.19.1
-          - python-version: '3.8'
-            torch: 1.13
-            torchvision: 0.14.0
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Update pip
+          activate-environment: true
+      - name: Install PyTorch
         run: |
-          python -m pip install --upgrade pip wheel
-      - name: Install dependencies
+          uv pip install torch==${{ matrix.torch }} torchvision
+      - name: Build MMEngine from source
+        run: uv pip install -e . -v
+      - name: Install unit tests dependencies
         run: |
-          apt-get update && apt-get install -y ffmpeg libsm6 libxext6 git ninja-build libglib2.0-0 libsm6 libxrender-dev libxext6
-          python -m pip install torch==${{matrix.torch}} torchvision==${{matrix.torchvision}}
-          python -m pip install -e . -v
-          python -m pip install -r requirements/tests.txt
-          python -m pip install openmim
-          mim install mmcv coverage
-      - name: Run unit tests with coverage
-        run: coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist
+          uv pip install -r pyproject.toml
+          uv pip install -r pyproject.toml --group test
+          uv pip install ninja psutil
+          uv pip install git+https://github.com/VBTI-development/onedl-mmcv.git@chore/rename-to-onedl-cv --no-build-isolation
+      - name: Run unittests and generate coverage report
+        run: |
+          uv run coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist
 
   build_gpu:
     runs-on: ubuntu-22.04
+    container:
+      image: nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
     needs: build_cpu
     defaults:
       run:
         shell: bash -l {0}
     env:
       MKL_THREADING_LAYER: GNU
+      UV_CACHE_DIR: /__w/_uv_cache # set cache to be on same disk to avoid hardlink copies.
     strategy:
       matrix:
         python-version: ['3.10']
@@ -102,26 +103,53 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - name: Show disk usage
+        run: df -h
+      - uses: actions/checkout@v4
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@v6
         with:
+          activate-environment: true
           python-version: ${{ matrix.python-version }}
-      - name: Update pip
+          cache-local-path: /__w/_uv_cache
+      - name: Install system dependencies
         run: |
-          python -m pip install --upgrade pip wheel
-      - name: Install dependencies
+          apt-get update && apt-get install -y git ffmpeg libturbojpeg && apt-get clean -y
+      - name: Clean up apt cache and pip cache
         run: |
-          apt-get update && apt-get install -y ffmpeg libsm6 libxext6 git ninja-build libglib2.0-0 libsm6 libxrender-dev libxext6
-          python -m pip install torch==${{matrix.torch}} --index-url https://download.pytorch.org/whl/${{matrix.cuda}}
-          python -m pip install -e . -v
-          python -m pip install -r requirements/tests.txt
-          python -m pip install openmim
-          mim install mmcv coverage
+          apt-get clean
+          rm -rf /var/lib/apt/lists/*
+          rm -rf ~/.cache/pip
+          rm -rf /root/.cache/pip
+          rm -rf /tmp/*
+      - name: Show disk usage
+        run: df -h
+      - name: Install torch
+        run: |
+          uv pip install -v --torch-backend=${{matrix.cuda}} torch==${{ matrix.torch }} torchvision
+      - name: Show disk usage
+        run: df -h
+      - name: Clear uv cache
+        run: uv cache clean
+      - name: Show disk usage
+        run: df -h
+      - name: Install mmengine
+        run: |
+          uv pip install -e . -v
+          uv pip install -r pyproject.toml --group test
+      - name: Show disk usage
+        run: df -h
+      - name: Install mmcv
+        run: |
+          uv pip install ninja psutil
+          uv pip install git+https://github.com/VBTI-development/onedl-mmcv.git@chore/rename-to-onedl-cv --no-build-isolation
+      - name: Show disk usage
+        run: df -h
       - name: Run unit tests with coverage
         run: |
-          coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist
-          coverage xml
+          set -e
+          uv run coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist
+          uv run coverage xml
       - name: Code Coverage Summary Report
         uses: irongut/CodeCoverageSummary@v1.3.0
         with:
@@ -150,7 +178,7 @@ jobs:
   #           torch: 2.1.0
   #           torchvision: 0.16.0
   #   steps:
-  #     - uses: actions/checkout@v3
+  #     - uses: actions/checkout@v4
   #     - name: Set up Python ${{ matrix.python-version }}
   #       uses: actions/setup-python@v4
   #       with:

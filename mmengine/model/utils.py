@@ -194,7 +194,7 @@ def revert_sync_batchnorm(module: nn.Module) -> nn.Module:
     for name, child in module.named_children():
         # Some custom modules or 3rd party implemented modules may raise an
         # error when calling `add_module`. Therefore, try to catch the error
-        # and do not raise it. See https://github.com/open-mmlab/mmengine/issues/638 # noqa: E501
+        # and do not raise it. See https://github.com/vbti-development/onedl-mmengine/issues/638 # noqa: E501
         # for more details.
         try:
             module_output.add_module(name, revert_sync_batchnorm(child))

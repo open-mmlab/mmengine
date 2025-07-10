@@ -258,7 +258,7 @@ If you as a beginner do not immediately understand, it doesn't matter too much, 
 <details>
 <summary>Where can I find the possible configuration options for the xxx argument?</summary>
 
-You will find extensive instructions and examples in those tutorials of the corresponding modules. You can also find all possible arguments in [Runner's API documentation](mmengine.runner.Runner). If neither of the above resolves your query, you are always encouraged to start a topic in our [discussion forum](https://github.com/open-mmlab/mmengine/discussions). It also helps us improve documentation.
+You will find extensive instructions and examples in those tutorials of the corresponding modules. You can also find all possible arguments in [Runner's API documentation](mmengine.runner.Runner). If neither of the above resolves your query, you are always encouraged to start a topic in our [discussion forum](https://github.com/vbti-development/onedl-mmengine/discussions). It also helps us improve documentation.
 
 </details>
 
@@ -518,6 +518,6 @@ Refer to [Parameter Scheduler tutorial](./param_scheduler.md)
 - "Common Usage" section to the left contains more example codes
 - "Advanced tutorials" to the left consists of more contents for experienced developers to make more flexible extensions to the training pipeline
 - [Hook](./hook.md) provides some flexible modifications without spoiling your codes
-- If none of the above solves your problem, you are always welcome to start a topic in our [discussion forum](https://github.com/open-mmlab/mmengine/discussions)!
+- If none of the above solves your problem, you are always welcome to start a topic in our [discussion forum](https://github.com/vbti-development/onedl-mmengine/discussions)!
 
 </details>

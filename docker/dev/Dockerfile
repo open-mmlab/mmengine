@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y git \
     && apt-get update && apt-get install -y libgl1 libglib2.0-0
 
 # Build mmengine from source with develop mode
-RUN git clone https://github.com/open-mmlab/mmengine.git /mmengine
+RUN git clone https://github.com/vbti-development/onedl-mmengine.git /mmengine
 WORKDIR /mmengine
 RUN git rev-parse --short HEAD
 RUN pip install --no-cache-dir -e .[all] -v && pip install pre-commit && pre-commit install

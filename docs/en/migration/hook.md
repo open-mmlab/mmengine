@@ -4,7 +4,7 @@
 
 Due to the upgrade of our architecture design and the continuous increase of user demands, existing hook mount points in MMCV can no longer meet the requirements. Hence, we redesigned the mount points in MMEngine, and the functions of hooks were adjusted accordingly. It will help a lot to read the tutorial [Hook Design](../design/hook.md) before your migration.
 
-This tutorial compares the difference in function, mount point, usage and implementation between [MMCV v1.6.0](https://github.com/open-mmlab/mmcv/tree/v1.6.0) and [MMEngine v0.5.0](https://github.com/open-mmlab/mmengine/tree/v0.5.0).
+This tutorial compares the difference in function, mount point, usage and implementation between [MMCV v1.6.0](https://github.com/open-mmlab/mmcv/tree/v1.6.0) and [MMEngine v0.5.0](https://github.com/vbti-development/onedl-mmengine/tree/v0.5.0).
 
 ## Function Comparison
 
@@ -285,7 +285,7 @@ For more details of MMEngine hooks, please refer to [Usage of Hooks](../tutorial
 
 ## Implementation Comparison
 
-Taking `CheckpointHook` as an example, compared with [CheckpointHook](https://github.com/open-mmlab/mmcv/blob/v1.6.0/mmcv/runner/hooks/checkpoint.py) in MMCV, [CheckpointHook](https://github.com/open-mmlab/mmengine/blob/main/mmengine/hooks/checkpoint_hook.py) of MMEngine needs to implement the `after_val_epoch` method, since new `CheckpointHook` supports saving the optimal weights, while in MMCV, the function is achieved by EvalHook.
+Taking `CheckpointHook` as an example, compared with [CheckpointHook](https://github.com/open-mmlab/mmcv/blob/v1.6.0/mmcv/runner/hooks/checkpoint.py) in MMCV, [CheckpointHook](https://github.com/vbti-development/onedl-mmengine/blob/main/mmengine/hooks/checkpoint_hook.py) of MMEngine needs to implement the `after_val_epoch` method, since new `CheckpointHook` supports saving the optimal weights, while in MMCV, the function is achieved by EvalHook.
 
 - MMCV
 

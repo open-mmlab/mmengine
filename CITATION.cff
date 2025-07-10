@@ -4,5 +4,5 @@ authors:
   - name: "MMEngine Contributors"
 title: "OpenMMLab Foundational Library for Training Deep Learning Models"
 date-released: 2022-09-01
-url: "https://github.com/open-mmlab/mmengine"
+url: "https://github.com/vbti-development/onedl-mmengine"
 license: Apache-2.0

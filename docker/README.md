@@ -18,14 +18,14 @@ There are two `Dockerfile` files to build docker images, one to build an image w
 Build with local repository
 
 ```bash
-git clone https://github.com/open-mmlab/mmengine.git && cd mmengine
+git clone https://github.com/vbti-development/onedl-mmengine.git && cd mmengine
 docker build -t mmengine -f docker/release/Dockerfile .
 ```
 
 Or build with remote repository
 
 ```bash
-docker build -t mmengine https://github.com/open-mmlab/mmengine.git#main:docker/release
+docker build -t mmengine https://github.com/vbti-development/onedl-mmengine.git#main:docker/release
 ```
 
 The [Dockerfile](release/Dockerfile) installs the latest released version of mmengine by default, but you can specify mmengine versions to install expected versions.
@@ -52,7 +52,7 @@ More available versions of PyTorch and CUDA can be found at [dockerhub/pytorch](
 If you want to build an docker image with the mmengine development environment, you can use the following command
 
 ```bash
-git clone https://github.com/open-mmlab/mmengine.git && cd mmengine
+git clone https://github.com/vbti-development/onedl-mmengine.git && cd mmengine
 docker build -t mmengine -f docker/dev/Dockerfile .
 ```
 

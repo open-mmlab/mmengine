@@ -98,7 +98,7 @@ runner = Runner(
 runner.train()
 ```
 
-![image](https://github.com/open-mmlab/mmengine/assets/58739961/d68e1dd2-9e82-40fb-ad81-00a647549adc)
+![image](https://github.com/vbti-development/onedl-mmengine/assets/58739961/d68e1dd2-9e82-40fb-ad81-00a647549adc)
 
 ## Neptune
 
@@ -125,7 +125,7 @@ runner = Runner(
 runner.train()
 ```
 
-![image](https://github.com/open-mmlab/mmengine/assets/58739961/9122e2ac-cc4f-43b2-bad3-ae33faa64043)
+![image](https://github.com/vbti-development/onedl-mmengine/assets/58739961/9122e2ac-cc4f-43b2-bad3-ae33faa64043)
 
 请注意：若未提供 `project` 和 `api_token` ，neptune 将被设置成离线模式，产生的文件将保存到本地 `.neptune` 文件下。
 推荐在初始化时提供 `project` 和 `api_token` ，具体方法如下所示：
@@ -185,7 +185,7 @@ runner.train()
 
 打开 `work_dir_dvc` 下面的 `report.html` 文件，即可看到如下图的可视化效果。
 
-![image](https://github.com/open-mmlab/mmengine/assets/58739961/47d85520-9a4a-4143-a449-12ed7347cc63)
+![image](https://github.com/vbti-development/onedl-mmengine/assets/58739961/47d85520-9a4a-4143-a449-12ed7347cc63)
 
 你还可以安装 VSCode 扩展 [DVC](https://marketplace.visualstudio.com/items?itemName=Iterative.dvc) 进行可视化。
 
@@ -231,6 +231,6 @@ aim up
 
 即可启动 Aim UI，界面如下图所示。
 
-![image](https://github.com/open-mmlab/mmengine/assets/58739961/2fc6cdd8-1de7-4125-a20a-c95c1a8bdb1b)
+![image](https://github.com/vbti-development/onedl-mmengine/assets/58739961/2fc6cdd8-1de7-4125-a20a-c95c1a8bdb1b)
 
 初始化配置参数可点击 [Aim SDK Reference](https://aimstack.readthedocs.io/en/latest/refs/sdk.html#module-aim.sdk.run) 查询。

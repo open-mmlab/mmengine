@@ -8,7 +8,7 @@ This segmentation task example will be divided into the following steps:
 - [Train with Runner](#training-with-runner)
 
 ```{note}
-You can also experience the notebook example [here](https://colab.research.google.com/github/open-mmlab/mmengine/blob/main/examples/segmentation/train.ipynb).
+You can also experience the notebook example [here](https://colab.research.google.com/github/vbti-development/onedl-mmengine/blob/main/examples/segmentation/train.ipynb).
 ```
 
 ## Download Camvid Dataset
@@ -280,9 +280,9 @@ Finnaly, you can check the training results in the folder `./work_dir/{timestamp
   <th>label</th>
 </tr>
 <tr>
-  <th><img src="https://github.com/open-mmlab/mmengine/assets/57566630/de70c138-fb8e-402c-9497-574b01725b6c" width="200"></th>
-  <th><img src="https://github.com/open-mmlab/mmengine/assets/57566630/ea9221e7-48ca-4515-8815-56b5ff091f53" width="200"></th>
-  <th><img src="https://github.com/open-mmlab/mmengine/assets/57566630/dcb2324f-a2df-4e5c-a038-df896dde2471" width="200"></th>
+  <th><img src="https://github.com/vbti-development/onedl-mmengine/assets/57566630/de70c138-fb8e-402c-9497-574b01725b6c" width="200"></th>
+  <th><img src="https://github.com/vbti-development/onedl-mmengine/assets/57566630/ea9221e7-48ca-4515-8815-56b5ff091f53" width="200"></th>
+  <th><img src="https://github.com/vbti-development/onedl-mmengine/assets/57566630/dcb2324f-a2df-4e5c-a038-df896dde2471" width="200"></th>
 </tr>
 </thead>
 </table>

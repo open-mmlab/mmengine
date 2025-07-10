@@ -19,9 +19,9 @@ sys.path.insert(0, os.path.abspath('../..'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'mmengine'
-copyright = '2022, mmengine contributors'
-author = 'mmengine contributors'
+project = 'onedl-mmengine'
+copyright = '2025, VBTI'
+author = 'VBTI Authors'
 
 version_file = '../../mmengine/version.py'
 with open(version_file) as f:
@@ -48,6 +48,7 @@ extensions = [
     'sphinx_copybutton',
     'sphinx.ext.autodoc.typehints',
     'sphinx_tabs.tabs',
+    'sphinxcontrib.jquery',
 ]  # yapf: disable
 autodoc_typehints = 'description'
 myst_heading_anchors = 4
@@ -81,11 +82,12 @@ html_theme_options = {
     'menu': [
         {
             'name': 'GitHub',
-            'url': 'https://github.com/open-mmlab/mmengine'
+            'url': 'https://github.com/vbti-development/onedl-mmengine'
         },
     ],
     # Specify the language of shared menu
-    'menu_lang': 'en',
+    'menu_lang':
+    'en',
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,

@@ -8,7 +8,7 @@
 新的执行器 FlexibleRunner 和 Strategy 还处于实验性阶段，在将来的版本中，它们的接口有可能会发生变化。
 ```
 
-下面的示例代码摘自 [examples/distributed_training_with_flexible_runner.py](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training_with_flexible_runner.py)。
+下面的示例代码摘自 [examples/distributed_training_with_flexible_runner.py](https://github.com/vbti-development/onedl-mmengine/blob/main/examples/distributed_training_with_flexible_runner.py)。
 
 ## DeepSpeed
 

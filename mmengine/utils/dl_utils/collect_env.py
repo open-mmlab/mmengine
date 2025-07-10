@@ -144,7 +144,8 @@ def collect_env():
         env_info['GCC'] = 'n/a'
     except io.UnsupportedOperation as e:
         # JupyterLab on Windows changes sys.stdout, which has no `fileno` attr
-        # Refer to: https://github.com/open-mmlab/mmengine/issues/931
+        # Refer to:
+        #   https://github.com/vbti-development/onedl-mmengine/issues/931
         # TODO: find a solution to get compiler info in Windows JupyterLab,
         # while preserving backward-compatibility in other systems.
         env_info['MSVC'] = f'n/a, reason: {str(e)}'

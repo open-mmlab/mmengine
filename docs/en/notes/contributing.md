@@ -40,7 +40,7 @@ git clone git@github.com:{username}/mmengine.git
 After that, you should add the official repository as the upstream repository.
 
 ```bash
-git remote add upstream git@github.com:open-mmlab/mmengine
+git remote add upstream git@github.com:vbti-development/onedl-mmengine
 ```
 
 Check whether the remote repository has been added successfully by `git remote -v`.
@@ -48,8 +48,8 @@ Check whether the remote repository has been added successfully by `git remote -
 ```bash
 origin	git@github.com:{username}/mmengine.git (fetch)
 origin	git@github.com:{username}/mmengine.git (push)
-upstream	git@github.com:open-mmlab/mmengine (fetch)
-upstream	git@github.com:open-mmlab/mmengine (push)
+upstream	git@github.com:vbti-development/onedl-mmengine (fetch)
+upstream	git@github.com:vbti-development/onedl-mmengine (push)
 ```
 
 ```{note}
@@ -194,7 +194,7 @@ python -m coverage html
 If the documents are modified/added, we should check the rendering result. We could install the dependencies and run the following command to render the documents and check the results:
 
 ```shell
-pip install -r requirements/docs.txt
+pip install -r pyproject.toml --group docs
 cd docs/zh_cn/
 # or docs/en
 make html
@@ -214,11 +214,11 @@ We use the following tools for linting and formatting:
 - [mdformat](https://github.com/executablebooks/mdformat): Mdformat is an opinionated Markdown formatter that can be used to enforce a consistent style in Markdown files.
 - [docformatter](https://github.com/myint/docformatter): A formatter to format docstring.
 
-Style configurations of yapf and isort can be found in [setup.cfg](https://github.com/open-mmlab/mmengine/blob/main/setup.cfg).
+Style configurations of yapf and isort can be found in [setup.cfg](https://github.com/vbti-development/onedl-mmengine/blob/main/setup.cfg).
 
 We use [pre-commit hook](https://pre-commit.com/) that checks and formats for `flake8`, `yapf`, `isort`, `trailing whitespaces`, `markdown files`,
 fixes `end-of-files`, `double-quoted-strings`, `python-encoding-pragma`, `mixed-line-ending`, sorts `requirments.txt` automatically on every commit.
-The config for a pre-commit hook is stored in [.pre-commit-config](https://github.com/open-mmlab/mmengine/blob/main/.pre-commit-config.yaml).
+The config for a pre-commit hook is stored in [.pre-commit-config](https://github.com/vbti-development/onedl-mmengine/blob/main/.pre-commit-config.yaml).
 
 ## PR Specs
 

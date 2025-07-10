@@ -129,7 +129,7 @@ runner.train()
 
 Finally, let's put all the codes above together into a complete script that uses the `MMEngine` executor for training and validation:
 
-<a href="https://colab.research.google.com/github/open-mmlab/mmengine/blob/main/docs/zh_cn/tutorials/get_started.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab"/></a>
+<a href="https://colab.research.google.com/github/vbti-development/onedl-mmengine/blob/main/docs/zh_cn/tutorials/get_started.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab"/></a>
 
 ```python
 import torch.nn.functional as F

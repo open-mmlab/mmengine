@@ -1,0 +1,132 @@
+[project]
+name = "onedl-mmengine"
+version = "0.10.8-rc.0"
+description = "Engine of OpenMMLab projects"
+readme = "README.md"
+authors = [
+    { name = "VBTI Contributors", email = "dev@vbti.nl" }
+]
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Utilities"
+]
+dependencies = [
+    "addict",
+    "matplotlib",
+    "numpy",
+    "pyyaml",
+    "rich",
+    "termcolor",
+    "yapf",
+    "regex; sys_platform == 'win32'"
+]
+
+[dependency-groups]
+test = [
+    "aim<=3.17.5; sys_platform != 'win32'",
+    "bitsandbytes",
+    "clearml",
+    "coverage",
+    "dadaptation",
+    "dvclive",
+    "lion-pytorch",
+    "lmdb",
+    "mlflow",
+    "opencv-python",
+    "parameterized",
+    "pydantic",
+    "pytest",
+    "transformers"
+]
+test-lite =[
+    "lmdb",
+    "opencv-python",
+    "parameterized",
+    "pytest",
+]
+docs = [
+    "docutils",
+    "deepspeed",
+    "myst-parser",
+    "opencv-python",
+    "pytorch_sphinx_theme @ git+https://github.com/VBTI-development/onedl_sphinx_theme.git@pt",
+    "sphinx",
+    "sphinx-copybutton",
+    "sphinx-tabs",
+    "sphinx_markdown_tables>=0.0.16",
+    "sphinxcontrib-jquery",
+    "tabulate",
+    "torch",
+    "torchvision",
+    "urllib3"
+]
+
+[project.optional-dependencies]
+all = [
+    "addict",
+    "matplotlib",
+    "numpy",
+    "pyyaml",
+    "rich",
+    "termcolor",
+    "yapf",
+    "regex; sys_platform == 'win32'",
+    "aim<=3.17.5; sys_platform != 'win32'",
+    "bitsandbytes",
+    "clearml",
+    "coverage",
+    "dadaptation",
+    "dvclive",
+    "lion-pytorch",
+    "lmdb",
+    "mlflow",
+    "parameterized",
+    "pydantic==1.10.9",
+    "pytest",
+    "transformers"
+]
+
+[project.urls]
+Homepage = "https://onedl.ai"
+Repository = "https://github.com/VBTI-development/onedl-mmengine"
+Documentation = "https://mmengine.readthedocs.io/en/latest/"
+
+
+[tool.setuptools]
+
+
+[tool.setuptools.packages.find]
+include = ["mmengine", "mmengine.*"]
+exclude = ["tests"]
+
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.isort]
+line_length = 79
+multi_line_output = 0
+extra_standard_library = ["setuptools"]
+known_first_party = ["mmengine"]
+known_third_party = ["pytest", "yaml"]
+no_lines_before = ["STDLIB", "LOCALFOLDER"]
+default_section = "THIRDPARTY"
+
+[tool.yapf]
+based_on_style = "pep8"
+blank_line_before_nested_class_or_def = true
+split_before_expression_after_opening_paren = true
+
+[tool.codespell]
+ignore-words-list = "nd, ba, warmup"
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true

@@ -26,7 +26,7 @@ import torch
 import mmcv
 from mmengine.visualization import Visualizer
 
-# https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/en/_static/image/cat_and_dog.png
+# https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/en/_static/image/cat_and_dog.png
 image = mmcv.imread('docs/en/_static/image/cat_and_dog.png',
                     channel_order='rgb')
 visualizer = Visualizer(image=image)

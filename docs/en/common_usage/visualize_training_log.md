@@ -98,7 +98,7 @@ runner = Runner(
 runner.train()
 ```
 
-![image](https://github.com/open-mmlab/mmengine/assets/58739961/d68e1dd2-9e82-40fb-ad81-00a647549adc)
+![image](https://github.com/vbti-development/onedl-mmengine/assets/58739961/d68e1dd2-9e82-40fb-ad81-00a647549adc)
 
 ## Neptune
 
@@ -125,7 +125,7 @@ runner = Runner(
 runner.train()
 ```
 
-![image](https://github.com/open-mmlab/mmengine/assets/58739961/9122e2ac-cc4f-43b2-bad3-ae33faa64043)
+![image](https://github.com/vbti-development/onedl-mmengine/assets/58739961/9122e2ac-cc4f-43b2-bad3-ae33faa64043)
 
 Please note: If the `project` and `api_token` are not specified, neptune will be set to offline mode and the generated files will be saved to the local `.neptune` file.
 It is recommended to specify the `project` and `api_token` during initialization as shown below.
@@ -185,7 +185,7 @@ Recommend not to set `work_dir` as `work_dirs`. Or DVC will give a warning `WARN
 
 Open the `report.html` file under `work_dir_dvc`, and you will see the visualization as shown in the following image.
 
-![image](https://github.com/open-mmlab/mmengine/assets/58739961/47d85520-9a4a-4143-a449-12ed7347cc63)
+![image](https://github.com/vbti-development/onedl-mmengine/assets/58739961/47d85520-9a4a-4143-a449-12ed7347cc63)
 
 You can also configure a VSCode extension of [DVC](https://marketplace.visualstudio.com/items?itemName=Iterative.dvc) to visualize the training process.
 
@@ -231,6 +231,6 @@ or in the Jupyter Notebook, use the following command,
 
 to launch the Aim UI as shown below.
 
-![image](https://github.com/open-mmlab/mmengine/assets/58739961/2fc6cdd8-1de7-4125-a20a-c95c1a8bdb1b)
+![image](https://github.com/vbti-development/onedl-mmengine/assets/58739961/2fc6cdd8-1de7-4125-a20a-c95c1a8bdb1b)
 
 Initialization configuration parameters are available at [Aim SDK Reference](https://aimstack.readthedocs.io/en/latest/refs/sdk.html#module-aim.sdk.run).

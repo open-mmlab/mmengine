@@ -8,7 +8,7 @@
 - [使用 Runner 训练模型](#使用-runner-训练模型)
 
 ```{note}
-如果你更喜欢 notebook 风格的样例，也可以在[此处](https://colab.research.google.com/github/open-mmlab/mmengine/blob/main/examples/segmentation/train.ipynb) 体验。
+如果你更喜欢 notebook 风格的样例，也可以在[此处](https://colab.research.google.com/github/vbti-development/onedl-mmengine/blob/main/examples/segmentation/train.ipynb) 体验。
 ```
 
 ## 下载 Camvid 数据集
@@ -282,9 +282,9 @@ runner.train()
   <th>标签</th>
 </tr>
 <tr>
-  <th><img src="https://github.com/open-mmlab/mmengine/assets/57566630/de70c138-fb8e-402c-9497-574b01725b6c" width="200"></th>
-  <th><img src="https://github.com/open-mmlab/mmengine/assets/57566630/ea9221e7-48ca-4515-8815-56b5ff091f53" width="200"></th>
-  <th><img src="https://github.com/open-mmlab/mmengine/assets/57566630/dcb2324f-a2df-4e5c-a038-df896dde2471" width="200"></th>
+  <th><img src="https://github.com/vbti-development/onedl-mmengine/assets/57566630/de70c138-fb8e-402c-9497-574b01725b6c" width="200"></th>
+  <th><img src="https://github.com/vbti-development/onedl-mmengine/assets/57566630/ea9221e7-48ca-4515-8815-56b5ff091f53" width="200"></th>
+  <th><img src="https://github.com/vbti-development/onedl-mmengine/assets/57566630/dcb2324f-a2df-4e5c-a038-df896dde2471" width="200"></th>
 </tr>
 </thead>
 </table>

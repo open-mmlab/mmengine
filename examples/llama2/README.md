@@ -7,7 +7,7 @@ Note: This example requires PyTorch 2.0+ and MMEngine 0.8.0+.
 - Install MMEngine
 
   ```bash
-  git clone https://github.com/open-mmlab/mmengine.git
+  git clone https://github.com/vbti-development/onedl-mmengine.git
   cd mmengine
   pip install -e . -v
   ```

@@ -86,11 +86,12 @@ html_theme_options = {
     'menu': [
         {
             'name': 'GitHub',
-            'url': 'https://github.com/open-mmlab/mmengine'
+            'url': 'https://github.com/vbti-development/onedl-mmengine'
         },
     ],
     # Specify the language of shared menu
-    'menu_lang': 'cn',
+    'menu_lang':
+    'cn',
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,

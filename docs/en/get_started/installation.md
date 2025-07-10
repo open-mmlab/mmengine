@@ -26,18 +26,17 @@
 
 ## Install MMEngine
 
-:::{note}
-If you only want to use the fileio, registry, and config modules in MMEngine, you can install `mmengine-lite`, which will only install the few third-party library dependencies that are necessary (e.g., it will not install opencv, matplotlib):
+### Install with uv (recommended)
+
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
 ```bash
-pip install mmengine-lite
+uv pip install mmengine
 ```
-
-:::
 
 ### Install with mim
 
-[mim](https://github.com/open-mmlab/mim) is a package management tool for OpenMMLab projects, which can be used to install the OpenMMLab project easily.
+[mim](https://github.com/vbti-development/mim) is a package management tool for OpenMMLab projects, which can be used to install the OpenMMLab project easily.
 
 ```bash
 pip install -U openmim
@@ -55,10 +54,10 @@ pip install mmengine
 1. Build the image
 
    ```bash
-   docker build -t mmengine https://github.com/open-mmlab/mmengine.git#main:docker/release
+   docker build -t mmengine https://github.com/vbti-development/onedl-mmengine.git#main:docker/release
    ```
 
-   More information can be referred from [mmengine/docker](https://github.com/open-mmlab/mmengine/tree/main/docker).
+   More information can be referred from [mmengine/docker](https://github.com/vbti-development/onedl-mmengine/tree/main/docker).
 
 2. Run the image
 
@@ -71,19 +70,10 @@ pip install mmengine
 #### Build mmengine
 
 ```bash
-# if cloning speed is too slow, you can switch the source to https://gitee.com/open-mmlab/mmengine.git
-git clone https://github.com/open-mmlab/mmengine.git
+# if cloning speed is too slow, you can switch the source to https://gitee.com/vbti-development/onedl-mmengine.git
+git clone https://github.com/vbti-development/onedl-mmengine.git
 cd mmengine
 pip install -e . -v
-```
-
-#### Build mmengine-lite
-
-```bash
-# if cloning speed is too slow, you can switch the source to https://gitee.com/open-mmlab/mmengine.git
-git clone https://github.com/open-mmlab/mmengine.git
-cd mmengine
-MMENGINE_LITE=1 pip install -e . -v
 ```
 
 ## Verify the Installation

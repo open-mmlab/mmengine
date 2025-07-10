@@ -8,7 +8,7 @@ To provide more flexibility in supporting large model training techniques, start
 The new FlexibleRunner and Strategy are still in the experimental stage, and their interfaces may change in future versions.
 ```
 
-The following example code is excerpted from [examples/distributed_training_with_flexible_runner.py](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training_with_flexible_runner.py).
+The following example code is excerpted from [examples/distributed_training_with_flexible_runner.py](https://github.com/vbti-development/onedl-mmengine/blob/main/examples/distributed_training_with_flexible_runner.py).
 
 ## DeepSpeed
 

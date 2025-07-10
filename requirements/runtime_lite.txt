@@ -1,7 +1,0 @@
-addict
-numpy
-pyyaml
-regex;sys_platform=='win32'
-rich
-termcolor
-yapf

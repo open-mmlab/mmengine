@@ -805,7 +805,7 @@ class BaseDataset(Dataset):
         else:
             return len(self.data_list)
 
-    def _copy_without_annotation(self, memo=dict()) -> 'BaseDataset':
+    def _copy_without_annotation(self, memo=None) -> 'BaseDataset':
         """Deepcopy for all attributes other than ``data_list``,
         ``data_address`` and ``data_bytes``.
 
@@ -813,6 +813,9 @@ class BaseDataset(Dataset):
             memo: Memory dict which used to reconstruct complex object
                 correctly.
         """
+        if memo is None:
+            memo = {}
+
         cls = self.__class__
         other = cls.__new__(cls)
         memo[id(self)] = other

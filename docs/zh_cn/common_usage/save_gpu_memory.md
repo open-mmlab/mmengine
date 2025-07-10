@@ -4,7 +4,7 @@
 
 - 启用高效卷积BN评估功能（实验性）
 
-  基于在[这篇论文](https://arxiv.org/abs/2305.11624)中讨论的概念，我们最近在MMCV中[引入](https://github.com/open-mmlab/mmcv/pull/2807)了一个实验性功能：高效卷积BN评估。这个功能的设计目标是在不损害性能的情况下减少网络训练过程中的显存占用。如果你的网络架构包含了一系列连续的Conv+BN模块，而且这些BN层在训练过程中保持在 `eval` 模式（在使用 [MMDetection](https://github.com/open-mmlab/mmdetection)训练对象检测器时很常见），这个功能可以将显存消耗减少超过 $20%$。要启用高效卷积BN评估功能，只需添加以下命令行参数：`--cfg-options efficient_conv_bn_eval="[backbone]"`。当你在输出日志中看到 `Enabling the "efficient_conv_bn_eval" feature for these modules ...`时，意味着功能已成功启用。由于这仍处于实验阶段，我们非常期待听到你对它的使用体验。请在[这个讨论线程](https://github.com/open-mmlab/mmengine/discussions/1252)分享你的使用报告、观察和建议。你的反馈对于进一步的开发和确定是否应将此功能集成到稳定版中至关重要。
+  基于在[这篇论文](https://arxiv.org/abs/2305.11624)中讨论的概念，我们最近在MMCV中[引入](https://github.com/open-mmlab/mmcv/pull/2807)了一个实验性功能：高效卷积BN评估。这个功能的设计目标是在不损害性能的情况下减少网络训练过程中的显存占用。如果你的网络架构包含了一系列连续的Conv+BN模块，而且这些BN层在训练过程中保持在 `eval` 模式（在使用 [MMDetection](https://github.com/open-mmlab/mmdetection)训练对象检测器时很常见），这个功能可以将显存消耗减少超过 $20%$。要启用高效卷积BN评估功能，只需添加以下命令行参数：`--cfg-options efficient_conv_bn_eval="[backbone]"`。当你在输出日志中看到 `Enabling the "efficient_conv_bn_eval" feature for these modules ...`时，意味着功能已成功启用。由于这仍处于实验阶段，我们非常期待听到你对它的使用体验。请在[这个讨论线程](https://github.com/vbti-development/onedl-mmengine/discussions/1252)分享你的使用报告、观察和建议。你的反馈对于进一步的开发和确定是否应将此功能集成到稳定版中至关重要。
 
 - 梯度累加
 
@@ -71,7 +71,7 @@ runner.train()
 ## 梯度检查点
 
 ```{note}
-MMEngine v0.9.0 开始支持梯度检查点的功能。关于性能的比较可点击 [#1319](https://github.com/open-mmlab/mmengine/pull/1319)。如果你在使用过程中遇到任何问题，欢迎在 [#1319](https://github.com/open-mmlab/mmengine/pull/1319) 反馈。
+MMEngine v0.9.0 开始支持梯度检查点的功能。关于性能的比较可点击 [#1319](https://github.com/vbti-development/onedl-mmengine/pull/1319)。如果你在使用过程中遇到任何问题，欢迎在 [#1319](https://github.com/vbti-development/onedl-mmengine/pull/1319) 反馈。
 ```
 
 只需在 Runner 的 cfg 参数中配置 `activation_checkpointing` 即可开启梯度检查点。

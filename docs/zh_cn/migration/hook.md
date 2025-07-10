@@ -4,7 +4,7 @@
 
 由于架构设计的更新和用户需求的不断增加，MMCV 的钩子（Hook）点位已经满足不了需求，因此在 MMEngine 中对钩子点位进行了重新设计以及对钩子的功能做了调整。在开始迁移前，阅读[钩子的设计](../design/hook.md)会很有帮助。
 
-本文对比 [MMCV v1.6.0](https://github.com/open-mmlab/mmcv/tree/v1.6.0) 和 [MMEngine v0.5.0](https://github.com/open-mmlab/mmengine/tree/v0.5.0) 的钩子在功能、点位、用法和实现上的差异。
+本文对比 [MMCV v1.6.0](https://github.com/open-mmlab/mmcv/tree/v1.6.0) 和 [MMEngine v0.5.0](https://github.com/vbti-development/onedl-mmengine/tree/v0.5.0) 的钩子在功能、点位、用法和实现上的差异。
 
 ## 功能差异
 
@@ -285,7 +285,7 @@ MMEngine 钩子的更多用法请参考[钩子的用法](../tutorials/hook.md)�
 
 ## 实现差异
 
-以 `CheckpointHook` 为例，MMEngine 的 [CheckpointHook](https://github.com/open-mmlab/mmengine/blob/main/mmengine/hooks/checkpoint_hook.py) 相比 MMCV 的 [CheckpointHook](https://github.com/open-mmlab/mmcv/blob/v1.6.0/mmcv/runner/hooks/checkpoint.py)（新增保存最优权重的功能，在 MMCV 中，保存最优权重的功能由 EvalHook 提供），因此，它需要实现 `after_val_epoch` 点位。
+以 `CheckpointHook` 为例，MMEngine 的 [CheckpointHook](https://github.com/vbti-development/onedl-mmengine/blob/main/mmengine/hooks/checkpoint_hook.py) 相比 MMCV 的 [CheckpointHook](https://github.com/open-mmlab/mmcv/blob/v1.6.0/mmcv/runner/hooks/checkpoint.py)（新增保存最优权重的功能，在 MMCV 中，保存最优权重的功能由 EvalHook 提供），因此，它需要实现 `after_val_epoch` 点位。
 
 - MMCV
 

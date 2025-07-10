@@ -1,79 +1,88 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import os.path as osp
 import subprocess
 
 
 def is_installed(package: str) -> bool:
-    """Check package whether installed.
+    """Check whether a package is installed.
 
     Args:
-        package (str): Name of package to be checked.
+        package (str): Name of the package to check.
+
+    Returns:
+        bool: True if the package is installed, False otherwise.
     """
-    # When executing `import mmengine.runner`,
-    # pkg_resources will be imported and it takes too much time.
-    # Therefore, import it in function scope to save time.
     import importlib.util
-
-    import pkg_resources
-    from pkg_resources import get_distribution
-
-    # refresh the pkg_resources
-    # more datails at https://github.com/pypa/setuptools/issues/373
-    importlib.reload(pkg_resources)
     try:
-        get_distribution(package)
+        from importlib.metadata import PackageNotFoundError, version
+    except ImportError:
+        from importlib_metadata import PackageNotFoundError  # type: ignore
+        from importlib_metadata import version  # type: ignore
+
+    try:
+        version(package)
         return True
-    except pkg_resources.DistributionNotFound:
+    except PackageNotFoundError:
         spec = importlib.util.find_spec(package)
-        if spec is None:
-            return False
-        elif spec.origin is not None:
-            return True
-        else:
-            return False
+        return spec is not None and spec.origin is not None
 
 
 def get_installed_path(package: str) -> str:
-    """Get installed path of package.
+    """Get installed path of a package.
 
     Args:
-        package (str): Name of package.
+        package (str): Name of the package.
+
+    Returns:
+        str: The path to the installed package.
 
     Example:
         >>> get_installed_path('mmcls')
-        >>> '.../lib/python3.7/site-packages/mmcls'
+        '.../lib/python3.10/site-packages/mmcls'
     """
     import importlib.util
+    import os.path as osp
 
-    from pkg_resources import DistributionNotFound, get_distribution
-
-    # if the package name is not the same as module name, module name should be
-    # inferred. For example, mmcv-full is the package name, but mmcv is module
-    # name. If we want to get the installed path of mmcv-full, we should concat
-    # the pkg.location and module name
     try:
-        pkg = get_distribution(package)
-    except DistributionNotFound as e:
-        # if the package is not installed, package path set in PYTHONPATH
-        # can be detected by `find_spec`
-        spec = importlib.util.find_spec(package)
-        if spec is not None:
-            if spec.origin is not None:
+        # Use importlib.metadata for distribution info (Python 3.8+)
+        try:
+            from importlib.metadata import PackageNotFoundError, distribution
+        except ImportError:
+            from importlib_metadata import (  # type: ignore
+                PackageNotFoundError, distribution)
+
+        try:
+            dist = distribution(package)
+        except PackageNotFoundError:
+            # If not installed as a distribution, try to find the module spec
+            spec = importlib.util.find_spec(package)
+            if spec and spec.origin:
                 return osp.dirname(spec.origin)
-            else:
-                # `get_installed_path` cannot get the installed path of
-                # namespace packages
+            elif spec:
                 raise RuntimeError(
                     f'{package} is a namespace package, which is invalid '
-                    'for `get_install_path`')
-        else:
-            raise e
+                    'for `get_installed_path`')
+            else:
+                raise ImportError(f'Package {package} is not installed.')
 
-    possible_path = osp.join(pkg.location, package)  # type: ignore
-    if osp.exists(possible_path):
-        return possible_path
-    else:
-        return osp.join(pkg.location, package2module(package))  # type: ignore
+        # Try to infer the top-level module name from top_level.txt
+        top_level = dist.read_text('top_level.txt')
+        if top_level:
+            module_name = top_level.split('\n')[0].strip()
+            possible_path = osp.join(dist.locate_file(''), module_name)
+            if osp.exists(possible_path):
+                return possible_path
+
+        # Fallback: try to find the module by spec
+        spec = importlib.util.find_spec(package)
+        if spec and spec.origin:
+            return osp.dirname(spec.origin)
+        else:
+            raise PackageNotFoundError(
+                f'Cannot determine installed path for {package}.')
+
+    except Exception:
+        raise PackageNotFoundError(
+            f'Cannot determine installed path for {package}.')
 
 
 def package2module(package: str):
@@ -81,14 +90,30 @@ def package2module(package: str):
 
     Args:
         package (str): Package to infer module name.
+
+    Returns:
+        str: The top-level module name for the given package.
+
+    Raises:
+        ValueError: If the module name cannot be inferred.
     """
-    from pkg_resources import get_distribution
-    pkg = get_distribution(package)
-    if pkg.has_metadata('top_level.txt'):
-        module_name = pkg.get_metadata('top_level.txt').split('\n')[0]
-        return module_name
-    else:
-        raise ValueError(f'can not infer the module name of {package}')
+    try:
+        from importlib.metadata import PackageNotFoundError, distribution
+    except ImportError:
+        from importlib_metadata import PackageNotFoundError  # type: ignore
+        from importlib_metadata import distribution  # type: ignore
+
+    try:
+        dist = distribution(package)
+    except PackageNotFoundError:
+        raise ValueError(f'Package {package} is not installed.')
+
+    if dist.read_text('top_level.txt'):
+        module_name = dist.read_text('top_level.txt').split(  # type: ignore
+            '\n')[0].strip()
+        if module_name:
+            return module_name
+    raise ValueError(f'Cannot infer the module name of {package}')
 
 
 def call_command(cmd: list) -> None:

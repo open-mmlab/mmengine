@@ -42,7 +42,7 @@ git clone git@github.com:{username}/mmengine.git
 添加原代码库为上游代码库
 
 ```bash
-git remote add upstream git@github.com:open-mmlab/mmengine
+git remote add upstream git@github.com:vbti-development/onedl-mmengine
 ```
 
 检查 remote 是否添加成功，在终端输入 `git remote -v`
@@ -50,8 +50,8 @@ git remote add upstream git@github.com:open-mmlab/mmengine
 ```bash
 origin	git@github.com:{username}/mmengine.git (fetch)
 origin	git@github.com:{username}/mmengine.git (push)
-upstream	git@github.com:open-mmlab/mmengine (fetch)
-upstream	git@github.com:open-mmlab/mmengine (push)
+upstream	git@github.com:vbti-development/onedl-mmengine (fetch)
+upstream	git@github.com:vbti-development/onedl-mmengine (push)
 ```
 
 ```{note}
@@ -209,7 +209,7 @@ python -m coverage html
 本地生成渲染后的文档的方法如下
 
 ```shell
-pip install -r requirements/docs.txt
+pip install -r pyproject.toml --group docs
 cd docs/zh_cn/
 # or docs/en
 make html
@@ -227,10 +227,10 @@ make html
 - [mdformat](https://github.com/executablebooks/mdformat): 检查 markdown 文件的工具
 - [docformatter](https://github.com/myint/docformatter): 格式化 docstring 的工具
 
-yapf 和 isort 的配置可以在 [setup.cfg](https://github.com/open-mmlab/mmengine/blob/main/setup.cfg) 找到
+yapf 和 isort 的配置可以在 [setup.cfg](https://github.com/vbti-development/onedl-mmengine/blob/main/setup.cfg) 找到
 
 通过配置 [pre-commit hook](https://pre-commit.com/) ，我们可以在提交代码时自动检查和格式化 `flake8`、`yapf`、`isort`、`trailing whitespaces`、`markdown files`，修复 `end-of-files`、`double-quoted-strings`、`python-encoding-pragma`、`mixed-line-ending`，调整 `requirments.txt` 的包顺序。
-pre-commit 钩子的配置可以在 [.pre-commit-config](https://github.com/open-mmlab/mmengine/blob/main/.pre-commit-config-zh-cn.yaml) 找到。
+pre-commit 钩子的配置可以在 [.pre-commit-config](https://github.com/vbti-development/onedl-mmengine/blob/main/.pre-commit-config-zh-cn.yaml) 找到。
 
 pre-commit 具体的安装使用方式见[拉取请求](#2-配置-pre-commit)。
 

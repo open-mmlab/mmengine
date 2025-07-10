@@ -257,7 +257,7 @@ runner = Runner(
 <details>
 <summary>我应该去哪里找到 xxx 参数的可能配置选项？</summary>
 
-你可以在对应模块的教程中找到丰富的说明和示例，你也可以在 [API 文档](mmengine.runner.Runner) 中找到 `Runner` 的所有参数。如果上述两种方式都无法解决你的疑问，你随时可以在我们的[讨论区](https://github.com/open-mmlab/mmengine/discussions)中发起话题，帮助我们更好地改进文档。
+你可以在对应模块的教程中找到丰富的说明和示例，你也可以在 [API 文档](mmengine.runner.Runner) 中找到 `Runner` 的所有参数。如果上述两种方式都无法解决你的疑问，你随时可以在我们的[讨论区](https://github.com/vbti-development/onedl-mmengine/discussions)中发起话题，帮助我们更好地改进文档。
 
 </details>
 
@@ -517,6 +517,6 @@ metrics = evaluator.evaluate(len(val_dataloader.dataset))
 - 左侧的“常用功能”中包含更多常用的与新特性的示例代码可供参考
 - “进阶教程”中有更多面向资深开发者的内容，可以更加灵活地配置训练流程、日志、可视化等
 - 如果以上所有内容都无法实现你的新想法，那么[钩子（Hook）](./hook.md)值得一试
-- 欢迎在我们的 [讨论版](https://github.com/open-mmlab/mmengine/discussions) 中发起话题求助！
+- 欢迎在我们的 [讨论版](https://github.com/vbti-development/onedl-mmengine/discussions) 中发起话题求助！
 
 </details>

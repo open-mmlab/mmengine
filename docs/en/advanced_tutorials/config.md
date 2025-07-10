@@ -30,24 +30,24 @@ MMEngine implements an abstract configuration class (`Config`) to provide a unif
 Before starting the tutorial, let's download the configuration files needed in the tutorial (it is recommended to execute them in a temporary directory to facilitate deleting these files latter.):
 
 ```bash
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/config_sgd.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/cross_repo.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/custom_imports.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/demo_train.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/example.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/learn_read_config.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/my_module.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/optimizer_cfg.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/predefined_var.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/replace_data_root.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/replace_num_classes.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/refer_base_var.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50_delete_key.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50_lr0.01.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50_runtime.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/resnet50.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/runtime_cfg.py
-wget https://raw.githubusercontent.com/open-mmlab/mmengine/main/docs/resources/config/modify_base_var.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/config_sgd.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/cross_repo.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/custom_imports.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/demo_train.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/example.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/learn_read_config.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/my_module.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/optimizer_cfg.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/predefined_var.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/replace_data_root.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/replace_num_classes.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/refer_base_var.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/resnet50_delete_key.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/resnet50_lr0.01.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/resnet50_runtime.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/resnet50.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/runtime_cfg.py
+wget https://raw.githubusercontent.com/vbti-development/onedl-mmengine/main/docs/resources/config/modify_base_var.py
 ```
 
 ```{note}

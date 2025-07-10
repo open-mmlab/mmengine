@@ -5,7 +5,7 @@
 - Build MMEngine from Source
 
   ```bash
-  git clone https://github.com/open-mmlab/mmengine.git
+  git clone https://github.com/vbti-development/onedl-mmengine.git
   cd mmengine
   pip install -e . -v
   ```

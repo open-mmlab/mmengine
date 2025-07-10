@@ -115,7 +115,7 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                 # PretrainedInit has higher priority than any other init_cfg.
                 # Therefore we initialize `pretrained_cfg` last to overwrite
                 # the previous initialized weights.
-                # See details in https://github.com/open-mmlab/mmengine/issues/691 # noqa E501
+                # See details in https://github.com/vbti-development/onedl-mmengine/issues/691 # noqa E501
                 other_cfgs = []
                 pretrained_cfg = []
                 for init_cfg in init_cfgs:

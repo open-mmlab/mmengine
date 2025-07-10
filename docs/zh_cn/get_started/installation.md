@@ -26,15 +26,6 @@
 
 ## 安装 MMEngine
 
-:::{note}
-如果你只想使用 MMEngine 中的 fileio、registry 和 config 模块，你可以安装`mmengine-lite`，它只会安装必须的几个第三方库依赖（例如不会安装 opencv、matplotlib）：
-
-```bash
-pip install mmengine-lite
-```
-
-:::
-
 ### 使用 mim 安装
 
 [mim](https://github.com/open-mmlab/mim) 是 OpenMMLab 项目的包管理工具，使用它可以很方便地安装 OpenMMLab 项目。
@@ -55,10 +46,10 @@ pip install mmengine
 1. 构建镜像
 
    ```bash
-   docker build -t mmengine https://github.com/open-mmlab/mmengine.git#main:docker/release
+   docker build -t mmengine https://github.com/vbti-development/onedl-mmengine.git#main:docker/release
    ```
 
-   更多构建方式请参考 [mmengine/docker](https://github.com/open-mmlab/mmengine/tree/main/docker)。
+   更多构建方式请参考 [mmengine/docker](https://github.com/vbti-development/onedl-mmengine/tree/main/docker)。
 
 2. 运行镜像
 
@@ -71,19 +62,10 @@ pip install mmengine
 #### 安装 mmengine
 
 ```bash
-# 如果克隆代码仓库的速度过慢，可以从 https://gitee.com/open-mmlab/mmengine.git 克隆
-git clone https://github.com/open-mmlab/mmengine.git
+# 如果克隆代码仓库的速度过慢，可以从 https://gitee.com/vbti-development/onedl-mmengine.git 克隆
+git clone https://github.com/vbti-development/onedl-mmengine.git
 cd mmengine
 pip install -e . -v
-```
-
-#### 安装 mmengine-lite
-
-```bash
-# 如果克隆代码仓库的速度过慢，可以从 https://gitee.com/open-mmlab/mmengine.git 克隆
-git clone https://github.com/open-mmlab/mmengine.git
-cd mmengine
-MMENGINE_LITE=1 pip install -e . -v
 ```
 
 ## 验证安装

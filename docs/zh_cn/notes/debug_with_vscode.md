@@ -4,15 +4,15 @@
 
 多进程（多卡）程序出现错误时，先判断是否和多进程相关，如不相关，建议使用单卡调试。
 
-本文将基于 MMEngine 中的 [example](https://github.com/open-mmlab/mmengine/blob/main/examples/distributed_training.py) 脚本来介绍如何使用 VS Code 调试多卡程序。
+本文将基于 MMEngine 中的 [example](https://github.com/vbti-development/onedl-mmengine/blob/main/examples/distributed_training.py) 脚本来介绍如何使用 VS Code 调试多卡程序。
 
 ### 安装 MMEngine
 
 因为需要使用 MMEngine 中的 example 脚本，为了方便，可以源码安装 MMEngine。
 
 ```bash
-# 如果克隆代码仓库的速度过慢，可以从 https://gitee.com/open-mmlab/mmengine.git 克隆
-git clone https://github.com/open-mmlab/mmengine.git
+# 如果克隆代码仓库的速度过慢，可以从 https://gitee.com/vbti-development/onedl-mmengine.git 克隆
+git clone https://github.com/vbti-development/onedl-mmengine.git
 cd mmengine
 pip install -e . -v
 ```
@@ -25,7 +25,7 @@ torchrun --nproc_per_node=2 examples/distributed_training.py --launcher pytorch
 
 运行上面的命令，可以看到脚本正常运行并打印训练日志。
 
-![image](https://github.com/open-mmlab/mmengine/assets/58739961/90b77e1c-06a8-47d6-9e3e-6edd685d4cf2)
+![image](https://github.com/vbti-development/onedl-mmengine/assets/58739961/90b77e1c-06a8-47d6-9e3e-6edd685d4cf2)
 
 脚本正常运行后，可以停掉程序。
 
@@ -64,12 +64,12 @@ torchrun --nproc_per_node=2 examples/distributed_training.py --launcher pytorch
 
 接下来在 VS Code 中设置断点，例如我们希望看一下 MMEngine Runner 的 train 过程，我们可以在 `runner.train()` 处设置断点。
 
-![image](https://github.com/open-mmlab/mmengine/assets/58739961/5f5e78a7-ce63-454b-9598-2626821a2f29)
+![image](https://github.com/vbti-development/onedl-mmengine/assets/58739961/5f5e78a7-ce63-454b-9598-2626821a2f29)
 
 最后点击 `Python: Current File` 按钮即可开始调试。
 
-![image](https://github.com/open-mmlab/mmengine/assets/58739961/7c18dce9-80dd-4f69-b2ac-09634d8c04b5)
+![image](https://github.com/vbti-development/onedl-mmengine/assets/58739961/7c18dce9-80dd-4f69-b2ac-09634d8c04b5)
 
 点击 F11 可跳入 `runner.train()` 查看它的实现。
 
-![gif](https://github.com/open-mmlab/mmengine/assets/58739961/398537c7-8f16-45b1-beab-612595f1e17a)
+![gif](https://github.com/vbti-development/onedl-mmengine/assets/58739961/398537c7-8f16-45b1-beab-612595f1e17a)
