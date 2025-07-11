@@ -10,10 +10,10 @@
 2. Install the building dependencies of documentation
 
    ```bash
-   pip install -r pyproject.toml --group docs
+   uv pip install -r pyproject.toml --group docs
    ```
 
-3. Change directory to `docs/en` or `docs/zh_cn`
+3. Change directory to `docs/en`
 
    ```bash
    cd docs/en  # or docs/zh_cn
