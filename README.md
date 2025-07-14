@@ -13,10 +13,11 @@
 <div>&nbsp;</div>
 
 [![Docs](https://img.shields.io/badge/docs-latest-blue)](https://mmengine.readthedocs.io/en/latest/)
-[![pytorch](https://img.shields.io/badge/pytorch-2.0~2.5-yellow)](#installation)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mmcv)](https://pypi.org/project/onedl-mmcv/)
-[![PyPI](https://img.shields.io/pypi/v/onedl-mmengine)](https://pypi.org/project/onedl-mmengine)
 [![license](https://img.shields.io/github/license/vbti-development/onedl-mmengine.svg)](https://github.com/vbti-development/onedl-mmengine/blob/main/LICENSE)
+
+[![pytorch](https://img.shields.io/badge/pytorch-2.0~2.5-yellow)](#installation)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/onedl-mmengine)](https://pypi.org/project/onedl-mmengine/)
+[![PyPI](https://img.shields.io/pypi/v/onedl-mmengine)](https://pypi.org/project/onedl-mmengine)
 
 [![Build Status](https://github.com/VBTI-development/onedl-mmengine/workflows/merge_stage_test/badge.svg)](https://github.com/VBTI-development/onedl-mmengine/actions)
 [![open issues](https://isitmaintained.com/badge/open/VBTI-development/onedl-mmengine.svg)](https://github.com/VBTI-development/onedl-mmengine/issues)
