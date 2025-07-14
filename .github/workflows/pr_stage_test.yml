@@ -79,7 +79,7 @@ jobs:
           uv pip install -r pyproject.toml
           uv pip install -r pyproject.toml --group test
           uv pip install ninja psutil
-          uv pip install git+https://github.com/VBTI-development/onedl-mmcv.git@chore/rename-to-onedl-cv --no-build-isolation
+          uv pip install git+https://github.com/VBTI-development/onedl-mmcv.git@main --no-build-isolation
       - name: Run unittests and generate coverage report
         run: |
           uv run coverage run --branch --source mmengine -m pytest tests/  --ignore tests/test_dist
@@ -142,7 +142,7 @@ jobs:
       - name: Install mmcv
         run: |
           uv pip install ninja psutil
-          uv pip install git+https://github.com/VBTI-development/onedl-mmcv.git@chore/rename-to-onedl-cv --no-build-isolation
+          uv pip install git+https://github.com/VBTI-development/onedl-mmcv.git@main --no-build-isolation
       - name: Show disk usage
         run: df -h
       - name: Run unit tests with coverage
