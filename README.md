@@ -1,5 +1,5 @@
 <div align="center">
-  <img width="600" alt="onedl-mmengine" src="https://github.com/user-attachments/assets/23fd3a03-970b-4886-bd2e-becac66de7b4" />
+  <img width="600" alt="onedl-mmengine" src="https://raw.githubusercontent.com/VBTI-development/onedl-mmengine/main/docs/en/_static/image/mmengine-logo.png" />
   <div>&nbsp;</div>
   <div align="center">
     <a href="https://vbti.ai">

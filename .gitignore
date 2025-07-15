@@ -124,3 +124,6 @@ work_dirs/
 
 *.aim
 *.dvc
+dvc.yaml
+dist/
+.dist_test/
