@@ -19,7 +19,7 @@ from mmengine.fileio import load as load_file
 from mmengine.logging import print_log
 from mmengine.model import BaseTTAModel, is_model_wrapper
 from mmengine.utils import (apply_to, deprecated_function, digit_version,
-                            mkdir_or_exist)
+                            mkdir_or_exist,)
 from mmengine.utils.dl_utils import load_url
 
 # `MMENGINE_HOME` is the highest priority directory to save checkpoints
@@ -810,6 +810,6 @@ def find_latest_checkpoint(path: str) -> Optional[str]:
         with open(save_file) as f:
             last_saved = f.read().strip()
     else:
-        print_log('Did not find last_checkpoint to be resumed.')
+        print_log('Did not find last_checkpoint to be resumed.', logger='current')
         last_saved = None
     return last_saved

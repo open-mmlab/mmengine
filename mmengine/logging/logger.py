@@ -43,6 +43,28 @@ class FilterDuplicateWarning(logging.Filter):
             self.seen.add(record.msg)
             return True
         return False
+    
+
+class FilterMasterRank(logging.Filter):
+    """Filter log messages from non-master processes in distributed training.
+
+    Args:
+        name (str): name of the filter. Defaults to 'mmengine'.
+    """
+
+    def __init__(self, name: str = 'mmengine') -> None:
+        super().__init__(name)
+
+    def filter(self, record: LogRecord) -> bool:
+        """Filter the log message of non-master processes.
+
+        Args:
+            record (LogRecord): The log record.
+
+        Returns:
+            bool: True if the log is from master process (rank 0).
+        """
+        return int(os.environ.get("LOCAL_RANK", 0)) == 0
 
 
 class MMFormatter(logging.Formatter):
@@ -221,6 +243,7 @@ class MMLogger(Logger, ManagerMixin):
         else:
             stream_handler.setLevel(logging.ERROR)
         stream_handler.addFilter(FilterDuplicateWarning(logger_name))
+        stream_handler.addFilter(FilterMasterRank(logger_name))
         self.handlers.append(stream_handler)
 
         if log_file is not None:
@@ -267,6 +290,7 @@ class MMLogger(Logger, ManagerMixin):
                     MMFormatter(color=False, datefmt='%Y/%m/%d %H:%M:%S'))
                 file_handler.setLevel(log_level)
                 file_handler.addFilter(FilterDuplicateWarning(logger_name))
+                file_handler.addFilter(FilterMasterRank(logger_name))
                 self.handlers.append(file_handler)
         self._log_file = log_file
 
