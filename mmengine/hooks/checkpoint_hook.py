@@ -561,10 +561,10 @@ class CheckpointHook(Hook):
                 self.out_dir,
                 filename=best_ckpt_name,
                 file_client_args=self.file_client_args,
-                save_optimizer=False,
-                save_param_scheduler=False,
+                save_optimizer=self.save_optimizer,
+                save_param_scheduler=self.save_param_scheduler,
                 meta=meta,
-                by_epoch=False,
+                by_epoch=self.by_epoch,
                 backend_args=self.backend_args)
             runner.logger.info(
                 f'The best checkpoint with {best_score:0.4f} {key_indicator} '
