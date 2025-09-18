@@ -67,6 +67,12 @@
 
 .. toctree::
    :maxdepth: 1
+   :caption: 组件示例
+
+   component.md
+
+.. toctree::
+   :maxdepth: 1
    :caption: 架构设计
 
    design/hook.md
