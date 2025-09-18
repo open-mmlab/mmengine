@@ -48,7 +48,8 @@ if TORCH_VERSION != 'parrots' and digit_version(TORCH_VERSION) < digit_version(
             f.extractall(model_dir)
             extraced_name = members[0].filename
             extracted_file = os.path.join(model_dir, extraced_name)
-        return torch.load(extracted_file, map_location=map_location)
+        return torch.load(
+            extracted_file, map_location=map_location, weights_only=False)
 
     def load_url(url,
                  model_dir=None,
@@ -114,7 +115,8 @@ if TORCH_VERSION != 'parrots' and digit_version(TORCH_VERSION) < digit_version(
             return _legacy_zip_load(cached_file, model_dir, map_location)
 
         try:
-            return torch.load(cached_file, map_location=map_location)
+            return torch.load(
+                cached_file, map_location=map_location, weights_only=False)
         except RuntimeError as error:
             if digit_version(TORCH_VERSION) < digit_version('1.5.0'):
                 warnings.warn(
