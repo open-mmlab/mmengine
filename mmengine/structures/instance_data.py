@@ -26,7 +26,7 @@ else:
     LongTypeTensor = Union[torch.LongTensor, torch.cuda.LongTensor]
 
 IndexType: Union[Any] = Union[str, slice, int, list, LongTypeTensor,
-                              BoolTypeTensor, np.ndarray]
+                              BoolTypeTensor, np.ndarray, torch.Tensor] # torch.Tensor is added to support mps device tensor types
 
 
 # Modified from
