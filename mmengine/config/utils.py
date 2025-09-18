@@ -168,6 +168,9 @@ def _is_builtin_module(module_name: str) -> bool:
         return True
     if module_name in sys.builtin_module_names:
         return True
+    if sys.version_info >= (
+            3, 10) and module_name in sys.stdlib_module_names():
+        return True
     spec = find_spec(module_name.split('.')[0])
     # Module not found
     if spec is None:
