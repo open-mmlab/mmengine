@@ -35,14 +35,14 @@ def test_progressbar_rich_exception():
         track_progress_rich(foo1, nproc=0)
 
 
-@pytest.mark.parametrize('nproc', [1, 2])
+@pytest.mark.parametrize("nproc", [1, 2])
 def test_progressbar_rich(nproc):
     # empty tasks
     results = track_progress_rich(foo, nproc=nproc, task_num=10)
     assert results == [1] * 10
     # Ordered results
     # foo1
-    tasks_ = [i for i in range(10)]
+    tasks_ = list(range(10))
     for tasks in (tasks_, iter(tasks_)):
         results = track_progress_rich(foo1, tasks, nproc=nproc)
         assert results == tasks_

@@ -5,22 +5,22 @@ from unittest import TestCase
 import torch
 from torch import nn
 
-from mmengine.model.efficient_conv_bn_eval import \
-    turn_on_efficient_conv_bn_eval_for_single_model
+from mmengine.model.efficient_conv_bn_eval import turn_on_efficient_conv_bn_eval_for_single_model
 from mmengine.testing import assert_allclose
 from mmengine.utils import is_installed
 from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.utils.version_utils import digit_version
 
-mmcv_is_installed = is_installed('mmcv')
+
+mmcv_is_installed = is_installed("mmcv")
 
 
 class BackboneModel(nn.Module):
-
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         if mmcv_is_installed:
             from mmcv.cnn import ConvModule
+
             conv0 = nn.Conv2d(6, 6, 6)
             bn0 = nn.BatchNorm2d(6)
             self.mod1 = ConvModule.create_from_conv_bn(conv0, bn0)
@@ -46,9 +46,7 @@ class BackboneModel(nn.Module):
         return x
 
 
-@unittest.skipIf(
-    digit_version(TORCH_VERSION) < digit_version('1.8'),
-    reason='torch.fx needs Pytorch 1.8 or higher')
+@unittest.skipIf(digit_version(TORCH_VERSION) < digit_version("1.8"), reason="torch.fx needs Pytorch 1.8 or higher")
 class TestEfficientConvBNEval(TestCase):
     """Test the turn_on_efficient_conv_bn_eval function."""
 

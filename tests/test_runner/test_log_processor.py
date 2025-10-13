@@ -14,10 +14,8 @@ from mmengine.testing import RunnerTestCase
 
 
 class TestLogProcessor(RunnerTestCase):
-
     def test_init(self):
-        log_processor = LogProcessor(
-            window_size=10, by_epoch=True, custom_cfg=None)
+        log_processor = LogProcessor(window_size=10, by_epoch=True, custom_cfg=None)
         assert log_processor.by_epoch
         assert log_processor.window_size == 10
         assert log_processor.custom_cfg == []
@@ -25,50 +23,44 @@ class TestLogProcessor(RunnerTestCase):
     def test_check_custom_cfg(self):
         # ``by_epoch==False`` and `window_size='epoch'` in log config will
         # raise AssertionError.
-        custom_cfg = [dict(data_src='loss', window_size='epoch')]
+        custom_cfg = [dict(data_src="loss", window_size="epoch")]
         with pytest.raises(AssertionError):
             LogProcessor(by_epoch=False, custom_cfg=custom_cfg)
         # Duplicate log_name will raise AssertionError.
-        custom_cfg = [
-            dict(data_src='loss', log_name='loss_1'),
-            dict(data_src='loss', log_name='loss_1')
-        ]
+        custom_cfg = [dict(data_src="loss", log_name="loss_1"), dict(data_src="loss", log_name="loss_1")]
         with pytest.raises(AssertionError):
             LogProcessor(custom_cfg=custom_cfg)
         # Overwrite loss item twice will raise AssertionError.
-        custom_cfg = [dict(data_src='loss'), dict(data_src='loss')]
+        custom_cfg = [dict(data_src="loss"), dict(data_src="loss")]
         with pytest.raises(AssertionError):
             LogProcessor(custom_cfg=custom_cfg)
 
         custom_cfg = [
-            dict(data_src='loss_cls', window_size=100, method_name='min'),
-            dict(data_src='loss', log_name='loss_min', method_name='max'),
-            dict(data_src='loss', log_name='loss_max', method_name='max')
+            dict(data_src="loss_cls", window_size=100, method_name="min"),
+            dict(data_src="loss", log_name="loss_min", method_name="max"),
+            dict(data_src="loss", log_name="loss_max", method_name="max"),
         ]
         LogProcessor(custom_cfg=custom_cfg)
 
     def test_parse_windows_size(self):
         log_processor = LogProcessor()
         # Test parse 'epoch' window_size.
-        custom_cfg = [dict(data_src='loss_cls', window_size='epoch')]
-        custom_cfg = log_processor._parse_windows_size(self.runner, 1,
-                                                       custom_cfg)
-        assert custom_cfg[0]['window_size'] == 2
+        custom_cfg = [dict(data_src="loss_cls", window_size="epoch")]
+        custom_cfg = log_processor._parse_windows_size(self.runner, 1, custom_cfg)
+        assert custom_cfg[0]["window_size"] == 2
 
         # Test parse 'global' window_size.
-        custom_cfg = [dict(data_src='loss_cls', window_size='global')]
-        custom_cfg = log_processor._parse_windows_size(self.runner, 1,
-                                                       custom_cfg)
-        assert custom_cfg[0]['window_size'] == 11
+        custom_cfg = [dict(data_src="loss_cls", window_size="global")]
+        custom_cfg = log_processor._parse_windows_size(self.runner, 1, custom_cfg)
+        assert custom_cfg[0]["window_size"] == 11
 
         # Test parse int window_size
-        custom_cfg = [dict(data_src='loss_cls', window_size=100)]
-        custom_cfg = log_processor._parse_windows_size(self.runner, 1,
-                                                       custom_cfg)
-        assert custom_cfg[0]['window_size'] == 100
+        custom_cfg = [dict(data_src="loss_cls", window_size=100)]
+        custom_cfg = log_processor._parse_windows_size(self.runner, 1, custom_cfg)
+        assert custom_cfg[0]["window_size"] == 100
 
         # Invalid type window_size will raise TypeError.
-        custom_cfg = [dict(data_src='loss_cls', window_size=[])]
+        custom_cfg = [dict(data_src="loss_cls", window_size=[])]
         with pytest.raises(TypeError):
             log_processor._parse_windows_size(self.runner, 1, custom_cfg)
 

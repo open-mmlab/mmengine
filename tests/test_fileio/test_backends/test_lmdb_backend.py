@@ -16,20 +16,19 @@ def imfrombytes(content):
 
 
 class TestLmdbBackend(TestCase):
-
     @classmethod
     def setUpClass(cls):
-        cls.test_data_dir = Path(__file__).parent.parent.parent / 'data'
-        cls.lmdb_path = cls.test_data_dir / 'demo.lmdb'
+        cls.test_data_dir = Path(__file__).parent.parent.parent / "data"
+        cls.lmdb_path = cls.test_data_dir / "demo.lmdb"
 
     @parameterized.expand([[Path], [str]])
     def test_get(self, path_type):
         backend = LmdbBackend(path_type(self.lmdb_path))
-        img_bytes = backend.get('baboon')
+        img_bytes = backend.get("baboon")
         img = imfrombytes(img_bytes)
         self.assertEqual(img.shape, (120, 125, 3))
 
     def test_get_text(self):
         backend = LmdbBackend(self.lmdb_path)
         with self.assertRaises(NotImplementedError):
-            backend.get_text('filepath')
+            backend.get_text("filepath")

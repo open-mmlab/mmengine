@@ -5,18 +5,16 @@ import torch
 import torch.nn as nn
 
 import mmengine
-from mmengine.device import (get_device, is_mlu_available, is_musa_available,
-                             is_npu_available)
+from mmengine.device import get_device, is_mlu_available, is_musa_available, is_npu_available
 from mmengine.runner import autocast
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
 
 
 class TestAmp(unittest.TestCase):
-
     def test_autocast(self):
         if is_npu_available():
-            device = 'npu'
+            device = "npu"
             with autocast(device_type=device):
                 # torch.autocast support npu mode.
                 layer = nn.Conv2d(1, 1, 1).to(device)
@@ -31,7 +29,7 @@ class TestAmp(unittest.TestCase):
                 res = layer(torch.randn(1, 1, 1, 1).to(device))
                 self.assertEqual(res.dtype, torch.float32)
         elif is_mlu_available():
-            device = 'mlu'
+            device = "mlu"
             with autocast(device_type=device):
                 # torch.autocast support mlu mode.
                 layer = nn.Conv2d(1, 1, 1).to(device)
@@ -46,7 +44,7 @@ class TestAmp(unittest.TestCase):
                 res = layer(torch.randn(1, 1, 1, 1).to(device))
                 self.assertEqual(res.dtype, torch.float32)
         elif is_musa_available():
-            device = 'musa'
+            device = "musa"
             with autocast(device_type=device):
                 # torch.autocast support mlu mode.
                 layer = nn.Conv2d(1, 1, 1).to(device)
@@ -61,12 +59,11 @@ class TestAmp(unittest.TestCase):
                 res = layer(torch.randn(1, 1, 1, 1).to(device))
                 self.assertEqual(res.dtype, torch.float32)
         elif not torch.cuda.is_available():
-            if digit_version(TORCH_VERSION) < digit_version('1.10.0'):
+            if digit_version(TORCH_VERSION) < digit_version("1.10.0"):
                 # `torch.cuda.amp.autocast` is only support in gpu mode, if
                 # cuda is not available, it will return an empty context and
                 # should not accept any arguments.
-                with self.assertRaisesRegex(RuntimeError,
-                                            'If pytorch versions is '):
+                with self.assertRaisesRegex(RuntimeError, "If pytorch versions is "):
                     with autocast():
                         pass
 
@@ -76,7 +73,7 @@ class TestAmp(unittest.TestCase):
                     self.assertEqual(res.dtype, torch.float32)
 
             else:
-                with autocast(device_type='cpu'):
+                with autocast(device_type="cpu"):
                     # torch.autocast support cpu mode.
                     layer = nn.Conv2d(1, 1, 1)
                     res = layer(torch.randn(1, 1, 1, 1))
@@ -86,10 +83,10 @@ class TestAmp(unittest.TestCase):
                         self.assertEqual(res.dtype, torch.float32)
 
         else:
-            if digit_version(TORCH_VERSION) < digit_version('1.10.0'):
-                devices = ['cuda']
+            if digit_version(TORCH_VERSION) < digit_version("1.10.0"):
+                devices = ["cuda"]
             else:
-                devices = ['cpu', 'cuda']
+                devices = ["cpu", "cuda"]
             for device in devices:
                 with autocast(device_type=device):
                     # torch.autocast support cpu and cuda mode.
@@ -106,21 +103,20 @@ class TestAmp(unittest.TestCase):
                     self.assertEqual(res.dtype, torch.float32)
 
         # Test mps
-        if digit_version(TORCH_VERSION) >= digit_version('1.12.0'):
-            mmengine.runner.amp.get_device = lambda: 'mps'
+        if digit_version(TORCH_VERSION) >= digit_version("1.12.0"):
+            mmengine.runner.amp.get_device = lambda: "mps"
             with autocast(enabled=False):
                 layer = nn.Conv2d(1, 1, 1)
                 res = layer(torch.randn(1, 1, 1, 1))
                 self.assertEqual(res.dtype, torch.float32)
 
-            with self.assertRaisesRegex(ValueError,
-                                        'User specified autocast device_type'):
+            with self.assertRaisesRegex(ValueError, "User specified autocast device_type"):
                 with autocast(enabled=True):
                     pass
-        # Native pytorch does not support mlu, here we simply test autocast
-        # will call `torch.autocast`, which will be overridden by mlu version
-        # pytorch
-            mmengine.runner.amp.get_device = lambda: 'mlu'
+            # Native pytorch does not support mlu, here we simply test autocast
+            # will call `torch.autocast`, which will be overridden by mlu version
+            # pytorch
+            mmengine.runner.amp.get_device = lambda: "mlu"
             with self.assertRaises(RuntimeError):
                 with autocast(enabled=False):
                     pass

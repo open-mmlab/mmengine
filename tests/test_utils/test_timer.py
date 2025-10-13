@@ -7,8 +7,7 @@ import pytest
 import mmengine
 
 
-@pytest.mark.skipif(
-    platform.system() != 'Linux', reason='Only test `Timer` in linux!')
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only test `Timer` in linux!")
 def test_timer_init():
     timer = mmengine.Timer(start=False)
     assert not timer.is_running
@@ -18,8 +17,7 @@ def test_timer_init():
     assert timer.is_running
 
 
-@pytest.mark.skipif(
-    platform.system() != 'Linux', reason='Only test `Timer` in linux!')
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only test `Timer` in linux!")
 def test_timer_run():
     timer = mmengine.Timer()
     time.sleep(1)
@@ -36,8 +34,7 @@ def test_timer_run():
         timer.since_last_check()
 
 
-@pytest.mark.skipif(
-    platform.system() != 'Linux', reason='Only test `Timer` in linux!')
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only test `Timer` in linux!")
 def test_timer_context(capsys):
     with mmengine.Timer():
         time.sleep(1)
@@ -45,7 +42,7 @@ def test_timer_context(capsys):
     # In Windows, the error could be larger than 20ms. More details in
     # https://stackoverflow.com/questions/11657734/sleep-for-exact-time-in-python.  # noqa: E501
     assert abs(float(out) - 1) < 3e-2
-    with mmengine.Timer(print_tmpl='time: {:.1f}s'):
+    with mmengine.Timer(print_tmpl="time: {:.1f}s"):
         time.sleep(1)
     out, _ = capsys.readouterr()
-    assert out == 'time: 1.0s\n'
+    assert out == "time: 1.0s\n"

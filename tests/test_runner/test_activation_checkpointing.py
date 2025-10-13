@@ -5,13 +5,11 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from mmengine.runner.activation_checkpointing import \
-    turn_on_activation_checkpointing
+from mmengine.runner.activation_checkpointing import turn_on_activation_checkpointing
 from mmengine.testing import assert_allclose
 
 
 class Model(nn.Module):
-
     def __init__(self):
         super().__init__()
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1)
@@ -37,7 +35,6 @@ class Model(nn.Module):
 
 
 class TestActivationCheckpointing(TestCase):
-
     def test_activation_checkpointing(self):
         model = Model()
         input = torch.randn(16, 3, 224, 224)
@@ -46,7 +43,7 @@ class TestActivationCheckpointing(TestCase):
         output.sum().backward()
         grad = input.grad.clone()
 
-        turn_on_activation_checkpointing(model, ['conv1', 'conv2', 'conv3'])
+        turn_on_activation_checkpointing(model, ["conv1", "conv2", "conv3"])
         output2 = model(input)
         output2.sum().backward()
         grad2 = input.grad.clone()

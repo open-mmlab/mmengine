@@ -9,13 +9,10 @@ def test_base_storage_backend():
     class ExampleBackend(BaseStorageBackend):
         pass
 
-    with pytest.raises(
-            TypeError,
-            match="Can't instantiate abstract class ExampleBackend"):
+    with pytest.raises(TypeError, match="Can't instantiate abstract class ExampleBackend"):
         ExampleBackend()
 
     class ExampleBackend(BaseStorageBackend):
-
         def get(self, filepath):
             return filepath
 
@@ -23,5 +20,5 @@ def test_base_storage_backend():
             return filepath
 
     backend = ExampleBackend()
-    assert backend.get('test') == 'test'
-    assert backend.get_text('test') == 'test'
+    assert backend.get("test") == "test"
+    assert backend.get_text("test") == "test"

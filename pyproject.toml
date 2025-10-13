@@ -1,0 +1,101 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mmengine"
+version = "0.10.7"
+description = "Engine of OpenMMLab projects"
+readme = "README.md"
+requires-python = ">=3.10"
+license-files = ["LICENSE"]
+authors = [
+    { name = "MMEngine Authors", email = "openmmlab@gmail.com" },
+]
+urls = { "Homepage" = "https://github.com/open-mmlab/mmengine" }
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Utilities"
+]
+
+dependencies = [
+    "addict",
+    "matplotlib",
+    "numpy<2.0",
+    "pyyaml",
+    "regex;sys_platform=='win32'",
+    "rich",
+    "termcolor"
+]
+
+[project.optional-dependencies]
+all = [
+    "aim<=3.17.5;sys_platform!='win32'",
+    "bitsandbytes",
+    "clearml",
+    "coverage",
+    "dadaptation",
+    "dvclive",
+    "lion-pytorch",
+    "lmdb",
+    "mlflow",
+    "parameterized",
+    "pydantic==1.10.9",
+    "pytest",
+    "transformers"
+]
+tests = [
+    "pytest"
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+fix = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["mmengine*"]
+
+[tool.ruff.lint]
+ignore = ["C408", "C901", "E501", "E741", "F402", "F823", "SIM1", "SIM300", "SIM212", "SIM905", "UP009", "UP015", "UP031", "UP028", "UP004", "UP045", "UP007", "UP035"]
+select = ["C", "E", "F", "I", "W", "RUF013", "PERF102", "PLC1802", "PLC0208", "SIM", "UP"]
+extend-safe-fixes = ["UP006"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402", "F401", "F403", "F811"]
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
+
+[tool.coverage.run]
+source = ["transformers"]
+omit = [
+    "*/convert_*",
+    "*/__main__.py"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise",
+    "except",
+    "register_parameter"
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

@@ -14,23 +14,19 @@ Imagine you are from the 1700s. Try to write a sentence in the language used in 
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='llama2 inference')
-    parser.add_argument('checkpoint', type=str)
+    parser = argparse.ArgumentParser(description="llama2 inference")
+    parser.add_argument("checkpoint", type=str)
     args = parser.parse_args()
     return args
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = parse_args()
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint)
     model = LlamaForCausalLM.from_pretrained(args.checkpoint).half().cuda()
     model.eval()
 
-    inputs = tokenizer(prompt, return_tensors='pt')
+    inputs = tokenizer(prompt, return_tensors="pt")
     with torch.no_grad():
         generate_ids = model.generate(inputs.input_ids.cuda(), max_length=300)
-    print(
-        tokenizer.batch_decode(
-            generate_ids,
-            skip_special_tokens=True,
-            clean_up_tokenization_spaces=False)[0])
+    print(tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0])

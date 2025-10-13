@@ -6,8 +6,8 @@ import warnings
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Say hello.')
-    parser.add_argument('name', help='To whom.')
+    parser = argparse.ArgumentParser(description="Say hello.")
+    parser.add_argument("name", help="To whom.")
 
     args = parser.parse_args()
 
@@ -16,10 +16,10 @@ def parse_args():
 
 def main():
     args = parse_args()
-    print(f'hello {args.name}!')
-    if args.name == 'agent':
-        warnings.warn('I have a secret!')
+    print(f"hello {args.name}!")
+    if args.name == "agent":
+        warnings.warn("I have a secret!", stacklevel=2)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -11,7 +11,6 @@ from mmengine.structures import BaseDataElement, InstanceData
 
 
 class TmpObject:
-
     def __init__(self, tmp) -> None:
         assert isinstance(tmp, list)
         if len(tmp) > 0:
@@ -25,7 +24,7 @@ class TmpObject:
     def __getitem__(self, item):
         if isinstance(item, int):
             if item >= len(self) or item < -len(self):  # type:ignore
-                raise IndexError(f'Index {item} out of range!')
+                raise IndexError(f"Index {item} out of range!")
             else:
                 # keep the dimension
                 item = slice(item, None, len(self))
@@ -46,7 +45,6 @@ class TmpObject:
 
 
 class TmpObjectWithoutCat:
-
     def __init__(self, tmp) -> None:
         assert isinstance(tmp, list)
         if len(tmp) > 0:
@@ -60,7 +58,7 @@ class TmpObjectWithoutCat:
     def __getitem__(self, item):
         if isinstance(item, int):
             if item >= len(self) or item < -len(self):  # type:ignore
-                raise IndexError(f'Index {item} out of range!')
+                raise IndexError(f"Index {item} out of range!")
             else:
                 # keep the dimension
                 item = slice(item, None, len(self))
@@ -71,17 +69,14 @@ class TmpObjectWithoutCat:
 
 
 class TestInstanceData(TestCase):
-
     def setup_data(self):
-        metainfo = dict(
-            img_id=random.randint(0, 100),
-            img_shape=(random.randint(400, 600), random.randint(400, 600)))
+        metainfo = dict(img_id=random.randint(0, 100), img_shape=(random.randint(400, 600), random.randint(400, 600)))
         instances_infos = [1] * 5
         bboxes = torch.rand((5, 4))
         labels = np.random.rand(5)
         kps = [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5]]
         ids = (1, 2, 3, 4, 5)
-        name_ids = '12345'
+        name_ids = "12345"
         polygons = TmpObject(np.arange(25).reshape((5, -1)).tolist())
         instance_data = InstanceData(
             metainfo=metainfo,
@@ -91,7 +86,8 @@ class TestInstanceData(TestCase):
             kps=kps,
             ids=ids,
             name_ids=name_ids,
-            instances_infos=instances_infos)
+            instances_infos=instances_infos,
+        )
         return instance_data
 
     def test_set_data(self):
@@ -108,7 +104,7 @@ class TestInstanceData(TestCase):
             instance_data.keypoints = torch.rand((17, 2))
 
         instance_data.keypoints = torch.rand((5, 2))
-        assert 'keypoints' in instance_data
+        assert "keypoints" in instance_data
 
     def test_getitem(self):
         instance_data = InstanceData()
@@ -138,7 +134,7 @@ class TestInstanceData(TestCase):
             instance_data[item.bool()]
 
         # test LongTensor
-        long_tensor = torch.randint(5, (2, ))
+        long_tensor = torch.randint(5, (2,))
         long_index_instance_data = instance_data[long_tensor]
         assert len(long_index_instance_data) == len(long_tensor)
 
@@ -170,27 +166,27 @@ class TestInstanceData(TestCase):
         assert len(bool_numpy_instance_data) == bool_numpy.sum()
 
         # without cat
-        instance_data.polygons = TmpObjectWithoutCat(
-            np.arange(25).reshape((5, -1)).tolist())
+        instance_data.polygons = TmpObjectWithoutCat(np.arange(25).reshape((5, -1)).tolist())
         bool_numpy = np.random.rand(5) > 0.5
         with pytest.raises(
-                ValueError,
-                match=('The type of `polygons` is '
-                       f'`{type(instance_data.polygons)}`, '
-                       'which has no attribute of `cat`, so it does not '
-                       f'support slice with `bool`')):
+            ValueError,
+            match=(
+                "The type of `polygons` is "
+                f"`{type(instance_data.polygons)}`, "
+                "which has no attribute of `cat`, so it does not "
+                f"support slice with `bool`"
+            ),
+        ):
             bool_numpy_instance_data = instance_data[bool_numpy]
 
     def test_cat(self):
         instance_data_1 = self.setup_data()
         instance_data_2 = self.setup_data()
-        cat_instance_data = InstanceData.cat(
-            [instance_data_1, instance_data_2])
+        cat_instance_data = InstanceData.cat([instance_data_1, instance_data_2])
         assert len(cat_instance_data) == 10
 
         # All inputs must be InstanceData
-        instance_data_2 = BaseDataElement(
-            bboxes=torch.rand((5, 4)), labels=torch.rand((5, )))
+        instance_data_2 = BaseDataElement(bboxes=torch.rand((5, 4)), labels=torch.rand((5,)))
         with self.assertRaises(AssertionError):
             InstanceData.cat([instance_data_1, instance_data_2])
 
@@ -199,22 +195,18 @@ class TestInstanceData(TestCase):
             InstanceData.cat([])
         instance_data_2 = instance_data_1.clone()
         instance_data_2 = instance_data_2[torch.zeros(5) > 0.5]
-        cat_instance_data = InstanceData.cat(
-            [instance_data_1, instance_data_2])
+        cat_instance_data = InstanceData.cat([instance_data_1, instance_data_2])
         cat_instance_data = InstanceData.cat([instance_data_1])
         assert len(cat_instance_data) == 5
 
         # test custom data cat
-        instance_data_1.polygons = TmpObjectWithoutCat(
-            np.arange(25).reshape((5, -1)).tolist())
+        instance_data_1.polygons = TmpObjectWithoutCat(np.arange(25).reshape((5, -1)).tolist())
         instance_data_2 = instance_data_1.clone()
         with pytest.raises(
-                ValueError,
-                match=('The type of `polygons` is '
-                       f'`{type(instance_data_1.polygons)}` '
-                       'which has no attribute of `cat`')):
-            cat_instance_data = InstanceData.cat(
-                [instance_data_1, instance_data_2])
+            ValueError,
+            match=(f"The type of `polygons` is `{type(instance_data_1.polygons)}` which has no attribute of `cat`"),
+        ):
+            cat_instance_data = InstanceData.cat([instance_data_1, instance_data_2])
 
     def test_len(self):
         instance_data = self.setup_data()

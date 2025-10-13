@@ -14,7 +14,6 @@ from mmengine.testing.runner_test_case import RunnerTestCase, ToyModel
 
 
 class ToyModuleWithNorm(ToyModel):
-
     def __init__(self, data_preprocessor=None):
         super().__init__(data_preprocessor=data_preprocessor)
         bn = nn.BatchNorm1d(2)
@@ -22,13 +21,11 @@ class ToyModuleWithNorm(ToyModel):
 
     def init_weights(self):
         for buffer in self.buffers():
-            buffer.fill_(
-                torch.tensor(int(os.environ['RANK']), dtype=torch.float32))
+            buffer.fill_(torch.tensor(int(os.environ["RANK"]), dtype=torch.float32))
         return super().init_weights()
 
 
 class TestSyncBuffersHook(MultiProcessTestCase, RunnerTestCase):
-
     def setUp(self) -> None:
         super().setUp()
         self._spawn_processes()
@@ -57,9 +54,9 @@ class TestSyncBuffersHook(MultiProcessTestCase, RunnerTestCase):
     def test_with_runner(self):
         self.setup_dist_env()
         cfg = self.epoch_based_cfg
-        cfg.model = dict(type='ToyModuleWithNorm')
-        cfg.launch = 'pytorch'
-        cfg.custom_hooks = [dict(type='SyncBuffersHook')]
+        cfg.model = dict(type="ToyModuleWithNorm")
+        cfg.launch = "pytorch"
+        cfg.custom_hooks = [dict(type="SyncBuffersHook")]
         runner = self.build_runner(cfg)
         runner.train()
 
@@ -69,6 +66,5 @@ class TestSyncBuffersHook(MultiProcessTestCase, RunnerTestCase):
 
     def setup_dist_env(self):
         super().setup_dist_env()
-        os.environ['RANK'] = str(self.rank)
-        torch_dist.init_process_group(
-            backend='gloo', rank=self.rank, world_size=self.world_size)
+        os.environ["RANK"] = str(self.rank)
+        torch_dist.init_process_group(backend="gloo", rank=self.rank, world_size=self.world_size)

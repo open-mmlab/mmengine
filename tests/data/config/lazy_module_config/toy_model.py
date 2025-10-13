@@ -6,6 +6,7 @@ from mmengine.model import MomentumAnnealingEMA
 from mmengine.runner import FlexibleRunner
 from mmengine.testing.runner_test_case import ToyDataset, ToyMetric
 
+
 with read_base():
     from ._base_.base_model import *
     from ._base_.default_runtime import *
@@ -15,24 +16,18 @@ param_scheduler.milestones = [2, 4]
 
 
 train_dataloader = dict(
-    dataset=dict(type=ToyDataset),
-    sampler=dict(type=DefaultSampler, shuffle=True),
-    batch_size=3,
-    num_workers=0)
+    dataset=dict(type=ToyDataset), sampler=dict(type=DefaultSampler, shuffle=True), batch_size=3, num_workers=0
+)
 
 val_dataloader = dict(
-    dataset=dict(type=ToyDataset),
-    sampler=dict(type=DefaultSampler, shuffle=False),
-    batch_size=3,
-    num_workers=0)
+    dataset=dict(type=ToyDataset), sampler=dict(type=DefaultSampler, shuffle=False), batch_size=3, num_workers=0
+)
 
 val_evaluator = [dict(type=ToyMetric)]
 
 test_dataloader = dict(
-    dataset=dict(type=ToyDataset),
-    sampler=dict(type=DefaultSampler, shuffle=False),
-    batch_size=3,
-    num_workers=0)
+    dataset=dict(type=ToyDataset), sampler=dict(type=DefaultSampler, shuffle=False), batch_size=3, num_workers=0
+)
 
 test_evaluator = [dict(type=ToyMetric)]
 
@@ -43,7 +38,8 @@ custom_hooks = [
         momentum=0.0002,
         update_buffers=True,
         strict_load=False,
-        priority=49)
+        priority=49,
+    )
 ]
 
 runner_type = FlexibleRunner

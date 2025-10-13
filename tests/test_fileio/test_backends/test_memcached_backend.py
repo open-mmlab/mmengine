@@ -17,43 +17,41 @@ def imfrombytes(content):
     return img
 
 
-sys.modules['mc'] = MagicMock()
+sys.modules["mc"] = MagicMock()
 
 
 class MockMemcachedClient:
-
     def __init__(self, server_list_cfg, client_cfg):
         pass
 
     def Get(self, filepath, buffer):
-        with open(filepath, 'rb') as f:
+        with open(filepath, "rb") as f:
             buffer.content = f.read()
 
 
 class TestMemcachedBackend(TestCase):
-
     @classmethod
     def setUpClass(cls):
-        cls.mc_cfg = dict(server_list_cfg='', client_cfg='', sys_path=None)
-        cls.test_data_dir = Path(__file__).parent.parent.parent / 'data'
-        cls.img_path = cls.test_data_dir / 'color.jpg'
+        cls.mc_cfg = dict(server_list_cfg="", client_cfg="", sys_path=None)
+        cls.test_data_dir = Path(__file__).parent.parent.parent / "data"
+        cls.img_path = cls.test_data_dir / "color.jpg"
         cls.img_shape = (300, 400, 3)
 
     @parameterized.expand([[Path], [str]])
-    @patch('mc.MemcachedClient.GetInstance', MockMemcachedClient)
-    @patch('mc.pyvector', MagicMock)
-    @patch('mc.ConvertBuffer', lambda x: x.content)
+    @patch("mc.MemcachedClient.GetInstance", MockMemcachedClient)
+    @patch("mc.pyvector", MagicMock)
+    @patch("mc.ConvertBuffer", lambda x: x.content)
     def test_get(self, path_type):
         backend = MemcachedBackend(**self.mc_cfg)
         img_bytes = backend.get(path_type(self.img_path))
-        self.assertEqual(self.img_path.open('rb').read(), img_bytes)
+        self.assertEqual(self.img_path.open("rb").read(), img_bytes)
         img = imfrombytes(img_bytes)
         self.assertEqual(img.shape, self.img_shape)
 
-    @patch('mc.MemcachedClient.GetInstance', MockMemcachedClient)
-    @patch('mc.pyvector', MagicMock)
-    @patch('mc.ConvertBuffer', lambda x: x.content)
+    @patch("mc.MemcachedClient.GetInstance", MockMemcachedClient)
+    @patch("mc.pyvector", MagicMock)
+    @patch("mc.ConvertBuffer", lambda x: x.content)
     def test_get_text(self):
         backend = MemcachedBackend(**self.mc_cfg)
         with self.assertRaises(NotImplementedError):
-            backend.get_text('filepath')
+            backend.get_text("filepath")

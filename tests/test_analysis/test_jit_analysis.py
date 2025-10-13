@@ -9,7 +9,7 @@ import typing
 import unittest
 import warnings
 from collections import Counter
-from typing import Any, Dict, List
+from typing import Any
 
 import torch
 import torch.nn as nn
@@ -17,14 +17,13 @@ import torch.nn as nn
 from mmengine import MMLogger
 from mmengine.analysis import FlopAnalyzer
 from mmengine.analysis.jit_analysis import JitModelAnalysis
-from mmengine.analysis.jit_handles import (Handle, addmm_flop_jit,
-                                           conv_flop_jit, linear_flop_jit)
+from mmengine.analysis.jit_handles import Handle, addmm_flop_jit, conv_flop_jit, linear_flop_jit
 
 
 class NestedNetInnerModule(nn.Module):
     """A submodule for the nested net test module below."""
 
-    def __init__(self, lin_op: str = 'addmm') -> None:
+    def __init__(self, lin_op: str = "addmm") -> None:
         super().__init__()
         conv_input_size = (2, 5)
         conv_in = 2
@@ -44,21 +43,20 @@ class NestedNetInnerModule(nn.Module):
 
         fc_flops_ = fc_in * fc_out
         fc_flops = Counter({lin_op: fc_flops_})
-        spatial_pos = (conv_input_size[1] + 2 * padding) - 2 * (
-            kernel_size // 2)
+        spatial_pos = (conv_input_size[1] + 2 * padding) - 2 * (kernel_size // 2)
         conv_flops_ = spatial_pos * kernel_size * conv_in * conv_out
-        conv_flops = Counter({'conv': conv_flops_})
+        conv_flops = Counter({"conv": conv_flops_})
         model_flops = conv_flops + fc_flops
-        self.flops: 'Dict[str, typing.Counter[str]]' = {
-            '': model_flops,
-            'fc': fc_flops,
-            'conv': conv_flops,
+        self.flops: dict[str, typing.Counter[str]] = {
+            "": model_flops,
+            "fc": fc_flops,
+            "conv": conv_flops,
         }
 
-        self.name_to_module: 'Dict[str, nn.Module]' = {
-            '': self,
-            'fc': self.fc,
-            'conv': self.conv,
+        self.name_to_module: dict[str, nn.Module] = {
+            "": self,
+            "fc": self.fc,
+            "conv": self.conv,
         }
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -73,7 +71,7 @@ class NestedNet(nn.Module):
     """A network with nested submodules for testing the ability to correctly
     capture scope information."""
 
-    def __init__(self, lin_op: str = 'addmm') -> None:
+    def __init__(self, lin_op: str = "addmm") -> None:
         super().__init__()
         self.input_size = (4, 5)
 
@@ -95,35 +93,34 @@ class NestedNet(nn.Module):
 
         fc_flops_ = fc_in * fc_out
         fc_flops = Counter({lin_op: fc_flops_})
-        spatial_pos = (self.input_size[1] + 2 * padding) - 2 * (
-            kernel_size // 2)
+        spatial_pos = (self.input_size[1] + 2 * padding) - 2 * (kernel_size // 2)
         conv_flops_ = spatial_pos * kernel_size * conv_in * conv_out
-        conv_flops = Counter({'conv': conv_flops_})
+        conv_flops = Counter({"conv": conv_flops_})
 
-        model_flops = conv_flops + fc_flops + self.submod.flops['']
-        self.flops: 'Dict[str, typing.Counter[str]]' = {
-            '': model_flops,
-            'fc': fc_flops,
-            'conv': conv_flops,
-            'submod': self.submod.flops[''],
-            'submod.fc': self.submod.flops['fc'],
-            'submod.conv': self.submod.flops['conv'],
+        model_flops = conv_flops + fc_flops + self.submod.flops[""]
+        self.flops: dict[str, typing.Counter[str]] = {
+            "": model_flops,
+            "fc": fc_flops,
+            "conv": conv_flops,
+            "submod": self.submod.flops[""],
+            "submod.fc": self.submod.flops["fc"],
+            "submod.conv": self.submod.flops["conv"],
         }
 
-        self.name_to_module: 'Dict[str, nn.Module]' = {
-            '': self,
-            'fc': self.fc,
-            'conv': self.conv,
-            'submod': self.submod,
-            'submod.fc': self.submod.name_to_module['fc'],
-            'submod.conv': self.submod.name_to_module['conv'],
+        self.name_to_module: dict[str, nn.Module] = {
+            "": self,
+            "fc": self.fc,
+            "conv": self.conv,
+            "submod": self.submod,
+            "submod.fc": self.submod.name_to_module["fc"],
+            "submod.conv": self.submod.name_to_module["conv"],
         }
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv(x)
         x = torch.flatten(x, 1)
         x = self.fc(x)
-        x = self.submod(x)**2
+        x = self.submod(x) ** 2
         return x
 
 
@@ -132,7 +129,7 @@ class UnusedNet(nn.Module):
 
     def __init__(self) -> None:
         super().__init__()
-        self.input_size = (10, )
+        self.input_size = (10,)
         fc1_in, fc1_out = 10, 10
         fc2_in, fc2_out = 10, 1
         unused_in, unused_out = 20, 20
@@ -140,7 +137,7 @@ class UnusedNet(nn.Module):
         self.fc1 = nn.Linear(in_features=fc1_in, out_features=fc1_out)
         self.fc2 = nn.Linear(in_features=fc2_in, out_features=fc2_out)
         self.unused = nn.Linear(in_features=unused_in, out_features=unused_out)
-        self.act: 'nn.Module' = nn.ReLU()
+        self.act: nn.Module = nn.ReLU()
 
         self.fc1_flops: int = fc1_in * fc1_out
         self.fc2_flops: int = fc2_in * fc2_out
@@ -155,7 +152,7 @@ class RepeatedNet(nn.Module):
 
     def __init__(self) -> None:
         super().__init__()
-        self.input_size = (10, )
+        self.input_size = (10,)
         fc1_in, fc1_out = 10, 10
         fc2_in, fc2_out = 10, 10
         self.fc1_num = 3
@@ -180,7 +177,7 @@ class NonForwardInnerModule(nn.Module):
 
     def __init__(self) -> None:
         super().__init__()
-        self.input_size = (10, )
+        self.input_size = (10,)
         fc_in, fc_out = 10, 1
 
         self.fc = nn.Linear(in_features=fc_in, out_features=fc_out)
@@ -199,7 +196,7 @@ class NonForwardNet(nn.Module):
 
     def __init__(self) -> None:
         super().__init__()
-        self.input_size = (10, )
+        self.input_size = (10,)
         fc_in, fc_out = 10, 10
 
         self.submod = NonForwardInnerModule()
@@ -230,7 +227,7 @@ class SharedModuleNet(nn.Module):
 
     def __init__(self) -> None:
         super().__init__()
-        self.input_size = (10, )
+        self.input_size = (10,)
         fc1_in, fc1_out = 10, 10
         fc2_in, fc2_out = 10, 1
 
@@ -238,8 +235,8 @@ class SharedModuleNet(nn.Module):
         self.submod1 = SharedInnerModule(inner)
         self.submod2 = SharedInnerModule(inner)
         multiname = nn.Linear(in_features=fc2_in, out_features=fc2_out)
-        self.multiname1: 'nn.Module' = multiname
-        self.multiname2: 'nn.Module' = multiname
+        self.multiname1: nn.Module = multiname
+        self.multiname2: nn.Module = multiname
 
         self.multiname_flops: int = fc2_in * fc2_out
         self.shared_flops: int = fc1_in * fc1_out
@@ -255,7 +252,7 @@ class RecursiveScopeNet(nn.Module):
 
     def __init__(self) -> None:
         super().__init__()
-        self.input_size = (10, )
+        self.input_size = (10,)
         fc_in, fc_out = 10, 1
 
         self.fc = nn.Linear(in_features=fc_in, out_features=fc_out)
@@ -277,7 +274,7 @@ class TraceWarningNet(nn.Module):
 
     def __init__(self) -> None:
         super().__init__()
-        self.input_size = (10, )
+        self.input_size = (10,)
         fc1_in, fc1_out = 10, 1
         fc2_in, fc2_out = 10, 10
 
@@ -289,7 +286,7 @@ class TraceWarningNet(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y = self.fc1(x).item()
-        warnings.warn('Dummy RuntimeWarning.', RuntimeWarning)
+        warnings.warn("Dummy RuntimeWarning.", RuntimeWarning, stacklevel=2)
         if y < 0.0:
             x = self.fc2(x)
         return x + 2
@@ -307,20 +304,20 @@ class TestJitModelAnalysis(unittest.TestCase):
         # we are testing the right thing.
         lin = nn.Linear(10, 10)
         lin_x: torch.Tensor = torch.randn(10, 10)
-        trace = torch.jit.trace(lin, (lin_x, ))
+        trace = torch.jit.trace(lin, (lin_x,))
         node_kinds = [node.kind() for node in trace.graph.nodes()]
-        assert 'aten::addmm' in node_kinds or 'aten::linear' in node_kinds
-        if 'aten::addmm' in node_kinds:
-            self.lin_op = 'addmm'
+        assert "aten::addmm" in node_kinds or "aten::linear" in node_kinds
+        if "aten::addmm" in node_kinds:
+            self.lin_op = "addmm"
         else:
-            self.lin_op = 'linear'
+            self.lin_op = "linear"
 
     def test_total(self) -> None:
         """Tests that JitModelAnalysis.total(module) returns the correct counts
         for string and module inputs."""
 
         model = NestedNet(lin_op=self.lin_op)
-        inputs = (torch.randn((1, *model.input_size)), )
+        inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopAnalyzer(model=model, inputs=inputs)
         analyzer.unsupported_ops_warnings(enabled=False)
@@ -336,15 +333,12 @@ class TestJitModelAnalysis(unittest.TestCase):
         in the correctly structured dictionary."""
 
         model = NestedNet(lin_op=self.lin_op)
-        inputs = (torch.randn((1, *model.input_size)), )
+        inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopAnalyzer(model=model, inputs=inputs)
         analyzer.unsupported_ops_warnings(enabled=False)
 
-        flops = {
-            name: sum(counts.values())
-            for name, counts in model.flops.items()
-        }
+        flops = {name: sum(counts.values()) for name, counts in model.flops.items()}
 
         self.assertEqual(analyzer.by_module(), flops)
 
@@ -353,7 +347,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         counts for string and module inputs."""
 
         model = NestedNet(lin_op=self.lin_op)
-        inputs = (torch.randn((1, *model.input_size)), )
+        inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopAnalyzer(model=model, inputs=inputs)
         analyzer.unsupported_ops_warnings(enabled=False)
@@ -368,7 +362,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         correct counts in the correct structure."""
 
         model = NestedNet(lin_op=self.lin_op)
-        inputs = (torch.randn((1, *model.input_size)), )
+        inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopAnalyzer(model=model, inputs=inputs)
         analyzer.unsupported_ops_warnings(enabled=False)
@@ -384,26 +378,26 @@ class TestJitModelAnalysis(unittest.TestCase):
         """
 
         model = UnusedNet()
-        inputs = (torch.randn((1, *model.input_size)), )
+        inputs = (torch.randn((1, *model.input_size)),)
         analyzer = FlopAnalyzer(model=model, inputs=inputs)
 
         unused_count = 0
         unused_per_operator = Counter()  # type: Counter
         model_count = model.fc1_flops + model.fc2_flops
 
-        self.assertEqual(analyzer.total('unused'), unused_count)
-        self.assertEqual(analyzer.by_operator('unused'), unused_per_operator)
-        self.assertEqual(analyzer.total(''), model_count)
+        self.assertEqual(analyzer.total("unused"), unused_count)
+        self.assertEqual(analyzer.by_operator("unused"), unused_per_operator)
+        self.assertEqual(analyzer.total(""), model_count)
 
         # The unused mod is recognized as never called
-        self.assertEqual(analyzer.uncalled_modules(), {'unused'})
+        self.assertEqual(analyzer.uncalled_modules(), {"unused"})
 
     def test_repeated_module(self) -> None:
         """Tests that repeated calls to the same submodule correct aggregates
         results to that submodule."""
 
         model = RepeatedNet()
-        inputs = (torch.randn((1, *model.input_size)), )
+        inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopAnalyzer(model=model, inputs=inputs)
         fc1_count = model.fc1_num * model.fc1_flops
@@ -411,10 +405,10 @@ class TestJitModelAnalysis(unittest.TestCase):
         total_count = fc1_count + fc2_count
         fc1_per_operator = Counter({self.lin_op: fc1_count})
 
-        self.assertEqual(analyzer.total('fc1'), fc1_count)
-        self.assertEqual(analyzer.total('fc2'), fc2_count)
-        self.assertEqual(analyzer.total(''), total_count)
-        self.assertEqual(analyzer.by_operator('fc1'), fc1_per_operator)
+        self.assertEqual(analyzer.total("fc1"), fc1_count)
+        self.assertEqual(analyzer.total("fc2"), fc2_count)
+        self.assertEqual(analyzer.total(""), total_count)
+        self.assertEqual(analyzer.by_operator("fc1"), fc1_per_operator)
 
         # Tests no uncalled mods
         self.assertEqual(analyzer.uncalled_modules(), set())
@@ -427,25 +421,23 @@ class TestJitModelAnalysis(unittest.TestCase):
         """
 
         model = NonForwardNet()
-        inputs = (torch.randn((1, 10)), )
-        analyzer = FlopAnalyzer(
-            model=model, inputs=inputs).ancestor_mode('caller')
+        inputs = (torch.randn((1, 10)),)
+        analyzer = FlopAnalyzer(model=model, inputs=inputs).ancestor_mode("caller")
 
         inner_fc_count = model.submod.fc_flops
         total_count = model.fc_flops + inner_fc_count
 
-        self.assertEqual(analyzer.total('submod'), 0)
-        self.assertEqual(analyzer.total('submod.fc'), inner_fc_count)
-        self.assertEqual(analyzer.total(''), total_count)
+        self.assertEqual(analyzer.total("submod"), 0)
+        self.assertEqual(analyzer.total("submod.fc"), inner_fc_count)
+        self.assertEqual(analyzer.total(""), total_count)
 
         # The mod not directly called is registered as such
-        self.assertEqual(analyzer.uncalled_modules(), {'submod'})
+        self.assertEqual(analyzer.uncalled_modules(), {"submod"})
 
-        analyzer = FlopAnalyzer(
-            model=model, inputs=inputs).ancestor_mode('owner')
-        self.assertEqual(analyzer.total('submod'), inner_fc_count)
-        self.assertEqual(analyzer.total('submod.fc'), inner_fc_count)
-        self.assertEqual(analyzer.total(''), total_count)
+        analyzer = FlopAnalyzer(model=model, inputs=inputs).ancestor_mode("owner")
+        self.assertEqual(analyzer.total("submod"), inner_fc_count)
+        self.assertEqual(analyzer.total("submod.fc"), inner_fc_count)
+        self.assertEqual(analyzer.total(""), total_count)
         self.assertEqual(analyzer.uncalled_modules(), set())
 
     def test_shared_module(self) -> None:
@@ -453,11 +445,11 @@ class TestJitModelAnalysis(unittest.TestCase):
         names."""
 
         model = SharedModuleNet()
-        inputs = (torch.randn((1, *model.input_size)), )
+        inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = (
-            FlopAnalyzer(model=model, inputs=inputs).unsupported_ops_warnings(
-                enabled=False).ancestor_mode('caller'))
+            FlopAnalyzer(model=model, inputs=inputs).unsupported_ops_warnings(enabled=False).ancestor_mode("caller")
+        )
 
         # The names `submod2.submod` and `multiname2` are not included,
         # since only the first name of a module is made the canonical one.
@@ -467,34 +459,30 @@ class TestJitModelAnalysis(unittest.TestCase):
         shared_flops = 2 * model.shared_flops  # Shared under 2 submodules
         total_flops = multiname_flops + shared_flops
         flops = {
-            '': total_flops,
-            'submod1': model.shared_flops,
-            'submod1.submod': shared_flops,
-            'submod2': model.shared_flops,
-            'multiname1': multiname_flops,
+            "": total_flops,
+            "submod1": model.shared_flops,
+            "submod1.submod": shared_flops,
+            "submod2": model.shared_flops,
+            "multiname1": multiname_flops,
         }
 
         self.assertEqual(analyzer.by_module(), flops)
 
         # Test access by alternative name
         self.assertEqual(
-            analyzer.total('submod2.submod'),
-            flops['submod1.submod'],
+            analyzer.total("submod2.submod"),
+            flops["submod1.submod"],
         )
         self.assertEqual(
-            analyzer.total('multiname2'),
-            flops['multiname1'],
+            analyzer.total("multiname2"),
+            flops["multiname1"],
         )
 
         # Test getting canonical name
-        self.assertEqual(
-            analyzer.canonical_module_name('multiname2'), 'multiname1')
-        self.assertEqual(
-            analyzer.canonical_module_name('multiname1'), 'multiname1')
-        self.assertEqual(
-            analyzer.canonical_module_name('submod2.submod'), 'submod1.submod')
-        self.assertEqual(
-            analyzer.canonical_module_name('submod1.submod'), 'submod1.submod')
+        self.assertEqual(analyzer.canonical_module_name("multiname2"), "multiname1")
+        self.assertEqual(analyzer.canonical_module_name("multiname1"), "multiname1")
+        self.assertEqual(analyzer.canonical_module_name("submod2.submod"), "submod1.submod")
+        self.assertEqual(analyzer.canonical_module_name("submod1.submod"), "submod1.submod")
 
         # Tests no uncalled modules
         self.assertEqual(analyzer.uncalled_modules(), set())
@@ -503,12 +491,12 @@ class TestJitModelAnalysis(unittest.TestCase):
         """Tests that an op is only counted once per module, even if it is in
         the scope of that module multiple times."""
         model = RecursiveScopeNet()
-        inputs = (torch.randn((1, *model.input_size)), )
+        inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopAnalyzer(model, inputs)
 
         self.assertEqual(analyzer.total(), model.flops)
-        self.assertEqual(analyzer.total('fc'), model.flops)
+        self.assertEqual(analyzer.total("fc"), model.flops)
 
         # Tests no uncalled modules
         self.assertEqual(analyzer.uncalled_modules(), set())
@@ -517,19 +505,13 @@ class TestJitModelAnalysis(unittest.TestCase):
         """Tests that a model wrapped in DataParallel still returns results
         labeled by the correct scopes."""
         model = NestedNet(lin_op=self.lin_op)
-        inputs = (torch.randn((1, *model.input_size)), )
+        inputs = (torch.randn((1, *model.input_size)),)
 
         # Find flops for wrapper
-        flops = {
-            'module' + ('.' if name else '') + name: flop
-            for name, flop in model.flops.items()
-        }
-        flops[''] = model.flops['']
-        name_to_module = {
-            'module' + ('.' if name else '') + name: mod
-            for name, mod in model.name_to_module.items()
-        }
-        name_to_module[''] = model.name_to_module['']
+        flops = {"module" + ("." if name else "") + name: flop for name, flop in model.flops.items()}
+        flops[""] = model.flops[""]
+        name_to_module = {"module" + ("." if name else "") + name: mod for name, mod in model.name_to_module.items()}
+        name_to_module[""] = model.name_to_module[""]
 
         model = torch.nn.DataParallel(model).cpu()
         analyzer = FlopAnalyzer(model=model, inputs=inputs)
@@ -550,8 +532,8 @@ class TestJitModelAnalysis(unittest.TestCase):
     def test_data_parallel_root_scope(self) -> None:
         # A test case discussed in D32227000
         model = nn.DataParallel(nn.Linear(10, 10)).cpu()
-        for mode in ['caller', 'owner']:
-            flop = FlopAnalyzer(model, (torch.randn(10, 10), ))
+        for mode in ["caller", "owner"]:
+            flop = FlopAnalyzer(model, (torch.randn(10, 10),))
             flop.ancestor_mode(mode)
             self.assertEqual(flop.total(), 1000)
 
@@ -559,37 +541,36 @@ class TestJitModelAnalysis(unittest.TestCase):
         """Tests per-module recording of unsupported operations."""
 
         model = NestedNet(lin_op=self.lin_op)
-        inputs = (torch.randn((1, *model.input_size)), )
+        inputs = (torch.randn((1, *model.input_size)),)
 
-        analyzer = JitModelAnalysis(
-            model=model, inputs=inputs).set_op_handle(
-                'aten::addmm',
-                addmm_flop_jit,
-                'aten::linear',
-                linear_flop_jit,
-            )
+        analyzer = JitModelAnalysis(model=model, inputs=inputs).set_op_handle(
+            "aten::addmm",
+            addmm_flop_jit,
+            "aten::linear",
+            linear_flop_jit,
+        )
         analyzer.total()
 
-        skipped_inner_conv = Counter({'aten::_convolution': 1})
+        skipped_inner_conv = Counter({"aten::_convolution": 1})
         skipped_inner_fc = Counter()  # type: Counter
-        skipped_inner = Counter({'aten::add': 1, 'aten::mul': 1})
+        skipped_inner = Counter({"aten::add": 1, "aten::mul": 1})
         skipped_inner += skipped_inner_fc
         skipped_inner += skipped_inner_conv
 
-        skipped_outer_conv = Counter({'aten::_convolution': 1})
+        skipped_outer_conv = Counter({"aten::_convolution": 1})
         skipped_outer_fc = Counter()  # type: Counter
-        skipped_outer = Counter({'aten::pow': 1})
+        skipped_outer = Counter({"aten::pow": 1})
         skipped_outer += skipped_outer_conv
         skipped_outer += skipped_outer_fc
         skipped_outer += skipped_inner
 
         skipped = {
-            '': skipped_outer,
-            'conv': skipped_outer_conv,
-            'fc': skipped_outer_fc,
-            'submod': skipped_inner,
-            'submod.conv': skipped_inner_conv,
-            'submod.fc': skipped_inner_fc,
+            "": skipped_outer,
+            "conv": skipped_outer_conv,
+            "fc": skipped_outer_fc,
+            "submod": skipped_inner,
+            "submod.conv": skipped_inner_conv,
+            "submod.fc": skipped_inner_fc,
         }
 
         # Access by string
@@ -600,47 +581,41 @@ class TestJitModelAnalysis(unittest.TestCase):
     def test_changing_handles(self) -> None:
         """Tests .set_op_handle(), .clear_op_handles()"""
         model = NestedNet(lin_op=self.lin_op)
-        inputs = (torch.randn((1, *model.input_size)), )
-        op_handles: 'Dict[str, Handle]' = {
-            'aten::addmm': addmm_flop_jit,
-            'aten::linear': linear_flop_jit,
+        inputs = (torch.randn((1, *model.input_size)),)
+        op_handles: dict[str, Handle] = {
+            "aten::addmm": addmm_flop_jit,
+            "aten::linear": linear_flop_jit,
         }
 
-        analyzer = JitModelAnalysis(
-            model=model, inputs=inputs).set_op_handle(**op_handles)
+        analyzer = JitModelAnalysis(model=model, inputs=inputs).set_op_handle(**op_handles)
         analyzer.unsupported_ops_warnings(enabled=False)
 
         # Request a result once to cache flop counts
-        _ = analyzer.total('')
+        _ = analyzer.total("")
 
         # Add an op handle
-        analyzer.set_op_handle('aten::_convolution', conv_flop_jit)
+        analyzer.set_op_handle("aten::_convolution", conv_flop_jit)
 
         self.assertEqual(analyzer.by_module_and_operator(), model.flops)
 
         # Overwrite an op handle
         def make_dummy_op(name: str, output: int) -> Handle:
-
-            def dummy_ops_handle(inputs: List[Any],
-                                 outputs: List[Any]) -> typing.Counter[str]:
+            def dummy_ops_handle(inputs: list[Any], outputs: list[Any]) -> typing.Counter[str]:
                 return Counter({name: output})
 
             return dummy_ops_handle
 
-        dummy_name = 'dummy_op'
+        dummy_name = "dummy_op"
         dummy_out = 1000
-        analyzer.set_op_handle(f'aten::{self.lin_op}',
-                               make_dummy_op(dummy_name, dummy_out))
+        analyzer.set_op_handle(f"aten::{self.lin_op}", make_dummy_op(dummy_name, dummy_out))
 
         dummy_flops = {}
         for name, counts in model.flops.items():
-            dummy_flops[name] = Counter(
-                {op: flop
-                 for op, flop in counts.items() if op != self.lin_op})
-        dummy_flops[''][dummy_name] = 2 * dummy_out
-        dummy_flops['fc'][dummy_name] = dummy_out
-        dummy_flops['submod'][dummy_name] = dummy_out
-        dummy_flops['submod.fc'][dummy_name] = dummy_out
+            dummy_flops[name] = Counter({op: flop for op, flop in counts.items() if op != self.lin_op})
+        dummy_flops[""][dummy_name] = 2 * dummy_out
+        dummy_flops["fc"][dummy_name] = dummy_out
+        dummy_flops["submod"][dummy_name] = dummy_out
+        dummy_flops["submod.fc"][dummy_name] = dummy_out
 
         self.assertEqual(analyzer.by_module_and_operator(), dummy_flops)
 
@@ -655,16 +630,19 @@ class TestJitModelAnalysis(unittest.TestCase):
         """Tests .copy(...)"""
 
         model = RepeatedNet()
-        inputs = (torch.randn((1, *model.input_size)), )
+        inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = (
-            JitModelAnalysis(model=model, inputs=inputs).set_op_handle(
-                'aten::addmm',
+            JitModelAnalysis(model=model, inputs=inputs)
+            .set_op_handle(
+                "aten::addmm",
                 addmm_flop_jit,
-                'aten::linear',
+                "aten::linear",
                 linear_flop_jit,
-            ).unsupported_ops_warnings(enabled=False).tracer_warnings(
-                mode='none'))
+            )
+            .unsupported_ops_warnings(enabled=False)
+            .tracer_warnings(mode="none")
+        )
 
         repeated_net_flops = model.fc1_num * model.fc1_flops
         repeated_net_flops += model.fc2_num * model.fc2_flops
@@ -698,9 +676,8 @@ class TestJitModelAnalysis(unittest.TestCase):
         # Copy with new model and inputs
         new_model = NonForwardNet()
         bs = 5
-        new_inputs = (torch.randn((bs, *new_model.input_size)), )
-        analyzer_new = analyzer.copy(
-            new_model=new_model, new_inputs=new_inputs)
+        new_inputs = (torch.randn((bs, *new_model.input_size)),)
+        analyzer_new = analyzer.copy(new_model=new_model, new_inputs=new_inputs)
 
         non_forward_flops = new_model.fc_flops + new_model.submod.fc_flops
 
@@ -720,32 +697,32 @@ class TestJitModelAnalysis(unittest.TestCase):
     def test_disable_warnings(self) -> None:
         """Tests .unsupported_ops_warnings(...) and .tracer_warnings(...)"""
         model = TraceWarningNet()
-        inputs = (torch.randn((1, *model.input_size)), )
+        inputs = (torch.randn((1, *model.input_size)),)
         analyzer = FlopAnalyzer(model=model, inputs=inputs)
 
         # Tracer warnings
-        analyzer.tracer_warnings(mode='all')
+        analyzer.tracer_warnings(mode="all")
         analyzer._stats = None  # Manually clear cache so trace is rerun
         self.assertWarns(torch.jit.TracerWarning, analyzer.total)
         analyzer._stats = None  # Manually clear cache so trace is rerun
         self.assertWarns(RuntimeWarning, analyzer.total)
 
-        analyzer.tracer_warnings(mode='none')
+        analyzer.tracer_warnings(mode="none")
         analyzer._stats = None  # Manually clear cache so trace is rerun
         with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter('always')
+            warnings.simplefilter("always")
             _ = analyzer.total()
             if w:
                 warning_types = [s.category for s in w]
                 self.assertFalse(torch.jit.TracerWarning in warning_types)
                 self.assertFalse(RuntimeWarning in warning_types)
 
-        analyzer.tracer_warnings(mode='no_tracer_warning')
+        analyzer.tracer_warnings(mode="no_tracer_warning")
         analyzer._stats = None  # Manually clear cache so trace is rerun
         self.assertWarns(RuntimeWarning, analyzer.total)
         analyzer._stats = None  # Manually clear cache so trace is rerun
         with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter('always')
+            warnings.simplefilter("always")
             _ = analyzer.total()
             if w:
                 warning_types = [s.category for s in w]
@@ -754,15 +731,15 @@ class TestJitModelAnalysis(unittest.TestCase):
         # Unsupported ops and uncalled modules warnings
 
         logger = MMLogger.get_current_instance()
-        skipeed_msg = 'Unsupported operator aten::add encountered 1 time(s)'
-        uncalled_msg = 'never called'
-        uncalled_modules = 'fc1'  # fc2 is called by chance
+        skipeed_msg = "Unsupported operator aten::add encountered 1 time(s)"
+        uncalled_msg = "never called"
+        uncalled_modules = "fc1"  # fc2 is called by chance
 
         analyzer.uncalled_modules_warnings(enabled=False)
         analyzer.unsupported_ops_warnings(enabled=False)
         analyzer._stats = None  # Manually clear cache so trace is rerun
         with self.assertLogs(logger, logging.WARN) as cm:
-            logger.warning('Dummy warning.')
+            logger.warning("Dummy warning.")
             _ = analyzer.total()
         self.assertFalse(any(skipeed_msg in s for s in cm.output))
         self.assertFalse(any(uncalled_msg in s for s in cm.output))
@@ -782,7 +759,6 @@ class TestJitModelAnalysis(unittest.TestCase):
         # uncalled containers should not warn
 
         class A(nn.Module):
-
             def forward(self, x):
                 return self.submod[0](x) + 1
 
@@ -793,7 +769,7 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         logger = MMLogger.get_current_instance()
         with self.assertLogs(logger, logging.WARN) as cm:
-            logger.warning('Dummy warning.')
+            logger.warning("Dummy warning.")
             _ = analyzer.total()
-        uncalled_string = 'Module never called: submod'
+        uncalled_string = "Module never called: submod"
         self.assertFalse(any(uncalled_string in s for s in cm.output))

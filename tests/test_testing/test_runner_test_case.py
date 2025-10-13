@@ -9,15 +9,14 @@ from mmengine.visualization import Visualizer
 
 
 class TestRunnerTestCase(RunnerTestCase):
-
     def test_setup(self):
         self.assertIsInstance(self.epoch_based_cfg, Config)
         self.assertIsInstance(self.iter_based_cfg, Config)
-        self.assertIn('MASTER_ADDR', self.dist_cfg)
-        self.assertIn('MASTER_PORT', self.dist_cfg)
-        self.assertIn('RANK', self.dist_cfg)
-        self.assertIn('WORLD_SIZE', self.dist_cfg)
-        self.assertIn('LOCAL_RANK', self.dist_cfg)
+        self.assertIn("MASTER_ADDR", self.dist_cfg)
+        self.assertIn("MASTER_PORT", self.dist_cfg)
+        self.assertIn("RANK", self.dist_cfg)
+        self.assertIn("WORLD_SIZE", self.dist_cfg)
+        self.assertIn("LOCAL_RANK", self.dist_cfg)
 
     def test_tearDown(self):
         self.tearDown()
@@ -46,13 +45,11 @@ class TestRunnerTestCase(RunnerTestCase):
 
     def test_init_dist(self):
         self.setup_dist_env()
-        self.assertEqual(
-            str(self.dist_cfg['MASTER_PORT']), os.environ['MASTER_PORT'])
-        self.assertEqual(self.dist_cfg['MASTER_ADDR'],
-                         os.environ['MASTER_ADDR'])
-        self.assertEqual(self.dist_cfg['RANK'], os.environ['RANK'])
-        self.assertEqual(self.dist_cfg['LOCAL_RANK'], os.environ['LOCAL_RANK'])
-        self.assertEqual(self.dist_cfg['WORLD_SIZE'], os.environ['WORLD_SIZE'])
-        fisrt_port = os.environ['MASTER_ADDR']
+        self.assertEqual(str(self.dist_cfg["MASTER_PORT"]), os.environ["MASTER_PORT"])
+        self.assertEqual(self.dist_cfg["MASTER_ADDR"], os.environ["MASTER_ADDR"])
+        self.assertEqual(self.dist_cfg["RANK"], os.environ["RANK"])
+        self.assertEqual(self.dist_cfg["LOCAL_RANK"], os.environ["LOCAL_RANK"])
+        self.assertEqual(self.dist_cfg["WORLD_SIZE"], os.environ["WORLD_SIZE"])
+        fisrt_port = os.environ["MASTER_ADDR"]
         self.setup_dist_env()
-        self.assertNotEqual(fisrt_port, os.environ['MASTER_PORT'])
+        self.assertNotEqual(fisrt_port, os.environ["MASTER_PORT"])

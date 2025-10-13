@@ -17,10 +17,9 @@ from mmengine.utils import is_installed
 
 @unittest.skipIf(
     not mmengine.hooks.profiler_hook.check_kineto(),
-    reason='Due to Kineto support issues, '
-    'please upgrade pytorch above 1.8.1 (windows users above 1.9.1)')
+    reason="Due to Kineto support issues, please upgrade pytorch above 1.8.1 (windows users above 1.9.1)",
+)
 class TestProfilerHook(RunnerTestCase):
-
     def test_init(self):
         # Test profile_times_args
         ProfilerHook(by_epoch=False, profile_times=1)
@@ -49,43 +48,37 @@ class TestProfilerHook(RunnerTestCase):
         hook._parse_trace_config(runner)
 
         with self.assertRaises(ValueError):
-            hook.on_trace_ready = dict(type='unknown')
+            hook.on_trace_ready = dict(type="unknown")
             hook._parse_trace_config(runner)
 
-        hook.on_trace_ready = dict(
-            type='log_trace', sort_by='self_cpu_time_total', row_limit=10)
+        hook.on_trace_ready = dict(type="log_trace", sort_by="self_cpu_time_total", row_limit=10)
         hook._parse_trace_config(runner)
 
-    @unittest.skipIf(
-        not is_installed('torch-tb-profiler'),
-        reason='required torch-tb-profiler')
+    @unittest.skipIf(not is_installed("torch-tb-profiler"), reason="required torch-tb-profiler")
     def test_parse_trace_config_tensorboard(self):
         # Test on_trace_ready_args
         runner = MagicMock()
         runner.log_dir = self.temp_dir.name
-        runner.logger = MMLogger.get_instance('test_profiler')
+        runner.logger = MMLogger.get_instance("test_profiler")
         hook = ProfilerHook(on_trace_ready=None)
 
-        hook.on_trace_ready = dict(type='tb_trace')
+        hook.on_trace_ready = dict(type="tb_trace")
         hook._parse_trace_config(runner)
 
-        hook.on_trace_ready['dir_name'] = 'tb'
+        hook.on_trace_ready["dir_name"] = "tb"
         hook._parse_trace_config(runner)
 
-        hook.on_trace_ready['dir_name'] = ops.join(self.temp_dir.name, 'tb')
+        hook.on_trace_ready["dir_name"] = ops.join(self.temp_dir.name, "tb")
         hook._parse_trace_config(runner)
 
         # with self.assertWarns(DeprecationWarning):
         hook = ProfilerHook(
-            on_trace_ready=dict(type='tb_trace'),
-            json_trace_path=ops.join(self.temp_dir.name, 'demo.json'))
+            on_trace_ready=dict(type="tb_trace"), json_trace_path=ops.join(self.temp_dir.name, "demo.json")
+        )
         hook._parse_trace_config(runner)
 
-        self.epoch_based_cfg['custom_hooks'] = [
-            dict(
-                type='ProfilerHook',
-                on_trace_ready=dict(
-                    type='tb_trace', dir_name=self.temp_dir.name))
+        self.epoch_based_cfg["custom_hooks"] = [
+            dict(type="ProfilerHook", on_trace_ready=dict(type="tb_trace", dir_name=self.temp_dir.name))
         ]
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
@@ -94,7 +87,7 @@ class TestProfilerHook(RunnerTestCase):
         runner = MagicMock()
         runner.max_epochs = 1000
         runner.max_iters = 10000
-        runner.logger = MMLogger.get_instance('test_profiler')
+        runner.logger = MMLogger.get_instance("test_profiler")
 
         hook = ProfilerHook()
         hook.before_run(runner)
@@ -113,17 +106,16 @@ class TestProfilerHook(RunnerTestCase):
     def test_export_chrome_trace(self):
         runner = MagicMock()
         runner.max_epochs = 1000
-        runner.logger = MMLogger.get_instance('test_profiler')
+        runner.logger = MMLogger.get_instance("test_profiler")
 
-        hook = ProfilerHook(
-            json_trace_path=ops.join(self.temp_dir.name, 'demo.json'))
+        hook = ProfilerHook(json_trace_path=ops.join(self.temp_dir.name, "demo.json"))
         hook.before_run(runner)
         hook._export_chrome_trace(runner)
 
     def test_after_train_epoch(self):
         runner = MagicMock()
         runner.max_epochs = 1000
-        runner.logger = MMLogger.get_instance('test_profiler')
+        runner.logger = MMLogger.get_instance("test_profiler")
 
         runner.epoch = 0
 
@@ -138,7 +130,7 @@ class TestProfilerHook(RunnerTestCase):
     def test_after_train_iter(self):
         runner = MagicMock()
         runner.max_iters = 10000
-        runner.logger = MMLogger.get_instance('test_profiler')
+        runner.logger = MMLogger.get_instance("test_profiler")
 
         runner.iter = 9
 
@@ -148,65 +140,47 @@ class TestProfilerHook(RunnerTestCase):
         hook.profiler.__exit__.assert_called_once()
         hook.profiler.step.assert_called_once()
 
-        hook = ProfilerHook(
-            by_epoch=False,
-            schedule=dict(wait=1, warmup=1, active=3, repeat=1))
+        hook = ProfilerHook(by_epoch=False, schedule=dict(wait=1, warmup=1, active=3, repeat=1))
         hook.profiler = MagicMock()
         hook.after_train_iter(runner, 1, 1, 1)
         hook.profiler.step.assert_called_once()
 
     def test_with_runner(self):
-        self.epoch_based_cfg['custom_hooks'] = [
-            dict(
-                type='ProfilerHook',
-                activity_with_cpu=False,
-                activity_with_cuda=False)
+        self.epoch_based_cfg["custom_hooks"] = [
+            dict(type="ProfilerHook", activity_with_cpu=False, activity_with_cuda=False)
         ]
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
 
-        json_path = ops.join(self.temp_dir.name, 'demo.json')
-        self.epoch_based_cfg['custom_hooks'] = [
-            dict(type='ProfilerHook', json_trace_path=json_path)
-        ]
+        json_path = ops.join(self.temp_dir.name, "demo.json")
+        self.epoch_based_cfg["custom_hooks"] = [dict(type="ProfilerHook", json_trace_path=json_path)]
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
-        self.assertTrue(
-            ops.exists(json_path), 'ERROR::json file is not generated!')
+        self.assertTrue(ops.exists(json_path), "ERROR::json file is not generated!")
 
-        self.epoch_based_cfg['custom_hooks'] = [
+        self.epoch_based_cfg["custom_hooks"] = [
             dict(
-                type='ProfilerHook',
-                on_trace_ready=dict(
-                    type='log_trace',
-                    sort_by='self_cpu_time_total',
-                    row_limit=10))
+                type="ProfilerHook", on_trace_ready=dict(type="log_trace", sort_by="self_cpu_time_total", row_limit=10)
+            )
         ]
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
 
         with self.assertRaises(ValueError):
-            self.epoch_based_cfg['custom_hooks'] = [
-                dict(type='ProfilerHook', on_trace_ready=0)
-            ]
+            self.epoch_based_cfg["custom_hooks"] = [dict(type="ProfilerHook", on_trace_ready=0)]
             runner = self.build_runner(self.epoch_based_cfg)
             runner.train()
 
         if torch.cuda.is_available():
-            self.epoch_based_cfg['custom_hooks'] = [
-                dict(type='ProfilerHook', activity_with_cuda=True)
-            ]
+            self.epoch_based_cfg["custom_hooks"] = [dict(type="ProfilerHook", activity_with_cuda=True)]
             runner = self.build_runner(self.epoch_based_cfg)
             runner.train()
 
 
-@unittest.skipIf(
-    not is_npu_available(), reason='Ascend PyTorch and npu devices not exist')
+@unittest.skipIf(not is_npu_available(), reason="Ascend PyTorch and npu devices not exist")
 class TestNPUProfilerHook(RunnerTestCase):
-
     def test_init(self):
-
-        result_path = ops.join(self.temp_dir.name, 'test/cann_profiling')
+        result_path = ops.join(self.temp_dir.name, "test/cann_profiling")
 
         NPUProfilerHook(result_path=result_path)
 
@@ -214,10 +188,10 @@ class TestNPUProfilerHook(RunnerTestCase):
             NPUProfilerHook(begin=1, end=0, result_path=result_path)
 
     def test_before_run(self):
-        result_path = ops.join(self.temp_dir.name, 'test/cann_profiling')
+        result_path = ops.join(self.temp_dir.name, "test/cann_profiling")
         runner = MagicMock()
         runner.max_iters = 1
-        runner.logger = MMLogger.get_instance('test_npu_profiler')
+        runner.logger = MMLogger.get_instance("test_npu_profiler")
 
         hook = NPUProfilerHook(result_path=result_path)
         hook.before_run(runner)
@@ -227,10 +201,10 @@ class TestNPUProfilerHook(RunnerTestCase):
             hook.before_run(runner)
 
     def test_after_train_iter(self):
-        result_path = ops.join(self.temp_dir.name, 'test/cann_profiling')
+        result_path = ops.join(self.temp_dir.name, "test/cann_profiling")
         runner = MagicMock()
         runner.max_iters = 10000
-        runner.logger = MMLogger.get_instance('test_npu_profiler')
+        runner.logger = MMLogger.get_instance("test_npu_profiler")
 
         runner.iter = 0
 
@@ -241,30 +215,24 @@ class TestNPUProfilerHook(RunnerTestCase):
         hook.after_train_iter(runner, 1)
 
     def test_with_runner(self):
-        result_path = ops.join(self.temp_dir.name, 'test/cann_profiling')
-        self.epoch_based_cfg['custom_hooks'] = [
-            dict(
-                type='NPUProfilerHook',
-                begin=0,
-                result_path=result_path,
-                exit_after_profiling=False)
+        result_path = ops.join(self.temp_dir.name, "test/cann_profiling")
+        self.epoch_based_cfg["custom_hooks"] = [
+            dict(type="NPUProfilerHook", begin=0, result_path=result_path, exit_after_profiling=False)
         ]
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
 
-        self.epoch_based_cfg['custom_hooks'] = [
+        self.epoch_based_cfg["custom_hooks"] = [
             dict(
-                type='NPUProfilerHook',
+                type="NPUProfilerHook",
                 result_path=result_path,
                 ge_profiling_to_std_out=True,
-                exit_after_profiling=False)
+                exit_after_profiling=False,
+            )
         ]
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
 
-        self.assertTrue(
-            ops.exists(result_path), 'profiler result path is not generated!')
+        self.assertTrue(ops.exists(result_path), "profiler result path is not generated!")
 
-        self.assertTrue(
-            os.getenv('GE_PROFILING_TO_STD_OUT', '0') == '1',
-            'GE PROFILING failed to start!')
+        self.assertTrue(os.getenv("GE_PROFILING_TO_STD_OUT", "0") == "1", "GE PROFILING failed to start!")

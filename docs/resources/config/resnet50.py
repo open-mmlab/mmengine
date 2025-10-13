@@ -1,2 +1,2 @@
-_base_ = ['optimizer_cfg.py']
-model = dict(type='ResNet', depth=50)
+_base_ = ["optimizer_cfg.py"]
+model = dict(type="ResNet", depth=50)
