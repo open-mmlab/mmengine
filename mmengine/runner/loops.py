@@ -12,6 +12,7 @@ from mmengine.logging import HistoryBuffer, print_log
 from mmengine.registry import LOOPS
 from mmengine.structures import BaseDataElement
 from mmengine.utils import is_list_of
+from mmengine.dataset.sampler import InfiniteSampler
 from .amp import autocast
 from .base_loop import BaseLoop
 from .utils import calc_dynamic_intervals
@@ -274,13 +275,14 @@ class IterBasedTrainLoop(BaseLoop):
         # In iteration-based training loop, we treat the whole training process
         # as a big epoch and execute the corresponding hook.
         self.runner.call_hook('before_train_epoch')
-        if self._iter > 0:
+        if self._iter > 0 and not isinstance(self.dataloader.sampler, InfiniteSampler):
             print_log(
                 f'Advance dataloader {self._iter} steps to skip data '
                 'that has already been trained',
                 logger='current',
                 level=logging.WARNING)
             for _ in range(self._iter):
+                break # NOTE MGAM: override all preprocessing steps during resume.
                 next(self.dataloader_iterator)
         while self._iter < self._max_iters and not self.stop_training:
             self.runner.model.train()
