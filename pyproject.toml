@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=72", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mmengine"
+version = "0.10.7"
+description = "Engine of OpenMMLab projects"
+readme = "README.md"
+license = { text = "Apache License 2.0" }
+authors = [
+    { name = "MMEngine Authors", email = "openmmlab@gmail.com" },
+    { name = "MGAM", email = "312065559@qq.com" }
+]
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Utilities",
+]
+keywords = ["OpenMMLab", "Engine"]
+dependencies = [
+    "addict",
+    "matplotlib",
+    "numpy",
+    "pyyaml",
+    "regex;sys_platform=='win32'",
+    "rich",
+    "termcolor",
+    "yapf",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["mmengine"]
