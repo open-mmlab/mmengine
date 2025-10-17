@@ -49,11 +49,11 @@ def fake_run(cfg):
     cfg.pop('test_cfg')
     extra_cfg = dict(
         model=dict(type='ToyModel'),
-        visualizer=dict(
-            type='Visualizer',
-            vis_backends=[
-                dict(type='TensorboardVisBackend', save_dir='temp_dir')
-            ]),
+        visualizer=dict(type='Visualizer',
+                        vis_backends=[
+                            dict(type='TensorboardVisBackend',
+                                 save_dir='temp_dir')
+                        ]),
     )
     cfg.merge_from_dict(extra_cfg)
     # build the runner from config

@@ -10,6 +10,7 @@ import torch.nn as nn
 
 from mmengine.dist import master_only
 from mmengine.logging import MMLogger, print_log
+
 from .weight_init import PretrainedInit, initialize, update_init_info
 from .wrappers.utils import is_model_wrapper
 
@@ -135,11 +136,10 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                         m, 'is_init', False):
                     m.init_weights()
                     # users may overload the `init_weights`
-                    update_init_info(
-                        m,
-                        init_info=f'Initialized by '
-                        f'user-defined `init_weights`'
-                        f' in {m.__class__.__name__} ')
+                    update_init_info(m,
+                                     init_info=f'Initialized by '
+                                     f'user-defined `init_weights`'
+                                     f' in {m.__class__.__name__} ')
             if self.init_cfg and pretrained_cfg:
                 initialize(self, pretrained_cfg)
             self._is_init = True

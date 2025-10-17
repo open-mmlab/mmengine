@@ -12,10 +12,14 @@ repos:
     rev: 5.11.5
     hooks:
       - id: isort
-  - repo: https://github.com/google/yapf
-    rev: v0.43.0
+  - repo: local
     hooks:
       - id: yapf
+        name: yapf
+        entry: yapf
+        language: system
+        types: [python]
+        args: ["-i"]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:

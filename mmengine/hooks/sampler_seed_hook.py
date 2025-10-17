@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from mmengine.registry import HOOKS
+
 from .hook import Hook
 
 

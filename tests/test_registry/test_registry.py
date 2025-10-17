@@ -134,10 +134,9 @@ class TestRegistry:
         # test `module` parameter, which is either None or a class
         # when the `register_module`` is called as a method rather than a
         # decorator, which must be a class
-        with pytest.raises(
-                TypeError,
-                match='module must be Callable,'
-                " but got <class 'str'>"):
+        with pytest.raises(TypeError,
+                           match='module must be Callable,'
+                           " but got <class 'str'>"):
             CATS.register_module(module='string')
 
         class SphynxCat:
@@ -183,15 +182,17 @@ class TestRegistry:
         registries.append(DOGS)
         HOUNDS = Registry('hounds', parent=DOGS, scope='hound')
         registries.append(HOUNDS)
-        LITTLE_HOUNDS = Registry(
-            'little hounds', parent=HOUNDS, scope='little_hound')
+        LITTLE_HOUNDS = Registry('little hounds',
+                                 parent=HOUNDS,
+                                 scope='little_hound')
         registries.append(LITTLE_HOUNDS)
         MID_HOUNDS = Registry('mid hounds', parent=HOUNDS, scope='mid_hound')
         registries.append(MID_HOUNDS)
         SAMOYEDS = Registry('samoyeds', parent=DOGS, scope='samoyed')
         registries.append(SAMOYEDS)
-        LITTLE_SAMOYEDS = Registry(
-            'little samoyeds', parent=SAMOYEDS, scope='little_samoyed')
+        LITTLE_SAMOYEDS = Registry('little samoyeds',
+                                   parent=SAMOYEDS,
+                                   scope='little_samoyed')
         registries.append(LITTLE_SAMOYEDS)
 
         return registries
@@ -408,14 +409,14 @@ class TestRegistry:
 
         # test `default_scope`
         # switch the current registry to another registry
-        DefaultScope.get_instance(
-            f'test-{time.time()}', scope_name='mid_hound')
+        DefaultScope.get_instance(f'test-{time.time()}',
+                                  scope_name='mid_hound')
         dog = LITTLE_HOUNDS.build(b_cfg)
         assert isinstance(dog, Beagle)
 
         # `default_scope` can not be found
-        DefaultScope.get_instance(
-            f'test2-{time.time()}', scope_name='scope-not-found')
+        DefaultScope.get_instance(f'test2-{time.time()}',
+                                  scope_name='scope-not-found')
         dog = MID_HOUNDS.build(b_cfg)
         assert isinstance(dog, Beagle)
 
@@ -431,20 +432,18 @@ class TestRegistry:
             pass
 
         s_cfg = cfg_type(
-            dict(
-                _scope_='samoyed',
-                type='MySamoyed',
-                friend=dict(type='hound.BloodHound')))
+            dict(_scope_='samoyed',
+                 type='MySamoyed',
+                 friend=dict(type='hound.BloodHound')))
         dog = DOGS.build(s_cfg)
         assert isinstance(dog, MySamoyed)
         assert isinstance(dog.friend, BloodHound)
         assert DefaultScope.get_current_instance().scope_name != 'samoyed'
 
         s_cfg = cfg_type(
-            dict(
-                _scope_='samoyed',
-                type='MySamoyed',
-                friend=dict(type='YourSamoyed')))
+            dict(_scope_='samoyed',
+                 type='MySamoyed',
+                 friend=dict(type='YourSamoyed')))
         dog = DOGS.build(s_cfg)
         assert isinstance(dog, MySamoyed)
         assert isinstance(dog.friend, YourSamoyed)
@@ -456,9 +455,9 @@ class TestRegistry:
         lambda_cfg = cfg_type(dict(type='lambda_dog', name='unknown'))
         assert DOGS.build(lambda_cfg) == 'unknown'
 
-        DOGS.register_module(
-            name='patial dog',
-            module=functools.partial(lambda_dog, name='patial'))
+        DOGS.register_module(name='patial dog',
+                             module=functools.partial(lambda_dog,
+                                                      name='patial'))
         unknown_cfg = cfg_type(dict(type='patial dog'))
         assert DOGS.build(unknown_cfg) == 'patial'
 
@@ -474,8 +473,8 @@ class TestRegistry:
         #              |                   |                   |
         #     HOUNDS (hound)         SAMOYEDS (samoyed) CHIHUAHUA (chihuahua)
 
-        DefaultScope.get_instance(
-            f'scope_{time.time()}', scope_name='chihuahua')
+        DefaultScope.get_instance(f'scope_{time.time()}',
+                                  scope_name='chihuahua')
         assert DefaultScope.get_current_instance().scope_name == 'chihuahua'
 
         # Test switch scope and get target registry.
@@ -597,19 +596,22 @@ def test_build_from_cfg(cfg_type):
     # cfg or default_args should contain the key "type"
     with pytest.raises(KeyError, match='must contain the key "type"'):
         cfg = cfg_type(dict(depth=50))
-        model = build_from_cfg(
-            cfg, BACKBONES, default_args=cfg_type(dict(stages=4)))
+        model = build_from_cfg(cfg,
+                               BACKBONES,
+                               default_args=cfg_type(dict(stages=4)))
 
     # "type" defined using default_args
     cfg = cfg_type(dict(depth=50))
-    model = build_from_cfg(
-        cfg, BACKBONES, default_args=cfg_type(dict(type='ResNet')))
+    model = build_from_cfg(cfg,
+                           BACKBONES,
+                           default_args=cfg_type(dict(type='ResNet')))
     assert isinstance(model, ResNet)
     assert model.depth == 50 and model.stages == 4
 
     cfg = cfg_type(dict(depth=50))
-    model = build_from_cfg(
-        cfg, BACKBONES, default_args=cfg_type(dict(type=ResNet)))
+    model = build_from_cfg(cfg,
+                           BACKBONES,
+                           default_args=cfg_type(dict(type=ResNet)))
     assert isinstance(model, ResNet)
     assert model.depth == 50 and model.stages == 4
 

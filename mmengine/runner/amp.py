@@ -138,8 +138,9 @@ def autocast(device_type: Optional[str] = None,
         elif device_type == 'musa':
             if dtype is None:
                 dtype = torch.get_autocast_gpu_dtype()
-            with torch.musa.amp.autocast(
-                    enabled=enabled, dtype=dtype, cache_enabled=cache_enabled):
+            with torch.musa.amp.autocast(enabled=enabled,
+                                         dtype=dtype,
+                                         cache_enabled=cache_enabled):
                 yield
                 return
         else:
@@ -153,9 +154,8 @@ def autocast(device_type: Optional[str] = None,
                 raise ValueError('User specified autocast device_type must be '
                                  f'cuda or cpu, but got {device_type}')
 
-        with torch.autocast(
-                device_type=device_type,
-                enabled=enabled,
-                dtype=dtype,
-                cache_enabled=cache_enabled):
+        with torch.autocast(device_type=device_type,
+                            enabled=enabled,
+                            dtype=dtype,
+                            cache_enabled=cache_enabled):
             yield

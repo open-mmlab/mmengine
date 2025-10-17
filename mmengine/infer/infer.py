@@ -51,9 +51,8 @@ class InferencerMeta(ABCMeta):
         assert isinstance(self.visualize_kwargs, set)
         assert isinstance(self.postprocess_kwargs, set)
 
-        all_kwargs = (
-            self.preprocess_kwargs | self.forward_kwargs
-            | self.visualize_kwargs | self.postprocess_kwargs)
+        all_kwargs = (self.preprocess_kwargs | self.forward_kwargs
+                      | self.visualize_kwargs | self.postprocess_kwargs)
 
         assert len(all_kwargs) == (
             len(self.preprocess_kwargs) + len(self.forward_kwargs) +
@@ -215,8 +214,9 @@ class BaseInferencer(metaclass=InferencerMeta):
         ) = self._dispatch_kwargs(**kwargs)
 
         ori_inputs = self._inputs_to_list(inputs)
-        inputs = self.preprocess(
-            ori_inputs, batch_size=batch_size, **preprocess_kwargs)
+        inputs = self.preprocess(ori_inputs,
+                                 batch_size=batch_size,
+                                 **preprocess_kwargs)
         preds = []
         for data in (track(inputs, description='Inference')
                      if self.show_progress else inputs):
@@ -286,8 +286,8 @@ class BaseInferencer(metaclass=InferencerMeta):
         Yields:
             Any: Data processed by the ``pipeline`` and ``collate_fn``.
         """
-        chunked_data = self._get_chunk_data(
-            map(self.pipeline, inputs), batch_size)
+        chunked_data = self._get_chunk_data(map(self.pipeline, inputs),
+                                            batch_size)
         yield from map(self.collate_fn, chunked_data)
 
     @torch.no_grad()

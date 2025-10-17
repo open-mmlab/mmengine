@@ -158,7 +158,8 @@ def default_collate(data_batch: Sequence) -> Any:
                 return [default_collate(samples) for samples in transposed]
     elif isinstance(data_item, Mapping):
         return data_item_type({
-            key: default_collate([d[key] for d in data_batch])
+            key:
+            default_collate([d[key] for d in data_batch])
             for key in data_item
         })
     else:

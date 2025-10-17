@@ -19,10 +19,9 @@ class TestDumpResults(TestCase):
 
         # collect_dir could only be configured when collect_device='cpu'
         with self.assertRaises(ValueError):
-            DumpResults(
-                out_file_path='./results.json',
-                collect_device='gpu',
-                collect_dir='./tmp')
+            DumpResults(out_file_path='./results.json',
+                        collect_device='gpu',
+                        collect_dir='./tmp')
 
     def test_process(self):
         metric = DumpResults(out_file_path='./results.pkl')

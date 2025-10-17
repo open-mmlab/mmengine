@@ -26,6 +26,7 @@ from mmengine.registry import (DATA_SAMPLERS, DATASETS, EVALUATOR, FUNCTIONS,
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
 from mmengine.visualization import Visualizer
+
 from .base_loop import BaseLoop
 from .checkpoint import find_latest_checkpoint
 from .log_processor import LogProcessor
@@ -708,10 +709,9 @@ class FlexibleRunner:
             Visualizer: A Visualizer object build from ``visualizer``.
         """
         if visualizer is None:
-            visualizer = dict(
-                name=self.experiment_name,
-                vis_backends=[dict(type='LocalVisBackend')],
-                save_dir=self.log_dir)
+            visualizer = dict(name=self.experiment_name,
+                              vis_backends=[dict(type='LocalVisBackend')],
+                              save_dir=self.log_dir)
             return Visualizer.get_instance(**visualizer)
 
         if isinstance(visualizer, Visualizer):
@@ -833,9 +833,9 @@ class FlexibleRunner:
         sampler_cfg = dataloader_cfg.pop('sampler')
         if isinstance(sampler_cfg, dict):
             sampler_seed = None if diff_rank_seed else seed
-            sampler = DATA_SAMPLERS.build(
-                sampler_cfg,
-                default_args=dict(dataset=dataset, seed=sampler_seed))
+            sampler = DATA_SAMPLERS.build(sampler_cfg,
+                                          default_args=dict(dataset=dataset,
+                                                            seed=sampler_seed))
         else:
             # fallback to raise error in dataloader
             # if `sampler_cfg` is not a valid type
@@ -848,9 +848,8 @@ class FlexibleRunner:
         elif isinstance(batch_sampler_cfg, dict):
             batch_sampler = DATA_SAMPLERS.build(
                 batch_sampler_cfg,
-                default_args=dict(
-                    sampler=sampler,
-                    batch_size=dataloader_cfg.pop('batch_size')))
+                default_args=dict(sampler=sampler,
+                                  batch_size=dataloader_cfg.pop('batch_size')))
         else:
             # fallback to raise error in dataloader
             # if `batch_sampler_cfg` is not a valid type
@@ -955,18 +954,20 @@ class FlexibleRunner:
                 'Only one of `type` or `by_epoch` can exist in `loop_cfg`.')
 
         if 'type' in loop_cfg:
-            loop = LOOPS.build(
-                loop_cfg,
-                default_args=dict(
-                    runner=self, dataloader=self._train_dataloader))
+            loop = LOOPS.build(loop_cfg,
+                               default_args=dict(
+                                   runner=self,
+                                   dataloader=self._train_dataloader))
         else:
             by_epoch = loop_cfg.pop('by_epoch')
             if by_epoch:
-                loop = EpochBasedTrainLoop(
-                    **loop_cfg, runner=self, dataloader=self._train_dataloader)
+                loop = EpochBasedTrainLoop(**loop_cfg,
+                                           runner=self,
+                                           dataloader=self._train_dataloader)
             else:
-                loop = IterBasedTrainLoop(
-                    **loop_cfg, runner=self, dataloader=self._train_dataloader)
+                loop = IterBasedTrainLoop(**loop_cfg,
+                                          runner=self,
+                                          dataloader=self._train_dataloader)
         return loop  # type: ignore
 
     def build_val_loop(self, loop: Union[BaseLoop, Dict]) -> BaseLoop:
@@ -997,18 +998,16 @@ class FlexibleRunner:
         loop_cfg = copy.deepcopy(loop)
 
         if 'type' in loop_cfg:
-            loop = LOOPS.build(
-                loop_cfg,
-                default_args=dict(
-                    runner=self,
-                    dataloader=self._val_dataloader,
-                    evaluator=self._val_evaluator))
+            loop = LOOPS.build(loop_cfg,
+                               default_args=dict(
+                                   runner=self,
+                                   dataloader=self._val_dataloader,
+                                   evaluator=self._val_evaluator))
         else:
-            loop = ValLoop(
-                **loop_cfg,
-                runner=self,
-                dataloader=self._val_dataloader,
-                evaluator=self._val_evaluator)  # type: ignore
+            loop = ValLoop(**loop_cfg,
+                           runner=self,
+                           dataloader=self._val_dataloader,
+                           evaluator=self._val_evaluator)  # type: ignore
 
         return loop  # type: ignore
 
@@ -1039,18 +1038,16 @@ class FlexibleRunner:
         loop_cfg = copy.deepcopy(loop)  # type: ignore
 
         if 'type' in loop_cfg:
-            loop = LOOPS.build(
-                loop_cfg,
-                default_args=dict(
-                    runner=self,
-                    dataloader=self._test_dataloader,
-                    evaluator=self._test_evaluator))
+            loop = LOOPS.build(loop_cfg,
+                               default_args=dict(
+                                   runner=self,
+                                   dataloader=self._test_dataloader,
+                                   evaluator=self._test_evaluator))
         else:
-            loop = TestLoop(
-                **loop_cfg,
-                runner=self,
-                dataloader=self._test_dataloader,
-                evaluator=self._test_evaluator)  # type: ignore
+            loop = TestLoop(**loop_cfg,
+                            runner=self,
+                            dataloader=self._test_dataloader,
+                            evaluator=self._test_evaluator)  # type: ignore
 
         return loop  # type: ignore
 
@@ -1172,12 +1169,11 @@ class FlexibleRunner:
             compile = copy.copy(self._compile)
             compile.setdefault('target', 'train_step')
 
-        dispatch_kwargs = dict(
-            epoch_length=len(self.train_dataloader),
-            max_epochs=self.max_epochs,
-            max_iters=self.max_iters,
-            train_micro_batch_size_per_gpu=_get_batch_size(
-                self.train_dataloader))  # type: ignore
+        dispatch_kwargs = dict(epoch_length=len(self.train_dataloader),
+                               max_epochs=self.max_epochs,
+                               max_iters=self.max_iters,
+                               train_micro_batch_size_per_gpu=_get_batch_size(
+                                   self.train_dataloader))  # type: ignore
 
         self.strategy.prepare(
             self.model,
@@ -1215,9 +1211,8 @@ class FlexibleRunner:
 
         self._val_loop = self.build_val_loop(self._val_loop)  # type: ignore
 
-        dispatch_kwargs = dict(
-            init_weights_for_test_or_val=self.cfg.get(
-                'init_weights_for_test_or_val', True))
+        dispatch_kwargs = dict(init_weights_for_test_or_val=self.cfg.get(
+            'init_weights_for_test_or_val', True))
         self.strategy.prepare(self.model, dispatch_kwargs=dispatch_kwargs)
         self.model = self.strategy.model
 
@@ -1242,9 +1237,8 @@ class FlexibleRunner:
                 '`test_evaluator` arguments when initializing runner.')
 
         self._test_loop = self.build_test_loop(self._test_loop)  # type: ignore
-        dispatch_kwargs = dict(
-            init_weights_for_test_or_val=self.cfg.get(
-                'init_weights_for_test_or_val', True))
+        dispatch_kwargs = dict(init_weights_for_test_or_val=self.cfg.get(
+            'init_weights_for_test_or_val', True))
         self.strategy.prepare(self.model, dispatch_kwargs=dispatch_kwargs)
         self.model = self.strategy.model
 
@@ -1467,8 +1461,8 @@ class FlexibleRunner:
         # check whether the number of GPU used for current experiment
         # is consistent with resuming from checkpoint
         if 'config' in checkpoint['meta']:
-            config = mmengine.Config.fromstring(
-                checkpoint['meta']['config'], file_format='.py')
+            config = mmengine.Config.fromstring(checkpoint['meta']['config'],
+                                                file_format='.py')
             previous_gpu_ids = config.get('gpu_ids', None)
             if (previous_gpu_ids is not None and len(previous_gpu_ids) > 0
                     and len(previous_gpu_ids) != self.world_size):
@@ -1525,12 +1519,11 @@ class FlexibleRunner:
         def callback(checkpoint):
             self.call_hook('after_load_checkpoint', checkpoint=checkpoint)
 
-        self.strategy.load_checkpoint(
-            filename,
-            map_location=map_location,
-            strict=strict,
-            revise_keys=revise_keys,
-            callback=callback)
+        self.strategy.load_checkpoint(filename,
+                                      map_location=map_location,
+                                      strict=strict,
+                                      revise_keys=revise_keys,
+                                      callback=callback)
 
     def save_checkpoint(
         self,
@@ -1596,8 +1589,8 @@ class FlexibleRunner:
             filepath = join_path(  # type: ignore
                 out_dir, filename, backend_args=backend_args)
 
-        meta.update(
-            cfg=self.cfg.pretty_text, experiment_name=self.experiment_name)
+        meta.update(cfg=self.cfg.pretty_text,
+                    experiment_name=self.experiment_name)
 
         if hasattr(self.train_dataloader.dataset, 'metainfo'):
             meta.update(dataset_meta=self.train_dataloader.dataset.metainfo)

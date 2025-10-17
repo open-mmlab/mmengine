@@ -365,8 +365,9 @@ class ColossalAIStrategy(BaseStrategy):
         directly."""
         self.logger.info(f'Resume checkpoint from {filename}')
 
-        extra_ckpt = self.load_checkpoint(
-            filename, map_location=map_location, callback=callback)
+        extra_ckpt = self.load_checkpoint(filename,
+                                          map_location=map_location,
+                                          callback=callback)
 
         if resume_optimizer:
             self.booster.load_optimizer(
@@ -438,10 +439,11 @@ class ColossalAIStrategy(BaseStrategy):
             extra_ckpt = dict()
         if 'meta' not in extra_ckpt:
             extra_ckpt['meta'] = dict()
-        extra_ckpt['meta'].update(
-            seed=self.seed,
-            time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
-            mmengine=mmengine.__version__ + get_git_hash())
+        extra_ckpt['meta'].update(seed=self.seed,
+                                  time=time.strftime('%Y%m%d_%H%M%S',
+                                                     time.localtime()),
+                                  mmengine=mmengine.__version__ +
+                                  get_git_hash())
 
         model_dir = join_path(filename, self.MODEL_DIR)
         optimizer_dir = join_path(filename, self.OPTIMIZER_DIR)
@@ -450,14 +452,14 @@ class ColossalAIStrategy(BaseStrategy):
         mkdir_or_exist(optimizer_dir)
         mkdir_or_exist(schedulers_dir)
 
-        self.booster.save_model(
-            self.model.model_wrapper, checkpoint=model_dir, shard=True)
+        self.booster.save_model(self.model.model_wrapper,
+                                checkpoint=model_dir,
+                                shard=True)
 
         if save_optimizer:
-            self.booster.save_optimizer(
-                self.optim_wrapper.optimizer,
-                checkpoint=optimizer_dir,
-                shard=True)
+            self.booster.save_optimizer(self.optim_wrapper.optimizer,
+                                        checkpoint=optimizer_dir,
+                                        shard=True)
 
         if is_main_process() and save_param_scheduler:
             for i, scheduler in enumerate(self.param_schedulers):
@@ -470,8 +472,8 @@ class ColossalAIStrategy(BaseStrategy):
         if isinstance(plugin, str):
             if plugin == 'gemini':
                 try:
-                    plugin = colo_plugin.GeminiPlugin(
-                        precision='bf16', placement_policy='auto')
+                    plugin = colo_plugin.GeminiPlugin(precision='bf16',
+                                                      placement_policy='auto')
                 except AssertionError:
                     from colossalai.zero.gemini.placement_policy import \
                         PlacementPolicyFactory as colo_placement
@@ -545,14 +547,14 @@ class ColossalAIStrategy(BaseStrategy):
             model_wrapper, optimizer, *_ = self.booster.boost(model, optimizer)
             optim_wrapper.optimizer = optimizer
             default_args = {'model_wrapper': model_wrapper, 'model': model}
-            model_wrapper = MODEL_WRAPPERS.build(
-                self.model_wrapper, default_args=default_args)
+            model_wrapper = MODEL_WRAPPERS.build(self.model_wrapper,
+                                                 default_args=default_args)
             return model_wrapper, optim_wrapper  # type: ignore
         else:
             model_wrapper, *_ = self.booster.boost(model)
             default_args = {'model_wrapper': model_wrapper, 'model': model}
-            model_wrapper = MODEL_WRAPPERS.build(
-                self.model_wrapper, default_args=default_args)
+            model_wrapper = MODEL_WRAPPERS.build(self.model_wrapper,
+                                                 default_args=default_args)
             return model_wrapper
 
     def _setup_distributed(  # type: ignore
@@ -561,5 +563,7 @@ class ColossalAIStrategy(BaseStrategy):
         backend: str = 'nccl',
         **kwargs,
     ):
-        init_dist(
-            launcher, backend, init_backend='colossalai', config=self.config)
+        init_dist(launcher,
+                  backend,
+                  init_backend='colossalai',
+                  config=self.config)

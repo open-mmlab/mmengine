@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
+
 from .base import BaseStrategy
 from .colossalai import ColossalAIStrategy
 from .deepspeed import DeepSpeedStrategy

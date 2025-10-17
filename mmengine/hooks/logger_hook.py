@@ -137,8 +137,8 @@ class LoggerHook(Hook):
             self.file_client = FileClient.infer_client(file_client_args,
                                                        self.out_dir)
             if file_client_args is None:
-                self.file_backend = get_file_backend(
-                    self.out_dir, backend_args=backend_args)
+                self.file_backend = get_file_backend(self.out_dir,
+                                                     backend_args=backend_args)
             else:
                 self.file_backend = self.file_client
 
@@ -196,8 +196,9 @@ class LoggerHook(Hook):
         else:
             return
         runner.logger.info(log_str)
-        runner.visualizer.add_scalars(
-            tag, step=runner.iter + 1, file_path=self.json_log_path)
+        runner.visualizer.add_scalars(tag,
+                                      step=runner.iter + 1,
+                                      file_path=self.json_log_path)
 
     def after_val_iter(self,
                        runner,
@@ -262,16 +263,18 @@ class LoggerHook(Hook):
                 epoch = 0
             else:
                 epoch = runner.epoch
-            runner.visualizer.add_scalars(
-                tag, step=epoch, file_path=self.json_log_path)
+            runner.visualizer.add_scalars(tag,
+                                          step=epoch,
+                                          file_path=self.json_log_path)
         else:
             if (isinstance(runner._train_loop, dict)
                     or runner._train_loop is None):
                 iter = 0
             else:
                 iter = runner.iter
-            runner.visualizer.add_scalars(
-                tag, step=iter, file_path=self.json_log_path)
+            runner.visualizer.add_scalars(tag,
+                                          step=iter,
+                                          file_path=self.json_log_path)
 
     def after_test_epoch(self,
                          runner,
@@ -288,9 +291,8 @@ class LoggerHook(Hook):
         tag, log_str = runner.log_processor.get_log_after_epoch(
             runner, len(runner.test_dataloader), 'test', with_non_scalar=True)
         runner.logger.info(log_str)
-        dump(
-            self._process_tags(tag),
-            osp.join(runner.log_dir, self.json_log_path))  # type: ignore
+        dump(self._process_tags(tag),
+             osp.join(runner.log_dir, self.json_log_path))  # type: ignore
 
     @staticmethod
     def _process_tags(tags: dict):

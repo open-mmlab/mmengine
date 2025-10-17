@@ -377,10 +377,9 @@ class MessageHub(ManagerMixin):
                         logger='current',
                         level=logging.WARNING)
                     saved_info[key] = value
-        return dict(
-            log_scalars=saved_scalars,
-            runtime_info=saved_info,
-            resumed_keys=self._resumed_keys)
+        return dict(log_scalars=saved_scalars,
+                    runtime_info=saved_info,
+                    resumed_keys=self._resumed_keys)
 
     def load_state_dict(self, state_dict: Union['MessageHub', dict]) -> None:
         """Loads log scalars, runtime information and resumed keys from

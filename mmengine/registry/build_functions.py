@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 
 from mmengine.config import Config, ConfigDict
 from mmengine.utils import ManagerMixin, digit_version
+
 from .registry import Registry
 
 if TYPE_CHECKING:

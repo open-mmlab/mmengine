@@ -139,8 +139,9 @@ def test_get_file_backend():
 
     backend_args = {'path_mapping': {'src': 'dst'}, 'enable_mc': True}
     uri = 'petrel://your_bucket/img.png'
-    backend4 = fileio.get_file_backend(
-        uri=uri, backend_args=backend_args, enable_singleton=True)
+    backend4 = fileio.get_file_backend(uri=uri,
+                                       backend_args=backend_args,
+                                       enable_singleton=True)
     assert isinstance(backend4, fileio.backends.PetrelBackend)
     assert len(fileio.io.backend_instances) == 2
     unique_key = 'petrel:{"path_mapping": {"src": "dst"}, "enable_mc": true}'
@@ -148,16 +149,18 @@ def test_get_file_backend():
     assert backend4 is not backend2
 
     uri = 'petrel://your_bucket/img1.png'
-    backend5 = fileio.get_file_backend(
-        uri=uri, backend_args=backend_args, enable_singleton=True)
+    backend5 = fileio.get_file_backend(uri=uri,
+                                       backend_args=backend_args,
+                                       enable_singleton=True)
     assert isinstance(backend5, fileio.backends.PetrelBackend)
     assert len(fileio.io.backend_instances) == 2
     assert backend5 is backend4
     assert backend5 is not backend2
 
     backend_args = {'path_mapping': {'src1': 'dst1'}, 'enable_mc': True}
-    backend6 = fileio.get_file_backend(
-        uri=uri, backend_args=backend_args, enable_singleton=True)
+    backend6 = fileio.get_file_backend(uri=uri,
+                                       backend_args=backend_args,
+                                       enable_singleton=True)
     assert isinstance(backend6, fileio.backends.PetrelBackend)
     assert len(fileio.io.backend_instances) == 3
     unique_key = 'petrel:{"path_mapping": {"src1": "dst1"}, "enable_mc": true}'
@@ -165,8 +168,9 @@ def test_get_file_backend():
     assert backend6 is not backend4
     assert backend6 is not backend5
 
-    backend7 = fileio.get_file_backend(
-        uri=uri, backend_args=backend_args, enable_singleton=False)
+    backend7 = fileio.get_file_backend(uri=uri,
+                                       backend_args=backend_args,
+                                       enable_singleton=False)
     assert isinstance(backend7, fileio.backends.PetrelBackend)
     assert len(fileio.io.backend_instances) == 3
     assert backend7 is not backend6
@@ -472,8 +476,9 @@ def test_list_dir_or_file():
                 TypeError,
                 match='`suffix` should be None when `list_dir` is True'):
             list(
-                fileio.list_dir_or_file(
-                    tmp_dir, list_file=False, suffix='.txt'))
+                fileio.list_dir_or_file(tmp_dir,
+                                        list_file=False,
+                                        suffix='.txt'))
 
         # only list directories recursively
         assert set(
@@ -502,34 +507,39 @@ def test_list_dir_or_file():
                 tmp_dir, list_dir=False,
                 suffix='.txt')) == {'text1.txt', 'text2.txt'}
         assert set(
-            fileio.list_dir_or_file(
-                tmp_dir, list_dir=False,
-                suffix=('.txt', '.jpg'))) == {'text1.txt', 'text2.txt'}
+            fileio.list_dir_or_file(tmp_dir,
+                                    list_dir=False,
+                                    suffix=('.txt', '.jpg'))) == {
+                                        'text1.txt', 'text2.txt'
+                                    }
 
         with pytest.raises(
                 TypeError,
                 match='`suffix` must be a string or tuple of strings'):
             list(
-                fileio.list_dir_or_file(
-                    tmp_dir, list_dir=False, suffix=['.txt', '.jpg']))
+                fileio.list_dir_or_file(tmp_dir,
+                                        list_dir=False,
+                                        suffix=['.txt', '.jpg']))
 
         # only list files ending with suffix recursively
         assert set(
-            fileio.list_dir_or_file(
-                tmp_dir, list_dir=False, suffix='.txt', recursive=True)) == {
-                    osp.join('dir1', 'text3.txt'),
-                    osp.join('dir2', 'dir3', 'text4.txt'), 'text1.txt',
-                    'text2.txt'
-                }
+            fileio.list_dir_or_file(tmp_dir,
+                                    list_dir=False,
+                                    suffix='.txt',
+                                    recursive=True)) == {
+                                        osp.join('dir1', 'text3.txt'),
+                                        osp.join('dir2', 'dir3', 'text4.txt'),
+                                        'text1.txt', 'text2.txt'
+                                    }
 
         # only list files ending with suffix
         assert set(
-            fileio.list_dir_or_file(
-                tmp_dir,
-                list_dir=False,
-                suffix=('.txt', '.jpg'),
-                recursive=True)) == {
-                    osp.join('dir1', 'text3.txt'),
-                    osp.join('dir2', 'dir3', 'text4.txt'),
-                    osp.join('dir2', 'img.jpg'), 'text1.txt', 'text2.txt'
-                }
+            fileio.list_dir_or_file(tmp_dir,
+                                    list_dir=False,
+                                    suffix=('.txt', '.jpg'),
+                                    recursive=True)) == {
+                                        osp.join('dir1', 'text3.txt'),
+                                        osp.join('dir2', 'dir3', 'text4.txt'),
+                                        osp.join('dir2', 'img.jpg'),
+                                        'text1.txt', 'text2.txt'
+                                    }

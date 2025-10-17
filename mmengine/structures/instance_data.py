@@ -7,6 +7,7 @@ import numpy as np
 import torch
 
 from mmengine.device import get_device
+
 from .base_data_element import BaseDataElement
 
 BoolTypeTensor: Union[Any]

@@ -11,6 +11,7 @@ from mmengine.device import (is_cuda_available, is_mlu_available,
 from mmengine.registry import OPTIM_WRAPPERS
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
+
 from .optimizer_wrapper import OptimWrapper
 
 if is_npu_available():

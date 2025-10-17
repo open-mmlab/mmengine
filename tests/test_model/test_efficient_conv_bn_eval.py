@@ -46,9 +46,8 @@ class BackboneModel(nn.Module):
         return x
 
 
-@unittest.skipIf(
-    digit_version(TORCH_VERSION) < digit_version('1.8'),
-    reason='torch.fx needs Pytorch 1.8 or higher')
+@unittest.skipIf(digit_version(TORCH_VERSION) < digit_version('1.8'),
+                 reason='torch.fx needs Pytorch 1.8 or higher')
 class TestEfficientConvBNEval(TestCase):
     """Test the turn_on_efficient_conv_bn_eval function."""
 

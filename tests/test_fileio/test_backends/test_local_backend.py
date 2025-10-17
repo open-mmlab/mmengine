@@ -146,15 +146,15 @@ class TestLocalBackend(TestCase):
     @parameterized.expand([[Path], [str]])
     def test_join_path(self, path_type):
         backend = LocalBackend()
-        filepath = backend.join_path(
-            path_type(self.test_data_dir), path_type('file'))
+        filepath = backend.join_path(path_type(self.test_data_dir),
+                                     path_type('file'))
         expected = osp.join(path_type(self.test_data_dir), path_type('file'))
         self.assertEqual(filepath, expected)
 
-        filepath = backend.join_path(
-            path_type(self.test_data_dir), path_type('dir'), path_type('file'))
-        expected = osp.join(
-            path_type(self.test_data_dir), path_type('dir'), path_type('file'))
+        filepath = backend.join_path(path_type(self.test_data_dir),
+                                     path_type('dir'), path_type('file'))
+        expected = osp.join(path_type(self.test_data_dir), path_type('dir'),
+                            path_type('file'))
         self.assertEqual(filepath, expected)
 
     @parameterized.expand([[Path], [str]])
@@ -170,17 +170,15 @@ class TestLocalBackend(TestCase):
             src = Path(tmp_dir) / 'test.txt'
             backend.put_text('disk', src)
             dst = Path(tmp_dir) / 'test.txt.bak'
-            self.assertEqual(
-                backend.copyfile(path_type(src), path_type(dst)),
-                path_type(dst))
+            self.assertEqual(backend.copyfile(path_type(src), path_type(dst)),
+                             path_type(dst))
             self.assertEqual(backend.get_text(dst), 'disk')
 
             # dst is a directory
             dst = Path(tmp_dir) / 'dir'
             dst.mkdir()
-            self.assertEqual(
-                backend.copyfile(path_type(src), path_type(dst)),
-                backend.join_path(path_type(dst), 'test.txt'))
+            self.assertEqual(backend.copyfile(path_type(src), path_type(dst)),
+                             backend.join_path(path_type(dst), 'test.txt'))
             self.assertEqual(
                 backend.get_text(backend.join_path(dst, 'test.txt')), 'disk')
 
@@ -195,17 +193,16 @@ class TestLocalBackend(TestCase):
             # src and dst are Path objects
             src = Path(tmp_dir) / 'dir1'
             dst = Path(tmp_dir) / 'dir100'
-            self.assertEqual(
-                backend.copytree(path_type(src), path_type(dst)),
-                path_type(dst))
+            self.assertEqual(backend.copytree(path_type(src), path_type(dst)),
+                             path_type(dst))
             self.assertTrue(backend.isdir(dst))
             self.assertTrue(backend.isfile(dst / 'text3.txt'))
             self.assertEqual(backend.get_text(dst / 'text3.txt'), 'text3')
 
             # dst should not exist
             with self.assertRaises(FileExistsError):
-                backend.copytree(
-                    path_type(src), path_type(Path(tmp_dir) / 'dir2'))
+                backend.copytree(path_type(src),
+                                 path_type(Path(tmp_dir) / 'dir2'))
 
     @parameterized.expand([[Path], [str]])
     def test_copyfile_from_local(self, path_type):
@@ -214,16 +211,14 @@ class TestLocalBackend(TestCase):
             src = Path(tmp_dir) / 'test.txt'
             backend.put_text('disk', src)
             dst = Path(tmp_dir) / 'test.txt.bak'
-            self.assertEqual(
-                backend.copyfile(path_type(src), path_type(dst)),
-                path_type(dst))
+            self.assertEqual(backend.copyfile(path_type(src), path_type(dst)),
+                             path_type(dst))
             self.assertEqual(backend.get_text(dst), 'disk')
 
             dst = Path(tmp_dir) / 'dir'
             dst.mkdir()
-            self.assertEqual(
-                backend.copyfile(path_type(src), path_type(dst)),
-                backend.join_path(path_type(dst), 'test.txt'))
+            self.assertEqual(backend.copyfile(path_type(src), path_type(dst)),
+                             backend.join_path(path_type(dst), 'test.txt'))
             self.assertEqual(
                 backend.get_text(backend.join_path(dst, 'test.txt')), 'disk')
 
@@ -238,17 +233,16 @@ class TestLocalBackend(TestCase):
             # src and dst are Path objects
             src = Path(tmp_dir) / 'dir1'
             dst = Path(tmp_dir) / 'dir100'
-            self.assertEqual(
-                backend.copytree(path_type(src), path_type(dst)),
-                path_type(dst))
+            self.assertEqual(backend.copytree(path_type(src), path_type(dst)),
+                             path_type(dst))
             self.assertTrue(backend.isdir(dst))
             self.assertTrue(backend.isfile(dst / 'text3.txt'))
             self.assertEqual(backend.get_text(dst / 'text3.txt'), 'text3')
 
             # dst should not exist
             with self.assertRaises(FileExistsError):
-                backend.copytree(
-                    path_type(src), path_type(Path(tmp_dir) / 'dir2'))
+                backend.copytree(path_type(src),
+                                 path_type(Path(tmp_dir) / 'dir2'))
 
     @parameterized.expand([[Path], [str]])
     def test_copyfile_to_local(self, path_type):
@@ -257,16 +251,14 @@ class TestLocalBackend(TestCase):
             src = Path(tmp_dir) / 'test.txt'
             backend.put_text('disk', src)
             dst = Path(tmp_dir) / 'test.txt.bak'
-            self.assertEqual(
-                backend.copyfile(path_type(src), path_type(dst)),
-                path_type(dst))
+            self.assertEqual(backend.copyfile(path_type(src), path_type(dst)),
+                             path_type(dst))
             self.assertEqual(backend.get_text(dst), 'disk')
 
             dst = Path(tmp_dir) / 'dir'
             dst.mkdir()
-            self.assertEqual(
-                backend.copyfile(path_type(src), path_type(dst)),
-                backend.join_path(path_type(dst), 'test.txt'))
+            self.assertEqual(backend.copyfile(path_type(src), path_type(dst)),
+                             backend.join_path(path_type(dst), 'test.txt'))
             self.assertEqual(
                 backend.get_text(backend.join_path(dst, 'test.txt')), 'disk')
 
@@ -281,17 +273,16 @@ class TestLocalBackend(TestCase):
             # src and dst are Path objects
             src = Path(tmp_dir) / 'dir1'
             dst = Path(tmp_dir) / 'dir100'
-            self.assertEqual(
-                backend.copytree(path_type(src), path_type(dst)),
-                path_type(dst))
+            self.assertEqual(backend.copytree(path_type(src), path_type(dst)),
+                             path_type(dst))
             self.assertTrue(backend.isdir(dst))
             self.assertTrue(backend.isfile(dst / 'text3.txt'))
             self.assertEqual(backend.get_text(dst / 'text3.txt'), 'text3')
 
             # dst should not exist
             with self.assertRaises(FileExistsError):
-                backend.copytree(
-                    path_type(src), path_type(Path(tmp_dir) / 'dir2'))
+                backend.copytree(path_type(src),
+                                 path_type(Path(tmp_dir) / 'dir2'))
 
     @parameterized.expand([[Path], [str]])
     def test_remove(self, path_type):
@@ -361,8 +352,8 @@ class TestLocalBackend(TestCase):
             with patch.object(os, 'symlink', side_effect=symlink):
                 src = Path(tmp_dir) / 'test.txt'
                 dst = Path(tmp_dir) / 'test_link1.txt'
-                res = backend.copy_if_symlink_fails(
-                    path_type(src), path_type(dst))
+                res = backend.copy_if_symlink_fails(path_type(src),
+                                                    path_type(dst))
                 self.assertFalse(res)
                 self.assertFalse(osp.islink(dst))
                 self.assertTrue(backend.exists(dst))
@@ -371,8 +362,8 @@ class TestLocalBackend(TestCase):
             with patch.object(os, 'symlink', side_effect=symlink):
                 src = Path(tmp_dir) / 'dir'
                 dst = Path(tmp_dir) / 'dir_link1'
-                res = backend.copy_if_symlink_fails(
-                    path_type(src), path_type(dst))
+                res = backend.copy_if_symlink_fails(path_type(src),
+                                                    path_type(dst))
                 self.assertFalse(res)
                 self.assertFalse(osp.islink(dst))
                 self.assertTrue(backend.exists(dst))
@@ -382,15 +373,14 @@ class TestLocalBackend(TestCase):
         backend = LocalBackend()
         with build_temporary_directory() as tmp_dir:
             # list directories and files
-            self.assertEqual(
-                set(backend.list_dir_or_file(path_type(tmp_dir))),
-                {'dir1', 'dir2', 'text1.txt', 'text2.txt'})
+            self.assertEqual(set(backend.list_dir_or_file(path_type(tmp_dir))),
+                             {'dir1', 'dir2', 'text1.txt', 'text2.txt'})
 
             # list directories and files recursively
             self.assertEqual(
                 set(
-                    backend.list_dir_or_file(
-                        path_type(tmp_dir), recursive=True)),
+                    backend.list_dir_or_file(path_type(tmp_dir),
+                                             recursive=True)),
                 {
                     'dir1',
                     osp.join('dir1', 'text3.txt'), 'dir2',
@@ -402,35 +392,38 @@ class TestLocalBackend(TestCase):
             # only list directories
             self.assertEqual(
                 set(
-                    backend.list_dir_or_file(
-                        path_type(tmp_dir), list_file=False)),
+                    backend.list_dir_or_file(path_type(tmp_dir),
+                                             list_file=False)),
                 {'dir1', 'dir2'})
 
             with self.assertRaisesRegex(
                     TypeError,
                     '`suffix` should be None when `list_dir` is True'):
-                backend.list_dir_or_file(
-                    path_type(tmp_dir), list_file=False, suffix='.txt')
+                backend.list_dir_or_file(path_type(tmp_dir),
+                                         list_file=False,
+                                         suffix='.txt')
 
             # only list directories recursively
             self.assertEqual(
                 set(
-                    backend.list_dir_or_file(
-                        path_type(tmp_dir), list_file=False, recursive=True)),
+                    backend.list_dir_or_file(path_type(tmp_dir),
+                                             list_file=False,
+                                             recursive=True)),
                 {'dir1', 'dir2', osp.join('dir2', 'dir3')})
 
             # only list files
             self.assertEqual(
                 set(
-                    backend.list_dir_or_file(
-                        path_type(tmp_dir), list_dir=False)),
+                    backend.list_dir_or_file(path_type(tmp_dir),
+                                             list_dir=False)),
                 {'text1.txt', 'text2.txt'})
 
             # only list files recursively
             self.assertEqual(
                 set(
-                    backend.list_dir_or_file(
-                        path_type(tmp_dir), list_dir=False, recursive=True)),
+                    backend.list_dir_or_file(path_type(tmp_dir),
+                                             list_dir=False,
+                                             recursive=True)),
                 {
                     osp.join('dir1', 'text3.txt'),
                     osp.join('dir2', 'dir3', 'text4.txt'),
@@ -440,45 +433,44 @@ class TestLocalBackend(TestCase):
             # only list files ending with suffix
             self.assertEqual(
                 set(
-                    backend.list_dir_or_file(
-                        path_type(tmp_dir), list_dir=False, suffix='.txt')),
+                    backend.list_dir_or_file(path_type(tmp_dir),
+                                             list_dir=False,
+                                             suffix='.txt')),
                 {'text1.txt', 'text2.txt'})
             self.assertEqual(
                 set(
-                    backend.list_dir_or_file(
-                        path_type(tmp_dir),
-                        list_dir=False,
-                        suffix=('.txt', '.jpg'))), {'text1.txt', 'text2.txt'})
+                    backend.list_dir_or_file(path_type(tmp_dir),
+                                             list_dir=False,
+                                             suffix=('.txt', '.jpg'))),
+                {'text1.txt', 'text2.txt'})
 
             with self.assertRaisesRegex(
                     TypeError,
                     '`suffix` must be a string or tuple of strings'):
-                backend.list_dir_or_file(
-                    path_type(tmp_dir),
-                    list_dir=False,
-                    suffix=['.txt', '.jpg'])
+                backend.list_dir_or_file(path_type(tmp_dir),
+                                         list_dir=False,
+                                         suffix=['.txt', '.jpg'])
 
             # only list files ending with suffix recursively
             self.assertEqual(
                 set(
-                    backend.list_dir_or_file(
-                        path_type(tmp_dir),
-                        list_dir=False,
-                        suffix='.txt',
-                        recursive=True)), {
-                            osp.join('dir1', 'text3.txt'),
-                            osp.join('dir2', 'dir3', 'text4.txt'), 'text1.txt',
-                            'text2.txt'
-                        })
+                    backend.list_dir_or_file(path_type(tmp_dir),
+                                             list_dir=False,
+                                             suffix='.txt',
+                                             recursive=True)),
+                {
+                    osp.join('dir1', 'text3.txt'),
+                    osp.join('dir2', 'dir3', 'text4.txt'), 'text1.txt',
+                    'text2.txt'
+                })
 
             # only list files ending with suffix
             self.assertEqual(
                 set(
-                    backend.list_dir_or_file(
-                        path_type(tmp_dir),
-                        list_dir=False,
-                        suffix=('.txt', '.jpg'),
-                        recursive=True)),
+                    backend.list_dir_or_file(path_type(tmp_dir),
+                                             list_dir=False,
+                                             suffix=('.txt', '.jpg'),
+                                             recursive=True)),
                 {
                     osp.join('dir1', 'text3.txt'),
                     osp.join('dir2', 'dir3', 'text4.txt'),

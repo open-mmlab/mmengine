@@ -18,9 +18,8 @@ class TestAveragedModel(TestCase):
     """  # noqa: E501
 
     def _test_swa_model(self, net_device, avg_device):
-        model = torch.nn.Sequential(
-            torch.nn.Conv2d(1, 5, kernel_size=3),
-            torch.nn.Linear(5, 10)).to(net_device)
+        model = torch.nn.Sequential(torch.nn.Conv2d(1, 5, kernel_size=3),
+                                    torch.nn.Linear(5, 10)).to(net_device)
 
         averaged_model = StochasticWeightAverage(model, device=avg_device)
         averaged_params = [
@@ -52,8 +51,8 @@ class TestAveragedModel(TestCase):
     def test_swa_mixed_device(self):
         if not torch.cuda.is_available():
             return
-        model = torch.nn.Sequential(
-            torch.nn.Conv2d(1, 5, kernel_size=3), torch.nn.Linear(5, 10))
+        model = torch.nn.Sequential(torch.nn.Conv2d(1, 5, kernel_size=3),
+                                    torch.nn.Linear(5, 10))
         model[0].cuda()
         model[1].cpu()
         averaged_model = StochasticWeightAverage(model)
@@ -73,8 +72,8 @@ class TestAveragedModel(TestCase):
             self.assertTrue(p_avg.device == p_swa.device)
 
     def test_swa_state_dict(self):
-        model = torch.nn.Sequential(
-            torch.nn.Conv2d(1, 5, kernel_size=3), torch.nn.Linear(5, 10))
+        model = torch.nn.Sequential(torch.nn.Conv2d(1, 5, kernel_size=3),
+                                    torch.nn.Linear(5, 10))
         averaged_model = StochasticWeightAverage(model)
         averaged_model2 = StochasticWeightAverage(model)
         n_updates = 10
@@ -92,19 +91,19 @@ class TestAveragedModel(TestCase):
         # test invalid momentum
         with self.assertRaisesRegex(AssertionError,
                                     'momentum must be in range'):
-            model = torch.nn.Sequential(
-                torch.nn.Conv2d(1, 5, kernel_size=3), torch.nn.Linear(5, 10))
+            model = torch.nn.Sequential(torch.nn.Conv2d(1, 5, kernel_size=3),
+                                        torch.nn.Linear(5, 10))
             ExponentialMovingAverage(model, momentum=3)
 
         # Warning should be raised if the value of momentum in EMA is
         # a large number
         with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
-            model = torch.nn.Sequential(
-                torch.nn.Conv2d(1, 5, kernel_size=3), torch.nn.Linear(5, 10))
+            model = torch.nn.Sequential(torch.nn.Conv2d(1, 5, kernel_size=3),
+                                        torch.nn.Linear(5, 10))
             ExponentialMovingAverage(model, momentum=0.9)
         # test EMA
-        model = torch.nn.Sequential(
-            torch.nn.Conv2d(1, 5, kernel_size=3), torch.nn.Linear(5, 10))
+        model = torch.nn.Sequential(torch.nn.Conv2d(1, 5, kernel_size=3),
+                                    torch.nn.Linear(5, 10))
         momentum = 0.1
 
         ema_model = ExponentialMovingAverage(model, momentum=momentum)
@@ -129,13 +128,14 @@ class TestAveragedModel(TestCase):
 
     def test_ema_update_buffers(self):
         # Test EMA and update_buffers as True.
-        model = torch.nn.Sequential(
-            torch.nn.Conv2d(1, 5, kernel_size=3),
-            torch.nn.BatchNorm2d(5, momentum=0.3), torch.nn.Linear(5, 10))
+        model = torch.nn.Sequential(torch.nn.Conv2d(1, 5, kernel_size=3),
+                                    torch.nn.BatchNorm2d(5, momentum=0.3),
+                                    torch.nn.Linear(5, 10))
         momentum = 0.1
 
-        ema_model = ExponentialMovingAverage(
-            model, momentum=momentum, update_buffers=True)
+        ema_model = ExponentialMovingAverage(model,
+                                             momentum=momentum,
+                                             update_buffers=True)
         averaged_params = [
             torch.zeros_like(param)
             for param in itertools.chain(model.parameters(), model.buffers())
@@ -168,9 +168,9 @@ class TestAveragedModel(TestCase):
             assert_allclose(p_target, p_ema)
 
     def test_momentum_annealing_ema(self):
-        model = torch.nn.Sequential(
-            torch.nn.Conv2d(1, 5, kernel_size=3),
-            torch.nn.BatchNorm2d(5, momentum=0.3), torch.nn.Linear(5, 10))
+        model = torch.nn.Sequential(torch.nn.Conv2d(1, 5, kernel_size=3),
+                                    torch.nn.BatchNorm2d(5, momentum=0.3),
+                                    torch.nn.Linear(5, 10))
         # Test invalid gamma
         with self.assertRaisesRegex(AssertionError,
                                     'gamma must be greater than 0'):
@@ -180,8 +180,10 @@ class TestAveragedModel(TestCase):
         momentum = 0.1
         gamma = 4
 
-        ema_model = MomentumAnnealingEMA(
-            model, gamma=gamma, momentum=momentum, update_buffers=True)
+        ema_model = MomentumAnnealingEMA(model,
+                                         gamma=gamma,
+                                         momentum=momentum,
+                                         update_buffers=True)
         averaged_params = [
             torch.zeros_like(param)
             for param in itertools.chain(model.parameters(), model.buffers())
@@ -216,19 +218,18 @@ class TestAveragedModel(TestCase):
 
     def test_momentum_annealing_ema_with_interval(self):
         # Test EMA with momentum annealing and interval
-        model = torch.nn.Sequential(
-            torch.nn.Conv2d(1, 5, kernel_size=3),
-            torch.nn.BatchNorm2d(5, momentum=0.3), torch.nn.Linear(5, 10))
+        model = torch.nn.Sequential(torch.nn.Conv2d(1, 5, kernel_size=3),
+                                    torch.nn.BatchNorm2d(5, momentum=0.3),
+                                    torch.nn.Linear(5, 10))
         momentum = 0.1
         gamma = 4
         interval = 3
 
-        ema_model = MomentumAnnealingEMA(
-            model,
-            gamma=gamma,
-            momentum=momentum,
-            interval=interval,
-            update_buffers=True)
+        ema_model = MomentumAnnealingEMA(model,
+                                         gamma=gamma,
+                                         momentum=momentum,
+                                         interval=interval,
+                                         update_buffers=True)
         averaged_params = [
             torch.zeros_like(param)
             for param in itertools.chain(model.parameters(), model.buffers())

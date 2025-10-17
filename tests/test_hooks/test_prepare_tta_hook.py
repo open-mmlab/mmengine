@@ -82,9 +82,8 @@ class TestPrepareTTAHook(RunnerTestCase):
         # Test with epoch based runner.
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.custom_hooks.append(
-            dict(
-                type='PrepareTTAHook',
-                tta_cfg=dict(type='ToyTestTimeAugModel')))
+            dict(type='PrepareTTAHook',
+                 tta_cfg=dict(type='ToyTestTimeAugModel')))
         cfg.model = dict(type='ToyModel')
         cfg.test_dataloader.dataset = dict(
             type='ToyDatasetTTA', pipeline=dict(type='ToyTTAPipeline'))
@@ -96,9 +95,8 @@ class TestPrepareTTAHook(RunnerTestCase):
         # Test with iteration based runner
         cfg = copy.deepcopy(self.iter_based_cfg)
         cfg.custom_hooks.append(
-            dict(
-                type='PrepareTTAHook',
-                tta_cfg=dict(type='ToyTestTimeAugModel')))
+            dict(type='PrepareTTAHook',
+                 tta_cfg=dict(type='ToyTestTimeAugModel')))
         cfg.model = dict(type='ToyModel')
         cfg.test_dataloader.dataset = dict(
             type='ToyDatasetTTA', pipeline=dict(type='ToyTTAPipeline'))

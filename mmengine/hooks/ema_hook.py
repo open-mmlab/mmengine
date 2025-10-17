@@ -7,6 +7,7 @@ from typing import Dict, Optional
 from mmengine.logging import print_log
 from mmengine.model import is_model_wrapper
 from mmengine.registry import HOOKS, MODELS
+
 from .hook import DATA_BATCH, Hook
 
 
@@ -71,8 +72,8 @@ class EMAHook(Hook):
         if is_model_wrapper(model):
             model = model.module
         self.src_model = model
-        self.ema_model = MODELS.build(
-            self.ema_cfg, default_args=dict(model=self.src_model))
+        self.ema_model = MODELS.build(self.ema_cfg,
+                                      default_args=dict(model=self.src_model))
 
     def before_train(self, runner) -> None:
         """Check the begin_epoch/iter is smaller than max_epochs/iters.
@@ -181,8 +182,8 @@ class EMAHook(Hook):
             # The original model parameters are actually saved in ema
             # field swap the weights back to resume ema state.
             self._swap_ema_state_dict(checkpoint)
-            self.ema_model.load_state_dict(
-                checkpoint['ema_state_dict'], strict=self.strict_load)
+            self.ema_model.load_state_dict(checkpoint['ema_state_dict'],
+                                           strict=self.strict_load)
 
         # Support load checkpoint without ema state dict.
         else:
@@ -191,22 +192,20 @@ class EMAHook(Hook):
                     'There is no `ema_state_dict` in checkpoint. '
                     '`EMAHook` will make a copy of `state_dict` as the '
                     'initial `ema_state_dict`', 'current', logging.WARNING)
-            load_state_dict(
-                self.ema_model.module,
-                copy.deepcopy(checkpoint['state_dict']),
-                strict=self.strict_load)
+            load_state_dict(self.ema_model.module,
+                            copy.deepcopy(checkpoint['state_dict']),
+                            strict=self.strict_load)
 
     def _swap_ema_parameters(self) -> None:
         """Swap the parameter of model with ema_model."""
-        avg_param = (
-            itertools.chain(self.ema_model.module.parameters(),
-                            self.ema_model.module.buffers())
-            if self.ema_model.update_buffers else
-            self.ema_model.module.parameters())
-        src_param = (
-            itertools.chain(self.src_model.parameters(),
-                            self.src_model.buffers())
-            if self.ema_model.update_buffers else self.src_model.parameters())
+        avg_param = (itertools.chain(self.ema_model.module.parameters(),
+                                     self.ema_model.module.buffers())
+                     if self.ema_model.update_buffers else
+                     self.ema_model.module.parameters())
+        src_param = (itertools.chain(self.src_model.parameters(),
+                                     self.src_model.buffers())
+                     if self.ema_model.update_buffers else
+                     self.src_model.parameters())
         for p_avg, p_src in zip(avg_param, src_param):
             tmp = p_avg.data.clone()
             p_avg.data.copy_(p_src.data)

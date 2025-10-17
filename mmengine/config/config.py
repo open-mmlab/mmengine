@@ -26,6 +26,7 @@ from mmengine.logging import print_log
 from mmengine.utils import (check_file_exist, digit_version,
                             get_installed_path, import_modules_from_strings,
                             is_installed)
+
 from .lazy import LazyAttr, LazyObject
 from .utils import (ConfigParsingError, ImportTransformer, RemoveAssignFromAST,
                     _gather_abs_import_lazyobj, _get_external_cfg_base_path,
@@ -46,9 +47,10 @@ else:
 def _lazy2string(cfg_dict, dict_type=None):
     if isinstance(cfg_dict, dict):
         dict_type = dict_type or type(cfg_dict)
-        return dict_type(
-            {k: _lazy2string(v, dict_type)
-             for k, v in dict.items(cfg_dict)})
+        return dict_type({
+            k: _lazy2string(v, dict_type)
+            for k, v in dict.items(cfg_dict)
+        })
     elif isinstance(cfg_dict, (tuple, list)):
         return type(cfg_dict)(_lazy2string(v, dict_type) for v in cfg_dict)
     elif isinstance(cfg_dict, (LazyAttr, LazyObject)):
@@ -254,8 +256,8 @@ class ConfigDict(Dict):
                     b.clear()
                 all_keys = list(b.keys()) + list(a.keys())
                 return {
-                    key:
-                    _merge_a_into_b(a.get(key, default), b.get(key, default))
+                    key: _merge_a_into_b(a.get(key, default),
+                                         b.get(key, default))
                     for key in all_keys if key != DELETE_KEY
                 }
             else:
@@ -271,13 +273,15 @@ class ConfigDict(Dict):
         # called by CPython interpreter during pickling. See more details in
         # https://github.com/python/cpython/blob/8d61a71f9c81619e34d4a30b625922ebc83c561b/Objects/typeobject.c#L6196  # noqa: E501
         if digit_version(platform.python_version()) < digit_version('3.8'):
-            return (self.__class__, ({k: v
-                                      for k, v in super().items()}, ), None,
-                    None, None)
+            return (self.__class__, ({
+                k: v
+                for k, v in super().items()
+            }, ), None, None, None)
         else:
-            return (self.__class__, ({k: v
-                                      for k, v in super().items()}, ), None,
-                    None, None, None)
+            return (self.__class__, ({
+                k: v
+                for k, v in super().items()
+            }, ), None, None, None, None)
 
     def __eq__(self, other):
         if isinstance(other, ConfigDict):
@@ -338,12 +342,12 @@ def add_args(parser: ArgumentParser,
         elif isinstance(v, dict):
             add_args(parser, v, prefix + k + '.')
         elif isinstance(v, abc.Iterable):
-            parser.add_argument(
-                '--' + prefix + k, type=type(next(iter(v))), nargs='+')
+            parser.add_argument('--' + prefix + k,
+                                type=type(next(iter(v))),
+                                nargs='+')
         else:
-            print_log(
-                f'cannot parse key {prefix + k} of type {type(v)}',
-                logger='current')
+            print_log(f'cannot parse key {prefix + k} of type {type(v)}',
+                      logger='current')
     return parser
 
 
@@ -495,10 +499,9 @@ class Config:
                 # about lazy in the docstring of ConfigDict
                 ConfigDict.lazy = False
 
-            cfg = Config(
-                cfg_dict,
-                filename=filename,
-                format_python_code=format_python_code)
+            cfg = Config(cfg_dict,
+                         filename=filename,
+                         format_python_code=format_python_code)
             object.__setattr__(cfg, '_imported_names', imported_names)
             return cfg
 
@@ -529,9 +532,10 @@ class Config:
         # As a workaround we set `delete=False` and close the temporary file
         # before opening again.
 
-        with tempfile.NamedTemporaryFile(
-                'w', encoding='utf-8', suffix=file_format,
-                delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile('w',
+                                         encoding='utf-8',
+                                         suffix=file_format,
+                                         delete=False) as temp_file:
             temp_file.write(cfg_str)
 
         cfg = Config.fromfile(temp_file.name)
@@ -1094,19 +1098,17 @@ class Config:
             # the global dict. After the ast transformation, most of import
             # syntax will be removed (except for the builtin import) and
             # replaced with the `LazyObject`
-            transform = ImportTransformer(
-                global_dict=global_dict,
-                base_dict=base_dict,
-                filename=filename)
+            transform = ImportTransformer(global_dict=global_dict,
+                                          base_dict=base_dict,
+                                          filename=filename)
             modified_code = transform.visit(parsed_codes)
             modified_code, abs_imported = _gather_abs_import_lazyobj(
                 modified_code, filename=filename)
             imported_names = transform.imported_obj | abs_imported
             imported_names |= base_imported_names
             modified_code = ast.fix_missing_locations(modified_code)
-            exec(
-                compile(modified_code, filename, mode='exec'), global_dict,
-                global_dict)
+            exec(compile(modified_code, filename, mode='exec'), global_dict,
+                 global_dict)
 
             ret: dict = {}
             for key, value in global_dict.items():
@@ -1138,8 +1140,8 @@ class Config:
                 cfg_dict[key] = Config._dict_to_config_dict_lazy(value)
             return cfg_dict
         if isinstance(cfg, (tuple, list)):
-            return type(cfg)(
-                Config._dict_to_config_dict_lazy(_cfg) for _cfg in cfg)
+            return type(cfg)(Config._dict_to_config_dict_lazy(_cfg)
+                             for _cfg in cfg)
         return cfg
 
     @staticmethod
@@ -1165,8 +1167,9 @@ class Config:
             cfg = ConfigDict(cfg)
             dict.__setattr__(cfg, 'scope', scope)
             for key, value in cfg.items():
-                cfg[key] = Config._dict_to_config_dict(
-                    value, scope=scope, has_scope=has_scope)
+                cfg[key] = Config._dict_to_config_dict(value,
+                                                       scope=scope,
+                                                       has_scope=has_scope)
         elif isinstance(cfg, tuple):
             cfg = tuple(
                 Config._dict_to_config_dict(_cfg, scope, has_scope=has_scope)
@@ -1475,16 +1478,16 @@ class Config:
         text = _format_dict(cfg_dict, outest_level=True)
         if self._format_python_code:
             # copied from setup.cfg
-            yapf_style = dict(
-                based_on_style='pep8',
-                blank_line_before_nested_class_or_def=True,
-                split_before_expression_after_opening_paren=True)
+            yapf_style = dict(based_on_style='pep8',
+                              blank_line_before_nested_class_or_def=True,
+                              split_before_expression_after_opening_paren=True)
             try:
                 if digit_version(yapf.__version__) >= digit_version('0.40.2'):
                     text, _ = FormatCode(text, style_config=yapf_style)
                 else:
-                    text, _ = FormatCode(
-                        text, style_config=yapf_style, verify=True)
+                    text, _ = FormatCode(text,
+                                         style_config=yapf_style,
+                                         verify=True)
             except:  # noqa: E722
                 raise SyntaxError('Failed to format the config file, please '
                                   f'check the syntax of: \n{text}')
@@ -1622,8 +1625,9 @@ class Config:
         cfg_dict = super().__getattribute__('_cfg_dict')
         super().__setattr__(
             '_cfg_dict',
-            Config._merge_a_into_b(
-                option_cfg_dict, cfg_dict, allow_list_keys=allow_list_keys))
+            Config._merge_a_into_b(option_cfg_dict,
+                                   cfg_dict,
+                                   allow_list_keys=allow_list_keys))
 
     @staticmethod
     def diff(cfg1: Union[str, 'Config'], cfg2: Union[str, 'Config']) -> str:
@@ -1633,8 +1637,8 @@ class Config:
         if isinstance(cfg2, str):
             cfg2 = Config.fromfile(cfg2)
 
-        res = difflib.unified_diff(
-            cfg1.pretty_text.split('\n'), cfg2.pretty_text.split('\n'))
+        res = difflib.unified_diff(cfg1.pretty_text.split('\n'),
+                                   cfg2.pretty_text.split('\n'))
 
         # Convert into rich format for better visualization
         console = Console()

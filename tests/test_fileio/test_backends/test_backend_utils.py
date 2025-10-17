@@ -57,8 +57,8 @@ def test_register_backend():
         def get_text(self, filepath):
             return filepath
 
-    with pytest.raises(
-            TypeError, match='not a subclass of BaseStorageBackend'):
+    with pytest.raises(TypeError,
+                       match='not a subclass of BaseStorageBackend'):
         register_backend('example3', ExampleBackend2)
 
     # 4. test `force` parameter
@@ -85,8 +85,9 @@ def test_register_backend():
     assert 'prefix1' in prefix_to_backends
 
     # 5.2 prefixes is a list (tuple) of strings
-    register_backend(
-        'example4', ExampleBackend3, prefixes=['prefix2', 'prefix3'])
+    register_backend('example4',
+                     ExampleBackend3,
+                     prefixes=['prefix2', 'prefix3'])
     assert 'example4' in backends
     assert 'prefix2' in prefix_to_backends
     assert 'prefix3' in prefix_to_backends
@@ -108,7 +109,9 @@ def test_register_backend():
         def get_text(self, filepath):
             return filepath
 
-    register_backend(
-        'example6', ExampleBackend4, prefixes='prefix2', force=True)
+    register_backend('example6',
+                     ExampleBackend4,
+                     prefixes='prefix2',
+                     force=True)
     assert 'example6' in backends
     assert 'prefix2' in prefix_to_backends

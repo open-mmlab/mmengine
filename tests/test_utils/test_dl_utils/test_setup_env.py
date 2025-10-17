@@ -38,8 +38,9 @@ def test_setup_multi_processes():
     assert os.getenv('OMP_NUM_THREADS') == '4'
 
     # test manually set opencv threads and mp start method
-    config = dict(
-        mp_start_method='spawn', opencv_num_threads=4, distributed=True)
+    config = dict(mp_start_method='spawn',
+                  opencv_num_threads=4,
+                  distributed=True)
     set_multi_processing(**config)
     assert cv2.getNumThreads() == 4
     assert mp.get_start_method() == 'spawn'

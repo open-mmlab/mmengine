@@ -52,13 +52,13 @@ class TestProfilerHook(RunnerTestCase):
             hook.on_trace_ready = dict(type='unknown')
             hook._parse_trace_config(runner)
 
-        hook.on_trace_ready = dict(
-            type='log_trace', sort_by='self_cpu_time_total', row_limit=10)
+        hook.on_trace_ready = dict(type='log_trace',
+                                   sort_by='self_cpu_time_total',
+                                   row_limit=10)
         hook._parse_trace_config(runner)
 
-    @unittest.skipIf(
-        not is_installed('torch-tb-profiler'),
-        reason='required torch-tb-profiler')
+    @unittest.skipIf(not is_installed('torch-tb-profiler'),
+                     reason='required torch-tb-profiler')
     def test_parse_trace_config_tensorboard(self):
         # Test on_trace_ready_args
         runner = MagicMock()
@@ -76,16 +76,15 @@ class TestProfilerHook(RunnerTestCase):
         hook._parse_trace_config(runner)
 
         # with self.assertWarns(DeprecationWarning):
-        hook = ProfilerHook(
-            on_trace_ready=dict(type='tb_trace'),
-            json_trace_path=ops.join(self.temp_dir.name, 'demo.json'))
+        hook = ProfilerHook(on_trace_ready=dict(type='tb_trace'),
+                            json_trace_path=ops.join(self.temp_dir.name,
+                                                     'demo.json'))
         hook._parse_trace_config(runner)
 
         self.epoch_based_cfg['custom_hooks'] = [
-            dict(
-                type='ProfilerHook',
-                on_trace_ready=dict(
-                    type='tb_trace', dir_name=self.temp_dir.name))
+            dict(type='ProfilerHook',
+                 on_trace_ready=dict(type='tb_trace',
+                                     dir_name=self.temp_dir.name))
         ]
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
@@ -148,19 +147,18 @@ class TestProfilerHook(RunnerTestCase):
         hook.profiler.__exit__.assert_called_once()
         hook.profiler.step.assert_called_once()
 
-        hook = ProfilerHook(
-            by_epoch=False,
-            schedule=dict(wait=1, warmup=1, active=3, repeat=1))
+        hook = ProfilerHook(by_epoch=False,
+                            schedule=dict(wait=1, warmup=1, active=3,
+                                          repeat=1))
         hook.profiler = MagicMock()
         hook.after_train_iter(runner, 1, 1, 1)
         hook.profiler.step.assert_called_once()
 
     def test_with_runner(self):
         self.epoch_based_cfg['custom_hooks'] = [
-            dict(
-                type='ProfilerHook',
-                activity_with_cpu=False,
-                activity_with_cuda=False)
+            dict(type='ProfilerHook',
+                 activity_with_cpu=False,
+                 activity_with_cuda=False)
         ]
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
@@ -171,16 +169,14 @@ class TestProfilerHook(RunnerTestCase):
         ]
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
-        self.assertTrue(
-            ops.exists(json_path), 'ERROR::json file is not generated!')
+        self.assertTrue(ops.exists(json_path),
+                        'ERROR::json file is not generated!')
 
         self.epoch_based_cfg['custom_hooks'] = [
-            dict(
-                type='ProfilerHook',
-                on_trace_ready=dict(
-                    type='log_trace',
-                    sort_by='self_cpu_time_total',
-                    row_limit=10))
+            dict(type='ProfilerHook',
+                 on_trace_ready=dict(type='log_trace',
+                                     sort_by='self_cpu_time_total',
+                                     row_limit=10))
         ]
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
@@ -200,8 +196,8 @@ class TestProfilerHook(RunnerTestCase):
             runner.train()
 
 
-@unittest.skipIf(
-    not is_npu_available(), reason='Ascend PyTorch and npu devices not exist')
+@unittest.skipIf(not is_npu_available(),
+                 reason='Ascend PyTorch and npu devices not exist')
 class TestNPUProfilerHook(RunnerTestCase):
 
     def test_init(self):
@@ -243,27 +239,25 @@ class TestNPUProfilerHook(RunnerTestCase):
     def test_with_runner(self):
         result_path = ops.join(self.temp_dir.name, 'test/cann_profiling')
         self.epoch_based_cfg['custom_hooks'] = [
-            dict(
-                type='NPUProfilerHook',
-                begin=0,
-                result_path=result_path,
-                exit_after_profiling=False)
+            dict(type='NPUProfilerHook',
+                 begin=0,
+                 result_path=result_path,
+                 exit_after_profiling=False)
         ]
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
 
         self.epoch_based_cfg['custom_hooks'] = [
-            dict(
-                type='NPUProfilerHook',
-                result_path=result_path,
-                ge_profiling_to_std_out=True,
-                exit_after_profiling=False)
+            dict(type='NPUProfilerHook',
+                 result_path=result_path,
+                 ge_profiling_to_std_out=True,
+                 exit_after_profiling=False)
         ]
         runner = self.build_runner(self.epoch_based_cfg)
         runner.train()
 
-        self.assertTrue(
-            ops.exists(result_path), 'profiler result path is not generated!')
+        self.assertTrue(ops.exists(result_path),
+                        'profiler result path is not generated!')
 
         self.assertTrue(
             os.getenv('GE_PROFILING_TO_STD_OUT', '0') == '1',

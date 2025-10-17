@@ -57,9 +57,8 @@ class TestCheckpointHook(RunnerTestCase):
                 ValueError,
                 '"file_client_args" and "backend_args" cannot be set '
                 'at the same time'):
-            CheckpointHook(
-                file_client_args={'backend': 'disk'},
-                backend_args={'backend': 'local'})
+            CheckpointHook(file_client_args={'backend': 'disk'},
+                           backend_args={'backend': 'local'})
 
         # Test save best
         CheckpointHook(save_best='acc')
@@ -88,8 +87,9 @@ class TestCheckpointHook(RunnerTestCase):
         hook = CheckpointHook(greater_keys=['acc'])
         self.assertEqual(hook.greater_keys, ['acc'])
 
-        hook = CheckpointHook(
-            interval=2, by_epoch=False, save_best=['acc', 'mIoU'])
+        hook = CheckpointHook(interval=2,
+                              by_epoch=False,
+                              save_best=['acc', 'mIoU'])
         self.assertEqual(hook.key_indicators, ['acc', 'mIoU'])
         self.assertEqual(hook.rules, ['greater', 'greater'])
 
@@ -123,8 +123,9 @@ class TestCheckpointHook(RunnerTestCase):
         self.assertEqual(checkpoint_hook.out_dir, runner.work_dir)
 
         # the out_dir of the checkpoint hook is not None
-        checkpoint_hook = CheckpointHook(
-            interval=1, by_epoch=True, out_dir='test_dir')
+        checkpoint_hook = CheckpointHook(interval=1,
+                                         by_epoch=True,
+                                         out_dir='test_dir')
         checkpoint_hook.before_train(runner)
         self.assertEqual(checkpoint_hook.out_dir,
                          osp.join('test_dir', osp.basename(cfg.work_dir)))
@@ -162,13 +163,15 @@ class TestCheckpointHook(RunnerTestCase):
 
         # if metrics is an empty dict, print a warning information
         with self.assertLogs(runner.logger, level='WARNING'):
-            checkpoint_hook = CheckpointHook(
-                interval=2, by_epoch=True, save_best='auto')
+            checkpoint_hook = CheckpointHook(interval=2,
+                                             by_epoch=True,
+                                             save_best='auto')
             checkpoint_hook.after_val_epoch(runner, {})
 
         # if save_best is None,no best_ckpt meta should be stored
-        checkpoint_hook = CheckpointHook(
-            interval=2, by_epoch=True, save_best=None)
+        checkpoint_hook = CheckpointHook(interval=2,
+                                         by_epoch=True,
+                                         save_best=None)
         checkpoint_hook.before_train(runner)
         checkpoint_hook.after_val_epoch(runner, {})
         self.assertNotIn('best_score', runner.message_hub.runtime_info)
@@ -176,8 +179,9 @@ class TestCheckpointHook(RunnerTestCase):
 
         # when `save_best` is set to `auto`, first metric will be used.
         metrics = {'acc': 0.5, 'map': 0.3}
-        checkpoint_hook = CheckpointHook(
-            interval=2, by_epoch=True, save_best='auto')
+        checkpoint_hook = CheckpointHook(interval=2,
+                                         by_epoch=True,
+                                         save_best='auto')
         checkpoint_hook.before_train(runner)
         checkpoint_hook.after_val_epoch(runner, metrics)
         best_ckpt_name = 'best_acc_epoch_9.pth'
@@ -186,20 +190,22 @@ class TestCheckpointHook(RunnerTestCase):
         self.assertEqual(checkpoint_hook.key_indicators, ['acc'])
         self.assertEqual(checkpoint_hook.rules, ['greater'])
         self.assertEqual(runner.message_hub.get_info('best_score'), 0.5)
-        self.assertEqual(
-            runner.message_hub.get_info('best_ckpt'), best_ckpt_path)
+        self.assertEqual(runner.message_hub.get_info('best_ckpt'),
+                         best_ckpt_path)
 
         # # when `save_best` is set to `acc`, it should update greater value
-        checkpoint_hook = CheckpointHook(
-            interval=2, by_epoch=True, save_best='acc')
+        checkpoint_hook = CheckpointHook(interval=2,
+                                         by_epoch=True,
+                                         save_best='acc')
         checkpoint_hook.before_train(runner)
         metrics['acc'] = 0.8
         checkpoint_hook.after_val_epoch(runner, metrics)
         self.assertEqual(runner.message_hub.get_info('best_score'), 0.8)
 
         # # when `save_best` is set to `loss`, it should update less value
-        checkpoint_hook = CheckpointHook(
-            interval=2, by_epoch=True, save_best='loss')
+        checkpoint_hook = CheckpointHook(interval=2,
+                                         by_epoch=True,
+                                         save_best='loss')
         checkpoint_hook.before_train(runner)
         metrics['loss'] = 0.8
         checkpoint_hook.after_val_epoch(runner, metrics)
@@ -209,8 +215,10 @@ class TestCheckpointHook(RunnerTestCase):
 
         # when `rule` is set to `less`,then it should update less value
         # no matter what `save_best` is
-        checkpoint_hook = CheckpointHook(
-            interval=2, by_epoch=True, save_best='acc', rule='less')
+        checkpoint_hook = CheckpointHook(interval=2,
+                                         by_epoch=True,
+                                         save_best='acc',
+                                         rule='less')
         checkpoint_hook.before_train(runner)
         metrics['acc'] = 0.3
         checkpoint_hook.after_val_epoch(runner, metrics)
@@ -218,22 +226,26 @@ class TestCheckpointHook(RunnerTestCase):
 
         # # when `rule` is set to `greater`,then it should update greater value
         # # no matter what `save_best` is
-        checkpoint_hook = CheckpointHook(
-            interval=2, by_epoch=True, save_best='loss', rule='greater')
+        checkpoint_hook = CheckpointHook(interval=2,
+                                         by_epoch=True,
+                                         save_best='loss',
+                                         rule='greater')
         checkpoint_hook.before_train(runner)
         metrics['loss'] = 1.0
         checkpoint_hook.after_val_epoch(runner, metrics)
         self.assertEqual(runner.message_hub.get_info('best_score'), 1.0)
 
         # test multi `save_best` with one rule
-        checkpoint_hook = CheckpointHook(
-            interval=2, save_best=['acc', 'mIoU'], rule='greater')
+        checkpoint_hook = CheckpointHook(interval=2,
+                                         save_best=['acc', 'mIoU'],
+                                         rule='greater')
         self.assertEqual(checkpoint_hook.key_indicators, ['acc', 'mIoU'])
         self.assertEqual(checkpoint_hook.rules, ['greater', 'greater'])
 
         # test multi `save_best` with multi rules
-        checkpoint_hook = CheckpointHook(
-            interval=2, save_best=['FID', 'IS'], rule=['less', 'greater'])
+        checkpoint_hook = CheckpointHook(interval=2,
+                                         save_best=['FID', 'IS'],
+                                         rule=['less', 'greater'])
         self.assertEqual(checkpoint_hook.key_indicators, ['FID', 'IS'])
         self.assertEqual(checkpoint_hook.rules, ['less', 'greater'])
 
@@ -254,10 +266,10 @@ class TestCheckpointHook(RunnerTestCase):
             checkpoint_hook.out_dir, best_mIoU_name)
         self.assertEqual(runner.message_hub.get_info('best_score_acc'), 0.5)
         self.assertEqual(runner.message_hub.get_info('best_score_mIoU'), 0.6)
-        self.assertEqual(
-            runner.message_hub.get_info('best_ckpt_acc'), best_acc_path)
-        self.assertEqual(
-            runner.message_hub.get_info('best_ckpt_mIoU'), best_mIoU_path)
+        self.assertEqual(runner.message_hub.get_info('best_ckpt_acc'),
+                         best_acc_path)
+        self.assertEqual(runner.message_hub.get_info('best_ckpt_mIoU'),
+                         best_mIoU_path)
 
         # test behavior when by_epoch is False
         cfg = copy.deepcopy(self.iter_based_cfg)
@@ -266,8 +278,10 @@ class TestCheckpointHook(RunnerTestCase):
 
         # check best ckpt name and best score
         metrics = {'acc': 0.5, 'map': 0.3}
-        checkpoint_hook = CheckpointHook(
-            interval=2, by_epoch=False, save_best='acc', rule='greater')
+        checkpoint_hook = CheckpointHook(interval=2,
+                                         by_epoch=False,
+                                         save_best='acc',
+                                         rule='greater')
         checkpoint_hook.before_train(runner)
         checkpoint_hook.after_val_epoch(runner, metrics)
         self.assertEqual(checkpoint_hook.key_indicators, ['acc'])
@@ -276,8 +290,8 @@ class TestCheckpointHook(RunnerTestCase):
         best_ckpt_path = checkpoint_hook.file_client.join_path(
             checkpoint_hook.out_dir, best_ckpt_name)
 
-        self.assertEqual(
-            runner.message_hub.get_info('best_ckpt'), best_ckpt_path)
+        self.assertEqual(runner.message_hub.get_info('best_ckpt'),
+                         best_ckpt_path)
         self.assertEqual(runner.message_hub.get_info('best_score'), 0.5)
 
         # check best score updating
@@ -286,13 +300,14 @@ class TestCheckpointHook(RunnerTestCase):
         best_ckpt_name = 'best_acc_iter_9.pth'
         best_ckpt_path = checkpoint_hook.file_client.join_path(
             checkpoint_hook.out_dir, best_ckpt_name)
-        self.assertEqual(
-            runner.message_hub.get_info('best_ckpt'), best_ckpt_path)
+        self.assertEqual(runner.message_hub.get_info('best_ckpt'),
+                         best_ckpt_path)
         self.assertEqual(runner.message_hub.get_info('best_score'), 0.666)
 
         # check best checkpoint name with `by_epoch` is False
-        checkpoint_hook = CheckpointHook(
-            interval=2, by_epoch=False, save_best=['acc', 'mIoU'])
+        checkpoint_hook = CheckpointHook(interval=2,
+                                         by_epoch=False,
+                                         save_best=['acc', 'mIoU'])
         checkpoint_hook.before_train(runner)
         metrics = dict(acc=0.5, mIoU=0.6)
         checkpoint_hook.after_val_epoch(runner, metrics)
@@ -305,10 +320,10 @@ class TestCheckpointHook(RunnerTestCase):
 
         self.assertEqual(runner.message_hub.get_info('best_score_acc'), 0.5)
         self.assertEqual(runner.message_hub.get_info('best_score_mIoU'), 0.6)
-        self.assertEqual(
-            runner.message_hub.get_info('best_ckpt_acc'), best_acc_path)
-        self.assertEqual(
-            runner.message_hub.get_info('best_ckpt_mIoU'), best_mIoU_path)
+        self.assertEqual(runner.message_hub.get_info('best_ckpt_acc'),
+                         best_acc_path)
+        self.assertEqual(runner.message_hub.get_info('best_ckpt_mIoU'),
+                         best_mIoU_path)
 
         # after_val_epoch should not save last_checkpoint
         self.assertFalse(
@@ -321,8 +336,9 @@ class TestCheckpointHook(RunnerTestCase):
             self.clear_work_dir()
             cfg = copy.deepcopy(cfg)
             runner = self.build_runner(cfg)
-            checkpoint_hook = CheckpointHook(
-                interval=2, by_epoch=by_epoch, save_best='acc')
+            checkpoint_hook = CheckpointHook(interval=2,
+                                             by_epoch=by_epoch,
+                                             save_best='acc')
             checkpoint_hook.before_train(runner)
             checkpoint_hook.after_val_epoch(runner, metrics)
             all_files = os.listdir(runner.work_dir)
@@ -373,9 +389,8 @@ class TestCheckpointHook(RunnerTestCase):
         checkpoint_hook.before_train(runner)
         checkpoint_hook.after_train_epoch(runner)
         self.assertEqual((runner.epoch + 1) % 2, 0)
-        self.assertEqual(
-            runner.message_hub.get_info('last_ckpt'),
-            osp.join(cfg.work_dir, 'epoch_10.pth'))
+        self.assertEqual(runner.message_hub.get_info('last_ckpt'),
+                         osp.join(cfg.work_dir, 'epoch_10.pth'))
 
         last_ckpt_path = osp.join(cfg.work_dir, 'last_checkpoint')
         self.assertTrue(osp.isfile(last_ckpt_path))
@@ -387,9 +402,8 @@ class TestCheckpointHook(RunnerTestCase):
         # epoch can not be evenly divided by 2
         runner.train_loop._epoch = 10
         checkpoint_hook.after_train_epoch(runner)
-        self.assertEqual(
-            runner.message_hub.get_info('last_ckpt'),
-            osp.join(cfg.work_dir, 'epoch_10.pth'))
+        self.assertEqual(runner.message_hub.get_info('last_ckpt'),
+                         osp.join(cfg.work_dir, 'epoch_10.pth'))
         runner.message_hub.runtime_info.clear()
 
         # by epoch is False
@@ -416,25 +430,22 @@ class TestCheckpointHook(RunnerTestCase):
         checkpoint_hook.before_train(runner)
         checkpoint_hook.after_train_iter(runner, batch_idx=9)
         self.assertIn('last_ckpt', runner.message_hub.runtime_info)
-        self.assertEqual(
-            runner.message_hub.get_info('last_ckpt'),
-            osp.join(cfg.work_dir, 'iter_10.pth'))
+        self.assertEqual(runner.message_hub.get_info('last_ckpt'),
+                         osp.join(cfg.work_dir, 'iter_10.pth'))
 
         # epoch can not be evenly divided by 2
         runner.train_loop._iter = 10
         checkpoint_hook.after_train_epoch(runner)
-        self.assertEqual(
-            runner.message_hub.get_info('last_ckpt'),
-            osp.join(cfg.work_dir, 'iter_10.pth'))
+        self.assertEqual(runner.message_hub.get_info('last_ckpt'),
+                         osp.join(cfg.work_dir, 'iter_10.pth'))
 
     @parameterized.expand([['iter'], ['epoch']])
     def test_with_runner(self, training_type):
         common_cfg = getattr(self, f'{training_type}_based_cfg')
         setattr(common_cfg.train_cfg, f'max_{training_type}s', 11)
-        checkpoint_cfg = dict(
-            type='CheckpointHook',
-            interval=1,
-            by_epoch=training_type == 'epoch')
+        checkpoint_cfg = dict(type='CheckpointHook',
+                              interval=1,
+                              by_epoch=training_type == 'epoch')
         common_cfg.default_hooks = dict(checkpoint=checkpoint_cfg)
 
         # Test interval in epoch based training
@@ -470,12 +481,11 @@ class TestCheckpointHook(RunnerTestCase):
         # Test save_param_scheduler=False
         cfg = copy.deepcopy(common_cfg)
         cfg.param_scheduler = [
-            dict(
-                type='LinearLR',
-                start_factor=0.1,
-                begin=0,
-                end=500,
-                by_epoch=training_type == 'epoch')
+            dict(type='LinearLR',
+                 start_factor=0.1,
+                 begin=0,
+                 end=500,
+                 by_epoch=training_type == 'epoch')
         ]
         runner = self.build_runner(cfg)
         runner.train()

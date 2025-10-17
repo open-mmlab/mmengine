@@ -7,6 +7,7 @@ from typing import Any, Generator, Iterator, Optional, Tuple, Union
 
 from mmengine.logging import print_log
 from mmengine.utils import is_filepath
+
 from .backends import (BaseStorageBackend, HTTPBackend, LmdbBackend,
                        LocalBackend, MemcachedBackend, PetrelBackend)
 
@@ -271,13 +272,17 @@ class FileClient:
                 `New in version 1.3.15.`
         """
         if backend is not None:
-            cls._register_backend(
-                name, backend, force=force, prefixes=prefixes)
+            cls._register_backend(name,
+                                  backend,
+                                  force=force,
+                                  prefixes=prefixes)
             return
 
         def _register(backend_cls):
-            cls._register_backend(
-                name, backend_cls, force=force, prefixes=prefixes)
+            cls._register_backend(name,
+                                  backend_cls,
+                                  force=force,
+                                  prefixes=prefixes)
             return backend_cls
 
         return _register
@@ -385,8 +390,8 @@ class FileClient:
         """
         return self.client.isfile(filepath)
 
-    def join_path(self, filepath: Union[str, Path],
-                  *filepaths: Union[str, Path]) -> str:
+    def join_path(self, filepath: Union[str, Path], *filepaths:
+                  Union[str, Path]) -> str:
         r"""Concatenate all file paths.
 
         Join one or more filepath components intelligently. The return value

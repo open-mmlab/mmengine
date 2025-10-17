@@ -124,13 +124,13 @@ except ImportError:
 
         def test_map_path(self):
             backend = PetrelBackend(path_mapping=None)
-            self.assertEqual(
-                backend._map_path(self.petrel_path), self.petrel_path)
+            self.assertEqual(backend._map_path(self.petrel_path),
+                             self.petrel_path)
 
             backend = PetrelBackend(
                 path_mapping={'data/': 'petrel://user/data/'})
-            self.assertEqual(
-                backend._map_path('data/test.jpg'), self.petrel_path)
+            self.assertEqual(backend._map_path('data/test.jpg'),
+                             self.petrel_path)
 
         def test_format_path(self):
             backend = PetrelBackend()
@@ -140,37 +140,31 @@ except ImportError:
 
         def test_replace_prefix(self):
             backend = PetrelBackend()
-            self.assertEqual(
-                backend._replace_prefix(self.petrel_path), self.expected_path)
+            self.assertEqual(backend._replace_prefix(self.petrel_path),
+                             self.expected_path)
 
         def test_join_path(self):
             backend = PetrelBackend()
-            self.assertEqual(
-                backend.join_path(self.petrel_dir, 'file'),
-                f'{self.petrel_dir}/file')
-            self.assertEqual(
-                backend.join_path(f'{self.petrel_dir}/', 'file'),
-                f'{self.petrel_dir}/file')
-            self.assertEqual(
-                backend.join_path(f'{self.petrel_dir}/', '/file'),
-                f'{self.petrel_dir}/file')
-            self.assertEqual(
-                backend.join_path(self.petrel_dir, 'dir', 'file'),
-                f'{self.petrel_dir}/dir/file')
+            self.assertEqual(backend.join_path(self.petrel_dir, 'file'),
+                             f'{self.petrel_dir}/file')
+            self.assertEqual(backend.join_path(f'{self.petrel_dir}/', 'file'),
+                             f'{self.petrel_dir}/file')
+            self.assertEqual(backend.join_path(f'{self.petrel_dir}/', '/file'),
+                             f'{self.petrel_dir}/file')
+            self.assertEqual(backend.join_path(self.petrel_dir, 'dir', 'file'),
+                             f'{self.petrel_dir}/dir/file')
 
         def test_get(self):
             backend = PetrelBackend()
-            with patch.object(
-                    backend._client, 'Get',
-                    return_value=b'petrel') as patched_get:
+            with patch.object(backend._client, 'Get',
+                              return_value=b'petrel') as patched_get:
                 self.assertEqual(backend.get(self.petrel_path), b'petrel')
                 patched_get.assert_called_once_with(self.expected_path)
 
         def test_get_text(self):
             backend = PetrelBackend()
-            with patch.object(
-                    backend._client, 'Get',
-                    return_value=b'petrel') as patched_get:
+            with patch.object(backend._client, 'Get',
+                              return_value=b'petrel') as patched_get:
                 self.assertEqual(backend.get_text(self.petrel_path), 'petrel')
                 patched_get.assert_called_once_with(self.expected_path)
 
@@ -201,9 +195,8 @@ except ImportError:
                 with self.assertRaises(NotImplementedError):
                     backend.exists(self.petrel_path)
 
-            with patch.object(
-                    backend._client, 'contains',
-                    return_value=True) as patched_contains:
+            with patch.object(backend._client, 'contains',
+                              return_value=True) as patched_contains:
                 self.assertTrue(backend.exists(self.petrel_path))
                 patched_contains.assert_called_once_with(self.expected_path)
 
@@ -216,9 +209,8 @@ except ImportError:
                 with self.assertRaises(NotImplementedError):
                     backend.isdir(self.petrel_path)
 
-            with patch.object(
-                    backend._client, 'isdir',
-                    return_value=True) as patched_contains:
+            with patch.object(backend._client, 'isdir',
+                              return_value=True) as patched_contains:
                 self.assertTrue(backend.isdir(self.petrel_path))
                 patched_contains.assert_called_once_with(self.expected_path)
 
@@ -231,9 +223,8 @@ except ImportError:
                 with self.assertRaises(NotImplementedError):
                     backend.isfile(self.petrel_path)
 
-            with patch.object(
-                    backend._client, 'contains',
-                    return_value=True) as patched_contains:
+            with patch.object(backend._client, 'contains',
+                              return_value=True) as patched_contains:
                 self.assertTrue(backend.isfile(self.petrel_path))
                 patched_contains.assert_called_once_with(self.expected_path)
 
@@ -335,8 +326,8 @@ except ImportError:
                 src = self.img_path
                 dst = f'{self.petrel_dir}/dir'
                 expected_dst = f'{self.expected_dir}/dir/color.jpg'
-                self.assertEqual(
-                    backend.copyfile_from_local(src, dst), f'{dst}/color.jpg')
+                self.assertEqual(backend.copyfile_from_local(src, dst),
+                                 f'{dst}/color.jpg')
                 patched_put.assert_called_once_with(expected_dst,
                                                     src.open('rb').read())
                 patched_isdir.assert_called_once_with(
@@ -380,8 +371,8 @@ except ImportError:
                 src = self.petrel_path
                 dst = Path(tmp_dir) / 'dir'
                 dst.mkdir()
-                self.assertEqual(
-                    backend.copyfile_to_local(src, dst), dst / 'test.jpg')
+                self.assertEqual(backend.copyfile_to_local(src, dst),
+                                 dst / 'test.jpg')
                 patched_get.assert_called_once_with(self.expected_path)
                 self.assertEqual((dst / 'test.jpg').open('rb').read(),
                                  b'petrel')
@@ -468,9 +459,8 @@ except ImportError:
 
             with build_temporary_directory() as tmp_dir:
                 # list directories and files
-                self.assertEqual(
-                    set(backend.list_dir_or_file(tmp_dir)),
-                    {'dir1', 'dir2', 'text1.txt', 'text2.txt'})
+                self.assertEqual(set(backend.list_dir_or_file(tmp_dir)),
+                                 {'dir1', 'dir2', 'text1.txt', 'text2.txt'})
 
                 # list directories and files recursively
                 self.assertEqual(
@@ -489,14 +479,16 @@ except ImportError:
                         TypeError,
                         '`list_dir` should be False when `suffix` is not None'
                 ):
-                    backend.list_dir_or_file(
-                        tmp_dir, list_file=False, suffix='.txt')
+                    backend.list_dir_or_file(tmp_dir,
+                                             list_file=False,
+                                             suffix='.txt')
 
                 # only list directories recursively
                 self.assertEqual(
                     set(
-                        backend.list_dir_or_file(
-                            tmp_dir, list_file=False, recursive=True)),
+                        backend.list_dir_or_file(tmp_dir,
+                                                 list_file=False,
+                                                 recursive=True)),
                     {'dir1', 'dir2', '/'.join(('dir2', 'dir3'))})
 
                 # only list files
@@ -507,8 +499,9 @@ except ImportError:
                 # only list files recursively
                 self.assertEqual(
                     set(
-                        backend.list_dir_or_file(
-                            tmp_dir, list_dir=False, recursive=True)),
+                        backend.list_dir_or_file(tmp_dir,
+                                                 list_dir=False,
+                                                 recursive=True)),
                     {
                         '/'.join(('dir1', 'text3.txt')), '/'.join(
                             ('dir2', 'dir3', 'text4.txt')), '/'.join(
@@ -518,41 +511,43 @@ except ImportError:
                 # only list files ending with suffix
                 self.assertEqual(
                     set(
-                        backend.list_dir_or_file(
-                            tmp_dir, list_dir=False, suffix='.txt')),
+                        backend.list_dir_or_file(tmp_dir,
+                                                 list_dir=False,
+                                                 suffix='.txt')),
                     {'text1.txt', 'text2.txt'})
                 self.assertEqual(
                     set(
-                        backend.list_dir_or_file(
-                            tmp_dir, list_dir=False, suffix=('.txt', '.jpg'))),
+                        backend.list_dir_or_file(tmp_dir,
+                                                 list_dir=False,
+                                                 suffix=('.txt', '.jpg'))),
                     {'text1.txt', 'text2.txt'})
                 with self.assertRaisesRegex(
                         TypeError,
                         '`suffix` must be a string or tuple of strings'):
-                    backend.list_dir_or_file(
-                        tmp_dir, list_dir=False, suffix=['.txt', '.jpg'])
+                    backend.list_dir_or_file(tmp_dir,
+                                             list_dir=False,
+                                             suffix=['.txt', '.jpg'])
 
                 # only list files ending with suffix recursively
                 self.assertEqual(
                     set(
-                        backend.list_dir_or_file(
-                            tmp_dir,
-                            list_dir=False,
-                            suffix='.txt',
-                            recursive=True)), {
-                                '/'.join(('dir1', 'text3.txt')), '/'.join(
-                                    ('dir2', 'dir3', 'text4.txt')),
-                                'text1.txt', 'text2.txt'
-                            })
+                        backend.list_dir_or_file(tmp_dir,
+                                                 list_dir=False,
+                                                 suffix='.txt',
+                                                 recursive=True)),
+                    {
+                        '/'.join(('dir1', 'text3.txt')), '/'.join(
+                            ('dir2', 'dir3', 'text4.txt')), 'text1.txt',
+                        'text2.txt'
+                    })
 
                 # only list files ending with suffix
                 self.assertEqual(
                     set(
-                        backend.list_dir_or_file(
-                            tmp_dir,
-                            list_dir=False,
-                            suffix=('.txt', '.jpg'),
-                            recursive=True)),
+                        backend.list_dir_or_file(tmp_dir,
+                                                 list_dir=False,
+                                                 suffix=('.txt', '.jpg'),
+                                                 recursive=True)),
                     {
                         '/'.join(('dir1', 'text3.txt')), '/'.join(
                             ('dir2', 'dir3', 'text4.txt')), '/'.join(
@@ -673,9 +668,8 @@ else:
             dst = f'{self.petrel_dir}/dir3'
             self.assertFalse(backend.exists(dst))
             self.assertEqual(backend.copytree(src, dst), dst)
-            self.assertEqual(
-                list(backend.list_dir_or_file(src)),
-                list(backend.list_dir_or_file(dst)))
+            self.assertEqual(list(backend.list_dir_or_file(src)),
+                             list(backend.list_dir_or_file(dst)))
 
             # dst should not exist
             with self.assertRaises(FileExistsError):
@@ -696,8 +690,8 @@ else:
             dst = f'{self.petrel_dir}/dir1'
             expected_dst = f'{self.petrel_dir}/dir1/color.jpg'
             self.assertFalse(backend.exists(expected_dst))
-            self.assertEqual(
-                backend.copyfile_from_local(src, dst), expected_dst)
+            self.assertEqual(backend.copyfile_from_local(src, dst),
+                             expected_dst)
             self.assertTrue(backend.isfile(expected_dst))
 
         def test_copytree_from_local(self):
@@ -705,8 +699,8 @@ else:
             backend.rmtree(self.petrel_dir)
             with build_temporary_directory() as tmp_dir:
                 backend.copytree_from_local(tmp_dir, self.petrel_dir)
-                files = backend.list_dir_or_file(
-                    self.petrel_dir, recursive=True)
+                files = backend.list_dir_or_file(self.petrel_dir,
+                                                 recursive=True)
                 self.assertEqual(len(list(files)), 8)
 
         def test_copyfile_to_local(self):
@@ -721,8 +715,8 @@ else:
                 # dst is a directory
                 dst = Path(tmp_dir) / 'dir'
                 dst.mkdir()
-                self.assertEqual(
-                    backend.copyfile_to_local(src, dst), dst / 'img.jpg')
+                self.assertEqual(backend.copyfile_to_local(src, dst),
+                                 dst / 'img.jpg')
                 self.assertEqual((dst / 'img.jpg').open('rb').read(), b'img')
 
         def test_copytree_to_local(self):
@@ -767,9 +761,8 @@ else:
             backend = PetrelBackend()
 
             # list directories and files
-            self.assertEqual(
-                set(backend.list_dir_or_file(self.petrel_dir)),
-                {'dir1', 'dir2', 'text1.txt', 'text2.txt'})
+            self.assertEqual(set(backend.list_dir_or_file(self.petrel_dir)),
+                             {'dir1', 'dir2', 'text1.txt', 'text2.txt'})
 
             # list directories and files recursively
             self.assertEqual(
@@ -783,21 +776,22 @@ else:
 
             # only list directories
             self.assertEqual(
-                set(
-                    backend.list_dir_or_file(self.petrel_dir,
+                set(backend.list_dir_or_file(self.petrel_dir,
                                              list_file=False)),
                 {'dir1', 'dir2'})
             with self.assertRaisesRegex(
                     TypeError,
                     '`list_dir` should be False when `suffix` is not None'):
-                backend.list_dir_or_file(
-                    self.petrel_dir, list_file=False, suffix='.txt')
+                backend.list_dir_or_file(self.petrel_dir,
+                                         list_file=False,
+                                         suffix='.txt')
 
             # only list directories recursively
             self.assertEqual(
                 set(
-                    backend.list_dir_or_file(
-                        self.petrel_dir, list_file=False, recursive=True)),
+                    backend.list_dir_or_file(self.petrel_dir,
+                                             list_file=False,
+                                             recursive=True)),
                 {'dir1', 'dir2', '/'.join(('dir2', 'dir3'))})
 
             # only list files
@@ -808,8 +802,9 @@ else:
             # only list files recursively
             self.assertEqual(
                 set(
-                    backend.list_dir_or_file(
-                        self.petrel_dir, list_dir=False, recursive=True)),
+                    backend.list_dir_or_file(self.petrel_dir,
+                                             list_dir=False,
+                                             recursive=True)),
                 {
                     '/'.join(('dir1', 'text3.txt')), '/'.join(
                         ('dir2', 'dir3', 'text4.txt')), '/'.join(
@@ -819,42 +814,43 @@ else:
             # only list files ending with suffix
             self.assertEqual(
                 set(
-                    backend.list_dir_or_file(
-                        self.petrel_dir, list_dir=False, suffix='.txt')),
+                    backend.list_dir_or_file(self.petrel_dir,
+                                             list_dir=False,
+                                             suffix='.txt')),
                 {'text1.txt', 'text2.txt'})
             self.assertEqual(
                 set(
-                    backend.list_dir_or_file(
-                        self.petrel_dir,
-                        list_dir=False,
-                        suffix=('.txt', '.jpg'))), {'text1.txt', 'text2.txt'})
+                    backend.list_dir_or_file(self.petrel_dir,
+                                             list_dir=False,
+                                             suffix=('.txt', '.jpg'))),
+                {'text1.txt', 'text2.txt'})
             with self.assertRaisesRegex(
                     TypeError,
                     '`suffix` must be a string or tuple of strings'):
-                backend.list_dir_or_file(
-                    self.petrel_dir, list_dir=False, suffix=['.txt', '.jpg'])
+                backend.list_dir_or_file(self.petrel_dir,
+                                         list_dir=False,
+                                         suffix=['.txt', '.jpg'])
 
             # only list files ending with suffix recursively
             self.assertEqual(
                 set(
-                    backend.list_dir_or_file(
-                        self.petrel_dir,
-                        list_dir=False,
-                        suffix='.txt',
-                        recursive=True)), {
-                            '/'.join(('dir1', 'text3.txt')), '/'.join(
-                                ('dir2', 'dir3', 'text4.txt')), 'text1.txt',
-                            'text2.txt'
-                        })
+                    backend.list_dir_or_file(self.petrel_dir,
+                                             list_dir=False,
+                                             suffix='.txt',
+                                             recursive=True)),
+                {
+                    '/'.join(('dir1', 'text3.txt')), '/'.join(
+                        ('dir2', 'dir3', 'text4.txt')), 'text1.txt',
+                    'text2.txt'
+                })
 
             # only list files ending with suffix
             self.assertEqual(
                 set(
-                    backend.list_dir_or_file(
-                        self.petrel_dir,
-                        list_dir=False,
-                        suffix=('.txt', '.jpg'),
-                        recursive=True)),
+                    backend.list_dir_or_file(self.petrel_dir,
+                                             list_dir=False,
+                                             suffix=('.txt', '.jpg'),
+                                             recursive=True)),
                 {
                     '/'.join(('dir1', 'text3.txt')), '/'.join(
                         ('dir2', 'dir3', 'text4.txt')), '/'.join(

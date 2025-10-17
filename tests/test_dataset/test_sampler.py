@@ -44,9 +44,8 @@ class TestDefaultSampler(TestCase):
         self.assertEqual(sampler.num_samples, np.ceil(self.data_length / 3))
         self.assertEqual(sampler.total_size, sampler.num_samples * 3)
         self.assertEqual(len(sampler), sampler.num_samples)
-        self.assertEqual(
-            list(sampler),
-            list(range(self.data_length))[2::3] + [1])
+        self.assertEqual(list(sampler),
+                         list(range(self.data_length))[2::3] + [1])
 
         # test round_up=False
         sampler = DefaultSampler(self.dataset, round_up=False, shuffle=False)

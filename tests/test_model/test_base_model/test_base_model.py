@@ -94,10 +94,9 @@ class TestBaseModel(TestCase):
         ]
         losses = dict(loss_cls=loss_cls, loss_list=loss_list)
         target_parsed_losses = torch.tensor(6, dtype=torch.float32)
-        targe_log_vars = dict(
-            loss=torch.tensor(6, dtype=torch.float32),
-            loss_cls=torch.tensor(1, dtype=torch.float32),
-            loss_list=torch.tensor(5, dtype=torch.float32))
+        targe_log_vars = dict(loss=torch.tensor(6, dtype=torch.float32),
+                              loss_cls=torch.tensor(1, dtype=torch.float32),
+                              loss_list=torch.tensor(5, dtype=torch.float32))
         parse_losses, log_vars = model.parse_losses(losses)
         assert_allclose(parse_losses, target_parsed_losses)
         for key in log_vars:

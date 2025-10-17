@@ -199,10 +199,9 @@ def revert_sync_batchnorm(module: nn.Module) -> nn.Module:
         try:
             module_output.add_module(name, revert_sync_batchnorm(child))
         except Exception:
-            print_log(
-                F'Failed to convert {child} from SyncBN to BN!',
-                logger='current',
-                level=logging.WARNING)
+            print_log(F'Failed to convert {child} from SyncBN to BN!',
+                      logger='current',
+                      level=logging.WARNING)
     del module
     return module_output
 

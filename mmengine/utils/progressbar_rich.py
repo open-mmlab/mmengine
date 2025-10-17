@@ -121,8 +121,9 @@ def track_progress_rich(func: Callable,
     )
 
     worker = _Worker(func)
-    task_id = prog_bar.add_task(
-        total=task_num, color=color, description=description)
+    task_id = prog_bar.add_task(total=task_num,
+                                color=color,
+                                description=description)
     tasks = _tasks_with_index(tasks)
 
     # Use single process when nproc is 1, else use multiprocess.

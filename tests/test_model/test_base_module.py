@@ -97,20 +97,27 @@ class TestBaseModule(TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
         self.BaseModule = BaseModule()
-        self.model_cfg = dict(
-            type='FooModel',
-            init_cfg=[
-                dict(type='Constant', val=1, bias=2, layer='Linear'),
-                dict(type='Constant', val=3, bias=4, layer='Conv1d'),
-                dict(type='Constant', val=5, bias=6, layer='Conv2d')
-            ],
-            component1=dict(type='FooConv1d'),
-            component2=dict(type='FooConv2d'),
-            component3=dict(type='FooLinear'),
-            component4=dict(
-                type='FooLinearConv1d',
-                linear=dict(type='FooLinear'),
-                conv1d=dict(type='FooConv1d')))
+        self.model_cfg = dict(type='FooModel',
+                              init_cfg=[
+                                  dict(type='Constant',
+                                       val=1,
+                                       bias=2,
+                                       layer='Linear'),
+                                  dict(type='Constant',
+                                       val=3,
+                                       bias=4,
+                                       layer='Conv1d'),
+                                  dict(type='Constant',
+                                       val=5,
+                                       bias=6,
+                                       layer='Conv2d')
+                              ],
+                              component1=dict(type='FooConv1d'),
+                              component2=dict(type='FooConv2d'),
+                              component3=dict(type='FooLinear'),
+                              component4=dict(type='FooLinearConv1d',
+                                              linear=dict(type='FooLinear'),
+                                              conv1d=dict(type='FooConv1d')))
 
         self.model = build_from_cfg(self.model_cfg, FOOMODELS)
         self.logger = MMLogger.get_instance(self._testMethodName)
@@ -212,8 +219,8 @@ class TestBaseModule(TestCase):
         torch.save(self.model.state_dict(), checkpoint_path)
         model_cfg = copy.deepcopy(self.model_cfg)
         model_cfg['type'] = 'PratrainedModel'
-        model_cfg['init_cfg'] = dict(
-            type='Pretrained', checkpoint=checkpoint_path)
+        model_cfg['init_cfg'] = dict(type='Pretrained',
+                                     checkpoint=checkpoint_path)
         model = FOOMODELS.build(model_cfg)
         ori_layer_weight = model.linear.linear.weight.clone()
         ori_layer_bias = model.linear.linear.bias.clone()
@@ -280,8 +287,8 @@ class TestBaseModule(TestCase):
         model1.init_weights()
         assert len(os.listdir(dump_dir)) == 0
         log_path = os.path.join(dump_dir, 'out.log')
-        MMLogger.get_instance(
-            'logger2', log_file=log_path)  # add logger with FileHandler
+        MMLogger.get_instance('logger2',
+                              log_file=log_path)  # add logger with FileHandler
         model2 = build_from_cfg(self.model_cfg, FOOMODELS)
         model2.init_weights()
         assert len(os.listdir(dump_dir)) == 1
@@ -297,14 +304,16 @@ class TestModuleList(TestCase):
 
     def test_modulelist_weight_init(self):
         models_cfg = [
-            dict(
-                type='FooConv1d',
-                init_cfg=dict(
-                    type='Constant', layer='Conv1d', val=0., bias=1.)),
-            dict(
-                type='FooConv2d',
-                init_cfg=dict(
-                    type='Constant', layer='Conv2d', val=2., bias=3.)),
+            dict(type='FooConv1d',
+                 init_cfg=dict(type='Constant',
+                               layer='Conv1d',
+                               val=0.,
+                               bias=1.)),
+            dict(type='FooConv2d',
+                 init_cfg=dict(type='Constant',
+                               layer='Conv2d',
+                               val=2.,
+                               bias=3.)),
         ]
         layers = [build_from_cfg(cfg, COMPONENTS) for cfg in models_cfg]
         modellist = ModuleList(layers)
@@ -323,10 +332,11 @@ class TestModuleList(TestCase):
                         torch.full(modellist[1].conv2d.bias.shape, 3.)))
         # inner init_cfg has higher priority
         layers = [build_from_cfg(cfg, COMPONENTS) for cfg in models_cfg]
-        modellist = ModuleList(
-            layers,
-            init_cfg=dict(
-                type='Constant', layer=['Conv1d', 'Conv2d'], val=4., bias=5.))
+        modellist = ModuleList(layers,
+                               init_cfg=dict(type='Constant',
+                                             layer=['Conv1d', 'Conv2d'],
+                                             val=4.,
+                                             bias=5.))
         modellist.init_weights()
         self.assertTrue(
             torch.equal(modellist[0].conv1d.weight,
@@ -346,14 +356,16 @@ class TestModuleDict(TestCase):
 
     def test_moduledict_weight_init(self):
         models_cfg = dict(
-            foo_conv_1d=dict(
-                type='FooConv1d',
-                init_cfg=dict(
-                    type='Constant', layer='Conv1d', val=0., bias=1.)),
-            foo_conv_2d=dict(
-                type='FooConv2d',
-                init_cfg=dict(
-                    type='Constant', layer='Conv2d', val=2., bias=3.)),
+            foo_conv_1d=dict(type='FooConv1d',
+                             init_cfg=dict(type='Constant',
+                                           layer='Conv1d',
+                                           val=0.,
+                                           bias=1.)),
+            foo_conv_2d=dict(type='FooConv2d',
+                             init_cfg=dict(type='Constant',
+                                           layer='Conv2d',
+                                           val=2.,
+                                           bias=3.)),
         )
         layers = {
             name: build_from_cfg(cfg, COMPONENTS)
@@ -382,10 +394,11 @@ class TestModuleDict(TestCase):
             name: build_from_cfg(cfg, COMPONENTS)
             for name, cfg in models_cfg.items()
         }
-        modeldict = ModuleDict(
-            layers,
-            init_cfg=dict(
-                type='Constant', layer=['Conv1d', 'Conv2d'], val=4., bias=5.))
+        modeldict = ModuleDict(layers,
+                               init_cfg=dict(type='Constant',
+                                             layer=['Conv1d', 'Conv2d'],
+                                             val=4.,
+                                             bias=5.))
         modeldict.init_weights()
         self.assertTrue(
             torch.equal(
@@ -409,14 +422,16 @@ class TestSequential(TestCase):
 
     def test_sequential_model_weight_init(self):
         seq_model_cfg = [
-            dict(
-                type='FooConv1d',
-                init_cfg=dict(
-                    type='Constant', layer='Conv1d', val=0., bias=1.)),
-            dict(
-                type='FooConv2d',
-                init_cfg=dict(
-                    type='Constant', layer='Conv2d', val=2., bias=3.)),
+            dict(type='FooConv1d',
+                 init_cfg=dict(type='Constant',
+                               layer='Conv1d',
+                               val=0.,
+                               bias=1.)),
+            dict(type='FooConv2d',
+                 init_cfg=dict(type='Constant',
+                               layer='Conv2d',
+                               val=2.,
+                               bias=3.)),
         ]
         layers = [build_from_cfg(cfg, COMPONENTS) for cfg in seq_model_cfg]
         seq_model = Sequential(*layers)
@@ -435,10 +450,11 @@ class TestSequential(TestCase):
                         torch.full(seq_model[1].conv2d.bias.shape, 3.)))
         # inner init_cfg has higher priority
         layers = [build_from_cfg(cfg, COMPONENTS) for cfg in seq_model_cfg]
-        seq_model = Sequential(
-            *layers,
-            init_cfg=dict(
-                type='Constant', layer=['Conv1d', 'Conv2d'], val=4., bias=5.))
+        seq_model = Sequential(*layers,
+                               init_cfg=dict(type='Constant',
+                                             layer=['Conv1d', 'Conv2d'],
+                                             val=4.,
+                                             bias=5.))
         seq_model.init_weights()
         self.assertTrue(
             torch.equal(seq_model[0].conv1d.weight,

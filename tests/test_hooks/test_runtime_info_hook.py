@@ -95,8 +95,8 @@ class TestRuntimeInfoHook(RunnerTestCase):
         optim2 = SGD(model.layer2.parameters(), lr=0.02)
         optim_wrapper1 = OptimWrapper(optim1)
         optim_wrapper2 = OptimWrapper(optim2)
-        optim_wrapper_dict = OptimWrapperDict(
-            key1=optim_wrapper1, key2=optim_wrapper2)
+        optim_wrapper_dict = OptimWrapperDict(key1=optim_wrapper1,
+                                              key2=optim_wrapper2)
         runner.optim_wrapper = optim_wrapper_dict
         hook.before_train_iter(runner, batch_idx=2, data_batch=None)
         self.assertEqual(
@@ -108,8 +108,10 @@ class TestRuntimeInfoHook(RunnerTestCase):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         runner = self.build_runner(cfg)
         hook = self._get_runtime_info_hook(runner)
-        hook.after_train_iter(
-            runner, batch_idx=2, data_batch=None, outputs={'loss_cls': 1.111})
+        hook.after_train_iter(runner,
+                              batch_idx=2,
+                              data_batch=None,
+                              outputs={'loss_cls': 1.111})
         self.assertEqual(
             runner.message_hub.get_scalar('train/loss_cls').current(), 1.111)
 
@@ -167,14 +169,13 @@ class TestRuntimeInfoHook(RunnerTestCase):
 
         # check other scalar dtypes
         val = np.mean([5])  # this is not ndarray but dtype is np.float64.
-        hook.after_val_epoch(
-            runner,
-            metrics={
-                'acc_f32': val.astype(np.float32),
-                'acc_i32': val.astype(np.int32),
-                'acc_u8': val.astype(np.uint8),
-                'acc_ndarray': np.array([5]),
-            })
+        hook.after_val_epoch(runner,
+                             metrics={
+                                 'acc_f32': val.astype(np.float32),
+                                 'acc_i32': val.astype(np.int32),
+                                 'acc_u8': val.astype(np.uint8),
+                                 'acc_ndarray': np.array([5]),
+                             })
         self.assertEqual(
             runner.message_hub.get_scalar('val/acc_f32').current(), 5)
         self.assertEqual(
@@ -185,13 +186,12 @@ class TestRuntimeInfoHook(RunnerTestCase):
             runner.message_hub.get_scalar('val/acc_ndarray').current(), 5)
 
         val = torch.tensor([5.0]).mean()
-        hook.after_val_epoch(
-            runner,
-            metrics={
-                'acc_f32': val.float(),
-                'acc_i64': val.long(),
-                'acc_tensor': torch.tensor([5]),
-            })
+        hook.after_val_epoch(runner,
+                             metrics={
+                                 'acc_f32': val.float(),
+                                 'acc_i64': val.long(),
+                                 'acc_tensor': torch.tensor([5]),
+                             })
         self.assertEqual(
             runner.message_hub.get_scalar('val/acc_f32').current(), 5)
         self.assertEqual(

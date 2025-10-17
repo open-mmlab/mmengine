@@ -97,12 +97,11 @@ class TestImgDataPreprocessor(TestBaseDataPreprocessor):
         assert_allclose(data_processor.pad_value, torch.tensor(0))
 
         # Initiate model with bgr2rgb, mean, std .etc..
-        data_processor = ImgDataPreprocessor(
-            bgr_to_rgb=True,
-            mean=[0, 0, 0],
-            std=[255, 255, 255],
-            pad_size_divisor=16,
-            pad_value=10)
+        data_processor = ImgDataPreprocessor(bgr_to_rgb=True,
+                                             mean=[0, 0, 0],
+                                             std=[255, 255, 255],
+                                             pad_size_divisor=16,
+                                             pad_value=10)
         self.assertTrue(data_processor._enable_normalize)
         self.assertTrue(data_processor._channel_conversion, True)
         assert_allclose(data_processor.mean,
@@ -122,15 +121,15 @@ class TestImgDataPreprocessor(TestBaseDataPreprocessor):
             ImgDataPreprocessor(bgr_to_rgb=True, rgb_to_bgr=True)
 
         with self.assertRaisesRegex(AssertionError, 'mean and std should be'):
-            ImgDataPreprocessor(
-                bgr_to_rgb=True,
-                mean=None,
-                std=[255, 255, 255],
-                pad_size_divisor=16,
-                pad_value=10)
+            ImgDataPreprocessor(bgr_to_rgb=True,
+                                mean=None,
+                                std=[255, 255, 255],
+                                pad_size_divisor=16,
+                                pad_value=10)
 
-        data_processor = ImgDataPreprocessor(
-            bgr_to_rgb=True, pad_size_divisor=16, pad_value=10)
+        data_processor = ImgDataPreprocessor(bgr_to_rgb=True,
+                                             pad_size_divisor=16,
+                                             pad_value=10)
         self.assertFalse(data_processor._enable_normalize)
 
     def test_forward(self):
@@ -147,10 +146,9 @@ class TestImgDataPreprocessor(TestBaseDataPreprocessor):
         data_sample1 = InstanceData(bboxes=torch.randn(5, 4))
         data_sample2 = InstanceData(bboxes=torch.randn(5, 4))
 
-        data = dict(
-            inputs=[inputs1.clone(), inputs2.clone()],
-            data_sample=[data_sample1.clone(),
-                         data_sample2.clone()])
+        data = dict(inputs=[inputs1.clone(), inputs2.clone()],
+                    data_sample=[data_sample1.clone(),
+                                 data_sample2.clone()])
 
         std = torch.tensor([1, 2, 3]).view(-1, 1, 1)
         target_inputs1 = (inputs1.clone()[[2, 1, 0], ...] - 127.5) / std
@@ -193,26 +191,27 @@ class TestImgDataPreprocessor(TestBaseDataPreprocessor):
             assert_allclose(data_sample.bboxes, target_data_sample.bboxes)
 
         # Test gray image with 3 dim mean will raise error
-        data_preprocessor = ImgDataPreprocessor(
-            mean=(127.5, 127.5, 127.5), std=(127.5, 127.5, 127.5))
-        data = dict(
-            inputs=[torch.ones(10, 10), torch.ones(10, 10)], data_sample=None)
+        data_preprocessor = ImgDataPreprocessor(mean=(127.5, 127.5, 127.5),
+                                                std=(127.5, 127.5, 127.5))
+        data = dict(inputs=[torch.ones(10, 10),
+                            torch.ones(10, 10)],
+                    data_sample=None)
         with self.assertRaisesRegex(AssertionError,
                                     'If the mean has 3 values'):
             data_preprocessor(data)
 
-        data = dict(
-            inputs=[torch.ones(10, 10), torch.ones(10, 10)], data_sample=None)
+        data = dict(inputs=[torch.ones(10, 10),
+                            torch.ones(10, 10)],
+                    data_sample=None)
         with self.assertRaisesRegex(AssertionError,
                                     'If the mean has 3 values'):
             data_preprocessor(data)
 
         # Test stacked batch inputs and batch data samples
-        data_preprocessor = ImgDataPreprocessor(
-            mean=(127.5, 127.5, 127.5),
-            std=(127.5, 127.5, 127.5),
-            rgb_to_bgr=True,
-            pad_size_divisor=16)
+        data_preprocessor = ImgDataPreprocessor(mean=(127.5, 127.5, 127.5),
+                                                std=(127.5, 127.5, 127.5),
+                                                rgb_to_bgr=True,
+                                                pad_size_divisor=16)
         _batch_inputs = torch.randn(2, 3, 10, 10)
         _batch_labels = [torch.randn(1), torch.randn(1)]
         data = dict(inputs=_batch_inputs, data_sample=_batch_labels)
@@ -226,8 +225,8 @@ class TestImgDataPreprocessor(TestBaseDataPreprocessor):
         assert_allclose(target_batch_inputs, inputs)
 
         # Test batch inputs without convert channel order and pad
-        data_preprocessor = ImgDataPreprocessor(
-            mean=(127.5, 127.5, 127.5), std=(127.5, 127.5, 127.5))
+        data_preprocessor = ImgDataPreprocessor(mean=(127.5, 127.5, 127.5),
+                                                std=(127.5, 127.5, 127.5))
         _batch_inputs = torch.randn(2, 3, 10, 10)
         _batch_labels = [torch.randn(1), torch.randn(1)]
         data = dict(inputs=_batch_inputs, data_sample=_batch_labels)
@@ -239,8 +238,8 @@ class TestImgDataPreprocessor(TestBaseDataPreprocessor):
         assert_allclose(target_batch_inputs, inputs)
 
         # Test empty `data_sample`
-        data = dict(
-            inputs=[inputs1.clone(), inputs2.clone()], data_sample=None)
+        data = dict(inputs=[inputs1.clone(), inputs2.clone()],
+                    data_sample=None)
         output = data_preprocessor(data, True)
         inputs, data_samples = output['inputs'], output['data_sample']
         self.assertIsNone(data_samples)

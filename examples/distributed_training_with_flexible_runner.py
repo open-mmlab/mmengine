@@ -70,16 +70,14 @@ def main():
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize(**norm_cfg)]))
-    train_dataloader = dict(
-        batch_size=128,
-        dataset=train_set,
-        sampler=dict(type='DefaultSampler', shuffle=True),
-        collate_fn=dict(type='default_collate'))
-    val_dataloader = dict(
-        batch_size=128,
-        dataset=valid_set,
-        sampler=dict(type='DefaultSampler', shuffle=False),
-        collate_fn=dict(type='default_collate'))
+    train_dataloader = dict(batch_size=128,
+                            dataset=train_set,
+                            sampler=dict(type='DefaultSampler', shuffle=True),
+                            collate_fn=dict(type='default_collate'))
+    val_dataloader = dict(batch_size=128,
+                          dataset=valid_set,
+                          sampler=dict(type='DefaultSampler', shuffle=False),
+                          collate_fn=dict(type='default_collate'))
 
     if args.use_deepspeed:
         strategy = dict(
@@ -97,30 +95,28 @@ def main():
             # bf16=dict(
             #     enabled=True,
             # ),
-            zero_optimization=dict(
-                stage=3,
-                allgather_partitions=True,
-                reduce_scatter=True,
-                allgather_bucket_size=50000000,
-                reduce_bucket_size=50000000,
-                overlap_comm=True,
-                contiguous_gradients=True,
-                cpu_offload=False),
+            zero_optimization=dict(stage=3,
+                                   allgather_partitions=True,
+                                   reduce_scatter=True,
+                                   allgather_bucket_size=50000000,
+                                   reduce_bucket_size=50000000,
+                                   overlap_comm=True,
+                                   contiguous_gradients=True,
+                                   cpu_offload=False),
         )
-        optim_wrapper = dict(
-            type='DeepSpeedOptimWrapper',
-            optimizer=dict(type='AdamW', lr=1e-3))
+        optim_wrapper = dict(type='DeepSpeedOptimWrapper',
+                             optimizer=dict(type='AdamW', lr=1e-3))
     elif args.use_fsdp:
         from functools import partial
 
         from torch.distributed.fsdp.wrap import size_based_auto_wrap_policy
-        size_based_auto_wrap_policy = partial(
-            size_based_auto_wrap_policy, min_num_params=1e7)
+        size_based_auto_wrap_policy = partial(size_based_auto_wrap_policy,
+                                              min_num_params=1e7)
         strategy = dict(
             type='FSDPStrategy',
             model_wrapper=dict(auto_wrap_policy=size_based_auto_wrap_policy))
-        optim_wrapper = dict(
-            type='AmpOptimWrapper', optimizer=dict(type='AdamW', lr=1e-3))
+        optim_wrapper = dict(type='AmpOptimWrapper',
+                             optimizer=dict(type='AdamW', lr=1e-3))
     elif args.use_colossalai:
         from colossalai.tensor.op_wrapper import colo_op_impl
 
@@ -142,20 +138,21 @@ def main():
         optim_wrapper = dict(optimizer=dict(type='HybridAdam', lr=1e-3))
     else:
         strategy = None
-        optim_wrapper = dict(
-            type='AmpOptimWrapper', optimizer=dict(type='AdamW', lr=1e-3))
+        optim_wrapper = dict(type='AmpOptimWrapper',
+                             optimizer=dict(type='AdamW', lr=1e-3))
 
-    runner = FlexibleRunner(
-        model=MMResNet50(),
-        work_dir='./work_dirs',
-        strategy=strategy,
-        train_dataloader=train_dataloader,
-        optim_wrapper=optim_wrapper,
-        param_scheduler=dict(type='LinearLR'),
-        train_cfg=dict(by_epoch=True, max_epochs=10, val_interval=1),
-        val_dataloader=val_dataloader,
-        val_cfg=dict(),
-        val_evaluator=dict(type=Accuracy))
+    runner = FlexibleRunner(model=MMResNet50(),
+                            work_dir='./work_dirs',
+                            strategy=strategy,
+                            train_dataloader=train_dataloader,
+                            optim_wrapper=optim_wrapper,
+                            param_scheduler=dict(type='LinearLR'),
+                            train_cfg=dict(by_epoch=True,
+                                           max_epochs=10,
+                                           val_interval=1),
+                            val_dataloader=val_dataloader,
+                            val_cfg=dict(),
+                            val_evaluator=dict(type=Accuracy))
     runner.train()
 
 

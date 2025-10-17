@@ -90,19 +90,22 @@ def test_build_from_cfg(cfg_type):
     # cfg or default_args should contain the key "type"
     with pytest.raises(KeyError, match='must contain the key "type"'):
         cfg = cfg_type(dict(depth=50))
-        model = build_from_cfg(
-            cfg, BACKBONES, default_args=cfg_type(dict(stages=4)))
+        model = build_from_cfg(cfg,
+                               BACKBONES,
+                               default_args=cfg_type(dict(stages=4)))
 
     # "type" defined using default_args
     cfg = cfg_type(dict(depth=50))
-    model = build_from_cfg(
-        cfg, BACKBONES, default_args=cfg_type(dict(type='ResNet')))
+    model = build_from_cfg(cfg,
+                           BACKBONES,
+                           default_args=cfg_type(dict(type='ResNet')))
     assert isinstance(model, ResNet)
     assert model.depth == 50 and model.stages == 4
 
     cfg = cfg_type(dict(depth=50))
-    model = build_from_cfg(
-        cfg, BACKBONES, default_args=cfg_type(dict(type=ResNet)))
+    model = build_from_cfg(cfg,
+                           BACKBONES,
+                           default_args=cfg_type(dict(type=ResNet)))
     assert isinstance(model, ResNet)
     assert model.depth == 50 and model.stages == 4
 
@@ -197,24 +200,22 @@ def test_build_scheduler_from_cfg():
     from torch.optim import SGD
     model = nn.Conv2d(1, 1, 1)
     optimizer = SGD(model.parameters(), lr=0.1)
-    cfg = dict(
-        type='LinearParamScheduler',
-        optimizer=optimizer,
-        param_name='lr',
-        begin=0,
-        end=100)
+    cfg = dict(type='LinearParamScheduler',
+               optimizer=optimizer,
+               param_name='lr',
+               begin=0,
+               end=100)
     scheduler = PARAM_SCHEDULERS.build(cfg)
     assert scheduler.begin == 0
     assert scheduler.end == 100
 
-    cfg = dict(
-        type='LinearParamScheduler',
-        convert_to_iter_based=True,
-        optimizer=optimizer,
-        param_name='lr',
-        begin=0,
-        end=100,
-        epoch_length=10)
+    cfg = dict(type='LinearParamScheduler',
+               convert_to_iter_based=True,
+               optimizer=optimizer,
+               param_name='lr',
+               begin=0,
+               end=100,
+               epoch_length=10)
 
     scheduler = PARAM_SCHEDULERS.build(cfg)
     assert scheduler.begin == 0

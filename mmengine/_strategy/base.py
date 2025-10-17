@@ -270,10 +270,9 @@ class BaseStrategy(metaclass=ABCMeta):
                 more details.
         """
         from mmengine.runner import set_random_seed
-        self._seed = set_random_seed(
-            seed=seed,
-            deterministic=deterministic,
-            diff_rank_seed=diff_rank_seed)
+        self._seed = set_random_seed(seed=seed,
+                                     deterministic=deterministic,
+                                     diff_rank_seed=diff_rank_seed)
 
     def build_model(self, model: Union[nn.Module, dict]) -> nn.Module:
         """Build model.
@@ -322,8 +321,8 @@ class BaseStrategy(metaclass=ABCMeta):
         Returns:
             nn.Module: Compiled model.
         """
-        if  isinstance(compile, bool) and not compile or \
-            isinstance(compile, dict) and not compile.get('disable', False):
+        if isinstance(compile, bool) and not compile or \
+           isinstance(compile, dict) and not compile.get('disable', False):
             return model
 
         assert digit_version(TORCH_VERSION) >= digit_version('2.0.0'), (
@@ -561,10 +560,10 @@ class BaseStrategy(metaclass=ABCMeta):
                     'Use the max epochs/iters of train loop as default.')
 
                 param_schedulers.append(
-                    PARAM_SCHEDULERS.build(
-                        _scheduler,
-                        default_args=dict(
-                            optimizer=optim_wrapper, **default_args)))
+                    PARAM_SCHEDULERS.build(_scheduler,
+                                           default_args=dict(
+                                               optimizer=optim_wrapper,
+                                               **default_args)))
             else:
                 raise TypeError(
                     'scheduler should be a _ParamScheduler object or dict, '
@@ -800,8 +799,10 @@ class BaseStrategy(metaclass=ABCMeta):
         else:
             model = self.model
 
-        _load_checkpoint_to_model(
-            model, state_dict, strict=strict, revise_keys=revise_keys)
+        _load_checkpoint_to_model(model,
+                                  state_dict,
+                                  strict=strict,
+                                  revise_keys=revise_keys)
 
     def load_optim_state_dict(self, state_dict: dict) -> None:
         """Load optimizer state from dict."""

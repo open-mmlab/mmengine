@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Generator, Iterator, Optional, Tuple, Union
 
 import mmengine
+
 from .base import BaseStorageBackend
 
 
@@ -156,8 +157,8 @@ class LocalBackend(BaseStorageBackend):
         """
         return osp.isfile(filepath)
 
-    def join_path(self, filepath: Union[str, Path],
-                  *filepaths: Union[str, Path]) -> str:
+    def join_path(self, filepath: Union[str, Path], *filepaths:
+                  Union[str, Path]) -> str:
         r"""Concatenate all file paths.
 
         Join one or more filepath components intelligently. The return value

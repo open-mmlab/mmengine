@@ -118,8 +118,10 @@ class TestLRScheduler(TestCase):
             group['initial_lr'] = 0.01
 
         def call_sch_before_optim_resume():
-            scheduler = StepLR(
-                self.optimizer, gamma=0.1, step_size=3, last_step=10)
+            scheduler = StepLR(self.optimizer,
+                               gamma=0.1,
+                               step_size=3,
+                               last_step=10)
             scheduler.step()
             self.optimizer.step()
 
@@ -179,17 +181,16 @@ class TestLRScheduler(TestCase):
         interpolation = [
             start_factor + i * (1 - start_factor) / iters for i in range(iters)
         ]
-        single_targets = [0.05] * begin + [x * 0.05
-                                           for x in interpolation] + [0.05] * (
-                                               epochs - iters - begin)
+        single_targets = [0.05] * begin + [
+            x * 0.05 for x in interpolation
+        ] + [0.05] * (epochs - iters - begin)
         targets = [
             single_targets, [x * self.layer2_mult for x in single_targets]
         ]
-        scheduler = LinearLR(
-            self.optimizer,
-            start_factor=start_factor,
-            begin=begin,
-            end=begin + iters + 1)
+        scheduler = LinearLR(self.optimizer,
+                             start_factor=start_factor,
+                             begin=begin,
+                             end=begin + iters + 1)
         self._test_scheduler_value(scheduler, targets, epochs)
 
     def _test_scheduler_value(self,
@@ -233,8 +234,10 @@ class TestLRScheduler(TestCase):
         targets = [
             single_targets, [x * self.layer2_mult for x in single_targets]
         ]
-        scheduler = StepLR(
-            self.optimizer, gamma=0.1, step_size=3, verbose=True)
+        scheduler = StepLR(self.optimizer,
+                           gamma=0.1,
+                           step_size=3,
+                           verbose=True)
         self._test_scheduler_value(scheduler, targets, epochs)
 
     def test_multi_step_scheduler(self):
@@ -248,8 +251,9 @@ class TestLRScheduler(TestCase):
         targets = [
             single_targets, [x * self.layer2_mult for x in single_targets]
         ]
-        scheduler = MultiStepLR(
-            self.optimizer, gamma=0.1, milestones=[2, 5, 9])
+        scheduler = MultiStepLR(self.optimizer,
+                                gamma=0.1,
+                                milestones=[2, 5, 9])
         self._test_scheduler_value(scheduler, targets, epochs)
 
     def test_constant_scheduler(self):
@@ -287,13 +291,14 @@ class TestLRScheduler(TestCase):
         interpolation = [
             start_factor + i * (1 - start_factor) / iters for i in range(iters)
         ]
-        single_targets = [x * 0.05 for x in interpolation] + [0.05] * (
-            epochs - iters)
+        single_targets = [x * 0.05
+                          for x in interpolation] + [0.05] * (epochs - iters)
         targets = [
             single_targets, [x * self.layer2_mult for x in single_targets]
         ]
-        scheduler = LinearLR(
-            self.optimizer, start_factor=start_factor, end=iters + 1)
+        scheduler = LinearLR(self.optimizer,
+                             start_factor=start_factor,
+                             end=iters + 1)
         self._test_scheduler_value(scheduler, targets, epochs)
 
     def test_exp_scheduler(self):
@@ -320,8 +325,10 @@ class TestLRScheduler(TestCase):
         self._test_scheduler_value(scheduler, targets, epochs)
 
         # Test default `T_max`
-        scheduler = CosineAnnealingLR(
-            self.optimizer, begin=5, end=100, eta_min=eta_min)
+        scheduler = CosineAnnealingLR(self.optimizer,
+                                      begin=5,
+                                      end=100,
+                                      eta_min=eta_min)
         self.assertEqual(scheduler.T_max, 100 - 5)
 
     def test_poly_scheduler(self):
@@ -332,32 +339,30 @@ class TestLRScheduler(TestCase):
         targets_layer1 = [
             min_lr + (0.05 - min_lr) * (1 - i / iters)**power
             for i in range(iters)
-        ] + [min_lr] * (
-            epochs - iters)
+        ] + [min_lr] * (epochs - iters)
         targets_layer2 = [
             min_lr + (0.05 * self.layer2_mult - min_lr) *
             (1 - i / iters)**power for i in range(iters)
-        ] + [min_lr] * (
-            epochs - iters)
+        ] + [min_lr] * (epochs - iters)
         targets = [targets_layer1, targets_layer2]
-        scheduler = PolyLR(
-            self.optimizer, power=power, eta_min=min_lr, end=iters + 1)
+        scheduler = PolyLR(self.optimizer,
+                           power=power,
+                           eta_min=min_lr,
+                           end=iters + 1)
         self._test_scheduler_value(scheduler, targets, epochs=10)
 
     def test_cosine_restart_scheduler(self):
         with self.assertRaises(AssertionError):
-            CosineRestartLR(
-                self.optimizer,
-                periods=[4, 5],
-                restart_weights=[1, 0.5],
-                eta_min=0,
-                eta_min_ratio=0.1)
+            CosineRestartLR(self.optimizer,
+                            periods=[4, 5],
+                            restart_weights=[1, 0.5],
+                            eta_min=0,
+                            eta_min_ratio=0.1)
         with self.assertRaises(AssertionError):
-            CosineRestartLR(
-                self.optimizer,
-                periods=[4, 5],
-                restart_weights=[1, 0.5, 0.0],
-                eta_min=0)
+            CosineRestartLR(self.optimizer,
+                            periods=[4, 5],
+                            restart_weights=[1, 0.5, 0.0],
+                            eta_min=0)
         single_targets = [
             0.05, 0.0426776, 0.025, 0.00732233, 0.025, 0.022612712, 0.01636271,
             0.0086372, 0.0023872, 0.0023872
@@ -365,11 +370,10 @@ class TestLRScheduler(TestCase):
         targets = [
             single_targets, [t * self.layer2_mult for t in single_targets]
         ]
-        scheduler = CosineRestartLR(
-            self.optimizer,
-            periods=[4, 5],
-            restart_weights=[1, 0.5],
-            eta_min=0)
+        scheduler = CosineRestartLR(self.optimizer,
+                                    periods=[4, 5],
+                                    restart_weights=[1, 0.5],
+                                    eta_min=0)
         self._test_scheduler_value(scheduler, targets, epochs=10)
 
     def test_reduce_on_plateau_scheduler(self):
@@ -429,8 +433,10 @@ class TestLRScheduler(TestCase):
                 cooldown=cooldown,
                 min_value=min_value,
             )
-            self._test_scheduler_value(
-                scheduler, targets, epochs=epochs, step_kwargs=metrics_list)
+            self._test_scheduler_value(scheduler,
+                                       targets,
+                                       epochs=epochs,
+                                       step_kwargs=metrics_list)
 
             # reset the state of optimizers
             self.optimizer = optim.SGD([{
@@ -559,9 +565,8 @@ class TestLRScheduler(TestCase):
     def test_multi_step_scheduler_state_dict(self):
         self._check_scheduler_state_dict(
             lambda: MultiStepLR(
-                self.optimizer, gamma=0.1, milestones=[2, 5, 9]),
-            lambda: MultiStepLR(
-                self.optimizer, gamma=0.01, milestones=[1, 4, 6]))
+                self.optimizer, gamma=0.1, milestones=[2, 5, 9]), lambda:
+            MultiStepLR(self.optimizer, gamma=0.01, milestones=[1, 4, 6]))
 
     def test_exp_scheduler_state_dict(self):
         self._check_scheduler_state_dict(
@@ -593,52 +598,50 @@ class TestLRScheduler(TestCase):
 
     def test_cosine_restart_scheduler_state_dict(self):
         self._check_scheduler_state_dict(
-            lambda: CosineRestartLR(
-                self.optimizer,
-                periods=[4, 5],
-                restart_weights=[1, 0.5],
-                eta_min=0),
-            lambda: CosineRestartLR(
-                self.optimizer,
-                periods=[4, 6],
-                restart_weights=[1, 0.5],
-                eta_min=0),
+            lambda: CosineRestartLR(self.optimizer,
+                                    periods=[4, 5],
+                                    restart_weights=[1, 0.5],
+                                    eta_min=0),
+            lambda: CosineRestartLR(self.optimizer,
+                                    periods=[4, 6],
+                                    restart_weights=[1, 0.5],
+                                    eta_min=0),
             epochs=10)
 
     def test_reduce_on_plateau_scheduler_state_dict(self):
         epochs = 10
         metrics_list = [dict(metrics=dict(loss=1.0)) for _ in range(epochs)]
         self._check_scheduler_state_dict(
-            lambda: ReduceOnPlateauLR(
-                self.optimizer,
-                monitor='loss',
-                rule='less',
-                factor=0.01,
-                patience=5,
-                threshold=1e-4,
-                threshold_rule='rel',
-                cooldown=0,
-                min_value=0.0,
-                eps=1e-8),
-            lambda: ReduceOnPlateauLR(
-                self.optimizer,
-                monitor='loss_foo',
-                rule='greater',
-                factor=0.05,
-                patience=10,
-                threshold=1e-5,
-                threshold_rule='abs',
-                cooldown=5,
-                min_value=0.1,
-                eps=1e-9),
+            lambda: ReduceOnPlateauLR(self.optimizer,
+                                      monitor='loss',
+                                      rule='less',
+                                      factor=0.01,
+                                      patience=5,
+                                      threshold=1e-4,
+                                      threshold_rule='rel',
+                                      cooldown=0,
+                                      min_value=0.0,
+                                      eps=1e-8),
+            lambda: ReduceOnPlateauLR(self.optimizer,
+                                      monitor='loss_foo',
+                                      rule='greater',
+                                      factor=0.05,
+                                      patience=10,
+                                      threshold=1e-5,
+                                      threshold_rule='abs',
+                                      cooldown=5,
+                                      min_value=0.1,
+                                      eps=1e-9),
             epochs=epochs,
             step_kwargs=metrics_list)
 
     def test_step_scheduler_convert_iterbased(self):
         # invalid epoch_length
         with self.assertRaises(AssertionError):
-            scheduler = StepLR.build_iter_from_epoch(
-                self.optimizer, gamma=0.1, step_size=2, epoch_length=-1)
+            scheduler = StepLR.build_iter_from_epoch(self.optimizer,
+                                                     gamma=0.1,
+                                                     step_size=2,
+                                                     epoch_length=-1)
 
         # lr = 0.05     if epoch < 2
         # lr = 0.005    if 2 <= epoch < 4
@@ -648,10 +651,14 @@ class TestLRScheduler(TestCase):
         targets = [
             single_targets, [x * self.layer2_mult for x in single_targets]
         ]
-        scheduler = StepLR.build_iter_from_epoch(
-            self.optimizer, gamma=0.1, step_size=2, epoch_length=epoch_length)
-        self._test_scheduler_value(
-            scheduler, targets, epochs * epoch_length, param_name='lr')
+        scheduler = StepLR.build_iter_from_epoch(self.optimizer,
+                                                 gamma=0.1,
+                                                 step_size=2,
+                                                 epoch_length=epoch_length)
+        self._test_scheduler_value(scheduler,
+                                   targets,
+                                   epochs * epoch_length,
+                                   param_name='lr')
 
     def test_multi_step_scheduler_convert_iterbased(self):
         # lr = 0.05     if epoch < 2
@@ -684,8 +691,10 @@ class TestLRScheduler(TestCase):
         targets = [
             single_targets, [x * self.layer2_mult for x in single_targets]
         ]
-        scheduler = ConstantLR.build_iter_from_epoch(
-            self.optimizer, factor=1.0 / 2, end=5, epoch_length=epoch_length)
+        scheduler = ConstantLR.build_iter_from_epoch(self.optimizer,
+                                                     factor=1.0 / 2,
+                                                     end=5,
+                                                     epoch_length=epoch_length)
         self._test_scheduler_value(scheduler, targets, epochs * epoch_length)
 
     def test_linear_scheduler_convert_iterbased(self):
@@ -698,16 +707,15 @@ class TestLRScheduler(TestCase):
         interpolation = [
             start_factor + i * (1 - start_factor) / iters for i in range(iters)
         ]
-        single_targets = [x * 0.05 for x in interpolation] + [0.05] * (
-            epochs * epoch_length - iters)
+        single_targets = [x * 0.05 for x in interpolation
+                          ] + [0.05] * (epochs * epoch_length - iters)
         targets = [
             single_targets, [x * self.layer2_mult for x in single_targets]
         ]
-        scheduler = LinearLR.build_iter_from_epoch(
-            self.optimizer,
-            start_factor=start_factor,
-            end=end,
-            epoch_length=epoch_length)
+        scheduler = LinearLR.build_iter_from_epoch(self.optimizer,
+                                                   start_factor=start_factor,
+                                                   end=end,
+                                                   epoch_length=epoch_length)
         self._test_scheduler_value(scheduler, targets, epochs)
 
     def test_exp_scheduler_convert_iterbased(self):
@@ -755,20 +763,17 @@ class TestLRScheduler(TestCase):
         targets_layer1 = [
             min_lr + (0.05 - min_lr) * (1 - i / iters)**power
             for i in range(iters)
-        ] + [min_lr] * (
-            epochs - iters)
+        ] + [min_lr] * (epochs - iters)
         targets_layer2 = [
             min_lr + (0.05 * self.layer2_mult - min_lr) *
             (1 - i / iters)**power for i in range(iters)
-        ] + [min_lr] * (
-            epochs - iters)
+        ] + [min_lr] * (epochs - iters)
         targets = [targets_layer1, targets_layer2]
-        scheduler = PolyLR.build_iter_from_epoch(
-            self.optimizer,
-            power=power,
-            eta_min=min_lr,
-            end=end,
-            epoch_length=epoch_length)
+        scheduler = PolyLR.build_iter_from_epoch(self.optimizer,
+                                                 power=power,
+                                                 eta_min=min_lr,
+                                                 end=end,
+                                                 epoch_length=epoch_length)
         self._test_scheduler_value(scheduler, targets, epochs=10)
 
     def test_multi_scheduler_without_overlap_linear_multi_step(self):
@@ -779,10 +784,15 @@ class TestLRScheduler(TestCase):
         targets = [
             single_targets, [x * self.layer2_mult for x in single_targets]
         ]
-        scheduler1 = LinearLR(
-            self.optimizer, start_factor=1 / 2, begin=0, end=5)
-        scheduler2 = MultiStepLR(
-            self.optimizer, gamma=0.1, milestones=[3, 6], begin=5, end=12)
+        scheduler1 = LinearLR(self.optimizer,
+                              start_factor=1 / 2,
+                              begin=0,
+                              end=5)
+        scheduler2 = MultiStepLR(self.optimizer,
+                                 gamma=0.1,
+                                 milestones=[3, 6],
+                                 begin=5,
+                                 end=12)
         self._test_scheduler_value([scheduler1, scheduler2], targets, epochs)
 
     def test_multi_scheduler_without_overlap_exp_cosine(self):
@@ -800,8 +810,11 @@ class TestLRScheduler(TestCase):
         targets = [
             single_targets, [x * self.layer2_mult for x in single_targets]
         ]
-        scheduler2 = CosineAnnealingLR(
-            self.optimizer, T_max=5, eta_min=eta_min, begin=5, end=10)
+        scheduler2 = CosineAnnealingLR(self.optimizer,
+                                       T_max=5,
+                                       eta_min=eta_min,
+                                       begin=5,
+                                       end=10)
 
         self._test_scheduler_value([scheduler1, scheduler2], targets, epochs)
 
@@ -813,10 +826,13 @@ class TestLRScheduler(TestCase):
         targets = [
             single_targets, [x * self.layer2_mult for x in single_targets]
         ]
-        scheduler1 = LinearLR(
-            self.optimizer, start_factor=1 / 2, begin=0, end=5)
-        scheduler2 = MultiStepLR(
-            self.optimizer, gamma=0.1, milestones=[3, 6, 9])
+        scheduler1 = LinearLR(self.optimizer,
+                              start_factor=1 / 2,
+                              begin=0,
+                              end=5)
+        scheduler2 = MultiStepLR(self.optimizer,
+                                 gamma=0.1,
+                                 milestones=[3, 6, 9])
         self._test_scheduler_value([scheduler1, scheduler2], targets, epochs)
 
     def test_multi_scheduler_with_gap(self):
@@ -836,32 +852,33 @@ class TestLRScheduler(TestCase):
         targets = [
             single_targets, [x * self.layer2_mult for x in single_targets]
         ]
-        scheduler2 = CosineAnnealingLR(
-            self.optimizer, T_max=5, eta_min=eta_min, begin=10, end=15)
+        scheduler2 = CosineAnnealingLR(self.optimizer,
+                                       T_max=5,
+                                       eta_min=eta_min,
+                                       begin=10,
+                                       end=15)
 
         self._test_scheduler_value([scheduler1, scheduler2], targets, epochs)
 
     def test_onecycle_lr(self):
         # test linear annealing
         target = [1., 13., 25., 21.5, 18., 14.5, 11., 7.5, 4., 0.5]
-        scheduler = OneCycleLR(
-            self.optimizer,
-            eta_max=25,
-            final_div_factor=2,
-            total_steps=10,
-            anneal_strategy='linear')
+        scheduler = OneCycleLR(self.optimizer,
+                               eta_max=25,
+                               final_div_factor=2,
+                               total_steps=10,
+                               anneal_strategy='linear')
         self._test_scheduler_value(scheduler, [target], 10)
         # test linear annealing three phase
         target = [1., 9., 17., 25., 17., 9., 1., 0.75, 0.5, 0.25]
-        scheduler = OneCycleLR(
-            self.optimizer,
-            eta_max=25,
-            div_factor=25,
-            total_steps=10,
-            anneal_strategy='linear',
-            pct_start=0.4,
-            final_div_factor=4,
-            three_phase=True)
+        scheduler = OneCycleLR(self.optimizer,
+                               eta_max=25,
+                               div_factor=25,
+                               total_steps=10,
+                               anneal_strategy='linear',
+                               pct_start=0.4,
+                               final_div_factor=4,
+                               three_phase=True)
         self._test_scheduler_value(scheduler, [target], 10)
 
         # test cosine annealing
@@ -878,6 +895,8 @@ class TestLRScheduler(TestCase):
             annealing_cos(25, 0.5, 5 / 7.0),
             annealing_cos(25, 0.5, 6 / 7.0), 0.5
         ]
-        scheduler = OneCycleLR(
-            self.optimizer, eta_max=25, final_div_factor=2, total_steps=10)
+        scheduler = OneCycleLR(self.optimizer,
+                               eta_max=25,
+                               final_div_factor=2,
+                               total_steps=10)
         self._test_scheduler_value(scheduler, [target], 10)

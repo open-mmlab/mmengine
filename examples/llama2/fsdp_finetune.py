@@ -92,17 +92,14 @@ def parse_args():
 def train():
     args = parse_args()
     # Setup distributed related component in Strategy.
-    strategy = FSDPStrategy(
-        model_wrapper=dict(
-            auto_wrap_policy=partial(
-                transformer_auto_wrap_policy,
-                transformer_layer_cls={LlamaDecoderLayer})),
-        state_dict_cfg='full',
-        env_kwargs=dict(randomness=dict(seed=42)))
-    visualizer = Visualizer(
-        name='mmengine',
-        save_dir=args.output_dir,
-        vis_backends=[dict(type=WandbVisBackend)])
+    strategy = FSDPStrategy(model_wrapper=dict(
+        auto_wrap_policy=partial(transformer_auto_wrap_policy,
+                                 transformer_layer_cls={LlamaDecoderLayer})),
+                            state_dict_cfg='full',
+                            env_kwargs=dict(randomness=dict(seed=42)))
+    visualizer = Visualizer(name='mmengine',
+                            save_dir=args.output_dir,
+                            vis_backends=[dict(type=WandbVisBackend)])
 
     # Prepare model
     tokenizer = LlamaTokenizer.from_pretrained(args.checkpoint)
@@ -112,21 +109,20 @@ def train():
     model.train()
 
     # Prepare dataset
-    train_dataset = AlpacaDataset(
-        tokenizer=tokenizer, data_path=args.data_root)
-    train_dataloader = DataLoader(
-        train_dataset,
-        batch_size=args.batch_size,
-        sampler=DefaultSampler(train_dataset, seed=0),
-        collate_fn=default_data_collator,
-        drop_last=True)
+    train_dataset = AlpacaDataset(tokenizer=tokenizer,
+                                  data_path=args.data_root)
+    train_dataloader = DataLoader(train_dataset,
+                                  batch_size=args.batch_size,
+                                  sampler=DefaultSampler(train_dataset,
+                                                         seed=0),
+                                  collate_fn=default_data_collator,
+                                  drop_last=True)
 
     # Get the prepared model, scheduler and optimizer from strategy
     epoch_length = len(train_dataloader)
     max_iters = epoch_length * args.max_epoch
-    optim_cfg = dict(
-        optimizer=dict(type=AdamW, lr=1e-4, weight_decay=0.0),
-        accumulative_counts=ORI_BATCH_SIZE / args.batch_size)
+    optim_cfg = dict(optimizer=dict(type=AdamW, lr=1e-4, weight_decay=0.0),
+                     accumulative_counts=ORI_BATCH_SIZE / args.batch_size)
     scheduler_cfgs = [dict(type=StepLR, step_size=1, gamma=0.85)]
     model, optimizer, schedulers = strategy.prepare(
         model,

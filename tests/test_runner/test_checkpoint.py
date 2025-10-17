@@ -211,14 +211,16 @@ def test_load_checkpoint():
 
     # add prefix
     torch.save(model.state_dict(), checkpoint_path)
-    state_dict = load_checkpoint(
-        pmodel, checkpoint_path, revise_keys=[(r'^', 'backbone.')])
+    state_dict = load_checkpoint(pmodel,
+                                 checkpoint_path,
+                                 revise_keys=[(r'^', 'backbone.')])
     for key in pmodel.backbone.state_dict().keys():
         assert torch.equal(pmodel.backbone.state_dict()[key], state_dict[key])
     # strip prefix
     torch.save(pmodel.state_dict(), checkpoint_path)
-    state_dict = load_checkpoint(
-        model, checkpoint_path, revise_keys=[(r'^backbone\.', '')])
+    state_dict = load_checkpoint(model,
+                                 checkpoint_path,
+                                 revise_keys=[(r'^backbone\.', '')])
 
     for key in state_dict.keys():
         key_stripped = re.sub(r'^backbone\.', '', key)
@@ -366,17 +368,19 @@ def test_save_checkpoint(tmp_path):
     save_checkpoint(model.state_dict(), filename)
 
     filename = str(tmp_path / 'checkpoint2.pth')
-    checkpoint = dict(
-        model=model.state_dict(), optimizer=optimizer.state_dict())
+    checkpoint = dict(model=model.state_dict(),
+                      optimizer=optimizer.state_dict())
     save_checkpoint(checkpoint, filename)
 
     filename = str(tmp_path / 'checkpoint3.pth')
-    save_checkpoint(
-        model.state_dict(), filename, backend_args={'backend': 'local'})
+    save_checkpoint(model.state_dict(),
+                    filename,
+                    backend_args={'backend': 'local'})
 
     filename = str(tmp_path / 'checkpoint4.pth')
-    save_checkpoint(
-        model.state_dict(), filename, file_client_args={'backend': 'disk'})
+    save_checkpoint(model.state_dict(),
+                    filename,
+                    file_client_args={'backend': 'disk'})
 
     # 2. save to petrel oss
     with patch.object(PetrelBackend, 'put') as mock_method:
@@ -386,10 +390,9 @@ def test_save_checkpoint(tmp_path):
 
     with patch.object(PetrelBackend, 'put') as mock_method:
         filename = 's3://path//of/your/checkpoint2.pth'
-        save_checkpoint(
-            model.state_dict(),
-            filename,
-            file_client_args={'backend': 'petrel'})
+        save_checkpoint(model.state_dict(),
+                        filename,
+                        file_client_args={'backend': 'petrel'})
     mock_method.assert_called()
 
 

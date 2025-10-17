@@ -6,6 +6,7 @@ from typing import Optional
 
 from mmengine.fileio import dump
 from mmengine.logging import print_log
+
 from . import root
 from .default_scope import DefaultScope
 from .registry import Registry
@@ -85,8 +86,8 @@ def count_registered_modules(save_path: Optional[str] = None,
         scan_date=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         registries=registries_info)
     if verbose:
-        print_log(
-            f'Finish registry analysis, got: {scan_data}', logger='current')
+        print_log(f'Finish registry analysis, got: {scan_data}',
+                  logger='current')
     if save_path is not None:
         json_path = osp.join(save_path, 'modules_statistic_results.json')
         dump(scan_data, json_path, indent=2)

@@ -29,6 +29,7 @@ from mmengine.optim import (AmpOptimWrapper, BaseOptimWrapper, OptimWrapper,
 from mmengine.registry import (FUNCTIONS, MODEL_WRAPPERS, OPTIM_WRAPPERS,
                                PARAM_SCHEDULERS, STRATEGIES, Registry)
 from mmengine.utils import get_git_hash, mkdir_or_exist
+
 from .distributed import DDPStrategy
 from .utils import MetaTensorContext
 
@@ -151,12 +152,11 @@ class FSDPStrategy(DDPStrategy):
         if self.model_wrapper is None:
             self.model_wrapper = dict(type='MMFullyShardedDataParallel')
 
-        default_args = dict(
-            module=model,
-            device_id=int(os.environ['LOCAL_RANK']),
-            type='MMFullyShardedDataParallel')
-        model = MODEL_WRAPPERS.build(
-            self.model_wrapper, default_args=default_args)
+        default_args = dict(module=model,
+                            device_id=int(os.environ['LOCAL_RANK']),
+                            type='MMFullyShardedDataParallel')
+        model = MODEL_WRAPPERS.build(self.model_wrapper,
+                                     default_args=default_args)
         model.set_state_dict_type(model, self.state_dict_type,
                                   self.state_dict_config,
                                   self.optim_state_dict_config)
@@ -632,10 +632,10 @@ class FSDPStrategy(DDPStrategy):
                     'Use the max epochs/iters of train loop as default.')
 
                 param_schedulers.append(
-                    PARAM_SCHEDULERS.build(
-                        _scheduler,
-                        default_args=dict(
-                            optimizer=optim_wrapper, **default_args)))
+                    PARAM_SCHEDULERS.build(_scheduler,
+                                           default_args=dict(
+                                               optimizer=optim_wrapper,
+                                               **default_args)))
             else:
                 raise TypeError(
                     'scheduler should be a _ParamScheduler object or dict, '

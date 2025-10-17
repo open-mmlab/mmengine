@@ -11,6 +11,7 @@ import torch
 
 import mmengine
 from mmengine.device import is_cuda_available, is_musa_available
+
 from .parrots_wrapper import TORCH_VERSION, get_build_config, is_rocm_pytorch
 
 
@@ -77,8 +78,8 @@ def collect_env():
             if CUDA_HOME == '/opt/rocm':
                 try:
                     nvcc = osp.join(CUDA_HOME, 'hip/bin/hipcc')
-                    nvcc = subprocess.check_output(
-                        f'"{nvcc}" --version', shell=True)
+                    nvcc = subprocess.check_output(f'"{nvcc}" --version',
+                                                   shell=True)
                     nvcc = nvcc.decode('utf-8').strip()
                     release = nvcc.rfind('HIP version:')
                     build = nvcc.rfind('')
@@ -134,8 +135,9 @@ def collect_env():
             from distutils.ccompiler import new_compiler
             ccompiler = new_compiler()
             ccompiler.initialize()
-            cc = subprocess.check_output(
-                f'{ccompiler.cc}', stderr=subprocess.STDOUT, shell=True)
+            cc = subprocess.check_output(f'{ccompiler.cc}',
+                                         stderr=subprocess.STDOUT,
+                                         shell=True)
             encoding = os.device_encoding(
                 sys.stdout.fileno()) or locale.getpreferredencoding()
             env_info['MSVC'] = cc.decode(encoding).partition('\n')[0].strip()

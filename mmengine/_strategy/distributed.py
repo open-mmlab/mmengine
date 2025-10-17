@@ -9,6 +9,7 @@ from mmengine.device import get_device
 from mmengine.dist import init_dist, is_distributed, master_only
 from mmengine.model import convert_sync_batchnorm, is_model_wrapper
 from mmengine.registry import MODEL_WRAPPERS, STRATEGIES
+
 from .single_device import SingleDeviceStrategy
 
 
@@ -93,15 +94,14 @@ class DDPStrategy(SingleDeviceStrategy):
         if self.model_wrapper is None:
             # set broadcast_buffers as False to keep compatibility with
             # OpenMMLab repos
-            self.model_wrapper = dict(
-                type='MMDistributedDataParallel', broadcast_buffers=False)
+            self.model_wrapper = dict(type='MMDistributedDataParallel',
+                                      broadcast_buffers=False)
 
-        default_args = dict(
-            type='MMDistributedDataParallel',
-            module=model,
-            device_ids=[int(os.environ['LOCAL_RANK'])])
-        model = MODEL_WRAPPERS.build(
-            self.model_wrapper, default_args=default_args)
+        default_args = dict(type='MMDistributedDataParallel',
+                            module=model,
+                            device_ids=[int(os.environ['LOCAL_RANK'])])
+        model = MODEL_WRAPPERS.build(self.model_wrapper,
+                                     default_args=default_args)
         return model
 
     @master_only
@@ -114,9 +114,8 @@ class DDPStrategy(SingleDeviceStrategy):
         extra_ckpt: Optional[dict] = None,
         callback: Optional[Callable] = None,
     ) -> None:
-        super().save_checkpoint(
-            filename=filename,
-            save_optimizer=save_optimizer,
-            save_param_scheduler=save_param_scheduler,
-            extra_ckpt=extra_ckpt,
-            callback=callback)
+        super().save_checkpoint(filename=filename,
+                                save_optimizer=save_optimizer,
+                                save_param_scheduler=save_param_scheduler,
+                                extra_ckpt=extra_ckpt,
+                                callback=callback)

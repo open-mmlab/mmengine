@@ -16,8 +16,9 @@ from mmengine.testing import RunnerTestCase
 class TestLogProcessor(RunnerTestCase):
 
     def test_init(self):
-        log_processor = LogProcessor(
-            window_size=10, by_epoch=True, custom_cfg=None)
+        log_processor = LogProcessor(window_size=10,
+                                     by_epoch=True,
+                                     custom_cfg=None)
         assert log_processor.by_epoch
         assert log_processor.window_size == 10
         assert log_processor.custom_cfg == []
@@ -81,8 +82,8 @@ class TestLogProcessor(RunnerTestCase):
     # yapf: enable
     def test_get_log_after_iter(self, by_epoch, mode, log_with_hierarchy):
         # Prepare LoggerHook
-        log_processor = LogProcessor(
-            by_epoch=by_epoch, log_with_hierarchy=log_with_hierarchy)
+        log_processor = LogProcessor(by_epoch=by_epoch,
+                                     log_with_hierarchy=log_with_hierarchy)
         log_processor._get_max_memory = MagicMock(return_value='100')
         eta = 40
         self.runner.message_hub.update_info('eta', eta)
@@ -157,15 +158,15 @@ class TestLogProcessor(RunnerTestCase):
          [False, 'val', False], [True, 'test', True], [False, 'test', False]))
     def test_log_val(self, by_epoch, mode, log_with_hierarchy):
         # Prepare LoggerHook
-        log_processor = LogProcessor(
-            by_epoch=by_epoch, log_with_hierarchy=log_with_hierarchy)
+        log_processor = LogProcessor(by_epoch=by_epoch,
+                                     log_with_hierarchy=log_with_hierarchy)
         # Prepare validation information.
         scalar_logs = dict(accuracy=0.9, data_time=1.0)
-        non_scalar_logs = dict(
-            recall={
-                'cat': 1,
-                'dog': 0
-            }, cm=torch.tensor([1, 2, 3]))
+        non_scalar_logs = dict(recall={
+            'cat': 1,
+            'dog': 0
+        },
+                               cm=torch.tensor([1, 2, 3]))
         log_processor._collect_scalars = MagicMock(return_value=scalar_logs)
         log_processor._collect_non_scalars = MagicMock(
             return_value=non_scalar_logs)
@@ -207,8 +208,9 @@ class TestLogProcessor(RunnerTestCase):
             'val/metric': history_metric_buffer
         }
         self.runner.message_hub._log_scalars = log_scalars
-        tag = log_processor._collect_scalars(
-            copy.deepcopy(custom_cfg), self.runner, mode='train')
+        tag = log_processor._collect_scalars(copy.deepcopy(custom_cfg),
+                                             self.runner,
+                                             mode='train')
         # Training key in tag.
         assert list(tag.keys()) == ['time', 'loss_cls', 'time_max']
         # Test statistics lr with `current`, loss and time with 'mean'
@@ -217,17 +219,17 @@ class TestLogProcessor(RunnerTestCase):
         assert tag['loss_cls'] == loss_cls_scalars[-10:].mean()
 
         # Validation key in tag
-        tag = log_processor._collect_scalars(
-            copy.deepcopy(custom_cfg), self.runner, mode='val')
+        tag = log_processor._collect_scalars(copy.deepcopy(custom_cfg),
+                                             self.runner,
+                                             mode='val')
         assert list(tag.keys()) == ['metric']
         assert tag['metric'] == metric_scalars[-1]
 
         # reserve_prefix=True
-        tag = log_processor._collect_scalars(
-            copy.deepcopy(custom_cfg),
-            self.runner,
-            mode='train',
-            reserve_prefix=True)
+        tag = log_processor._collect_scalars(copy.deepcopy(custom_cfg),
+                                             self.runner,
+                                             mode='train',
+                                             reserve_prefix=True)
         assert list(
             tag.keys()) == ['train/time', 'train/loss_cls', 'train/time_max']
         # Test statistics lr with `current`, loss and time with 'mean'
@@ -315,31 +317,27 @@ class TestLogProcessor(RunnerTestCase):
 
     def test_with_runner(self):
         cfg = self.epoch_based_cfg.copy()
-        cfg.log_processor = dict(
-            custom_cfg=[
-                dict(
-                    data_src='time',
-                    window_size='epoch',
-                    log_name='iter_time',
-                    method_name='mean')
-            ],
-            log_with_hierarchy=True)
+        cfg.log_processor = dict(custom_cfg=[
+            dict(data_src='time',
+                 window_size='epoch',
+                 log_name='iter_time',
+                 method_name='mean')
+        ],
+                                 log_with_hierarchy=True)
         runner = self.build_runner(cfg)
         runner.train()
         runner.val()
         runner.test()
 
         cfg = self.iter_based_cfg.copy()
-        cfg.log_processor = dict(
-            by_epoch=False,
-            custom_cfg=[
-                dict(
-                    data_src='time',
-                    window_size=100,
-                    log_name='iter_time',
-                    method_name='mean')
-            ],
-            log_with_hierarchy=True)
+        cfg.log_processor = dict(by_epoch=False,
+                                 custom_cfg=[
+                                     dict(data_src='time',
+                                          window_size=100,
+                                          log_name='iter_time',
+                                          method_name='mean')
+                                 ],
+                                 log_with_hierarchy=True)
         runner = self.build_runner(cfg)
         runner.train()
         runner.val()

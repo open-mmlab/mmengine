@@ -24,6 +24,7 @@ from mmengine.registry import (MODEL_WRAPPERS, OPTIM_WRAPPERS, OPTIMIZERS,
                                STRATEGIES)
 from mmengine.runner.checkpoint import save_checkpoint, weights_to_cpu
 from mmengine.utils import apply_to, digit_version, get_git_hash
+
 from .base import BaseStrategy
 
 
@@ -310,10 +311,10 @@ class DeepSpeedStrategy(BaseStrategy):
             self.config.setdefault('gradient_accumulation_steps', 1)
         self.config['steps_per_print'] = steps_per_print
         self._inputs_to_half = inputs_to_half
-        assert (exclude_frozen_parameters is None or
-                digit_version(deepspeed.__version__) >= digit_version('0.13.2')
-                ), ('DeepSpeed >= 0.13.2 is required to enable '
-                    'exclude_frozen_parameters')
+        assert (exclude_frozen_parameters is None or digit_version(
+            deepspeed.__version__) >= digit_version('0.13.2')), (
+                'DeepSpeed >= 0.13.2 is required to enable '
+                'exclude_frozen_parameters')
         self.exclude_frozen_parameters = exclude_frozen_parameters
 
         register_deepspeed_optimizers()
@@ -405,8 +406,8 @@ class DeepSpeedStrategy(BaseStrategy):
         else:
             engine, *_ = deepspeed.initialize(model=model, config=self.config)
 
-        wrapper = MMDeepSpeedEngineWrapper(
-            model=engine, inputs_to_half=self._inputs_to_half)
+        wrapper = MMDeepSpeedEngineWrapper(model=engine,
+                                           inputs_to_half=self._inputs_to_half)
         return wrapper
 
     def load_checkpoint(
@@ -563,12 +564,11 @@ class DeepSpeedStrategy(BaseStrategy):
                 extra_ckpt['optim_wrapper'] = self.optim_state_dict()
 
             dirname, basename = osp.split(filename)
-            self.model.save_checkpoint(
-                dirname,
-                tag=basename,
-                client_state=extra_ckpt,
-                save_latest=False,
-                **state_dict_kwargs)
+            self.model.save_checkpoint(dirname,
+                                       tag=basename,
+                                       client_state=extra_ckpt,
+                                       save_latest=False,
+                                       **state_dict_kwargs)
         else:
             if self.model.zero_optimization_partition_weights():
                 state_dict = self.model._zero3_consolidated_16bit_state_dict(

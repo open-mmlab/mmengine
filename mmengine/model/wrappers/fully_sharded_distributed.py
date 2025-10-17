@@ -233,17 +233,16 @@ class MMFullyShardedDataParallel(FullyShardedDataParallel):
             kwargs['ignored_modules'] = self._get_ignored_modules(
                 module, kwargs['ignored_modules'])
 
-        super().__init__(
-            module=module,
-            process_group=process_group,
-            sharding_strategy=sharding_strategy,
-            auto_wrap_policy=auto_wrap_policy,
-            cpu_offload=cpu_offload,
-            backward_prefetch=backward_prefetch,
-            mixed_precision=mixed_precision,
-            param_init_fn=param_init_fn,
-            use_orig_params=use_orig_params,
-            **kwargs)
+        super().__init__(module=module,
+                         process_group=process_group,
+                         sharding_strategy=sharding_strategy,
+                         auto_wrap_policy=auto_wrap_policy,
+                         cpu_offload=cpu_offload,
+                         backward_prefetch=backward_prefetch,
+                         mixed_precision=mixed_precision,
+                         param_init_fn=param_init_fn,
+                         use_orig_params=use_orig_params,
+                         **kwargs)
 
     def train_step(self, data: dict,
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:

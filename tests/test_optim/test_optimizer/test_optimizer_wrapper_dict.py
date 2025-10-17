@@ -18,8 +18,8 @@ class TestOptimWrapperDict(TestCase):
         self.optim2 = SGD(self.model2.parameters(), lr=0.2, momentum=0.9)
         self.optim_wrapper1 = OptimWrapper(self.optim1)
         self.optim_wrapper2 = OptimWrapper(self.optim2)
-        self.optimizers_wrappers = dict(
-            optim1=self.optim_wrapper1, optim2=self.optim_wrapper2)
+        self.optimizers_wrappers = dict(optim1=self.optim_wrapper1,
+                                        optim2=self.optim_wrapper2)
 
     def test_init(self):
         optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
@@ -111,8 +111,8 @@ class TestOptimWrapperDict(TestCase):
         optim_wrapper_load2 = OptimWrapper(optim2)
 
         optim_wrapper_dict_save = OptimWrapperDict(**self.optimizers_wrappers)
-        optim_wrapper_dict_load = OptimWrapperDict(
-            optim1=optim_wrapper_load1, optim2=optim_wrapper_load2)
+        optim_wrapper_dict_load = OptimWrapperDict(optim1=optim_wrapper_load1,
+                                                   optim2=optim_wrapper_load2)
         state_dict = optim_wrapper_dict_save.state_dict()
         optim_wrapper_dict_load.load_state_dict(state_dict)
 
@@ -121,21 +121,18 @@ class TestOptimWrapperDict(TestCase):
 
     def test_items(self):
         optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
-        self.assertListEqual(
-            list(optim_wrapper_dict.items()),
-            list(self.optimizers_wrappers.items()))
+        self.assertListEqual(list(optim_wrapper_dict.items()),
+                             list(self.optimizers_wrappers.items()))
 
     def test_values(self):
         optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
-        self.assertListEqual(
-            list(optim_wrapper_dict.values()),
-            list(self.optimizers_wrappers.values()))
+        self.assertListEqual(list(optim_wrapper_dict.values()),
+                             list(self.optimizers_wrappers.values()))
 
     def test_keys(self):
         optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)
-        self.assertListEqual(
-            list(optim_wrapper_dict.keys()),
-            list(self.optimizers_wrappers.keys()))
+        self.assertListEqual(list(optim_wrapper_dict.keys()),
+                             list(self.optimizers_wrappers.keys()))
 
     def test_getitem(self):
         optim_wrapper_dict = OptimWrapperDict(**self.optimizers_wrappers)

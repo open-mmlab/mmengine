@@ -12,9 +12,9 @@ from mmengine.structures import PixelData
 class TestPixelData(TestCase):
 
     def setup_data(self):
-        metainfo = dict(
-            img_id=random.randint(0, 100),
-            img_shape=(random.randint(400, 600), random.randint(400, 600)))
+        metainfo = dict(img_id=random.randint(0, 100),
+                        img_shape=(random.randint(400, 600),
+                                   random.randint(400, 600)))
         image = np.random.randint(0, 255, (4, 20, 40))
         featmap = torch.randint(0, 255, (10, 20, 40))
         pixel_data = PixelData(metainfo=metainfo, image=image, featmap=featmap)

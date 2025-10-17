@@ -42,11 +42,10 @@ class Accuracy(BaseMetric):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Distributed Training')
-    parser.add_argument(
-        '--launcher',
-        choices=['none', 'pytorch', 'slurm', 'mpi'],
-        default='none',
-        help='job launcher')
+    parser.add_argument('--launcher',
+                        choices=['none', 'pytorch', 'slurm', 'mpi'],
+                        default='none',
+                        help='job launcher')
     parser.add_argument('--local_rank', type=int, default=0)
 
     args = parser.parse_args()
@@ -73,16 +72,14 @@ def main():
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize(**norm_cfg)]))
-    train_dataloader = dict(
-        batch_size=32,
-        dataset=train_set,
-        sampler=dict(type='DefaultSampler', shuffle=True),
-        collate_fn=dict(type='default_collate'))
-    val_dataloader = dict(
-        batch_size=32,
-        dataset=valid_set,
-        sampler=dict(type='DefaultSampler', shuffle=False),
-        collate_fn=dict(type='default_collate'))
+    train_dataloader = dict(batch_size=32,
+                            dataset=train_set,
+                            sampler=dict(type='DefaultSampler', shuffle=True),
+                            collate_fn=dict(type='default_collate'))
+    val_dataloader = dict(batch_size=32,
+                          dataset=valid_set,
+                          sampler=dict(type='DefaultSampler', shuffle=False),
+                          collate_fn=dict(type='default_collate'))
     runner = Runner(
         model=MMResNet50(),
         work_dir='./work_dirs',

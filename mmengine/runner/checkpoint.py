@@ -48,8 +48,8 @@ def _get_mmengine_home():
     mmengine_home = os.path.expanduser(
         os.getenv(
             ENV_MMENGINE_HOME,
-            os.path.join(
-                os.getenv(ENV_XDG_CACHE_HOME, DEFAULT_CACHE_DIR), 'mmengine')))
+            os.path.join(os.getenv(ENV_XDG_CACHE_HOME, DEFAULT_CACHE_DIR),
+                         'mmengine')))
 
     mkdir_or_exist(mmengine_home)
     return mmengine_home
@@ -344,7 +344,9 @@ def load_from_local(filename, map_location):
     filename = osp.expanduser(filename)
     if not osp.isfile(filename):
         raise FileNotFoundError(f'{filename} can not be found.')
-    checkpoint = torch.load(filename, map_location=map_location, weights_only=False)
+    checkpoint = torch.load(filename,
+                            map_location=map_location,
+                            weights_only=False)
     return checkpoint
 
 
@@ -368,19 +370,17 @@ def load_from_http(filename,
     """
     rank, world_size = get_dist_info()
     if rank == 0:
-        checkpoint = load_url(
-            filename,
-            model_dir=model_dir,
-            map_location=map_location,
-            progress=progress)
+        checkpoint = load_url(filename,
+                              model_dir=model_dir,
+                              map_location=map_location,
+                              progress=progress)
     if world_size > 1:
         torch.distributed.barrier()
         if rank > 0:
-            checkpoint = load_url(
-                filename,
-                model_dir=model_dir,
-                map_location=map_location,
-                progress=progress)
+            checkpoint = load_url(filename,
+                                  model_dir=model_dir,
+                                  map_location=map_location,
+                                  progress=progress)
     return checkpoint
 
 
@@ -432,8 +432,8 @@ def load_from_ceph(filename, map_location=None, backend='petrel'):
     Returns:
         dict or OrderedDict: The loaded checkpoint.
     """
-    file_backend = get_file_backend(
-        filename, backend_args={'backend': backend})
+    file_backend = get_file_backend(filename,
+                                    backend_args={'backend': backend})
     with io.BytesIO(file_backend.get(filename)) as buffer:
         checkpoint = torch.load(buffer, map_location=map_location)
     return checkpoint
@@ -522,8 +522,8 @@ def load_from_mmcls(filename, map_location=None):
 
     model_urls = get_mmcls_models()
     model_name = filename[8:]
-    checkpoint = load_from_http(
-        model_urls[model_name], map_location=map_location)
+    checkpoint = load_from_http(model_urls[model_name],
+                                map_location=map_location)
     checkpoint = _process_mmcls_checkpoint(checkpoint)
     return checkpoint
 
@@ -597,9 +597,10 @@ def _load_checkpoint_to_model(model,
     # strip prefix of state_dict
     metadata = getattr(state_dict, '_metadata', OrderedDict())
     for p, r in revise_keys:
-        state_dict = OrderedDict(
-            {re.sub(p, r, k): v
-             for k, v in state_dict.items()})
+        state_dict = OrderedDict({
+            re.sub(p, r, k): v
+            for k, v in state_dict.items()
+        })
     # Keep metadata in state_dict
     state_dict._metadata = metadata
 
@@ -720,8 +721,10 @@ def get_state_dict(module, destination=None, prefix='', keep_vars=False):
     module._save_to_state_dict(destination, prefix, keep_vars)
     for name, child in module._modules.items():
         if child is not None:
-            get_state_dict(
-                child, destination, prefix + name + '.', keep_vars=keep_vars)
+            get_state_dict(child,
+                           destination,
+                           prefix + name + '.',
+                           keep_vars=keep_vars)
     for hook in module._state_dict_hooks.values():
         hook_result = hook(module, destination, prefix, local_metadata)
         if hook_result is not None:
@@ -783,8 +786,8 @@ def save_checkpoint(checkpoint,
     else:
         file_client = FileClient.infer_client(file_client_args, filename)
         if file_client_args is None:
-            file_backend = get_file_backend(
-                filename, backend_args=backend_args)
+            file_backend = get_file_backend(filename,
+                                            backend_args=backend_args)
         else:
             file_backend = file_client
 

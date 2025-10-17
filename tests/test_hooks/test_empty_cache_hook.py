@@ -9,8 +9,8 @@ from mmengine.testing import RunnerTestCase
 
 class TestEmptyCacheHook(RunnerTestCase):
 
-    @pytest.mark.skipif(
-        not is_cuda_available(), reason='cuda should be available')
+    @pytest.mark.skipif(not is_cuda_available(),
+                        reason='cuda should be available')
     def test_with_runner(self):
         with patch('torch.cuda.empty_cache') as mock_empty_cache:
             cfg = self.epoch_based_cfg
@@ -47,8 +47,7 @@ class TestEmptyCacheHook(RunnerTestCase):
 
         with patch('torch.cuda.empty_cache') as mock_empty_cache:
             cfg.custom_hooks = [
-                dict(
-                    type='EmptyCacheHook', after_iter=True, before_epoch=True)
+                dict(type='EmptyCacheHook', after_iter=True, before_epoch=True)
             ]
             runner = self.build_runner(cfg)
 

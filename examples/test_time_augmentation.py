@@ -28,15 +28,14 @@ if __name__ == '__main__':
     cfg.work_dir = 'work_dirs/resnet50_8xb16_cifar10'
     cfg.model = dict(type='ClsTTAModel', module=cfg.model)
     test_pipeline = deepcopy(cfg.test_dataloader.dataset.pipeline)
-    flip_tta = dict(
-        type='TestTimeAug',
-        transforms=[
-            [
-                dict(type='RandomFlip', prob=1.),
-                dict(type='RandomFlip', prob=0.)
-            ],
-            [test_pipeline[-1]],
-        ])
+    flip_tta = dict(type='TestTimeAug',
+                    transforms=[
+                        [
+                            dict(type='RandomFlip', prob=1.),
+                            dict(type='RandomFlip', prob=0.)
+                        ],
+                        [test_pipeline[-1]],
+                    ])
     # Replace the last transform with `TestTimeAug`
     cfg.test_dataloader.dataset.pipeline[-1] = flip_tta
     cfg.load_from = 'https://download.openmmlab.com/mmclassification/v0' \

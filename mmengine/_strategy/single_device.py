@@ -10,6 +10,7 @@ from mmengine.model import revert_sync_batchnorm
 from mmengine.optim import BaseOptimWrapper, _ParamScheduler
 from mmengine.registry import STRATEGIES
 from mmengine.utils import get_git_hash
+
 from .base import BaseStrategy
 
 
@@ -150,8 +151,9 @@ class SingleDeviceStrategy(BaseStrategy):
             callback(checkpoint)
 
         state_dict = checkpoint.pop('state_dict')
-        self.load_model_state_dict(
-            state_dict, strict=strict, revise_keys=revise_keys)
+        self.load_model_state_dict(state_dict,
+                                   strict=strict,
+                                   revise_keys=revise_keys)
 
         return checkpoint
 
@@ -191,8 +193,9 @@ class SingleDeviceStrategy(BaseStrategy):
         """
         self.logger.info(f'Resume checkpoint from {filename}')
 
-        checkpoint = self.load_checkpoint(
-            filename, map_location=map_location, callback=callback)
+        checkpoint = self.load_checkpoint(filename,
+                                          map_location=map_location,
+                                          callback=callback)
 
         if resume_optimizer:
             self.load_optim_state_dict(checkpoint.pop('optimizer'))
