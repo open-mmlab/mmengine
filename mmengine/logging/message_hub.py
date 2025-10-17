@@ -2,16 +2,15 @@
 import copy
 import logging
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
+import torch
 
 from mmengine.utils import ManagerMixin
+
 from .history_buffer import HistoryBuffer
 from .logger import print_log
-
-if TYPE_CHECKING:
-    import torch
 
 
 class MessageHub(ManagerMixin):
@@ -346,7 +345,8 @@ class MessageHub(ManagerMixin):
             if hasattr(value, 'numel') and value.numel() == 1:
                 value = value.item()
             else:
-                print_log(f"MessageHub got unexpceted log: {value}", level=logging.WARN)
+                print_log(f"MessageHub got unexpceted log: {value}",
+                          level=logging.WARN)
         return value  # type: ignore
 
     def state_dict(self) -> dict:
