@@ -3,7 +3,7 @@ import os
 from importlib.util import find_spec as find_module
 
 import numpy
-import numpy.compat
+import numpy.fft
 import numpy.linalg as linalg
 
 from mmengine.config import Config
