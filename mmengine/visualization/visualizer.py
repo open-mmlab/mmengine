@@ -271,9 +271,8 @@ class Visualizer(ManagerMixin):
             # will be updated with `win_name`.
             cv2.namedWindow(winname=f'{id(self)}')
             cv2.setWindowTitle(f'{id(self)}', win_name)
-            cv2.imshow(
-                str(id(self)),
-                self.get_image() if drawn_img is None else drawn_img)
+            cv2.imshow(str(id(self)),
+                       self.get_image() if drawn_img is None else drawn_img)
             cv2.waitKey(int(np.ceil(wait_time * 1000)))
         else:
             raise ValueError('backend should be "matplotlib" or "cv2", '
@@ -300,10 +299,9 @@ class Visualizer(ManagerMixin):
         # self.canvas = mpl.backends.backend_cairo.FigureCanvasCairo(fig)
         self.ax_save.cla()
         self.ax_save.axis(False)
-        self.ax_save.imshow(
-            image,
-            extent=(0, self.width, self.height, 0),
-            interpolation='none')
+        self.ax_save.imshow(image,
+                            extent=(0, self.width, self.height, 0),
+                            interpolation='none')
 
     @master_only
     def get_image(self) -> np.ndarray:
@@ -344,14 +342,16 @@ class Visualizer(ManagerMixin):
         from matplotlib.figure import Figure
         from matplotlib.pyplot import new_figure_manager
         if getattr(self, 'manager', None) is None:
-            self.manager = new_figure_manager(
-                num=1, FigureClass=Figure, **self.fig_show_cfg)
+            self.manager = new_figure_manager(num=1,
+                                              FigureClass=Figure,
+                                              **self.fig_show_cfg)
 
         try:
             self.manager.set_window_title(win_name)
         except Exception:
-            self.manager = new_figure_manager(
-                num=1, FigureClass=Figure, **self.fig_show_cfg)
+            self.manager = new_figure_manager(num=1,
+                                              FigureClass=Figure,
+                                              **self.fig_show_cfg)
             self.manager.set_window_title(win_name)
 
     @master_only
@@ -413,8 +413,11 @@ class Visualizer(ManagerMixin):
             'The shape of `positions` should be (N, 2), '
             f'but got {positions.shape}')
         colors = color_val_matplotlib(colors)  # type: ignore
-        self.ax_save.scatter(
-            positions[:, 0], positions[:, 1], c=colors, s=sizes, marker=marker)
+        self.ax_save.scatter(positions[:, 0],
+                             positions[:, 1],
+                             c=colors,
+                             s=sizes,
+                             marker=marker)
         return self
 
     @master_only
@@ -616,11 +619,10 @@ class Visualizer(ManagerMixin):
             warnings.warn(
                 'Warning: The line is out of bounds,'
                 ' the drawn line may not be in the image', UserWarning)
-        line_collect = LineCollection(
-            lines.tolist(),
-            colors=colors,
-            linestyles=line_styles,
-            linewidths=line_widths)
+        line_collect = LineCollection(lines.tolist(),
+                                      colors=colors,
+                                      linestyles=line_styles,
+                                      linewidths=line_widths)
         self.ax_save.add_collection(line_collect)
         return self
 
@@ -676,10 +678,9 @@ class Visualizer(ManagerMixin):
         assert center.shape == (radius.shape[0], 2), (
             'The shape of `center` should be (radius.shape, 2), '
             f'but got {center.shape}')
-        if not (self._is_posion_valid(center -
-                                      np.tile(radius.reshape((-1, 1)), (1, 2)))
-                and self._is_posion_valid(
-                    center + np.tile(radius.reshape((-1, 1)), (1, 2)))):
+        if not (self._is_posion_valid(center - np.tile(radius.reshape(
+            (-1, 1)), (1, 2))) and self._is_posion_valid(
+                center + np.tile(radius.reshape((-1, 1)), (1, 2)))):
             warnings.warn(
                 'Warning: The circle is out of bounds,'
                 ' the drawn circle may not be in the image', UserWarning)
@@ -698,13 +699,12 @@ class Visualizer(ManagerMixin):
             min(max(linewidth, 1), self._default_font_size / 4)
             for linewidth in line_widths
         ]
-        p = PatchCollection(
-            circles,
-            alpha=alpha,
-            facecolors=face_colors,
-            edgecolors=edge_colors,
-            linewidths=line_widths,
-            linestyles=line_styles)
+        p = PatchCollection(circles,
+                            alpha=alpha,
+                            facecolors=face_colors,
+                            edgecolors=edge_colors,
+                            linewidths=line_widths,
+                            linestyles=line_styles)
         self.ax_save.add_collection(p)
         return self
 
@@ -754,8 +754,9 @@ class Visualizer(ManagerMixin):
         assert bboxes.shape[-1] == 4, (
             f'The shape of `bboxes` should be (N, 4), but got {bboxes.shape}')
 
-        assert (bboxes[:, 0] <= bboxes[:, 2]).all() and (bboxes[:, 1] <=
-                                                         bboxes[:, 3]).all()
+        assert (bboxes[:, 0] <= bboxes[:, 2]).all() and (bboxes[:, 1]
+                                                         <= bboxes[:,
+                                                                   3]).all()
         if not self._is_posion_valid(bboxes.reshape((-1, 2, 2))):
             warnings.warn(
                 'Warning: The bbox is out of bounds,'
@@ -765,13 +766,12 @@ class Visualizer(ManagerMixin):
              bboxes[:, 2], bboxes[:, 3], bboxes[:, 0], bboxes[:, 3]),
             axis=-1).reshape(-1, 4, 2)
         poly = [p for p in poly]
-        return self.draw_polygons(
-            poly,
-            alpha=alpha,
-            edge_colors=edge_colors,
-            line_styles=line_styles,
-            line_widths=line_widths,
-            face_colors=face_colors)
+        return self.draw_polygons(poly,
+                                  alpha=alpha,
+                                  edge_colors=edge_colors,
+                                  line_styles=line_styles,
+                                  line_widths=line_widths,
+                                  face_colors=face_colors)
 
     @master_only
     def draw_polygons(
@@ -837,13 +837,12 @@ class Visualizer(ManagerMixin):
             min(max(linewidth, 1), self._default_font_size / 4)
             for linewidth in line_widths
         ]
-        polygon_collection = PolyCollection(
-            polygons,
-            alpha=alpha,
-            facecolor=face_colors,
-            linestyles=line_styles,
-            edgecolors=edge_colors,
-            linewidths=line_widths)
+        polygon_collection = PolyCollection(polygons,
+                                            alpha=alpha,
+                                            facecolor=face_colors,
+                                            linestyles=line_styles,
+                                            edgecolors=edge_colors,
+                                            linewidths=line_widths)
 
         self.ax_save.add_collection(polygon_collection)
         return self
@@ -903,14 +902,14 @@ class Visualizer(ManagerMixin):
             rgb = np.zeros_like(img)
             rgb[...] = color
             rgb = cv2.bitwise_and(rgb, rgb, mask=binary_mask)
-            img_complement = cv2.bitwise_and(
-                img, img, mask=binary_mask_complement)
+            img_complement = cv2.bitwise_and(img,
+                                             img,
+                                             mask=binary_mask_complement)
             rgb = rgb + img_complement
             img = cv2.addWeighted(img, 1 - alpha, rgb, alpha, 0)
-        self.ax_save.imshow(
-            img,
-            extent=(0, self.width, self.height, 0),
-            interpolation='nearest')
+        self.ax_save.imshow(img,
+                            extent=(0, self.width, self.height, 0),
+                            interpolation='nearest')
         return self
 
     @staticmethod
@@ -991,18 +990,16 @@ class Visualizer(ManagerMixin):
                     f'the feature map will be interpolated. '
                     f'This may cause mismatch problems !')
                 if resize_shape is None:
-                    featmap = F.interpolate(
-                        featmap[None],
-                        overlaid_image.shape[:2],
-                        mode='bilinear',
-                        align_corners=False)[0]
+                    featmap = F.interpolate(featmap[None],
+                                            overlaid_image.shape[:2],
+                                            mode='bilinear',
+                                            align_corners=False)[0]
 
         if resize_shape is not None:
-            featmap = F.interpolate(
-                featmap[None],
-                resize_shape,
-                mode='bilinear',
-                align_corners=False)[0]
+            featmap = F.interpolate(featmap[None],
+                                    resize_shape,
+                                    mode='bilinear',
+                                    align_corners=False)[0]
             if overlaid_image is not None:
                 overlaid_image = cv2.resize(overlaid_image, resize_shape[::-1])
 
@@ -1044,8 +1041,12 @@ class Visualizer(ManagerMixin):
 
             fig = plt.figure(frameon=False)
             # Set the window layout
-            fig.subplots_adjust(
-                left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
+            fig.subplots_adjust(left=0,
+                                right=1,
+                                bottom=0,
+                                top=1,
+                                wspace=0,
+                                hspace=0)
             dpi = fig.get_dpi()
             fig.set_size_inches((width * col + 1e-2) / dpi,
                                 (height * row + 1e-2) / dpi)

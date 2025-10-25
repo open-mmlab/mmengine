@@ -91,12 +91,11 @@ class RunnerTestCase(TestCase):
     3. Provides `build_runner` method to build runner easily.
     4. Clean the global variable used by the runner.
     """
-    dist_cfg = dict(
-        MASTER_ADDR='127.0.0.1',
-        MASTER_PORT=29600,
-        RANK='0',
-        WORLD_SIZE='1',
-        LOCAL_RANK='0')
+    dist_cfg = dict(MASTER_ADDR='127.0.0.1',
+                    MASTER_PORT=29600,
+                    RANK='0',
+                    WORLD_SIZE='1',
+                    LOCAL_RANK='0')
 
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -108,22 +107,22 @@ class RunnerTestCase(TestCase):
         epoch_based_cfg = dict(
             work_dir=self.temp_dir.name,
             model=dict(type='ToyModel'),
-            train_dataloader=dict(
-                dataset=dict(type='ToyDataset'),
-                sampler=dict(type='DefaultSampler', shuffle=True),
-                batch_size=3,
-                num_workers=0),
-            val_dataloader=dict(
-                dataset=dict(type='ToyDataset'),
-                sampler=dict(type='DefaultSampler', shuffle=False),
-                batch_size=3,
-                num_workers=0),
+            train_dataloader=dict(dataset=dict(type='ToyDataset'),
+                                  sampler=dict(type='DefaultSampler',
+                                               shuffle=True),
+                                  batch_size=3,
+                                  num_workers=0),
+            val_dataloader=dict(dataset=dict(type='ToyDataset'),
+                                sampler=dict(type='DefaultSampler',
+                                             shuffle=False),
+                                batch_size=3,
+                                num_workers=0),
             val_evaluator=[dict(type='ToyMetric')],
-            test_dataloader=dict(
-                dataset=dict(type='ToyDataset'),
-                sampler=dict(type='DefaultSampler', shuffle=False),
-                batch_size=3,
-                num_workers=0),
+            test_dataloader=dict(dataset=dict(type='ToyDataset'),
+                                 sampler=dict(type='DefaultSampler',
+                                              shuffle=False),
+                                 batch_size=3,
+                                 num_workers=0),
             test_evaluator=[dict(type='ToyMetric')],
             optim_wrapper=dict(optimizer=dict(type='SGD', lr=0.1)),
             train_cfg=dict(by_epoch=True, max_epochs=2, val_interval=1),
@@ -145,10 +144,12 @@ class RunnerTestCase(TestCase):
         self.iter_based_cfg.log_processor = dict(by_epoch=False)
 
         self.iter_based_cfg.train_cfg = dict(by_epoch=False, max_iters=12)
-        self.iter_based_cfg.default_hooks = dict(
-            logger=dict(type='LoggerHook', interval=1),
-            checkpoint=dict(
-                type='CheckpointHook', interval=12, by_epoch=False))
+        self.iter_based_cfg.default_hooks = dict(logger=dict(type='LoggerHook',
+                                                             interval=1),
+                                                 checkpoint=dict(
+                                                     type='CheckpointHook',
+                                                     interval=12,
+                                                     by_epoch=False))
 
     def tearDown(self):
         # `FileHandler` should be closed in Windows, otherwise we cannot

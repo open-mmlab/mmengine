@@ -105,27 +105,24 @@ def _init_dist_pytorch(backend, init_backend='torch', **kwargs) -> None:
     if is_mlu_available():
         import torch_mlu  # noqa: F401
         torch.mlu.set_device(local_rank)
-        torch_dist.init_process_group(
-            backend='cncl',
-            rank=rank,
-            world_size=int(os.environ['WORLD_SIZE']),
-            **kwargs)
+        torch_dist.init_process_group(backend='cncl',
+                                      rank=rank,
+                                      world_size=int(os.environ['WORLD_SIZE']),
+                                      **kwargs)
     elif is_npu_available():
         import torch_npu  # noqa: F401
         torch.npu.set_device(local_rank)
-        torch_dist.init_process_group(
-            backend='hccl',
-            rank=rank,
-            world_size=int(os.environ['WORLD_SIZE']),
-            **kwargs)
+        torch_dist.init_process_group(backend='hccl',
+                                      rank=rank,
+                                      world_size=int(os.environ['WORLD_SIZE']),
+                                      **kwargs)
     elif is_musa_available():
         import torch_musa  # noqa: F401
         torch.musa.set_device(rank)
-        torch_dist.init_process_group(
-            backend='mccl',
-            rank=rank,
-            world_size=int(os.environ['WORLD_SIZE']),
-            **kwargs)
+        torch_dist.init_process_group(backend='mccl',
+                                      rank=rank,
+                                      world_size=int(os.environ['WORLD_SIZE']),
+                                      **kwargs)
     else:
         torch.cuda.set_device(local_rank)
 

@@ -158,8 +158,8 @@ def test_import_modules_from_strings():
     with pytest.raises(ImportError):
         import_modules_from_strings('_not_implemented_module')
     with pytest.warns(UserWarning):
-        imported = import_modules_from_strings(
-            '_not_implemented_module', allow_failed_imports=True)
+        imported = import_modules_from_strings('_not_implemented_module',
+                                               allow_failed_imports=True)
         assert imported is None
     with pytest.warns(UserWarning):
         imported = import_modules_from_strings(['os.path', '_not_implemented'],

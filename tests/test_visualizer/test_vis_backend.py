@@ -156,8 +156,9 @@ class TestTensorboardVisBackend:
             tensorboard_vis_backend.add_scalar('map', np.array(9), step=0)
             tensorboard_vis_backend.add_scalar('map', np.array(95), step=1)
             tensorboard_vis_backend.add_scalar('map', np.array([9])[0], step=0)
-            tensorboard_vis_backend.add_scalar(
-                'map', np.array([95])[0], step=1)
+            tensorboard_vis_backend.add_scalar('map',
+                                               np.array([95])[0],
+                                               step=1)
         assert len(record) == 0
         # test with tensor
         tensorboard_vis_backend.add_scalar('map', torch.tensor(0.9), step=0)
@@ -266,8 +267,8 @@ class TestWandbVisBackend:
         wandb_vis_backend = WandbVisBackend(
             'temp_dir', define_metric_cfg=define_metric_cfg)
         wandb_vis_backend._init_env()
-        wandb_vis_backend._wandb.define_metric.assert_any_call(
-            'test3', summary='max')
+        wandb_vis_backend._wandb.define_metric.assert_any_call('test3',
+                                                               summary='max')
 
         shutil.rmtree('temp_dir')
 
@@ -284,11 +285,11 @@ class TestMLflowVisBackend:
 
     def test_create_experiment(self):
         with patch('mlflow.create_experiment') as mock_create_experiment:
-            MLflowVisBackend(
-                'temp_dir', exp_name='test',
-                artifact_location='foo')._init_env()
-            mock_create_experiment.assert_any_call(
-                'test', artifact_location='foo')
+            MLflowVisBackend('temp_dir',
+                             exp_name='test',
+                             artifact_location='foo')._init_env()
+            mock_create_experiment.assert_any_call('test',
+                                                   artifact_location='foo')
 
     def test_add_config(self):
         cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
@@ -366,8 +367,8 @@ class TestClearMLVisBackend:
         clearml_vis_backend.close()
 
 
-@pytest.mark.skipif(
-    not is_installed('neptune'), reason='Neptune is not installed.')
+@pytest.mark.skipif(not is_installed('neptune'),
+                    reason='Neptune is not installed.')
 class TestNeptuneVisBackend:
 
     def test_init(self):
@@ -457,9 +458,8 @@ class TestDVCLiveVisBackend:
         shutil.rmtree('temp_dir')
 
 
-@pytest.mark.skipif(
-    platform.system() == 'Windows',
-    reason='Aim does not support Windows for now.')
+@pytest.mark.skipif(platform.system() == 'Windows',
+                    reason='Aim does not support Windows for now.')
 class TestAimVisBackend:
 
     def test_init(self):

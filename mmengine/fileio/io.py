@@ -38,6 +38,7 @@ from pathlib import Path
 from typing import Generator, Iterator, Optional, Tuple, Union
 
 from mmengine.utils import is_filepath, is_str
+
 from .backends import backends, prefix_to_backends
 from .file_client import FileClient
 # file_handlers and register_handler had been moved to
@@ -176,8 +177,9 @@ def get(
         >>> get(filepath)
         b'hello world'
     """
-    backend = get_file_backend(
-        filepath, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(filepath,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     return backend.get(filepath)
 
 
@@ -203,8 +205,9 @@ def get_text(
         >>> get_text(filepath)
         'hello world'
     """
-    backend = get_file_backend(
-        filepath, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(filepath,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     return backend.get_text(filepath, encoding)
 
 
@@ -229,8 +232,9 @@ def put(
         >>> filepath = '/path/of/file'
         >>> put(b'hello world', filepath)
     """
-    backend = get_file_backend(
-        filepath, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(filepath,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     backend.put(obj, filepath)
 
 
@@ -257,8 +261,9 @@ def put_text(
         >>> filepath = '/path/of/file'
         >>> put_text('hello world', filepath)
     """
-    backend = get_file_backend(
-        filepath, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(filepath,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     backend.put_text(obj, filepath)
 
 
@@ -281,8 +286,9 @@ def exists(
         >>> exists(filepath)
         True
     """
-    backend = get_file_backend(
-        filepath, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(filepath,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     return backend.exists(filepath)
 
 
@@ -307,8 +313,9 @@ def isdir(
         >>> isdir(filepath)
         True
     """
-    backend = get_file_backend(
-        filepath, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(filepath,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     return backend.isdir(filepath)
 
 
@@ -332,8 +339,9 @@ def isfile(
         >>> isfile(filepath)
         True
     """
-    backend = get_file_backend(
-        filepath, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(filepath,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     return backend.isfile(filepath)
 
 
@@ -363,8 +371,9 @@ def join_path(
         >>> join_path(filepath1, filepath2, filepath3)
         '/path/of/dir/dir2/path/of/file'
     """
-    backend = get_file_backend(
-        filepath, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(filepath,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     return backend.join_path(filepath, *filepaths)
 
 
@@ -395,8 +404,9 @@ def get_local_path(
         >>> with get_local_path('s3://bucket/abc.jpg') as path:
         ...     # do something here
     """
-    backend = get_file_backend(
-        filepath, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(filepath,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     with backend.get_local_path(str(filepath)) as local_path:
         yield local_path
 
@@ -439,8 +449,9 @@ def copyfile(
         >>> copyfile(src, dst)
         '/path1/of/dir/file'
     """
-    backend = get_file_backend(
-        src, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(src,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     return backend.copyfile(src, dst)
 
 
@@ -473,8 +484,9 @@ def copytree(
         >>> copytree(src, dst)
         '/path/of/dir2'
     """
-    backend = get_file_backend(
-        src, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(src,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     return backend.copytree(src, dst)
 
 
@@ -513,8 +525,9 @@ def copyfile_from_local(
         >>> copyfile_from_local(src, dst)
         's3://openmmlab/mmengine/file'
     """
-    backend = get_file_backend(
-        dst, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(dst,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     return backend.copyfile_from_local(src, dst)
 
 
@@ -545,8 +558,9 @@ def copytree_from_local(
         >>> copyfile_from_local(src, dst)
         's3://openmmlab/mmengine/dir'
     """
-    backend = get_file_backend(
-        dst, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(dst,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     return backend.copytree_from_local(src, dst)
 
 
@@ -589,8 +603,9 @@ def copyfile_to_local(
         >>> copyfile_to_local(src, dst)
         '/path/of/dir/file'
     """
-    backend = get_file_backend(
-        dst, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(dst,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     return backend.copyfile_to_local(src, dst)
 
 
@@ -621,8 +636,9 @@ def copytree_to_local(
         >>> copytree_to_local(src, dst)
         '/path/of/dir'
     """
-    backend = get_file_backend(
-        dst, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(dst,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     return backend.copytree_to_local(src, dst)
 
 
@@ -647,8 +663,9 @@ def remove(
         >>> filepath = '/path/of/file'
         >>> remove(filepath)
     """
-    backend = get_file_backend(
-        filepath, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(filepath,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     backend.remove(filepath)
 
 
@@ -667,8 +684,9 @@ def rmtree(
         >>> dir_path = '/path/of/dir'
         >>> rmtree(dir_path)
     """
-    backend = get_file_backend(
-        dir_path, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(dir_path,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     backend.rmtree(dir_path)
 
 
@@ -702,8 +720,9 @@ def copy_if_symlink_fails(
         >>> copy_if_symlink_fails(src, dst)
         True
     """
-    backend = get_file_backend(
-        src, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(src,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     return backend.copy_if_symlink_fails(src, dst)
 
 
@@ -755,8 +774,9 @@ def list_dir_or_file(
         >>> for file_path in list_dir_or_file(dir_path, recursive=True):
         ...     print(file_path)
     """
-    backend = get_file_backend(
-        dir_path, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(dir_path,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     yield from backend.list_dir_or_file(dir_path, list_dir, list_file, suffix,
                                         recursive)
 
@@ -784,8 +804,9 @@ def generate_presigned_url(
     Returns:
         str: Generated presigned url.
     """
-    backend = get_file_backend(
-        url, backend_args=backend_args, enable_singleton=True)
+    backend = get_file_backend(url,
+                               backend_args=backend_args,
+                               enable_singleton=True)
     return backend.generate_presigned_url(url, client_method, expires_in)
 
 

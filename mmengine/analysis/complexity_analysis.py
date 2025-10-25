@@ -342,8 +342,8 @@ def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
     rows.append(('model', format_size(count.pop(''))))
     fill(0, '')
 
-    table = Table(
-        title=f'parameter count of {model.__class__.__name__}', box=box.ASCII2)
+    table = Table(title=f'parameter count of {model.__class__.__name__}',
+                  box=box.ASCII2)
     table.add_column('name')
     table.add_column('#elements or shape')
 

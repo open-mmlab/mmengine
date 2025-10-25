@@ -119,11 +119,10 @@ class BaseMetric(metaclass=ABCMeta):
                 level=logging.WARNING)
 
         if self.collect_device == 'cpu':
-            results = collect_results(
-                self.results,
-                size,
-                self.collect_device,
-                tmpdir=self.collect_dir)
+            results = collect_results(self.results,
+                                      size,
+                                      self.collect_device,
+                                      tmpdir=self.collect_dir)
         else:
             results = collect_results(self.results, size, self.collect_device)
 
@@ -168,8 +167,8 @@ class DumpResults(BaseMetric):
                  out_file_path: str,
                  collect_device: str = 'cpu',
                  collect_dir: Optional[str] = None) -> None:
-        super().__init__(
-            collect_device=collect_device, collect_dir=collect_dir)
+        super().__init__(collect_device=collect_device,
+                         collect_dir=collect_dir)
         if not out_file_path.endswith(('.pkl', '.pickle')):
             raise ValueError('The output file must be a pkl file.')
         self.out_file_path = out_file_path
@@ -181,9 +180,8 @@ class DumpResults(BaseMetric):
     def compute_metrics(self, results: list) -> dict:
         """Dump the prediction results to a pickle file."""
         dump(results, self.out_file_path)
-        print_log(
-            f'Results has been saved to {self.out_file_path}.',
-            logger='current')
+        print_log(f'Results has been saved to {self.out_file_path}.',
+                  logger='current')
         return {}
 
 

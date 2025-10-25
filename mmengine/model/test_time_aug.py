@@ -7,6 +7,7 @@ import torch.nn as nn
 
 from mmengine.registry import MODELS
 from mmengine.structures import BaseDataElement
+
 from .base_model import BaseModel
 
 # multi-batch inputs processed by different augmentations from the same batch.
@@ -124,9 +125,10 @@ class BaseTTAModel(BaseModel):
         data_list: Union[List[dict], List[list]]
         if isinstance(data, dict):
             num_augs = len(data[next(iter(data))])
-            data_list = [{key: value[idx]
-                          for key, value in data.items()}
-                         for idx in range(num_augs)]
+            data_list = [{
+                key: value[idx]
+                for key, value in data.items()
+            } for idx in range(num_augs)]
         elif isinstance(data, (tuple, list)):
             num_augs = len(data[0])
             data_list = [[_data[idx] for _data in data]

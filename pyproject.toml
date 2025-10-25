@@ -1,0 +1,97 @@
+[build-system]
+requires = ["setuptools>=72", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mmengine"
+# Version is dynamically set from mmengine/version.py
+dynamic = ["version"]
+description = "Engine of OpenMMLab projects"
+readme = "README.md"
+license = { text = "Apache License 2.0" }
+authors = [
+    { name = "MMEngine Authors", email = "openmmlab@gmail.com" },
+    { name = "MGAM", email = "312065559@qq.com" }
+]
+requires-python = ">=3.7"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Utilities",
+]
+keywords = ["OpenMMLab", "Engine"]
+# Core dependencies from requirements/runtime.txt
+dependencies = [
+    "addict",
+    "matplotlib",
+    "numpy",
+    "pyyaml",
+    "regex; sys_platform=='win32'",
+    "rich",
+    "termcolor",
+    "yapf",
+]
+
+# Optional dependency groups
+[project.optional-dependencies]
+# All dependencies (runtime + tests)
+all = [
+    # Runtime dependencies are already included in base
+    # Test dependencies from requirements/tests.txt
+    # Note: aim excluded due to dependency issues (aimrocks not available)
+    # "aim<=3.17.5; sys_platform!='win32'",
+    "bitsandbytes",
+    "clearml",
+    "coverage",
+    "dadaptation",
+    "dvclive",
+    "lion-pytorch",
+    "lmdb",
+    "mlflow",
+    "parameterized",
+    "pydantic==1.10.9",
+    "pytest",
+    "transformers",
+]
+# Test dependencies only
+tests = [
+    "bitsandbytes",
+    "clearml",
+    "coverage",
+    "dadaptation",
+    "dvclive",
+    "lion-pytorch",
+    "lmdb",
+    "mlflow",
+    "parameterized",
+    "pydantic==1.10.9",
+    "pytest",
+    "transformers",
+]
+
+[project.urls]
+Homepage = "https://github.com/open-mmlab/mmengine"
+Repository = "https://github.com/open-mmlab/mmengine"
+Documentation = "https://mmengine.readthedocs.io"
+
+# Setuptools configuration
+[tool.setuptools]
+# Include package data files (similar to include_package_data=True)
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["mmengine*"]
+exclude = ["tests*", "docs*", "examples*"]
+
+# Dynamic version from mmengine/version.py
+[tool.setuptools.dynamic]
+version = {attr = "mmengine.version.__version__"}

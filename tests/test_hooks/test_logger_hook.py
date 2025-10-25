@@ -49,17 +49,15 @@ class TestLoggerHook(RunnerTestCase):
         # test deprecated warning raised by `file_client_args`
         logger = MMLogger.get_current_instance()
         with self.assertLogs(logger, level='WARNING'):
-            LoggerHook(
-                out_dir=self.temp_dir.name,
-                file_client_args=dict(backend='disk'))
+            LoggerHook(out_dir=self.temp_dir.name,
+                       file_client_args=dict(backend='disk'))
 
         with self.assertRaisesRegex(
                 ValueError,
                 '"file_client_args" and "backend_args" cannot be '):
-            LoggerHook(
-                out_dir=self.temp_dir.name,
-                file_client_args=dict(enable_mc=True),
-                backend_args=dict(enable_mc=True))
+            LoggerHook(out_dir=self.temp_dir.name,
+                       file_client_args=dict(enable_mc=True),
+                       backend_args=dict(enable_mc=True))
 
     def test_after_train_iter(self):
         # Test LoggerHook by iter.
@@ -138,8 +136,8 @@ class TestLoggerHook(RunnerTestCase):
                 'acc': 0.8
             }, **args),
         ]
-        self.assertEqual(
-            len(calls), len(runner.visualizer.add_scalars.mock_calls))
+        self.assertEqual(len(calls),
+                         len(runner.visualizer.add_scalars.mock_calls))
         runner.visualizer.add_scalars.assert_has_calls(calls)
 
         # Test when `log_metric_by_epoch` is False
@@ -165,8 +163,8 @@ class TestLoggerHook(RunnerTestCase):
                 'acc': 0.5
             }, **args),
         ]
-        self.assertEqual(
-            len(calls), len(runner.visualizer.add_scalars.mock_calls))
+        self.assertEqual(len(calls),
+                         len(runner.visualizer.add_scalars.mock_calls))
         runner.visualizer.add_scalars.assert_has_calls(calls)
 
     def test_after_test_epoch(self):
@@ -174,10 +172,9 @@ class TestLoggerHook(RunnerTestCase):
         runner = MagicMock()
         runner.log_dir = self.temp_dir.name
         runner.timestamp = 'test_after_test_epoch'
-        runner.log_processor.get_log_after_epoch = MagicMock(
-            return_value=(
-                dict(a=1, b=2, c={'list': [1, 2]}, d=torch.tensor([1, 2, 3])),
-                'log_str'))
+        runner.log_processor.get_log_after_epoch = MagicMock(return_value=(
+            dict(a=1, b=2, c={'list': [1, 2]}, d=torch.tensor([1, 2, 3])),
+            'log_str'))
         logger_hook.before_run(runner)
         logger_hook.after_test_epoch(runner)
         runner.log_processor.get_log_after_epoch.assert_called()
@@ -232,8 +229,9 @@ class TestLoggerHook(RunnerTestCase):
             shutil.rmtree(osp.join(out_dir, filename))
 
         # Test out_suffix
-        cfg.default_hooks.logger = dict(
-            type='LoggerHook', out_dir=out_dir, out_suffix='.log')
+        cfg.default_hooks.logger = dict(type='LoggerHook',
+                                        out_dir=out_dir,
+                                        out_suffix='.log')
         runner = self.build_runner(cfg)
         runner.train()
         filenames = scandir(out_dir, recursive=True)
@@ -241,8 +239,9 @@ class TestLoggerHook(RunnerTestCase):
             all(filename.endswith('.log') for filename in filenames))
 
         # Test keep_local=False
-        cfg.default_hooks.logger = dict(
-            type='LoggerHook', out_dir=out_dir, keep_local=False)
+        cfg.default_hooks.logger = dict(type='LoggerHook',
+                                        out_dir=out_dir,
+                                        keep_local=False)
         runner = self.build_runner(cfg)
         runner.train()
         filenames = scandir(runner._log_dir, recursive=True)

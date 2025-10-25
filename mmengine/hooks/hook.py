@@ -183,8 +183,10 @@ class Hook:
             batch_idx (int): The index of the current batch in the train loop.
             data_batch (dict or tuple or list, optional): Data from dataloader.
         """
-        self._before_iter(
-            runner, batch_idx=batch_idx, data_batch=data_batch, mode='train')
+        self._before_iter(runner,
+                          batch_idx=batch_idx,
+                          data_batch=data_batch,
+                          mode='train')
 
     def before_val_iter(self,
                         runner,
@@ -199,8 +201,10 @@ class Hook:
             data_batch (dict, optional): Data from dataloader.
                 Defaults to None.
         """
-        self._before_iter(
-            runner, batch_idx=batch_idx, data_batch=data_batch, mode='val')
+        self._before_iter(runner,
+                          batch_idx=batch_idx,
+                          data_batch=data_batch,
+                          mode='val')
 
     def before_test_iter(self,
                          runner,
@@ -215,8 +219,10 @@ class Hook:
             data_batch (dict or tuple or list, optional): Data from dataloader.
                 Defaults to None.
         """
-        self._before_iter(
-            runner, batch_idx=batch_idx, data_batch=data_batch, mode='test')
+        self._before_iter(runner,
+                          batch_idx=batch_idx,
+                          data_batch=data_batch,
+                          mode='test')
 
     def after_train_iter(self,
                          runner,
@@ -232,12 +238,11 @@ class Hook:
             data_batch (dict tuple or list, optional): Data from dataloader.
             outputs (dict, optional): Outputs from model.
         """
-        self._after_iter(
-            runner,
-            batch_idx=batch_idx,
-            data_batch=data_batch,
-            outputs=outputs,
-            mode='train')
+        self._after_iter(runner,
+                         batch_idx=batch_idx,
+                         data_batch=data_batch,
+                         outputs=outputs,
+                         mode='train')
 
     def after_val_iter(self,
                        runner,
@@ -253,12 +258,11 @@ class Hook:
             data_batch (dict or tuple or list, optional): Data from dataloader.
             outputs (Sequence, optional): Outputs from model.
         """
-        self._after_iter(
-            runner,
-            batch_idx=batch_idx,
-            data_batch=data_batch,
-            outputs=outputs,
-            mode='val')
+        self._after_iter(runner,
+                         batch_idx=batch_idx,
+                         data_batch=data_batch,
+                         outputs=outputs,
+                         mode='val')
 
     def after_test_iter(self,
                         runner,
@@ -274,12 +278,11 @@ class Hook:
             data_batch (dict or tuple or list, optional): Data from dataloader.
             outputs (Sequence, optional): Outputs from model.
         """
-        self._after_iter(
-            runner,
-            batch_idx=batch_idx,
-            data_batch=data_batch,
-            outputs=outputs,
-            mode='test')
+        self._after_iter(runner,
+                         batch_idx=batch_idx,
+                         data_batch=data_batch,
+                         outputs=outputs,
+                         mode='test')
 
     def _before_epoch(self, runner, mode: str = 'train') -> None:
         """All subclasses should override this method, if they need any

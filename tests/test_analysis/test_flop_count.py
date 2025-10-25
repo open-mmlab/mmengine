@@ -243,8 +243,8 @@ class TestFlopAnalyzer(unittest.TestCase):
         custom_ops2: Dict[str, Handle] = {
             f'aten::{self.lin_op}': addmm_dummy_flop_jit
         }
-        flop_dict2, _ = flop_count(
-            custom_net, (x, ), supported_ops=custom_ops2)
+        flop_dict2, _ = flop_count(custom_net, (x, ),
+                                   supported_ops=custom_ops2)
         flop = 400000 / 1e9
         self.assertEqual(
             flop_dict2[self.lin_op],
@@ -365,9 +365,9 @@ class TestFlopAnalyzer(unittest.TestCase):
             else:
                 spatial_size = (
                     (spatial_dim + 2 * padding) - kernel_size) // stride + 1
-            gt_flop = (
-                batch_size * input_dim * output_dim * (kernel_size**conv_dim) *
-                (spatial_size**conv_dim) / group_size / 1e9)
+            gt_flop = (batch_size * input_dim * output_dim *
+                       (kernel_size**conv_dim) * (spatial_size**conv_dim) /
+                       group_size / 1e9)
             gt_dict = defaultdict(float)
             gt_dict['conv'] = gt_flop
             self.assertDictEqual(
@@ -849,8 +849,8 @@ class TestFlopCountHandles(unittest.TestCase):
         def f(*args):
             return func(*inputs)
 
-        graph = torch.jit.trace(
-            f, tuple(tensor_inputs), check_trace=False).graph
+        graph = torch.jit.trace(f, tuple(tensor_inputs),
+                                check_trace=False).graph
         nodes = [k for k in graph.nodes() if k.kind() == name]
         self.assertEqual(len(nodes), 1)
         node = nodes[0]

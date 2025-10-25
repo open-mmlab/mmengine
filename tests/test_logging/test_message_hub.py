@@ -27,10 +27,9 @@ class TestMessageHub:
             MessageHub('hello', log_scalars=OrderedDict(a=1))
         # `Resumed_keys`
         with pytest.raises(AssertionError):
-            MessageHub(
-                'hello',
-                runtime_info=OrderedDict(iter=1),
-                resumed_keys=OrderedDict(iters=False))
+            MessageHub('hello',
+                       runtime_info=OrderedDict(iter=1),
+                       resumed_keys=OrderedDict(iters=False))
 
     def test_update_scalar(self):
         message_hub = MessageHub.get_instance('mmengine')
@@ -99,11 +98,10 @@ class TestMessageHub:
     def test_get_scalars(self):
         import torch
         message_hub = MessageHub.get_instance('mmengine')
-        log_dict = dict(
-            loss=1,
-            loss_cls=torch.tensor(2),
-            loss_bbox=np.array(3),
-            loss_iou=dict(value=1, count=2))
+        log_dict = dict(loss=1,
+                        loss_cls=torch.tensor(2),
+                        loss_bbox=np.array(3),
+                        loss_iou=dict(value=1, count=2))
         message_hub.update_scalars(log_dict)
         loss = message_hub.get_scalar('loss')
         loss_cls = message_hub.get_scalar('loss_cls')
@@ -169,8 +167,11 @@ class TestMessageHub:
         state_dict = OrderedDict()
         state_dict['log_scalars'] = dict(a=1, b=HistoryBuffer())
         state_dict['runtime_info'] = dict(c=1, d=NoDeepCopy(), e=1)
-        state_dict['resumed_keys'] = dict(
-            a=True, b=True, c=True, e=False, f=True)
+        state_dict['resumed_keys'] = dict(a=True,
+                                          b=True,
+                                          c=True,
+                                          e=False,
+                                          f=True)
 
         message_hub4 = MessageHub.get_instance('test_load_state_dict4')
         message_hub4.load_state_dict(state_dict)
@@ -179,8 +180,9 @@ class TestMessageHub:
         assert 'c' in message_hub4.runtime_info and \
                state_dict['runtime_info']['d'] is \
                message_hub4.runtime_info['d']
-        assert message_hub4._resumed_keys == OrderedDict(
-            b=True, c=True, e=False)
+        assert message_hub4._resumed_keys == OrderedDict(b=True,
+                                                         c=True,
+                                                         e=False)
 
     def test_getstate(self):
         message_hub = MessageHub.get_instance('name')

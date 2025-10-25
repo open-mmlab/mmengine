@@ -70,12 +70,11 @@ class LmdbBackend(BaseStorageBackend):
     def _get_client(self):
         import lmdb
 
-        return lmdb.open(
-            self.db_path,
-            readonly=self.readonly,
-            lock=self.lock,
-            readahead=self.readahead,
-            **self.kwargs)
+        return lmdb.open(self.db_path,
+                         readonly=self.readonly,
+                         lock=self.lock,
+                         readahead=self.readahead,
+                         **self.kwargs)
 
     def __del__(self):
         if self._client is not None:

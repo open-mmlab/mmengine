@@ -149,8 +149,9 @@ class TestEarlyStoppingHook(RunnerTestCase):
         # if `monitor` does not match and strict=True, crash the training.
         with self.assertRaises(RuntimeError):
             metrics = {'accuracy/top1': 0.5, 'loss': 0.23}
-            hook = EarlyStoppingHook(
-                monitor='acc', rule='greater', strict=True)
+            hook = EarlyStoppingHook(monitor='acc',
+                                     rule='greater',
+                                     strict=True)
             hook.after_val_epoch(runner, metrics)
 
         # Check largest value
@@ -176,8 +177,9 @@ class TestEarlyStoppingHook(RunnerTestCase):
         # Check stop training
         runner = get_mock_runner()
         metrics = [{'accuracy/top1': i} for i in torch.linspace(98, 99, 8)]
-        hook = EarlyStoppingHook(
-            monitor='accuracy/top1', rule='greater', min_delta=1)
+        hook = EarlyStoppingHook(monitor='accuracy/top1',
+                                 rule='greater',
+                                 min_delta=1)
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
             if runner.train_loop.stop_training:
@@ -187,8 +189,9 @@ class TestEarlyStoppingHook(RunnerTestCase):
         # Check finite
         runner = get_mock_runner()
         metrics = [{'accuracy/top1': math.inf} for i in range(5)]
-        hook = EarlyStoppingHook(
-            monitor='accuracy/top1', rule='greater', min_delta=1)
+        hook = EarlyStoppingHook(monitor='accuracy/top1',
+                                 rule='greater',
+                                 min_delta=1)
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
             if runner.train_loop.stop_training:
@@ -198,8 +201,10 @@ class TestEarlyStoppingHook(RunnerTestCase):
         # Check patience
         runner = get_mock_runner()
         metrics = [{'accuracy/top1': i} for i in torch.linspace(98, 99, 8)]
-        hook = EarlyStoppingHook(
-            monitor='accuracy/top1', rule='greater', min_delta=1, patience=10)
+        hook = EarlyStoppingHook(monitor='accuracy/top1',
+                                 rule='greater',
+                                 min_delta=1,
+                                 patience=10)
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
             if runner.train_loop.stop_training:
@@ -209,11 +214,10 @@ class TestEarlyStoppingHook(RunnerTestCase):
         # Check stopping_threshold
         runner = get_mock_runner()
         metrics = [{'accuracy/top1': i} for i in torch.linspace(98, 99, 8)]
-        hook = EarlyStoppingHook(
-            monitor='accuracy/top1',
-            rule='greater',
-            stopping_threshold=98.5,
-            patience=0)
+        hook = EarlyStoppingHook(monitor='accuracy/top1',
+                                 rule='greater',
+                                 stopping_threshold=98.5,
+                                 patience=0)
         for metric in metrics:
             hook.after_val_epoch(runner, metric)
             if runner.train_loop.stop_training:
@@ -230,26 +234,27 @@ class TestEarlyStoppingHook(RunnerTestCase):
             min_delta=1,
             patience=3,
         )
-        runner = Runner(
-            model=ToyModel(),
-            work_dir=work_dir,
-            train_dataloader=dict(
-                dataset=DummyDataset(),
-                sampler=dict(type='DefaultSampler', shuffle=True),
-                batch_size=3,
-                num_workers=0),
-            val_dataloader=dict(
-                dataset=DummyDataset(),
-                sampler=dict(type='DefaultSampler', shuffle=False),
-                batch_size=3,
-                num_workers=0),
-            val_evaluator=dict(type=DummyMetric, length=max_epoch),
-            optim_wrapper=OptimWrapper(
-                torch.optim.Adam(ToyModel().parameters())),
-            train_cfg=dict(
-                by_epoch=True, max_epochs=max_epoch, val_interval=1),
-            val_cfg=dict(),
-            custom_hooks=[early_stop_cfg],
-            experiment_name='earlystop_test')
+        runner = Runner(model=ToyModel(),
+                        work_dir=work_dir,
+                        train_dataloader=dict(dataset=DummyDataset(),
+                                              sampler=dict(
+                                                  type='DefaultSampler',
+                                                  shuffle=True),
+                                              batch_size=3,
+                                              num_workers=0),
+                        val_dataloader=dict(dataset=DummyDataset(),
+                                            sampler=dict(type='DefaultSampler',
+                                                         shuffle=False),
+                                            batch_size=3,
+                                            num_workers=0),
+                        val_evaluator=dict(type=DummyMetric, length=max_epoch),
+                        optim_wrapper=OptimWrapper(
+                            torch.optim.Adam(ToyModel().parameters())),
+                        train_cfg=dict(by_epoch=True,
+                                       max_epochs=max_epoch,
+                                       val_interval=1),
+                        val_cfg=dict(),
+                        custom_hooks=[early_stop_cfg],
+                        experiment_name='earlystop_test')
         runner.train()
         self.assertEqual(runner.epoch, 6)

@@ -73,9 +73,9 @@ class TmpObjectWithoutCat:
 class TestInstanceData(TestCase):
 
     def setup_data(self):
-        metainfo = dict(
-            img_id=random.randint(0, 100),
-            img_shape=(random.randint(400, 600), random.randint(400, 600)))
+        metainfo = dict(img_id=random.randint(0, 100),
+                        img_shape=(random.randint(400, 600),
+                                   random.randint(400, 600)))
         instances_infos = [1] * 5
         bboxes = torch.rand((5, 4))
         labels = np.random.rand(5)
@@ -83,15 +83,14 @@ class TestInstanceData(TestCase):
         ids = (1, 2, 3, 4, 5)
         name_ids = '12345'
         polygons = TmpObject(np.arange(25).reshape((5, -1)).tolist())
-        instance_data = InstanceData(
-            metainfo=metainfo,
-            bboxes=bboxes,
-            labels=labels,
-            polygons=polygons,
-            kps=kps,
-            ids=ids,
-            name_ids=name_ids,
-            instances_infos=instances_infos)
+        instance_data = InstanceData(metainfo=metainfo,
+                                     bboxes=bboxes,
+                                     labels=labels,
+                                     polygons=polygons,
+                                     kps=kps,
+                                     ids=ids,
+                                     name_ids=name_ids,
+                                     instances_infos=instances_infos)
         return instance_data
 
     def test_set_data(self):
@@ -189,8 +188,8 @@ class TestInstanceData(TestCase):
         assert len(cat_instance_data) == 10
 
         # All inputs must be InstanceData
-        instance_data_2 = BaseDataElement(
-            bboxes=torch.rand((5, 4)), labels=torch.rand((5, )))
+        instance_data_2 = BaseDataElement(bboxes=torch.rand((5, 4)),
+                                          labels=torch.rand((5, )))
         with self.assertRaises(AssertionError):
             InstanceData.cat([instance_data_1, instance_data_2])
 
@@ -208,11 +207,10 @@ class TestInstanceData(TestCase):
         instance_data_1.polygons = TmpObjectWithoutCat(
             np.arange(25).reshape((5, -1)).tolist())
         instance_data_2 = instance_data_1.clone()
-        with pytest.raises(
-                ValueError,
-                match=('The type of `polygons` is '
-                       f'`{type(instance_data_1.polygons)}` '
-                       'which has no attribute of `cat`')):
+        with pytest.raises(ValueError,
+                           match=('The type of `polygons` is '
+                                  f'`{type(instance_data_1.polygons)}` '
+                                  'which has no attribute of `cat`')):
             cat_instance_data = InstanceData.cat(
                 [instance_data_1, instance_data_2])
 

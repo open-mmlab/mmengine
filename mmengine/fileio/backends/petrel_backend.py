@@ -10,6 +10,7 @@ from typing import Generator, Iterator, Optional, Tuple, Union
 
 import mmengine
 from mmengine.utils import has_method
+
 from .base import BaseStorageBackend
 
 
@@ -605,8 +606,9 @@ class PetrelBackend(BaseStorageBackend):
             >>> dir_path = 'petrel://path/of/dir'
             >>> backend.rmtree(dir_path)
         """
-        for path in self.list_dir_or_file(
-                dir_path, list_dir=False, recursive=True):
+        for path in self.list_dir_or_file(dir_path,
+                                          list_dir=False,
+                                          recursive=True):
             filepath = self.join_path(dir_path, path)
             self.remove(filepath)
 

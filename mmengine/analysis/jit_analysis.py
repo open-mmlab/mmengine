@@ -20,6 +20,7 @@ from torch import Tensor
 from torch.jit import TracerWarning, _get_trace_graph
 
 from mmengine.logging import print_log
+
 from .jit_handles import Handle
 
 T = TypeVar('T', bound='JitModelAnalysis')
@@ -628,10 +629,9 @@ class JitModelAnalysis:
                     counts[name] += op_counts
 
         uncalled_mods = set(self._aliases.values()) - all_seen
-        stats = Statistics(
-            counts=counts,
-            unsupported_ops=unsupported_ops,
-            uncalled_mods=uncalled_mods)
+        stats = Statistics(counts=counts,
+                           unsupported_ops=unsupported_ops,
+                           uncalled_mods=uncalled_mods)
         self._stats = stats
         self._warn_unsupported_ops(unsupported_ops[''])
         self._warn_uncalled_mods(uncalled_mods)

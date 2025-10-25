@@ -107,8 +107,10 @@ if TORCH_VERSION != 'parrots' and digit_version(TORCH_VERSION) < digit_version(
             if check_hash:
                 r = HASH_REGEX.search(filename)  # r is Optional[Match[str]]
                 hash_prefix = r.group(1) if r else None
-            download_url_to_file(
-                url, cached_file, hash_prefix, progress=progress)
+            download_url_to_file(url,
+                                 cached_file,
+                                 hash_prefix,
+                                 progress=progress)
 
         if _is_legacy_zip_format(cached_file):
             return _legacy_zip_load(cached_file, model_dir, map_location)

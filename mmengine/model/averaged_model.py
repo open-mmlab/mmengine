@@ -96,9 +96,8 @@ class BaseAveragedModel(nn.Module):
         Args:
             model (nn.Module): The model whose parameters will be averaged.
         """
-        src_parameters = (
-            model.state_dict()
-            if self.update_buffers else dict(model.named_parameters()))
+        src_parameters = (model.state_dict() if self.update_buffers else dict(
+            model.named_parameters()))
         if self.steps == 0:
             for k, p_avg in self.avg_parameters.items():
                 p_avg.data.copy_(src_parameters[k].data)
@@ -138,9 +137,8 @@ class StochasticWeightAverage(BaseAveragedModel):
             steps (int): The number of times the parameters have been
                 updated.
         """
-        averaged_param.add_(
-            source_param - averaged_param,
-            alpha=1 / float(steps // self.interval + 1))
+        averaged_param.add_(source_param - averaged_param,
+                            alpha=1 / float(steps // self.interval + 1))
 
 
 @MODELS.register_module()
@@ -238,12 +236,11 @@ class MomentumAnnealingEMA(ExponentialMovingAverage):
                  interval: int = 1,
                  device: Optional[torch.device] = None,
                  update_buffers: bool = False) -> None:
-        super().__init__(
-            model=model,
-            momentum=momentum,
-            interval=interval,
-            device=device,
-            update_buffers=update_buffers)
+        super().__init__(model=model,
+                         momentum=momentum,
+                         interval=interval,
+                         device=device,
+                         update_buffers=update_buffers)
         assert gamma > 0, f'gamma must be greater than 0, but got {gamma}'
         self.gamma = gamma
 

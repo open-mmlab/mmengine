@@ -646,8 +646,9 @@ def _all_gather_object(object_list: List[Any],
     # Gather all local sizes. This is so that we can find the max size, and
     # index until the correct size when deserializing the tensors.
     group_size = get_world_size(group=group)
-    object_sizes_tensor = torch.zeros(
-        group_size, dtype=torch.long, device=current_device)
+    object_sizes_tensor = torch.zeros(group_size,
+                                      dtype=torch.long,
+                                      device=current_device)
     object_size_list = [
         object_sizes_tensor[i].unsqueeze(dim=0) for i in range(group_size)
     ]
@@ -656,8 +657,9 @@ def _all_gather_object(object_list: List[Any],
     max_object_size = int(max(object_size_list).item())
     # Resize tensor to max size across all ranks.
     input_tensor.resize_(max_object_size)
-    coalesced_output_tensor = torch.empty(
-        max_object_size * group_size, dtype=torch.uint8, device=current_device)
+    coalesced_output_tensor = torch.empty(max_object_size * group_size,
+                                          dtype=torch.uint8,
+                                          device=current_device)
     # Output tensors are nonoverlapping views of coalesced_output_tensor
     output_tensors = [
         coalesced_output_tensor[max_object_size * i:max_object_size * (i + 1)]
@@ -800,8 +802,9 @@ def _gather_object(obj: Any,
     # Gather all local sizes. This is so that we can find the max size, and
     # index until the correct size when deserializing the tensors.
     group_size = get_world_size(group=group)
-    object_sizes_tensor = torch.zeros(
-        group_size, dtype=torch.long, device=current_device)
+    object_sizes_tensor = torch.zeros(group_size,
+                                      dtype=torch.long,
+                                      device=current_device)
     object_size_list = [
         object_sizes_tensor[i].unsqueeze(dim=0) for i in range(group_size)
     ]
@@ -815,10 +818,9 @@ def _gather_object(obj: Any,
     # Avoid populating output tensors if the result won't be gathered on this
     # rank.
     if my_rank == dst:
-        coalesced_output_tensor = torch.empty(
-            max_object_size * group_size,
-            dtype=torch.uint8,
-            device=current_device)
+        coalesced_output_tensor = torch.empty(max_object_size * group_size,
+                                              dtype=torch.uint8,
+                                              device=current_device)
         # Output tensors are nonoverlapping views of coalesced_output_tensor
         output_tensors = [
             coalesced_output_tensor[max_object_size * i:max_object_size *
@@ -996,8 +998,8 @@ def collect_results_cpu(result_part: list,
         if rank == 0:
             mmengine.mkdir_or_exist('.dist_test')
             tmpdir = tempfile.mkdtemp(dir='.dist_test')
-            tmpdir = torch.tensor(
-                bytearray(tmpdir.encode()), dtype=torch.uint8)
+            tmpdir = torch.tensor(bytearray(tmpdir.encode()),
+                                  dtype=torch.uint8)
             dir_tensor[:len(tmpdir)] = tmpdir
         broadcast(dir_tensor, 0)
         tmpdir = dir_tensor.numpy().tobytes().decode().rstrip()

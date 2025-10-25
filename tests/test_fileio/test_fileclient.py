@@ -226,23 +226,24 @@ class TestFileClient:
                     osp.join('dir2', 'img.jpg'), 'text1.txt', 'text2.txt'
                 }
             # 3. only list directories
-            assert set(
-                disk_backend.list_dir_or_file(
-                    tmp_dir, list_file=False)) == {'dir1', 'dir2'}
+            assert set(disk_backend.list_dir_or_file(
+                tmp_dir, list_file=False)) == {'dir1', 'dir2'}
             with pytest.raises(
                     TypeError,
                     match='`suffix` should be None when `list_dir` is True'):
                 # Exception is raised among the `list_dir_or_file` of client,
                 # so we need to invode the client to trigger the exception
-                disk_backend.client.list_dir_or_file(
-                    tmp_dir, list_file=False, suffix='.txt')
+                disk_backend.client.list_dir_or_file(tmp_dir,
+                                                     list_file=False,
+                                                     suffix='.txt')
             # 4. only list directories recursively
             assert set(
-                disk_backend.list_dir_or_file(
-                    tmp_dir, list_file=False, recursive=True)) == {
-                        'dir1', 'dir2',
-                        osp.join('dir2', 'dir3')
-                    }
+                disk_backend.list_dir_or_file(tmp_dir,
+                                              list_file=False,
+                                              recursive=True)) == {
+                                                  'dir1', 'dir2',
+                                                  osp.join('dir2', 'dir3')
+                                              }
             # 5. only list files
             assert set(disk_backend.list_dir_or_file(
                 tmp_dir, list_dir=False)) == {'text1.txt', 'text2.txt'}
@@ -256,18 +257,23 @@ class TestFileClient:
                     }
             # 7. only list files ending with suffix
             assert set(
-                disk_backend.list_dir_or_file(
-                    tmp_dir, list_dir=False,
-                    suffix='.txt')) == {'text1.txt', 'text2.txt'}
+                disk_backend.list_dir_or_file(tmp_dir,
+                                              list_dir=False,
+                                              suffix='.txt')) == {
+                                                  'text1.txt', 'text2.txt'
+                                              }
             assert set(
-                disk_backend.list_dir_or_file(
-                    tmp_dir, list_dir=False,
-                    suffix=('.txt', '.jpg'))) == {'text1.txt', 'text2.txt'}
+                disk_backend.list_dir_or_file(tmp_dir,
+                                              list_dir=False,
+                                              suffix=('.txt', '.jpg'))) == {
+                                                  'text1.txt', 'text2.txt'
+                                              }
             with pytest.raises(
                     TypeError,
                     match='`suffix` must be a string or tuple of strings'):
-                disk_backend.client.list_dir_or_file(
-                    tmp_dir, list_dir=False, suffix=['.txt', '.jpg'])
+                disk_backend.client.list_dir_or_file(tmp_dir,
+                                                     list_dir=False,
+                                                     suffix=['.txt', '.jpg'])
             # 8. only list files ending with suffix recursively
             assert set(
                 disk_backend.list_dir_or_file(
@@ -326,16 +332,16 @@ class TestFileClient:
             == petrel_path
 
         # test `get`
-        with patch.object(
-                petrel_backend.client._client, 'Get',
-                return_value=b'petrel') as mock_get:
+        with patch.object(petrel_backend.client._client,
+                          'Get',
+                          return_value=b'petrel') as mock_get:
             assert petrel_backend.get(petrel_path) == b'petrel'
             mock_get.assert_called_once_with(petrel_path)
 
         # test `get_text`
-        with patch.object(
-                petrel_backend.client._client, 'Get',
-                return_value=b'petrel') as mock_get:
+        with patch.object(petrel_backend.client._client,
+                          'Get',
+                          return_value=b'petrel') as mock_get:
             assert petrel_backend.get_text(petrel_path) == 'petrel'
             mock_get.assert_called_once_with(petrel_path)
 
@@ -381,9 +387,9 @@ class TestFileClient:
             with pytest.raises(NotImplementedError):
                 petrel_backend.exists(petrel_path)
 
-        with patch.object(
-                petrel_backend.client._client, 'contains',
-                return_value=True) as mock_contains:
+        with patch.object(petrel_backend.client._client,
+                          'contains',
+                          return_value=True) as mock_contains:
             assert petrel_backend.exists(petrel_path)
             mock_contains.assert_called_once_with(petrel_path)
 
@@ -394,9 +400,9 @@ class TestFileClient:
             with pytest.raises(NotImplementedError):
                 petrel_backend.isdir(petrel_path)
 
-        with patch.object(
-                petrel_backend.client._client, 'isdir',
-                return_value=True) as mock_isdir:
+        with patch.object(petrel_backend.client._client,
+                          'isdir',
+                          return_value=True) as mock_isdir:
             assert petrel_backend.isdir(petrel_dir)
             mock_isdir.assert_called_once_with(petrel_dir)
 
@@ -408,9 +414,9 @@ class TestFileClient:
             with pytest.raises(NotImplementedError):
                 petrel_backend.isfile(petrel_path)
 
-        with patch.object(
-                petrel_backend.client._client, 'contains',
-                return_value=True) as mock_contains:
+        with patch.object(petrel_backend.client._client,
+                          'contains',
+                          return_value=True) as mock_contains:
             assert petrel_backend.isfile(petrel_path)
             mock_contains.assert_called_once_with(petrel_path)
 
@@ -447,8 +453,8 @@ class TestFileClient:
                 'dir1', 'dir2', 'text1.txt', 'text2.txt'
             }
             # 2. list directories and files recursively
-            assert set(
-                petrel_backend.list_dir_or_file(tmp_dir, recursive=True)) == {
+            assert set(petrel_backend.list_dir_or_file(
+                tmp_dir, recursive=True)) == {
                     'dir1', '/'.join(('dir1', 'text3.txt')), 'dir2', '/'.join(
                         ('dir2', 'dir3')), '/'.join(
                             ('dir2', 'dir3', 'text4.txt')), '/'.join(
@@ -464,18 +470,20 @@ class TestFileClient:
                            'None')):
                 # Exception is raised among the `list_dir_or_file` of client,
                 # so we need to invode the client to trigger the exception
-                petrel_backend.client.list_dir_or_file(
-                    tmp_dir, list_file=False, suffix='.txt')
+                petrel_backend.client.list_dir_or_file(tmp_dir,
+                                                       list_file=False,
+                                                       suffix='.txt')
             # 4. only list directories recursively
             assert set(
-                petrel_backend.list_dir_or_file(
-                    tmp_dir, list_file=False, recursive=True)) == {
-                        'dir1', 'dir2', '/'.join(('dir2', 'dir3'))
-                    }
+                petrel_backend.list_dir_or_file(tmp_dir,
+                                                list_file=False,
+                                                recursive=True)) == {
+                                                    'dir1', 'dir2', '/'.join(
+                                                        ('dir2', 'dir3'))
+                                                }
             # 5. only list files
-            assert set(
-                petrel_backend.list_dir_or_file(
-                    tmp_dir, list_dir=False)) == {'text1.txt', 'text2.txt'}
+            assert set(petrel_backend.list_dir_or_file(
+                tmp_dir, list_dir=False)) == {'text1.txt', 'text2.txt'}
             # 6. only list files recursively
             assert set(
                 petrel_backend.list_dir_or_file(
@@ -486,27 +494,35 @@ class TestFileClient:
                     }
             # 7. only list files ending with suffix
             assert set(
-                petrel_backend.list_dir_or_file(
-                    tmp_dir, list_dir=False,
-                    suffix='.txt')) == {'text1.txt', 'text2.txt'}
+                petrel_backend.list_dir_or_file(tmp_dir,
+                                                list_dir=False,
+                                                suffix='.txt')) == {
+                                                    'text1.txt', 'text2.txt'
+                                                }
             assert set(
-                petrel_backend.list_dir_or_file(
-                    tmp_dir, list_dir=False,
-                    suffix=('.txt', '.jpg'))) == {'text1.txt', 'text2.txt'}
+                petrel_backend.list_dir_or_file(tmp_dir,
+                                                list_dir=False,
+                                                suffix=('.txt', '.jpg'))) == {
+                                                    'text1.txt', 'text2.txt'
+                                                }
             with pytest.raises(
                     TypeError,
                     match='`suffix` must be a string or tuple of strings'):
-                petrel_backend.client.list_dir_or_file(
-                    tmp_dir, list_dir=False, suffix=['.txt', '.jpg'])
+                petrel_backend.client.list_dir_or_file(tmp_dir,
+                                                       list_dir=False,
+                                                       suffix=['.txt', '.jpg'])
             # 8. only list files ending with suffix recursively
             assert set(
-                petrel_backend.list_dir_or_file(
-                    tmp_dir, list_dir=False, suffix='.txt',
-                    recursive=True)) == {
-                        '/'.join(('dir1', 'text3.txt')), '/'.join(
-                            ('dir2', 'dir3', 'text4.txt')), 'text1.txt',
-                        'text2.txt'
-                    }
+                petrel_backend.list_dir_or_file(tmp_dir,
+                                                list_dir=False,
+                                                suffix='.txt',
+                                                recursive=True)) == {
+                                                    '/'.join(
+                                                        ('dir1', 'text3.txt')),
+                                                    '/'.join(('dir2', 'dir3',
+                                                              'text4.txt')),
+                                                    'text1.txt', 'text2.txt'
+                                                }
             # 7. only list files ending with suffix
             assert set(
                 petrel_backend.list_dir_or_file(
@@ -782,11 +798,10 @@ class TestFileClient:
             def get_text(self, filepath, encoding='utf-8'):
                 return 'text6'
 
-        FileClient.register_backend(
-            'example4',
-            Example6Backend,
-            force=True,
-            prefixes='example4_prefix')
+        FileClient.register_backend('example4',
+                                    Example6Backend,
+                                    force=True,
+                                    prefixes='example4_prefix')
         example_backend = FileClient('example4')
         assert example_backend.get(self.img_path) == b'bytes6'
         assert example_backend.get_text(self.text_path) == 'text6'
@@ -830,11 +845,10 @@ class TestFileClient:
             def get_text(self, filepath, encoding='utf-8'):
                 return 'text8'
 
-        FileClient.register_backend(
-            'example6',
-            Example8Backend,
-            force=True,
-            prefixes='example6_prefix')
+        FileClient.register_backend('example6',
+                                    Example8Backend,
+                                    force=True,
+                                    prefixes='example6_prefix')
         example_backend = FileClient('example6')
         assert example_backend.get(self.img_path) == b'bytes8'
         assert example_backend.get_text(self.text_path) == 'text8'

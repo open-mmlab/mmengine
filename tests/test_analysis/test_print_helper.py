@@ -60,23 +60,24 @@ def test_get_model_complexity_info():
     assert complexity_info['flops'] == flops
     assert complexity_info['params'] == params
 
-    complexity_info = get_model_complexity_info(
-        model=model, input_shape=input_shape1)
-    flops = FlopAnalyzer(
-        model=model, inputs=(torch.randn(1, *input_shape1), )).total()
+    complexity_info = get_model_complexity_info(model=model,
+                                                input_shape=input_shape1)
+    flops = FlopAnalyzer(model=model,
+                         inputs=(torch.randn(1, *input_shape1), )).total()
     assert complexity_info['flops'] == flops
 
     # test a network that accepts two tensors as input
     model = NetAcceptTwoTensors()
-    complexity_info = get_model_complexity_info(
-        model=model, inputs=(input1, input2))
+    complexity_info = get_model_complexity_info(model=model,
+                                                inputs=(input1, input2))
     flops = FlopAnalyzer(model=model, inputs=(input1, input2)).total()
     params = parameter_count(model=model)['']
     assert complexity_info['flops'] == flops
     assert complexity_info['params'] == params
 
-    complexity_info = get_model_complexity_info(
-        model=model, input_shape=(input_shape1, input_shape2))
+    complexity_info = get_model_complexity_info(model=model,
+                                                input_shape=(input_shape1,
+                                                             input_shape2))
     inputs = (torch.randn(1, *input_shape1), torch.randn(1, *input_shape2))
     flops = FlopAnalyzer(model=model, inputs=inputs).total()
     assert complexity_info['flops'] == flops
@@ -88,8 +89,8 @@ def test_get_model_complexity_info():
     scalar = torch.tensor([
         scalar
     ]) if digit_version(TORCH_VERSION) < digit_version('1.9.0') else scalar
-    complexity_info = get_model_complexity_info(
-        model=model, inputs=(input1, scalar))
+    complexity_info = get_model_complexity_info(model=model,
+                                                inputs=(input1, scalar))
     flops = FlopAnalyzer(model=model, inputs=(input1, scalar)).total()
     params = parameter_count(model=model)['']
     assert complexity_info['flops'] == flops
@@ -104,5 +105,6 @@ def test_get_model_complexity_info():
     # when both `inputs` and `input_shape` are specified
     model = NetAcceptOneTensor()
     with pytest.raises(ValueError, match='cannot be both set'):
-        get_model_complexity_info(
-            model, inputs=input1, input_shape=input_shape1)
+        get_model_complexity_info(model,
+                                  inputs=input1,
+                                  input_shape=input_shape1)

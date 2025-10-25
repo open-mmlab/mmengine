@@ -97,11 +97,15 @@ def kaiming_init(module,
     assert distribution in ['uniform', 'normal']
     if hasattr(module, 'weight') and module.weight is not None:
         if distribution == 'uniform':
-            nn.init.kaiming_uniform_(
-                module.weight, a=a, mode=mode, nonlinearity=nonlinearity)
+            nn.init.kaiming_uniform_(module.weight,
+                                     a=a,
+                                     mode=mode,
+                                     nonlinearity=nonlinearity)
         else:
-            nn.init.kaiming_normal_(
-                module.weight, a=a, mode=mode, nonlinearity=nonlinearity)
+            nn.init.kaiming_normal_(module.weight,
+                                    a=a,
+                                    mode=mode,
+                                    nonlinearity=nonlinearity)
     if hasattr(module, 'bias') and module.bias is not None:
         nn.init.constant_(module.bias, bias)
 
@@ -109,13 +113,12 @@ def kaiming_init(module,
 def caffe2_xavier_init(module, bias=0):
     # `XavierFill` in Caffe2 corresponds to `kaiming_uniform_` in PyTorch
     # Acknowledgment to FAIR's internal code
-    kaiming_init(
-        module,
-        a=1,
-        mode='fan_in',
-        nonlinearity='leaky_relu',
-        bias=bias,
-        distribution='uniform')
+    kaiming_init(module,
+                 a=1,
+                 mode='fan_in',
+                 nonlinearity='leaky_relu',
+                 bias=bias,
+                 distribution='uniform')
 
 
 def bias_init_with_prob(prior_prob):
@@ -450,12 +453,11 @@ class Caffe2XavierInit(KaimingInit):
     # `XavierFill` in Caffe2 corresponds to `kaiming_uniform_` in PyTorch
     # Acknowledgment to FAIR's internal code
     def __init__(self, **kwargs):
-        super().__init__(
-            a=1,
-            mode='fan_in',
-            nonlinearity='leaky_relu',
-            distribution='uniform',
-            **kwargs)
+        super().__init__(a=1,
+                         mode='fan_in',
+                         nonlinearity='leaky_relu',
+                         distribution='uniform',
+                         **kwargs)
 
     def __call__(self, module):
         super().__call__(module)
@@ -487,16 +489,14 @@ class PretrainedInit:
                                                 load_state_dict)
         if self.prefix is None:
             print_log(f'load model from: {self.checkpoint}', logger='current')
-            load_checkpoint(
-                module,
-                self.checkpoint,
-                map_location=self.map_location,
-                strict=False,
-                logger='current')
+            load_checkpoint(module,
+                            self.checkpoint,
+                            map_location=self.map_location,
+                            strict=False,
+                            logger='current')
         else:
-            print_log(
-                f'load {self.prefix} in model from: {self.checkpoint}',
-                logger='current')
+            print_log(f'load {self.prefix} in model from: {self.checkpoint}',
+                      logger='current')
             state_dict = _load_checkpoint_with_prefix(
                 self.prefix, self.checkpoint, map_location=self.map_location)
             load_state_dict(module, state_dict, strict=False, logger='current')

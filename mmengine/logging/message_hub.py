@@ -2,16 +2,15 @@
 import copy
 import logging
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
+import torch
 
 from mmengine.utils import ManagerMixin
+
 from .history_buffer import HistoryBuffer
 from .logger import print_log
-
-if TYPE_CHECKING:
-    import torch
 
 
 class MessageHub(ManagerMixin):
@@ -92,6 +91,7 @@ class MessageHub(ManagerMixin):
             cls.get_instance('mmengine')
         return super().get_current_instance()
 
+    @torch.compiler.disable
     def update_scalar(self,
                       key: str,
                       value: Union[int, float, np.ndarray, 'torch.Tensor'],
@@ -342,8 +342,11 @@ class MessageHub(ManagerMixin):
         else:
             # check whether value is torch.Tensor but don't want
             # to import torch in this file
-            assert hasattr(value, 'numel') and value.numel() == 1
-            value = value.item()
+            if hasattr(value, 'numel') and value.numel() == 1:
+                value = value.item()
+            else:
+                print_log(f"MessageHub got unexpceted log: {value}",
+                          level=logging.WARN)
         return value  # type: ignore
 
     def state_dict(self) -> dict:
@@ -374,10 +377,9 @@ class MessageHub(ManagerMixin):
                         logger='current',
                         level=logging.WARNING)
                     saved_info[key] = value
-        return dict(
-            log_scalars=saved_scalars,
-            runtime_info=saved_info,
-            resumed_keys=self._resumed_keys)
+        return dict(log_scalars=saved_scalars,
+                    runtime_info=saved_info,
+                    resumed_keys=self._resumed_keys)
 
     def load_state_dict(self, state_dict: Union['MessageHub', dict]) -> None:
         """Loads log scalars, runtime information and resumed keys from

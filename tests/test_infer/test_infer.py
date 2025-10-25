@@ -133,8 +133,8 @@ class TestBaseInferencer(RunnerTestCase):
         inferencer(imgs)
         inferencer(img_paths)
 
-    @pytest.mark.skipif(
-        not is_imported('mmdet'), reason='mmdet is not installed')
+    @pytest.mark.skipif(not is_imported('mmdet'),
+                        reason='mmdet is not installed')
     def test_load_model_from_meta(self):
         from mmdet.utils import register_all_modules
 
@@ -154,8 +154,8 @@ class TestBaseInferencer(RunnerTestCase):
         inferencer = ToyInferencer(self.cfg_path, self.ckpt_path)
         data = list(range(1, 11))
         chunk_data = inferencer._get_chunk_data(data, 3)
-        self.assertEqual(
-            list(chunk_data), [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10]])
+        self.assertEqual(list(chunk_data),
+                         [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10]])
 
     def test_init_visualizer(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -173,11 +173,10 @@ class TestBaseInferencer(RunnerTestCase):
 
     def test_dispatch_kwargs(self):
         inferencer = ToyInferencer(self.cfg_path, self.ckpt_path)
-        kwargs = dict(
-            pre_arg=dict(a=1),
-            for_arg=dict(c=2),
-            vis_arg=dict(b=3),
-            pos_arg=dict(d=4))
+        kwargs = dict(pre_arg=dict(a=1),
+                      for_arg=dict(c=2),
+                      vis_arg=dict(b=3),
+                      pos_arg=dict(d=4))
         pre_arg, for_arg, vis_arg, pos_arg = inferencer._dispatch_kwargs(
             **kwargs)
         self.assertEqual(pre_arg, dict(pre_arg=dict(a=1)))
@@ -217,8 +216,8 @@ class TestBaseInferencer(RunnerTestCase):
         for data in dataloader:
             self.assertTrue(is_list_of(data, torch.Tensor))
 
-    @pytest.mark.skipif(
-        not is_imported('mmdet'), reason='mmdet is not installed')
+    @pytest.mark.skipif(not is_imported('mmdet'),
+                        reason='mmdet is not installed')
     def test_list_models(self):
         model_list = BaseInferencer.list_models('mmdet')
         self.assertTrue(len(model_list) > 0)

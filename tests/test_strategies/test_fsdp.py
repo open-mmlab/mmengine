@@ -59,33 +59,29 @@ class TestStrategy(TestCase):
         strategy = FSDPStrategy(state_dict_cfg='full')
         self._assert_full(strategy)
 
-        strategy = FSDPStrategy(
-            state_dict_cfg=dict(
-                state_dict_type=StateDictType.LOCAL_STATE_DICT))
+        strategy = FSDPStrategy(state_dict_cfg=dict(
+            state_dict_type=StateDictType.LOCAL_STATE_DICT))
         self._assert_local(strategy)
 
-        strategy = FSDPStrategy(
-            state_dict_cfg=dict(
-                state_dict_type=StateDictType.FULL_STATE_DICT,
-                state_dict_config=FullStateDictConfig(),
-                optim_state_dict_config=FullOptimStateDictConfig(),
-            ))
+        strategy = FSDPStrategy(state_dict_cfg=dict(
+            state_dict_type=StateDictType.FULL_STATE_DICT,
+            state_dict_config=FullStateDictConfig(),
+            optim_state_dict_config=FullOptimStateDictConfig(),
+        ))
         self._assert_full(strategy)
 
-        strategy = FSDPStrategy(
-            state_dict_cfg=dict(
-                state_dict_type='FULL_STATE_DICT',
-                state_dict_config=dict(type='FullStateDictConfig'),
-                optim_state_dict_config=dict(type='FullOptimStateDictConfig'),
-            ))
+        strategy = FSDPStrategy(state_dict_cfg=dict(
+            state_dict_type='FULL_STATE_DICT',
+            state_dict_config=dict(type='FullStateDictConfig'),
+            optim_state_dict_config=dict(type='FullOptimStateDictConfig'),
+        ))
         self._assert_full(strategy)
 
-        strategy = FSDPStrategy(
-            state_dict_cfg=dict(
-                state_dict_type=StateDictType.FULL_STATE_DICT,
-                state_dict_config=dict(type=FullStateDictConfig),
-                optim_state_dict_config=dict(type=FullOptimStateDictConfig),
-            ))
+        strategy = FSDPStrategy(state_dict_cfg=dict(
+            state_dict_type=StateDictType.FULL_STATE_DICT,
+            state_dict_config=dict(type=FullStateDictConfig),
+            optim_state_dict_config=dict(type=FullOptimStateDictConfig),
+        ))
         self._assert_full(strategy)
 
         with self.assertRaises(ValueError):
@@ -97,33 +93,28 @@ class TestStrategy(TestCase):
 
         # state_dict_type must be a str or a enumerate of StateDictType
         with self.assertRaises(TypeError):
-            strategy = FSDPStrategy(
-                state_dict_cfg=dict(
-                    state_dict_type=[],
-                    state_dict_config=dict(type=FullStateDictConfig),
-                    optim_state_dict_config=dict(
-                        type=FullOptimStateDictConfig),
-                ))
+            strategy = FSDPStrategy(state_dict_cfg=dict(
+                state_dict_type=[],
+                state_dict_config=dict(type=FullStateDictConfig),
+                optim_state_dict_config=dict(type=FullOptimStateDictConfig),
+            ))
 
         # state_dict_config should be a dict or a subclass of StateDictConfig
         with self.assertRaises(TypeError):
-            strategy = FSDPStrategy(
-                state_dict_cfg=dict(
-                    state_dict_type=StateDictType.FULL_STATE_DICT,
-                    state_dict_config=[],
-                    optim_state_dict_config=dict(
-                        type=FullOptimStateDictConfig),
-                ))
+            strategy = FSDPStrategy(state_dict_cfg=dict(
+                state_dict_type=StateDictType.FULL_STATE_DICT,
+                state_dict_config=[],
+                optim_state_dict_config=dict(type=FullOptimStateDictConfig),
+            ))
 
         # optim_state_dict_config should be a dict or a subclass of
         # OptimStateDictConfig
         with self.assertRaises(TypeError):
-            strategy = FSDPStrategy(
-                state_dict_cfg=dict(
-                    state_dict_type=StateDictType.FULL_STATE_DICT,
-                    state_dict_config=dict(type=FullStateDictConfig),
-                    optim_state_dict_config=[],
-                ))
+            strategy = FSDPStrategy(state_dict_cfg=dict(
+                state_dict_type=StateDictType.FULL_STATE_DICT,
+                state_dict_config=dict(type=FullStateDictConfig),
+                optim_state_dict_config=[],
+            ))
 
     def run_strategy(self):
         # Strategy can run with the built model, optimizer and schedulers.
@@ -168,8 +159,8 @@ class TestStrategy(TestCase):
 
         # optimizer with multiple param_groups can be reconstructed.
         model = ToyModel()
-        strategy = FSDPStrategy(
-            model_wrapper=dict(auto_wrap_policy=linear_wrap_policy))
+        strategy = FSDPStrategy(model_wrapper=dict(
+            auto_wrap_policy=linear_wrap_policy))
         param_groups = []
         for param in model.parameters():
             param_groups.append(dict(params=[param], lr=0.1))
@@ -204,10 +195,9 @@ class TestStrategy(TestCase):
         self.tearDown()
 
     def test_run_strategy(self):
-        start_processes(
-            TestStrategy._worker,
-            args=('run_strategy', ),
-            nprocs=self.world_size)
+        start_processes(TestStrategy._worker,
+                        args=('run_strategy', ),
+                        nprocs=self.world_size)
 
     def test_build_model(self):
         ...

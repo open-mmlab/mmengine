@@ -58,9 +58,10 @@ def _minimal_ext_cmd(cmd):
     env['LANGUAGE'] = 'C'
     env['LANG'] = 'C'
     env['LC_ALL'] = 'C'
-    out, err = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        env=env).communicate()
+    out, err = subprocess.Popen(cmd,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                env=env).communicate()
     return out
 
 

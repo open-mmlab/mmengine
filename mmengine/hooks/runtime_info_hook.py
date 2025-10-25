@@ -7,6 +7,7 @@ import torch
 from mmengine.registry import HOOKS
 from mmengine.utils import get_git_hash
 from mmengine.version import __version__
+
 from .hook import Hook
 
 DATA_BATCH = Optional[Union[dict, tuple, list]]
@@ -47,11 +48,10 @@ class RuntimeInfoHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
-        metainfo = dict(
-            cfg=runner.cfg.pretty_text,
-            seed=runner.seed,
-            experiment_name=runner.experiment_name,
-            mmengine_version=__version__ + get_git_hash())
+        metainfo = dict(cfg=runner.cfg.pretty_text,
+                        seed=runner.seed,
+                        experiment_name=runner.experiment_name,
+                        mmengine_version=__version__ + get_git_hash())
         runner.message_hub.update_info_dict(metainfo)
 
         self.last_loop_stage = None

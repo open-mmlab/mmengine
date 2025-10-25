@@ -34,16 +34,18 @@ class TestLogger:
         # If `rank=0`, the `log_level` of stream_handler and file_handler
         # depends on the given arguments.
         tmp_file = tmp_path / 'tmp_file.log'
-        logger = MMLogger.get_instance(
-            'rank0.pkg2', log_level='INFO', log_file=str(tmp_file))
+        logger = MMLogger.get_instance('rank0.pkg2',
+                                       log_level='INFO',
+                                       log_file=str(tmp_file))
         assert isinstance(logger, logging.Logger)
         assert len(logger.handlers) == 2
         assert isinstance(logger.handlers[0], logging.StreamHandler)
         assert isinstance(logger.handlers[1], logging.FileHandler)
         logger_pkg3 = MMLogger.get_instance('rank0.pkg2')
         assert id(logger_pkg3) == id(logger)
-        logger = MMLogger.get_instance(
-            'rank0.pkg3', logger_name='logger_test', log_level='INFO')
+        logger = MMLogger.get_instance('rank0.pkg3',
+                                       logger_name='logger_test',
+                                       log_level='INFO')
         assert logger.name == 'logger_test'
         assert logger.instance_name == 'rank0.pkg3'
         # `FileHandler` should be closed in Windows, otherwise we cannot
@@ -59,14 +61,14 @@ class TestLogger:
         # If `rank!=1`, the `loglevel` of file_handler is `logging.ERROR`.
         tmp_file = tmp_path / 'tmp_file.log'
         log_path = tmp_path / 'tmp_file_test_device1_rank1.log'
-        logger = MMLogger.get_instance(
-            'rank1.pkg2', log_level='INFO', log_file=str(tmp_file))
+        logger = MMLogger.get_instance('rank1.pkg2',
+                                       log_level='INFO',
+                                       log_file=str(tmp_file))
         assert len(logger.handlers) == 1
-        logger = MMLogger.get_instance(
-            'rank1.pkg3',
-            log_level='INFO',
-            log_file=str(tmp_file),
-            distributed=True)
+        logger = MMLogger.get_instance('rank1.pkg3',
+                                       log_level='INFO',
+                                       log_file=str(tmp_file),
+                                       distributed=True)
         assert logger.handlers[0].level == logging.ERROR
         assert logger.handlers[1].level == logging.INFO
         assert len(logger.handlers) == 2
@@ -94,8 +96,9 @@ class TestLogger:
         # test file_handler output plain text without color.
         tmp_file = tmp_path / 'tmp_file.log'
         instance_name = f'test_file_{log_level}'
-        logger = MMLogger.get_instance(
-            instance_name, log_level=log_level, log_file=tmp_file)
+        logger = MMLogger.get_instance(instance_name,
+                                       log_level=log_level,
+                                       log_file=tmp_file)
         logger.log(level=log_level, msg='welcome')
 
         with open(tmp_file) as f:
@@ -209,27 +212,32 @@ class TestLogger:
     def test_file_handlers(self, tmp_path):
         tmp_file = tmp_path / 'tmp_file.log'
         fh = None
-        logger = MMLogger(
-            name='test_file_handlers', log_file=tmp_file, file_handler_cfg=fh)
+        logger = MMLogger(name='test_file_handlers',
+                          log_file=tmp_file,
+                          file_handler_cfg=fh)
         assert isinstance(logger.handlers[-1], logging.FileHandler)
         fh = dict(type='BaseRotatingHandler', mode='a')
-        logger = MMLogger(
-            name='test_file_handlers', log_file=tmp_file, file_handler_cfg=fh)
+        logger = MMLogger(name='test_file_handlers',
+                          log_file=tmp_file,
+                          file_handler_cfg=fh)
         assert isinstance(logger.handlers[-1],
                           logging.handlers.BaseRotatingHandler)
         fh = dict(type='RotatingFileHandler', maxBytes=1024)
-        logger = MMLogger(
-            name='test_file_handlers', log_file=tmp_file, file_handler_cfg=fh)
+        logger = MMLogger(name='test_file_handlers',
+                          log_file=tmp_file,
+                          file_handler_cfg=fh)
         assert isinstance(logger.handlers[-1],
                           logging.handlers.RotatingFileHandler)
         fh = dict(type='TimedRotatingFileHandler', when='MIDNIGHT')
-        logger = MMLogger(
-            name='test_file_handlers', log_file=tmp_file, file_handler_cfg=fh)
+        logger = MMLogger(name='test_file_handlers',
+                          log_file=tmp_file,
+                          file_handler_cfg=fh)
         assert isinstance(logger.handlers[-1],
                           logging.handlers.TimedRotatingFileHandler)
         fh = dict(type='WatchedFileHandler')
-        logger = MMLogger(
-            name='test_file_handlers', log_file=tmp_file, file_handler_cfg=fh)
+        logger = MMLogger(name='test_file_handlers',
+                          log_file=tmp_file,
+                          file_handler_cfg=fh)
         assert isinstance(logger.handlers[-1],
                           logging.handlers.WatchedFileHandler)
         # `FileHandler` should be closed in Windows, otherwise we cannot

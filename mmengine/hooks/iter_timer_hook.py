@@ -3,6 +3,7 @@ import time
 from typing import Optional, Sequence, Union
 
 from mmengine.registry import HOOKS
+
 from .hook import Hook
 
 DATA_BATCH = Optional[Union[dict, tuple, list]]
@@ -90,8 +91,8 @@ class IterTimerHook(Hook):
         if mode == 'train':
             self.time_sec_tot += iter_time.current()
             # Calculate average iterative time.
-            time_sec_avg = self.time_sec_tot / (
-                runner.iter - self.start_iter + 1)
+            time_sec_avg = self.time_sec_tot / (runner.iter - self.start_iter +
+                                                1)
             # Calculate eta.
             eta_sec = time_sec_avg * (runner.max_iters - runner.iter - 1)
             runner.message_hub.update_info('eta', eta_sec)

@@ -258,14 +258,13 @@ class StepParamScheduler(_ParamScheduler):
                  verbose: bool = False):
         self.step_size = step_size
         self.gamma = gamma
-        super().__init__(
-            optimizer=optimizer,
-            param_name=param_name,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
+        super().__init__(optimizer=optimizer,
+                         param_name=param_name,
+                         begin=begin,
+                         end=end,
+                         last_step=last_step,
+                         by_epoch=by_epoch,
+                         verbose=verbose)
 
     @classmethod
     def build_iter_from_epoch(cls,
@@ -288,13 +287,12 @@ class StepParamScheduler(_ParamScheduler):
         begin = int(begin * epoch_length)
         if end != INF:
             end = int(end * epoch_length)
-        return cls(
-            *args,
-            step_size=step_size,
-            begin=begin,
-            end=end,
-            by_epoch=by_epoch,
-            **kwargs)
+        return cls(*args,
+                   step_size=step_size,
+                   begin=begin,
+                   end=end,
+                   by_epoch=by_epoch,
+                   **kwargs)
 
     def _get_value(self):
         """Compute value using chainable form of the scheduler."""
@@ -346,14 +344,13 @@ class MultiStepParamScheduler(_ParamScheduler):
                  verbose: bool = False):
         self.milestones = Counter(milestones)
         self.gamma = gamma
-        super().__init__(
-            optimizer,
-            param_name=param_name,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
+        super().__init__(optimizer,
+                         param_name=param_name,
+                         begin=begin,
+                         end=end,
+                         last_step=last_step,
+                         by_epoch=by_epoch,
+                         verbose=verbose)
 
     @classmethod
     def build_iter_from_epoch(cls,
@@ -376,13 +373,12 @@ class MultiStepParamScheduler(_ParamScheduler):
         begin = int(begin * epoch_length)
         if end != INF:
             end = int(end * epoch_length)
-        return cls(
-            *args,
-            milestones=milestones,
-            begin=begin,
-            end=end,
-            by_epoch=by_epoch,
-            **kwargs)
+        return cls(*args,
+                   milestones=milestones,
+                   begin=begin,
+                   end=end,
+                   by_epoch=by_epoch,
+                   **kwargs)
 
     def _get_value(self):
         """Compute value using chainable form of the scheduler."""
@@ -438,14 +434,13 @@ class ConstantParamScheduler(_ParamScheduler):
 
         self.factor = factor
         self.total_iters = end - begin - 1
-        super().__init__(
-            optimizer,
-            param_name=param_name,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
+        super().__init__(optimizer,
+                         param_name=param_name,
+                         begin=begin,
+                         end=end,
+                         last_step=last_step,
+                         by_epoch=by_epoch,
+                         verbose=verbose)
 
     @classmethod
     def build_iter_from_epoch(cls,
@@ -521,14 +516,13 @@ class ExponentialParamScheduler(_ParamScheduler):
                  by_epoch: bool = True,
                  verbose: bool = False):
         self.gamma = gamma
-        super().__init__(
-            optimizer,
-            param_name=param_name,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
+        super().__init__(optimizer,
+                         param_name=param_name,
+                         begin=begin,
+                         end=end,
+                         last_step=last_step,
+                         by_epoch=by_epoch,
+                         verbose=verbose)
 
     @classmethod
     def build_iter_from_epoch(cls,
@@ -638,14 +632,13 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
         self.T_max = T_max or (end - begin)
         self.eta_min = eta_min
         self.eta_min_ratio = eta_min_ratio
-        super().__init__(
-            optimizer,
-            param_name=param_name,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
+        super().__init__(optimizer,
+                         param_name=param_name,
+                         begin=begin,
+                         end=end,
+                         last_step=last_step,
+                         by_epoch=by_epoch,
+                         verbose=verbose)
 
     @classmethod
     def build_iter_from_epoch(cls,
@@ -669,13 +662,12 @@ class CosineAnnealingParamScheduler(_ParamScheduler):
         begin = int(begin * epoch_length)
         if end != INF:
             end = int(end * epoch_length)
-        return cls(
-            *args,
-            T_max=T_max,
-            begin=begin,
-            end=end,
-            by_epoch=by_epoch,
-            **kwargs)
+        return cls(*args,
+                   T_max=T_max,
+                   begin=begin,
+                   end=end,
+                   by_epoch=by_epoch,
+                   **kwargs)
 
     def _get_value(self) -> list:
         """Compute value using chainable form of the scheduler."""
@@ -756,14 +748,13 @@ class LinearParamScheduler(_ParamScheduler):
         self.start_factor = start_factor
         self.end_factor = end_factor
         self.total_iters = end - begin - 1
-        super().__init__(
-            optimizer,
-            param_name=param_name,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
+        super().__init__(optimizer,
+                         param_name=param_name,
+                         begin=begin,
+                         end=end,
+                         last_step=last_step,
+                         by_epoch=by_epoch,
+                         verbose=verbose)
 
     @classmethod
     def build_iter_from_epoch(cls,
@@ -846,14 +837,13 @@ class PolyParamScheduler(_ParamScheduler):
         self.power = power
         self.total_iters = end - begin - 1
 
-        super().__init__(
-            optimizer,
-            param_name=param_name,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
+        super().__init__(optimizer,
+                         param_name=param_name,
+                         begin=begin,
+                         end=end,
+                         last_step=last_step,
+                         by_epoch=by_epoch,
+                         verbose=verbose)
 
     @classmethod
     def build_iter_from_epoch(cls,
@@ -1043,14 +1033,13 @@ class OneCycleParamScheduler(_ParamScheduler):
                 group[f'min_{param_name}'] = \
                     group[f'initial_{param_name}'] / final_div_factor
 
-        super().__init__(
-            optimizer=optimizer,
-            param_name=param_name,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
+        super().__init__(optimizer=optimizer,
+                         param_name=param_name,
+                         begin=begin,
+                         end=end,
+                         last_step=last_step,
+                         by_epoch=by_epoch,
+                         verbose=verbose)
 
     def _format_param(self, name, optimizer, param):
         """Return correctly formatted lr/momentum for each param group."""
@@ -1098,13 +1087,12 @@ class OneCycleParamScheduler(_ParamScheduler):
             end = int(end * epoch_length)
         if total_steps is not None:
             total_steps = total_steps * epoch_length
-        return cls(
-            *args,
-            begin=begin,
-            end=end,
-            total_steps=total_steps,
-            by_epoch=by_epoch,
-            **kwargs)
+        return cls(*args,
+                   begin=begin,
+                   end=end,
+                   total_steps=total_steps,
+                   by_epoch=by_epoch,
+                   **kwargs)
 
     def _get_value(self):
         """Compute value using chainable form of the scheduler."""
@@ -1190,14 +1178,13 @@ class CosineRestartParamScheduler(_ParamScheduler):
             sum(self.periods[0:i + 1]) for i in range(0, len(self.periods))
         ]
 
-        super().__init__(
-            optimizer,
-            param_name=param_name,
-            begin=begin,
-            end=end,
-            last_step=last_step,
-            by_epoch=by_epoch,
-            verbose=verbose)
+        super().__init__(optimizer,
+                         param_name=param_name,
+                         begin=begin,
+                         end=end,
+                         last_step=last_step,
+                         by_epoch=by_epoch,
+                         verbose=verbose)
 
     @classmethod
     def build_iter_from_epoch(cls,
@@ -1220,13 +1207,12 @@ class CosineRestartParamScheduler(_ParamScheduler):
         begin = int(begin * epoch_length)
         if end != INF:
             end = int(end * epoch_length)
-        return cls(
-            *args,
-            periods=periods,
-            begin=begin,
-            end=end,
-            by_epoch=by_epoch,
-            **kwargs)
+        return cls(*args,
+                   periods=periods,
+                   begin=begin,
+                   end=end,
+                   by_epoch=by_epoch,
+                   **kwargs)
 
     def _get_value(self):
         """Compute value using chainable form of the scheduler."""
@@ -1444,8 +1430,9 @@ class ReduceOnPlateauParamScheduler(_ParamScheduler):
         self.eps = eps
 
         self.monitor = monitor
-        self._init_is_better(
-            rule=rule, threshold=threshold, threshold_rule=threshold_rule)
+        self._init_is_better(rule=rule,
+                             threshold=threshold,
+                             threshold_rule=threshold_rule)
         self._reset()
 
         # remove call self.step() and init self._global_step = 0

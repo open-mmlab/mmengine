@@ -21,10 +21,11 @@ class TestLabelData(TestCase):
 
         # item'max bigger than num_classes
         with self.assertRaises(AssertionError):
-            LabelData.label_to_onehot(
-                torch.tensor([11], dtype=torch.int64), num_classes)
-        onehot = LabelData.label_to_onehot(
-            label=torch.tensor([], dtype=torch.int64), num_classes=num_classes)
+            LabelData.label_to_onehot(torch.tensor([11], dtype=torch.int64),
+                                      num_classes)
+        onehot = LabelData.label_to_onehot(label=torch.tensor(
+            [], dtype=torch.int64),
+                                           num_classes=num_classes)
         assert (onehot == torch.zeros((num_classes, ),
                                       dtype=torch.int64)).all()
 
@@ -50,8 +51,8 @@ class TestLabelData(TestCase):
         assert label == item
         assert label.device == item.device
 
-    @pytest.mark.skipif(
-        not torch.cuda.is_available(), reason='GPU is required!')
+    @pytest.mark.skipif(not torch.cuda.is_available(),
+                        reason='GPU is required!')
     def test_cuda(self):
         item = torch.arange(0, 9).cuda()
         onehot = LabelData.label_to_onehot(item, num_classes=10)

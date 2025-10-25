@@ -19,10 +19,9 @@ class MMT5ForTranslation(BaseModel):
 
     def forward(self, label, input_ids, attention_mask, mode):
         if mode == 'loss':
-            output = self.model(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                labels=label)
+            output = self.model(input_ids=input_ids,
+                                attention_mask=attention_mask,
+                                labels=label)
             return {'loss': output.loss}
         elif mode == 'predict':
             output = self.model.generate(input_ids)
@@ -80,10 +79,9 @@ def collate_fn(data):
     ).input_ids
     label[label ==
           tokenizer.pad_token_id] = -100  # ignore contribution to loss
-    return dict(
-        label=label,
-        input_ids=input_dict.input_ids,
-        attention_mask=input_dict.attention_mask)
+    return dict(label=label,
+                input_ids=input_dict.input_ids,
+                attention_mask=input_dict.attention_mask)
 
 
 def main():
@@ -93,16 +91,14 @@ def main():
     books = books['train'].train_test_split(test_size=0.2)
     train_set, test_set = books['train'], books['test']
 
-    train_loader = dict(
-        batch_size=16,
-        dataset=train_set,
-        sampler=dict(type='DefaultSampler', shuffle=True),
-        collate_fn=collate_fn)
-    test_loader = dict(
-        batch_size=32,
-        dataset=test_set,
-        sampler=dict(type='DefaultSampler', shuffle=False),
-        collate_fn=collate_fn)
+    train_loader = dict(batch_size=16,
+                        dataset=train_set,
+                        sampler=dict(type='DefaultSampler', shuffle=True),
+                        collate_fn=collate_fn)
+    test_loader = dict(batch_size=32,
+                       dataset=test_set,
+                       sampler=dict(type='DefaultSampler', shuffle=False),
+                       collate_fn=collate_fn)
     runner = Runner(
         model=MMT5ForTranslation(model),
         train_dataloader=train_loader,

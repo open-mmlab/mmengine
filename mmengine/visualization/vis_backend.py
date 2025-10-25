@@ -437,8 +437,8 @@ class WandbVisBackend(BaseVisBackend):
         """
         assert isinstance(self._init_kwargs, dict)
         allow_val_change = self._init_kwargs.get('allow_val_change', False)
-        self._wandb.config.update(
-            config.to_dict(), allow_val_change=allow_val_change)
+        self._wandb.config.update(config.to_dict(),
+                                  allow_val_change=allow_val_change)
         self._wandb.run.log_code(name=self._log_code_name)
 
     @force_init_env
@@ -604,7 +604,8 @@ class TensorboardVisBackend(BaseVisBackend):
                       (int, float, torch.Tensor, np.ndarray, np.number)):
             self._tensorboard.add_scalar(name, value, step)
         else:
-            warnings.warn(f'Got {type(value)}, but numpy array, torch tensor, '
+            warnings.warn(f'Got type {type(value)} with name {name}, '
+                          'but numpy array, torch tensor, '
                           f'int or float are expected. skip it!')
 
     @force_init_env
@@ -938,8 +939,10 @@ class ClearMLVisBackend(BaseVisBackend):
                 should be RGB.
             step (int): Global step value to record. Defaults to 0.
         """
-        self._logger.report_image(
-            title=name, series=name, iteration=step, image=image)
+        self._logger.report_image(title=name,
+                                  series=name,
+                                  iteration=step,
+                                  image=image)
 
     @force_init_env
     def add_scalar(self,
@@ -954,8 +957,10 @@ class ClearMLVisBackend(BaseVisBackend):
             value (int, float, torch.Tensor, np.ndarray): Value to save.
             step (int): Global step value to record. Defaults to 0.
         """
-        self._logger.report_scalar(
-            title=name, series=name, value=value, iteration=step)
+        self._logger.report_scalar(title=name,
+                                   series=name,
+                                   value=value,
+                                   iteration=step)
 
     @force_init_env
     def add_scalars(self,
@@ -975,8 +980,10 @@ class ClearMLVisBackend(BaseVisBackend):
         assert 'step' not in scalar_dict, 'Please set it directly ' \
                                           'through the step parameter'
         for key, value in scalar_dict.items():
-            self._logger.report_scalar(
-                title=key, series=key, value=value, iteration=step)
+            self._logger.report_scalar(title=key,
+                                       series=key,
+                                       value=value,
+                                       iteration=step)
 
     def close(self) -> None:
         """Close the clearml."""
@@ -1092,8 +1099,9 @@ class NeptuneVisBackend(BaseVisBackend):
 
         # values in the array need to be in the [0, 1] range
         img = image.astype(np.float32) / 255.0
-        self._neptune['images'].append(
-            File.as_image(img), name=name, step=step)
+        self._neptune['images'].append(File.as_image(img),
+                                       name=name,
+                                       step=step)
 
     @force_init_env
     def add_scalar(self,

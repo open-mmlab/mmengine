@@ -40,8 +40,9 @@ class CamVid(VisionDataset):
                  mask_folder,
                  transform=None,
                  target_transform=None):
-        super().__init__(
-            root, transform=transform, target_transform=target_transform)
+        super().__init__(root,
+                         transform=transform,
+                         target_transform=target_transform)
         self.img_folder = img_folder
         self.mask_folder = mask_folder
         self.images = list(
@@ -72,8 +73,9 @@ class CamVid(VisionDataset):
 
         if self.target_transform is not None:
             labels = self.target_transform(labels)
-        data_samples = dict(
-            labels=labels, img_path=img_path, mask_path=mask_path)
+        data_samples = dict(labels=labels,
+                            img_path=img_path,
+                            mask_path=mask_path)
         return img, data_samples
 
     def __len__(self):
@@ -102,8 +104,8 @@ class IoU(BaseMetric):
         intersect = (labels == preds).sum()
         union = (torch.logical_or(preds, labels)).sum()
         iou = (intersect / union).cpu()
-        self.results.append(
-            dict(batch_size=len(labels), iou=iou * len(labels)))
+        self.results.append(dict(batch_size=len(labels),
+                                 iou=iou * len(labels)))
 
     def compute_metrics(self, results):
         total_iou = sum(result['iou'] for result in self.results)
@@ -151,18 +153,16 @@ class SegVisHook(Hook):
                             osp.join(saved_dir, osp.basename(img_path)))
             shutil.copyfile(mask_path,
                             osp.join(saved_dir, osp.basename(mask_path)))
-            cv2.imwrite(
-                osp.join(saved_dir, f'pred_{osp.basename(img_path)}'),
-                pred_mask)
+            cv2.imwrite(osp.join(saved_dir, f'pred_{osp.basename(img_path)}'),
+                        pred_mask)
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Distributed Training')
-    parser.add_argument(
-        '--launcher',
-        choices=['none', 'pytorch', 'slurm', 'mpi'],
-        default='none',
-        help='job launcher')
+    parser.add_argument('--launcher',
+                        choices=['none', 'pytorch', 'slurm', 'mpi'],
+                        default='none',
+                        help='job launcher')
     parser.add_argument('--local_rank', type=int, default=0)
 
     args = parser.parse_args()
@@ -181,37 +181,33 @@ def main():
     target_transform = transforms.Lambda(
         lambda x: torch.tensor(np.array(x), dtype=torch.long))
 
-    train_set = CamVid(
-        'data/CamVid',
-        img_folder='train',
-        mask_folder='train_labels',
-        transform=transform,
-        target_transform=target_transform)
+    train_set = CamVid('data/CamVid',
+                       img_folder='train',
+                       mask_folder='train_labels',
+                       transform=transform,
+                       target_transform=target_transform)
 
-    valid_set = CamVid(
-        'data/CamVid',
-        img_folder='val',
-        mask_folder='val_labels',
-        transform=transform,
-        target_transform=target_transform)
+    valid_set = CamVid('data/CamVid',
+                       img_folder='val',
+                       mask_folder='val_labels',
+                       transform=transform,
+                       target_transform=target_transform)
 
-    train_dataloader = dict(
-        batch_size=3,
-        dataset=train_set,
-        sampler=dict(type='DefaultSampler', shuffle=True),
-        collate_fn=dict(type='default_collate'))
-    val_dataloader = dict(
-        batch_size=3,
-        dataset=valid_set,
-        sampler=dict(type='DefaultSampler', shuffle=False),
-        collate_fn=dict(type='default_collate'))
+    train_dataloader = dict(batch_size=3,
+                            dataset=train_set,
+                            sampler=dict(type='DefaultSampler', shuffle=True),
+                            collate_fn=dict(type='default_collate'))
+    val_dataloader = dict(batch_size=3,
+                          dataset=valid_set,
+                          sampler=dict(type='DefaultSampler', shuffle=False),
+                          collate_fn=dict(type='default_collate'))
 
     runner = Runner(
         model=MMDeeplabV3(num_classes),
         work_dir='./work_dir',
         train_dataloader=train_dataloader,
-        optim_wrapper=dict(
-            type=AmpOptimWrapper, optimizer=dict(type=AdamW, lr=2e-4)),
+        optim_wrapper=dict(type=AmpOptimWrapper,
+                           optimizer=dict(type=AdamW, lr=2e-4)),
         train_cfg=dict(by_epoch=True, max_epochs=10, val_interval=10),
         val_dataloader=val_dataloader,
         val_cfg=dict(),

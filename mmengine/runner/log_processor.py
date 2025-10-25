@@ -301,10 +301,9 @@ class LogProcessor:
                 dict(data_src='time', window_size='epoch', method_name='mean'))
         if 'data_time' not in custom_keys:
             custom_cfg_copy.append(
-                dict(
-                    data_src='data_time',
-                    window_size='epoch',
-                    method_name='mean'))
+                dict(data_src='data_time',
+                     window_size='epoch',
+                     method_name='mean'))
         parsed_cfg = self._parse_windows_size(runner, batch_idx,
                                               custom_cfg_copy)
         # tag is used to write log information to different backends.

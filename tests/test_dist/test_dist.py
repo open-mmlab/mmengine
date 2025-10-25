@@ -126,8 +126,9 @@ class TestDistWithGLOOBackend(MultiProcessTestCase):
         os.environ['MASTER_ADDR'] = '127.0.0.1'
         os.environ['MASTER_PORT'] = '29505'
         os.environ['RANK'] = str(rank)
-        torch_dist.init_process_group(
-            backend='gloo', rank=rank, world_size=world_size)
+        torch_dist.init_process_group(backend='gloo',
+                                      rank=rank,
+                                      world_size=world_size)
 
     def setUp(self):
         super().setUp()
@@ -193,9 +194,8 @@ class TestDistWithGLOOBackend(MultiProcessTestCase):
 
     def test_sync_random_seed(self):
         self._init_dist_env(self.rank, self.world_size)
-        with patch.object(
-                torch, 'tensor',
-                return_value=torch.tensor(1024)) as mock_tensor:
+        with patch.object(torch, 'tensor',
+                          return_value=torch.tensor(1024)) as mock_tensor:
             output = dist.sync_random_seed()
             assert output == 1024
         mock_tensor.assert_called()
@@ -333,20 +333,17 @@ class TestDistWithGLOOBackend(MultiProcessTestCase):
                     torch.tensor([0, 1], dtype=tensor_type) for _ in range(100)
                 ]
             else:
-                data = (
-                    torch.tensor([2, 3], dtype=tensor_type)
-                    for _ in range(100))
+                data = (torch.tensor([2, 3], dtype=tensor_type)
+                        for _ in range(100))
 
             data_gen = (item for item in data)
 
             if reduce_op == 'sum':
-                expected = (
-                    torch.tensor([2, 4], dtype=tensor_type)
-                    for _ in range(100))
+                expected = (torch.tensor([2, 4], dtype=tensor_type)
+                            for _ in range(100))
             else:
-                expected = (
-                    torch.tensor([1, 2], dtype=tensor_type)
-                    for _ in range(100))
+                expected = (torch.tensor([1, 2], dtype=tensor_type)
+                            for _ in range(100))
 
             dist.all_reduce_params(data_gen, coalesce=coalesce, op=reduce_op)
 
@@ -354,8 +351,8 @@ class TestDistWithGLOOBackend(MultiProcessTestCase):
                 self.assertTrue(torch.allclose(item1, item2))
 
 
-@unittest.skipIf(
-    torch.cuda.device_count() < 2, reason='need 2 gpu to test nccl')
+@unittest.skipIf(torch.cuda.device_count() < 2,
+                 reason='need 2 gpu to test nccl')
 class TestDistWithNCCLBackend(MultiProcessTestCase):
 
     def _init_dist_env(self, rank, world_size):
@@ -366,8 +363,9 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
 
         num_gpus = torch.cuda.device_count()
         torch.cuda.set_device(rank % num_gpus)
-        torch_dist.init_process_group(
-            backend='nccl', rank=rank, world_size=world_size)
+        torch_dist.init_process_group(backend='nccl',
+                                      rank=rank,
+                                      world_size=world_size)
 
     def setUp(self):
         super().setUp()
@@ -431,9 +429,8 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
 
     def test_sync_random_seed(self):
         self._init_dist_env(self.rank, self.world_size)
-        with patch.object(
-                torch, 'tensor',
-                return_value=torch.tensor(1024)) as mock_tensor:
+        with patch.object(torch, 'tensor',
+                          return_value=torch.tensor(1024)) as mock_tensor:
             output = dist.sync_random_seed()
             assert output == 1024
         mock_tensor.assert_called()
@@ -580,8 +577,10 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
         # broadcast tmpdir to all ranks to make it consistent
         object_list = [tmpdir]
         dist.broadcast_object_list(object_list)
-        output = dist.collect_results(
-            data, size, device='cpu', tmpdir=object_list[0])
+        output = dist.collect_results(data,
+                                      size,
+                                      device='cpu',
+                                      tmpdir=object_list[0])
         if dist.get_rank() == 0:
             self.assertEqual(output, expected)
         else:
@@ -646,13 +645,13 @@ class TestDistWithNCCLBackend(MultiProcessTestCase):
             dist.all_reduce_params(data_gen, coalesce=coalesce, op=reduce_op)
 
             if reduce_op == 'sum':
-                expected = (
-                    torch.tensor([2, 4], dtype=tensor_type).to(device_type)
-                    for _ in range(100))
+                expected = (torch.tensor([2, 4],
+                                         dtype=tensor_type).to(device_type)
+                            for _ in range(100))
             else:
-                expected = (
-                    torch.tensor([1, 2], dtype=tensor_type).to(device_type)
-                    for _ in range(100))
+                expected = (torch.tensor([1, 2],
+                                         dtype=tensor_type).to(device_type)
+                            for _ in range(100))
 
             for item1, item2 in zip(data_gen, expected):
                 self.assertTrue(torch.allclose(item1, item2))

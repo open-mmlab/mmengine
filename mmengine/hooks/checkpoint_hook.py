@@ -13,6 +13,7 @@ from mmengine.fileio import FileClient, get_file_backend
 from mmengine.logging import print_log
 from mmengine.registry import HOOKS
 from mmengine.utils import is_list_of, is_seq_of
+
 from .hook import Hook
 
 DATA_BATCH = Optional[Union[dict, tuple, list]]
@@ -196,10 +197,10 @@ class CheckpointHook(Hook):
         self.save_best = save_best
 
         # rule logic
-        assert (isinstance(rule, str) or is_list_of(rule, str)
-                or (rule is None)), (
-                    '"rule" should be a str or list of str or None, '
-                    f'but got {type(rule)}')
+        assert (isinstance(rule, str) or is_list_of(rule, str) or
+                (rule
+                 is None)), ('"rule" should be a str or list of str or None, '
+                             f'but got {type(rule)}')
         if isinstance(rule, list):
             # check the length of rule list
             assert len(rule) in [
@@ -440,16 +441,15 @@ class CheckpointHook(Hook):
                                                      ckpt_filename)
         runner.message_hub.update_info('last_ckpt', self.last_ckpt)
 
-        runner.save_checkpoint(
-            self.out_dir,
-            ckpt_filename,
-            self.file_client_args,
-            save_optimizer=self.save_optimizer,
-            save_param_scheduler=self.save_param_scheduler,
-            meta=meta,
-            by_epoch=self.by_epoch,
-            backend_args=self.backend_args,
-            **self.args)
+        runner.save_checkpoint(self.out_dir,
+                               ckpt_filename,
+                               self.file_client_args,
+                               save_optimizer=self.save_optimizer,
+                               save_param_scheduler=self.save_param_scheduler,
+                               meta=meta,
+                               by_epoch=self.by_epoch,
+                               backend_args=self.backend_args,
+                               **self.args)
 
         # Model parallel-like training should involve pulling sharded states
         # from all ranks, but skip the following procedure.
@@ -557,15 +557,14 @@ class CheckpointHook(Hook):
                 runner.message_hub.update_info(
                     runtime_best_ckpt_key,
                     self.best_ckpt_path_dict[key_indicator])
-            runner.save_checkpoint(
-                self.out_dir,
-                filename=best_ckpt_name,
-                file_client_args=self.file_client_args,
-                save_optimizer=False,
-                save_param_scheduler=False,
-                meta=meta,
-                by_epoch=False,
-                backend_args=self.backend_args)
+            runner.save_checkpoint(self.out_dir,
+                                   filename=best_ckpt_name,
+                                   file_client_args=self.file_client_args,
+                                   save_optimizer=False,
+                                   save_param_scheduler=False,
+                                   meta=meta,
+                                   by_epoch=False,
+                                   backend_args=self.backend_args)
             runner.logger.info(
                 f'The best checkpoint with {best_score:0.4f} {key_indicator} '
                 f'at {cur_time} {cur_type} is saved to {best_ckpt_name}.')

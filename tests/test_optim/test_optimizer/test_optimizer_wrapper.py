@@ -176,8 +176,8 @@ class TestOptimWrapper(MultiProcessTestCase):
         optim_wrapper = OptimWrapper(optim)
         self.assertEqual(optim_wrapper.get_lr(), dict(lr=[0.1]))
         model = ToyModel()
-        optimizer_cfg = dict(
-            type='OptimWrapper', optimizer=dict(type='SGD', lr=0.1))
+        optimizer_cfg = dict(type='OptimWrapper',
+                             optimizer=dict(type='SGD', lr=0.1))
         paramwise_cfg = dict(custom_keys={'conv1.weight': dict(lr_mult=0.1)})
         optim_constructor = DefaultOptimWrapperConstructor(
             optimizer_cfg, paramwise_cfg)
@@ -226,8 +226,8 @@ class TestOptimWrapper(MultiProcessTestCase):
     @unittest.skipIf(True, reason='Solved in the future')
     def test_clip_grads(self):
         # Test `clip_grad` with `clip_norm_`
-        optim_wrapper = OptimWrapper(
-            self.optimizer, clip_grad=dict(max_norm=35))
+        optim_wrapper = OptimWrapper(self.optimizer,
+                                     clip_grad=dict(max_norm=35))
         loss = self.model(torch.Tensor(1, 1, 1, 1))
         loss.backward()
         optim_wrapper._clip_grad()
@@ -236,8 +236,9 @@ class TestOptimWrapper(MultiProcessTestCase):
         self.message_hub._log_scalars.clear()
 
         # Test `clip_grad` with `clip_value_`
-        optim_wrapper = OptimWrapper(
-            self.optimizer, clip_grad=dict(type='value', clip_value=0.5))
+        optim_wrapper = OptimWrapper(self.optimizer,
+                                     clip_grad=dict(type='value',
+                                                    clip_value=0.5))
         loss = self.model(torch.Tensor(1, 1, 1, 1))
         loss.backward()
         optim_wrapper._clip_grad()
@@ -300,8 +301,9 @@ class TestOptimWrapper(MultiProcessTestCase):
         os.environ['MASTER_ADDR'] = '127.0.0.1'
         os.environ['MASTER_PORT'] = '29515'
         os.environ['RANK'] = str(rank)
-        torch_dist.init_process_group(
-            backend='gloo', rank=rank, world_size=world_size)
+        torch_dist.init_process_group(backend='gloo',
+                                      rank=rank,
+                                      world_size=world_size)
 
     # TODO Test the real interface after add testing tool function which can
     #  test the function or method is read called.
@@ -328,8 +330,9 @@ class TestApexOptimWrapper(TestCase):
         reason='`apex` is not available, Please install apex from '
         'https://www.github.com/nvidia/apex')
     def test_init(self):
-        apex_optim_wrapper = ApexOptimWrapper(
-            optimizer=self.optimizer, opt_level='O1', loss_scale=1)
+        apex_optim_wrapper = ApexOptimWrapper(optimizer=self.optimizer,
+                                              opt_level='O1',
+                                              loss_scale=1)
         with apex_optim_wrapper.optim_context(self.model):
             pass
 
@@ -339,8 +342,9 @@ class TestApexOptimWrapper(TestCase):
         'https://www.github.com/nvidia/apex')
     def test_step(self):
         optimizer = MagicMock(spec=Optimizer)
-        apex_optim_wrapper = ApexOptimWrapper(
-            optimizer=optimizer, opt_level='O1', loss_scale=1)
+        apex_optim_wrapper = ApexOptimWrapper(optimizer=optimizer,
+                                              opt_level='O1',
+                                              loss_scale=1)
         with apex_optim_wrapper.optim_context(self.model):
             loss = self.model(torch.Tensor(1, 1, 1, 1).cuda())
             apex_optim_wrapper.backward(loss)
@@ -351,8 +355,9 @@ class TestApexOptimWrapper(TestCase):
         reason='`apex` is not available, Please install apex from '
         'https://www.github.com/nvidia/apex')
     def test_backward(self):
-        apex_optim_wrapper = ApexOptimWrapper(
-            optimizer=self.optimizer, opt_level='O1', loss_scale=1)
+        apex_optim_wrapper = ApexOptimWrapper(optimizer=self.optimizer,
+                                              opt_level='O1',
+                                              loss_scale=1)
         with apex_optim_wrapper.optim_context(self.model):
             loss = self.model(torch.Tensor(1, 1, 1, 1).cuda())
             apex_optim_wrapper.backward(loss)
@@ -362,8 +367,9 @@ class TestApexOptimWrapper(TestCase):
         reason='`apex` is not available, Please install apex from '
         'https://www.github.com/nvidia/apex')
     def test_state_dict(self):
-        apex_optim_wrapper = ApexOptimWrapper(
-            optimizer=self.optimizer, opt_level='O1', loss_scale=1)
+        apex_optim_wrapper = ApexOptimWrapper(optimizer=self.optimizer,
+                                              opt_level='O1',
+                                              loss_scale=1)
         with apex_optim_wrapper.optim_context(self.model):
             loss = self.model(torch.Tensor(1, 1, 1, 1).cuda())
             apex_optim_wrapper.update_params(loss)
@@ -380,8 +386,9 @@ class TestApexOptimWrapper(TestCase):
         reason='`apex` is not available, Please install apex from '
         'https://www.github.com/nvidia/apex')
     def test_load_state_dict(self):
-        apex_optim_wrapper = ApexOptimWrapper(
-            optimizer=self.optimizer, opt_level='O1', loss_scale=1)
+        apex_optim_wrapper = ApexOptimWrapper(optimizer=self.optimizer,
+                                              opt_level='O1',
+                                              loss_scale=1)
         with apex_optim_wrapper.optim_context(self.model):
             # Test load from optimizer
             optimizer = SGD(self.model.parameters(), lr=0.1)
@@ -403,8 +410,9 @@ class TestApexOptimWrapper(TestCase):
         reason='`apex` is not available, Please install apex from '
         'https://www.github.com/nvidia/apex')
     def test_optim_context(self):
-        apex_optim_wrapper = ApexOptimWrapper(
-            optimizer=self.optimizer, opt_level='O1', loss_scale=1)
+        apex_optim_wrapper = ApexOptimWrapper(optimizer=self.optimizer,
+                                              opt_level='O1',
+                                              loss_scale=1)
         with apex_optim_wrapper.optim_context(self.model):
             x = torch.randn(1, 1, 1, 1).cuda()
             y = nn.Conv2d(1, 1, 1).cuda()(x)
@@ -426,24 +434,25 @@ class TestAmpOptimWrapper(TestCase):
         self.assertIsInstance(amp_optim_wrapper.loss_scaler, GradScaler)
 
         # Test with dynamic.
-        amp_optim_wrapper = AmpOptimWrapper(
-            'dynamic', optimizer=self.optimizer)
+        amp_optim_wrapper = AmpOptimWrapper('dynamic',
+                                            optimizer=self.optimizer)
         self.assertIsNone(amp_optim_wrapper._scale_update_param)
         self.assertIsInstance(amp_optim_wrapper.loss_scaler, GradScaler)
 
         # Test with dtype float16
-        amp_optim_wrapper = AmpOptimWrapper(
-            dtype='float16', optimizer=self.optimizer)
+        amp_optim_wrapper = AmpOptimWrapper(dtype='float16',
+                                            optimizer=self.optimizer)
         self.assertIs(amp_optim_wrapper.cast_dtype, torch.float16)
 
         # Test with dtype bfloat16
-        amp_optim_wrapper = AmpOptimWrapper(
-            dtype='bfloat16', optimizer=self.optimizer)
+        amp_optim_wrapper = AmpOptimWrapper(dtype='bfloat16',
+                                            optimizer=self.optimizer)
         self.assertIs(amp_optim_wrapper.cast_dtype, torch.bfloat16)
 
         # Test with dict loss_scale.
-        amp_optim_wrapper = AmpOptimWrapper(
-            dict(init_scale=1, growth_factor=2), optimizer=self.optimizer)
+        amp_optim_wrapper = AmpOptimWrapper(dict(init_scale=1,
+                                                 growth_factor=2),
+                                            optimizer=self.optimizer)
         self.assertIsInstance(amp_optim_wrapper.loss_scaler, GradScaler)
         self.assertIsNone(amp_optim_wrapper._scale_update_param)
         with self.assertRaisesRegex(TypeError,
@@ -455,8 +464,8 @@ class TestAmpOptimWrapper(TestCase):
         not torch.cuda.is_available(),
         reason='`torch.cuda.amp` is only available when pytorch-gpu installed')
     def test_step(self, dtype):
-        if dtype is not None and (digit_version(TORCH_VERSION) <
-                                  digit_version('1.10.0')):
+        if dtype is not None and (digit_version(TORCH_VERSION)
+                                  < digit_version('1.10.0')):
             raise unittest.SkipTest('Require PyTorch version >= 1.10.0 to '
                                     'support `dtype` argument in autocast')
         if dtype == 'bfloat16' and not bf16_supported():
@@ -478,14 +487,14 @@ class TestAmpOptimWrapper(TestCase):
         not torch.cuda.is_available(),
         reason='`torch.cuda.amp` is only available when pytorch-gpu installed')
     def test_backward(self, dtype):
-        if dtype is not None and (digit_version(TORCH_VERSION) <
-                                  digit_version('1.10.0')):
+        if dtype is not None and (digit_version(TORCH_VERSION)
+                                  < digit_version('1.10.0')):
             raise unittest.SkipTest('Require PyTorch version >= 1.10.0 to '
                                     'support `dtype` argument in autocast')
         if dtype == 'bfloat16' and not bf16_supported():
             raise unittest.SkipTest('bfloat16 not supported by device')
-        amp_optim_wrapper = AmpOptimWrapper(
-            optimizer=self.optimizer, dtype=dtype)
+        amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer,
+                                            dtype=dtype)
         loss_scaler = MagicMock()
         scale_return = MagicMock()
         scale_fn = MagicMock(return_value=scale_return)
@@ -539,14 +548,14 @@ class TestAmpOptimWrapper(TestCase):
         not torch.cuda.is_available(),
         reason='`torch.cuda.amp` is only available when pytorch-gpu installed')
     def test_optim_context(self, dtype, target_dtype):
-        if dtype is not None and (digit_version(TORCH_VERSION) <
-                                  digit_version('1.10.0')):
+        if dtype is not None and (digit_version(TORCH_VERSION)
+                                  < digit_version('1.10.0')):
             raise unittest.SkipTest('Require PyTorch version >= 1.10.0 to '
                                     'support `dtype` argument in autocast')
         if dtype == 'bfloat16' and not bf16_supported():
             raise unittest.SkipTest('bfloat16 not supported by device')
-        amp_optim_wrapper = AmpOptimWrapper(
-            optimizer=self.optimizer, dtype=dtype)
+        amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer,
+                                            dtype=dtype)
         with amp_optim_wrapper.optim_context(self.model):
             x = torch.randn(1, 1, 1, 1).cuda()
             y = nn.Conv2d(1, 1, 1).cuda()(x)

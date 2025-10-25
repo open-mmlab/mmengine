@@ -29,8 +29,9 @@ class DetDataSample(BaseDataElement):
 
     @gt_instances.setter
     def gt_instances(self, value):
-        self.set_field(
-            value=value, name='_gt_instances', dtype=BaseDataElement)
+        self.set_field(value=value,
+                       name='_gt_instances',
+                       dtype=BaseDataElement)
 
     @gt_instances.deleter
     def gt_instances(self):
@@ -42,8 +43,9 @@ class DetDataSample(BaseDataElement):
 
     @pred_instances.setter
     def pred_instances(self, value):
-        self.set_field(
-            value=value, name='_pred_instances', dtype=BaseDataElement)
+        self.set_field(value=value,
+                       name='_pred_instances',
+                       dtype=BaseDataElement)
 
     @pred_instances.deleter
     def pred_instances(self):
@@ -53,13 +55,13 @@ class DetDataSample(BaseDataElement):
 class TestBaseDataElement(TestCase):
 
     def setup_data(self):
-        metainfo = dict(
-            img_id=random.randint(0, 100),
-            img_shape=(random.randint(400, 600), random.randint(400, 600)))
-        gt_instances = BaseDataElement(
-            bboxes=torch.rand((5, 4)), labels=torch.rand((5, )))
-        pred_instances = BaseDataElement(
-            bboxes=torch.rand((5, 4)), scores=torch.rand((5, )))
+        metainfo = dict(img_id=random.randint(0, 100),
+                        img_shape=(random.randint(400, 600),
+                                   random.randint(400, 600)))
+        gt_instances = BaseDataElement(bboxes=torch.rand((5, 4)),
+                                       labels=torch.rand((5, )))
+        pred_instances = BaseDataElement(bboxes=torch.rand((5, 4)),
+                                         scores=torch.rand((5, )))
         data = dict(gt_instances=gt_instances, pred_instances=pred_instances)
         return metainfo, data
 
@@ -232,8 +234,8 @@ class TestBaseDataElement(TestCase):
     def test_update(self):
         metainfo, data = self.setup_data()
         instances = BaseDataElement(metainfo=metainfo, **data)
-        proposals = BaseDataElement(
-            bboxes=torch.rand((5, 4)), scores=torch.rand((5, )))
+        proposals = BaseDataElement(bboxes=torch.rand((5, 4)),
+                                    scores=torch.rand((5, )))
         new_instances = BaseDataElement(proposals=proposals)
         instances.update(new_instances)
         self.check_key_value(instances, metainfo,
@@ -267,8 +269,8 @@ class TestBaseDataElement(TestCase):
 
         del instances.gt_instances
         del instances.img_id
-        assert not self.is_equal(
-            instances.pop('pred_instances', None), data['pred_instances'])
+        assert not self.is_equal(instances.pop('pred_instances', None),
+                                 data['pred_instances'])
         with self.assertRaises(AttributeError):
             del instances.pred_instances
 
@@ -293,8 +295,8 @@ class TestBaseDataElement(TestCase):
         with self.assertRaises(AttributeError):
             del instances._data_fields
 
-    @pytest.mark.skipif(
-        not torch.cuda.is_available(), reason='GPU is required!')
+    @pytest.mark.skipif(not torch.cuda.is_available(),
+                        reason='GPU is required!')
     def test_cuda(self):
         metainfo, data = self.setup_data()
         instances = BaseDataElement(metainfo=metainfo, **data)
@@ -338,8 +340,9 @@ class TestBaseDataElement(TestCase):
 
     def test_repr(self):
         metainfo = dict(img_shape=(800, 1196, 3))
-        gt_instances = BaseDataElement(
-            metainfo=metainfo, det_labels=torch.LongTensor([0, 1, 2, 3]))
+        gt_instances = BaseDataElement(metainfo=metainfo,
+                                       det_labels=torch.LongTensor(
+                                           [0, 1, 2, 3]))
         sample = BaseDataElement(metainfo=metainfo, gt_instances=gt_instances)
         address = hex(id(sample))
         address_gt_instances = hex(id(sample.gt_instances))

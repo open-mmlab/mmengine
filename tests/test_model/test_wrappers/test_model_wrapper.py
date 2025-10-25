@@ -79,8 +79,8 @@ class TestDistributedDataParallel(MultiProcessTestCase):
         super().setUp()
         self._spawn_processes()
 
-    @unittest.skipIf(
-        not torch.cuda.is_available(), reason='cuda should be available')
+    @unittest.skipIf(not torch.cuda.is_available(),
+                     reason='cuda should be available')
     def test_train_step(self):
         self._init_dist_env(self.rank, self.world_size)
         # Mixed precision training and gradient asynchronous should be valid at
@@ -88,8 +88,8 @@ class TestDistributedDataParallel(MultiProcessTestCase):
         model = ToyModel().cuda()
         ddp_model = MMDistributedDataParallel(module=model)
         optimizer = SGD(ddp_model.parameters(), lr=0)
-        optim_wrapper = AmpOptimWrapper(
-            optimizer=optimizer, accumulative_counts=3)
+        optim_wrapper = AmpOptimWrapper(optimizer=optimizer,
+                                        accumulative_counts=3)
         inputs = torch.randn(1, 3, 1, 1).cuda() * self.rank * 255
         data = dict(inputs=inputs, data_sample=None)
         res = ddp_model.train_step(data, optim_wrapper=optim_wrapper)['loss']
@@ -113,11 +113,11 @@ class TestDistributedDataParallel(MultiProcessTestCase):
             self.assertIsNone(grad)
 
         # Test enable detect_anomalous_params.
-        ddp_model = MMDistributedDataParallel(
-            module=model, detect_anomalous_params=True)
+        ddp_model = MMDistributedDataParallel(module=model,
+                                              detect_anomalous_params=True)
         optimizer = SGD(ddp_model.parameters(), lr=0)
-        optim_wrapper = AmpOptimWrapper(
-            optimizer=optimizer, accumulative_counts=3)
+        optim_wrapper = AmpOptimWrapper(optimizer=optimizer,
+                                        accumulative_counts=3)
         inputs = torch.randn(1, 3, 1, 1).cuda() * self.rank * 255
         data = dict(inputs=inputs, data_sample=None)
         res = ddp_model.train_step(data, optim_wrapper=optim_wrapper)['loss']
@@ -148,12 +148,13 @@ class TestDistributedDataParallel(MultiProcessTestCase):
         os.environ['MASTER_ADDR'] = '127.0.0.1'
         os.environ['MASTER_PORT'] = '29510'
         os.environ['RANK'] = str(rank)
-        torch_dist.init_process_group(
-            backend='gloo', rank=rank, world_size=world_size)
+        torch_dist.init_process_group(backend='gloo',
+                                      rank=rank,
+                                      world_size=world_size)
 
 
-@unittest.skipIf(
-    not torch.cuda.is_available(), reason='cuda should be available')
+@unittest.skipIf(not torch.cuda.is_available(),
+                 reason='cuda should be available')
 class TestMMSeparateDistributedDataParallel(TestDistributedDataParallel):
 
     def test_init(self):
@@ -178,8 +179,8 @@ class TestMMSeparateDistributedDataParallel(TestDistributedDataParallel):
         optimizer2 = SGD(model.conv1.parameters(), lr=0.2)
         optim_wrapper1 = OptimWrapper(optimizer1, 1)
         optim_wrapper2 = OptimWrapper(optimizer2, 1)
-        optim_wrapper_dict = OptimWrapperDict(
-            optim_wrapper1=optim_wrapper1, optim_wrapper2=optim_wrapper2)
+        optim_wrapper_dict = OptimWrapperDict(optim_wrapper1=optim_wrapper1,
+                                              optim_wrapper2=optim_wrapper2)
         inputs = torch.randn(1, 3, 1, 1).cuda() * self.rank * 255
         data = dict(inputs=inputs, data_sample=None)
         # Automatically sync grads of `optim_wrapper1` since
@@ -215,15 +216,15 @@ class TestMMSeparateDistributedDataParallel(TestDistributedDataParallel):
         os.environ['MASTER_ADDR'] = '127.0.0.1'
         os.environ['MASTER_PORT'] = '29515'
         os.environ['RANK'] = str(rank)
-        torch_dist.init_process_group(
-            backend='gloo', rank=rank, world_size=world_size)
+        torch_dist.init_process_group(backend='gloo',
+                                      rank=rank,
+                                      world_size=world_size)
 
 
-@unittest.skipIf(
-    torch.cuda.device_count() < 2, reason='need 2 gpu to test fsdp')
-@unittest.skipIf(
-    digit_version(TORCH_VERSION) < digit_version('2.0.0'),
-    reason='fsdp needs Pytorch 2.0.0 or higher')
+@unittest.skipIf(torch.cuda.device_count() < 2,
+                 reason='need 2 gpu to test fsdp')
+@unittest.skipIf(digit_version(TORCH_VERSION) < digit_version('2.0.0'),
+                 reason='fsdp needs Pytorch 2.0.0 or higher')
 class TestMMFullyShardedDataParallel(MultiProcessTestCase):
 
     def _init_dist_env(self, rank, world_size):
@@ -234,8 +235,9 @@ class TestMMFullyShardedDataParallel(MultiProcessTestCase):
 
         num_gpus = torch.cuda.device_count()
         torch.cuda.set_device(rank % num_gpus)
-        torch_dist.init_process_group(
-            backend='nccl', rank=rank, world_size=world_size)
+        torch_dist.init_process_group(backend='nccl',
+                                      rank=rank,
+                                      world_size=world_size)
 
     def setUp(self) -> None:
         super().setUp()
@@ -266,8 +268,8 @@ class TestMMFullyShardedDataParallel(MultiProcessTestCase):
                 return True
             return isinstance(module, nn.Conv2d)
 
-        fsdp_model = MMFullyShardedDataParallel(
-            module=model.cuda(), auto_wrap_policy=wrap_policy)
+        fsdp_model = MMFullyShardedDataParallel(module=model.cuda(),
+                                                auto_wrap_policy=wrap_policy)
         optimizer = SGD(fsdp_model.parameters(), lr=0.1)
         optim_wrapper = OptimWrapper(optimizer, accumulative_counts=1)
         inputs = torch.randn(1, 3, 1, 1) * self.rank * 255

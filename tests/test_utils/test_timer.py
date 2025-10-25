@@ -7,8 +7,8 @@ import pytest
 import mmengine
 
 
-@pytest.mark.skipif(
-    platform.system() != 'Linux', reason='Only test `Timer` in linux!')
+@pytest.mark.skipif(platform.system() != 'Linux',
+                    reason='Only test `Timer` in linux!')
 def test_timer_init():
     timer = mmengine.Timer(start=False)
     assert not timer.is_running
@@ -18,8 +18,8 @@ def test_timer_init():
     assert timer.is_running
 
 
-@pytest.mark.skipif(
-    platform.system() != 'Linux', reason='Only test `Timer` in linux!')
+@pytest.mark.skipif(platform.system() != 'Linux',
+                    reason='Only test `Timer` in linux!')
 def test_timer_run():
     timer = mmengine.Timer()
     time.sleep(1)
@@ -36,8 +36,8 @@ def test_timer_run():
         timer.since_last_check()
 
 
-@pytest.mark.skipif(
-    platform.system() != 'Linux', reason='Only test `Timer` in linux!')
+@pytest.mark.skipif(platform.system() != 'Linux',
+                    reason='Only test `Timer` in linux!')
 def test_timer_context(capsys):
     with mmengine.Timer():
         time.sleep(1)

@@ -389,40 +389,42 @@ class TestRunner(TestCase):
         epoch_based_cfg = dict(
             model=dict(type='ToyModel'),
             work_dir=self.temp_dir,
-            train_dataloader=dict(
-                dataset=dict(type='ToyDataset'),
-                sampler=dict(type='DefaultSampler', shuffle=True),
-                batch_size=3,
-                num_workers=0),
-            val_dataloader=dict(
-                dataset=dict(type='ToyDataset'),
-                sampler=dict(type='DefaultSampler', shuffle=False),
-                batch_size=3,
-                num_workers=0),
-            test_dataloader=dict(
-                dataset=dict(type='ToyDataset'),
-                sampler=dict(type='DefaultSampler', shuffle=False),
-                batch_size=3,
-                num_workers=0),
+            train_dataloader=dict(dataset=dict(type='ToyDataset'),
+                                  sampler=dict(type='DefaultSampler',
+                                               shuffle=True),
+                                  batch_size=3,
+                                  num_workers=0),
+            val_dataloader=dict(dataset=dict(type='ToyDataset'),
+                                sampler=dict(type='DefaultSampler',
+                                             shuffle=False),
+                                batch_size=3,
+                                num_workers=0),
+            test_dataloader=dict(dataset=dict(type='ToyDataset'),
+                                 sampler=dict(type='DefaultSampler',
+                                              shuffle=False),
+                                 batch_size=3,
+                                 num_workers=0),
             auto_scale_lr=dict(base_batch_size=16, enable=False),
-            optim_wrapper=dict(
-                type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)),
+            optim_wrapper=dict(type='OptimWrapper',
+                               optimizer=dict(type='SGD', lr=0.01)),
             param_scheduler=dict(type='MultiStepLR', milestones=[1, 2]),
             val_evaluator=dict(type='ToyMetric1'),
             test_evaluator=dict(type='ToyMetric1'),
-            train_cfg=dict(
-                by_epoch=True, max_epochs=3, val_interval=1, val_begin=1),
+            train_cfg=dict(by_epoch=True,
+                           max_epochs=3,
+                           val_interval=1,
+                           val_begin=1),
             val_cfg=dict(),
             test_cfg=dict(),
             custom_hooks=[],
-            default_hooks=dict(
-                runtime_info=dict(type='RuntimeInfoHook'),
-                timer=dict(type='IterTimerHook'),
-                logger=dict(type='LoggerHook'),
-                param_scheduler=dict(type='ParamSchedulerHook'),
-                checkpoint=dict(
-                    type='CheckpointHook', interval=1, by_epoch=True),
-                sampler_seed=dict(type='DistSamplerSeedHook')),
+            default_hooks=dict(runtime_info=dict(type='RuntimeInfoHook'),
+                               timer=dict(type='IterTimerHook'),
+                               logger=dict(type='LoggerHook'),
+                               param_scheduler=dict(type='ParamSchedulerHook'),
+                               checkpoint=dict(type='CheckpointHook',
+                                               interval=1,
+                                               by_epoch=True),
+                               sampler_seed=dict(type='DistSamplerSeedHook')),
             data_preprocessor=None,
             launcher='none',
             env_cfg=dict(dist_cfg=dict(backend='nccl')),
@@ -620,23 +622,25 @@ class TestRunner(TestCase):
         train_dataloader = DataLoader(ToyDataset(), collate_fn=collate_fn)
         val_dataloader = DataLoader(ToyDataset(), collate_fn=collate_fn)
         test_dataloader = DataLoader(ToyDataset(), collate_fn=collate_fn)
-        runner = Runner(
-            model=model,
-            work_dir=self.temp_dir,
-            train_cfg=dict(
-                by_epoch=True, max_epochs=3, val_interval=1, val_begin=1),
-            train_dataloader=train_dataloader,
-            optim_wrapper=optim_wrapper,
-            param_scheduler=MultiStepLR(optim_wrapper, milestones=[1, 2]),
-            val_cfg=dict(),
-            val_dataloader=val_dataloader,
-            val_evaluator=[ToyMetric1()],
-            test_cfg=dict(),
-            test_dataloader=test_dataloader,
-            test_evaluator=[ToyMetric1()],
-            default_hooks=dict(param_scheduler=toy_hook),
-            custom_hooks=[toy_hook2],
-            experiment_name='test_init14')
+        runner = Runner(model=model,
+                        work_dir=self.temp_dir,
+                        train_cfg=dict(by_epoch=True,
+                                       max_epochs=3,
+                                       val_interval=1,
+                                       val_begin=1),
+                        train_dataloader=train_dataloader,
+                        optim_wrapper=optim_wrapper,
+                        param_scheduler=MultiStepLR(optim_wrapper,
+                                                    milestones=[1, 2]),
+                        val_cfg=dict(),
+                        val_dataloader=val_dataloader,
+                        val_evaluator=[ToyMetric1()],
+                        test_cfg=dict(),
+                        test_dataloader=test_dataloader,
+                        test_evaluator=[ToyMetric1()],
+                        default_hooks=dict(param_scheduler=toy_hook),
+                        custom_hooks=[toy_hook2],
+                        experiment_name='test_init14')
         runner.train()
         runner.test()
 
@@ -693,8 +697,8 @@ class TestRunner(TestCase):
 
         # 6.6 Test initializing with `_ParameterScheduler`.
         optimizer = SGD(nn.Linear(1, 1).parameters(), lr=0.1)
-        cfg.param_scheduler = MultiStepLR(
-            milestones=[1, 2], optimizer=optimizer)
+        cfg.param_scheduler = MultiStepLR(milestones=[1, 2],
+                                          optimizer=optimizer)
         cfg.experiment_name = 'test_init22'
         Runner(**cfg)
 
@@ -706,9 +710,10 @@ class TestRunner(TestCase):
         Runner(**cfg)
 
         # 6.8 Test initializing with 2 `_ParameterScheduler` for 2 optimizers.
-        cfg.param_scheduler = dict(
-            linear1=MultiStepLR(milestones=[1, 2], optimizer=optimizer),
-            linear2=MultiStepLR(milestones=[1, 2], optimizer=optimizer))
+        cfg.param_scheduler = dict(linear1=MultiStepLR(milestones=[1, 2],
+                                                       optimizer=optimizer),
+                                   linear2=MultiStepLR(milestones=[1, 2],
+                                                       optimizer=optimizer))
         cfg.experiment_name = 'test_init24'
         Runner(**cfg)
 
@@ -747,9 +752,8 @@ class TestRunner(TestCase):
                 temp_config_file = tempfile.NamedTemporaryFile(
                     dir=temp_config_dir, suffix='.py', delete=False)
                 temp_config_file.close()
-                file_cfg = Config(
-                    self.epoch_based_cfg._cfg_dict,
-                    filename=temp_config_file.name)
+                file_cfg = Config(self.epoch_based_cfg._cfg_dict,
+                                  filename=temp_config_file.name)
                 file_cfg.experiment_name = f'test_dump2{idx}'
                 runner = Runner.from_cfg(cfg=file_cfg)
                 assert osp.exists(
@@ -813,9 +817,8 @@ class TestRunner(TestCase):
                          runner.visualizer.instance_name)
 
         # input is a Visualizer object
-        self.assertEqual(
-            id(runner.build_visualizer(runner.visualizer)),
-            id(runner.visualizer))
+        self.assertEqual(id(runner.build_visualizer(runner.visualizer)),
+                         id(runner.visualizer))
 
         # input is a dict
         visualizer_cfg = dict(type='Visualizer', name='test_build_visualizer2')
@@ -835,8 +838,9 @@ class TestRunner(TestCase):
             runner.build_visualizer('invalid-type')
 
     def test_default_scope(self):
-        TOY_SCHEDULERS = Registry(
-            'parameter scheduler', parent=PARAM_SCHEDULERS, scope='toy')
+        TOY_SCHEDULERS = Registry('parameter scheduler',
+                                  parent=PARAM_SCHEDULERS,
+                                  scope='toy')
 
         @TOY_SCHEDULERS.register_module(force=True)
         class ToyScheduler(MultiStepLR):
@@ -844,8 +848,8 @@ class TestRunner(TestCase):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
-        self.epoch_based_cfg.param_scheduler = dict(
-            type='ToyScheduler', milestones=[1, 2])
+        self.epoch_based_cfg.param_scheduler = dict(type='ToyScheduler',
+                                                    milestones=[1, 2])
         self.epoch_based_cfg.default_scope = 'toy'
 
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1019,20 +1023,21 @@ class TestRunner(TestCase):
         # "constructor" are not in optimizer
         optimizer1 = SGD(runner.model.linear1.parameters(), lr=0.01)
         optim_wrapper1 = OptimWrapper(optimizer1)
-        optim_wrapper2 = dict(
-            type='OptimWrapper', optimizer=dict(type='Adam', lr=0.01))
+        optim_wrapper2 = dict(type='OptimWrapper',
+                              optimizer=dict(type='Adam', lr=0.01))
         optim_cfg = dict(key1=optim_wrapper1, key2=optim_wrapper2)
         with self.assertRaisesRegex(ValueError,
                                     'each item mush be an optimizer object'):
             runner.build_optim_wrapper(optim_cfg)
 
         # 2.3 input is a dict which contains multiple configs
-        optim_wrapper_cfg = dict(
-            linear1=dict(
-                type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)),
-            linear2=dict(
-                type='OptimWrapper', optimizer=dict(type='Adam', lr=0.02)),
-            constructor='ToyMultipleOptimizerConstructor')
+        optim_wrapper_cfg = dict(linear1=dict(type='OptimWrapper',
+                                              optimizer=dict(type='SGD',
+                                                             lr=0.01)),
+                                 linear2=dict(type='OptimWrapper',
+                                              optimizer=dict(type='Adam',
+                                                             lr=0.02)),
+                                 constructor='ToyMultipleOptimizerConstructor')
         optim_wrapper = runner.build_optim_wrapper(optim_wrapper_cfg)
         self.assertIsInstance(optim_wrapper, OptimWrapperDict)
         self.assertIsInstance(optim_wrapper['linear1'].optimizer, SGD)
@@ -1049,8 +1054,9 @@ class TestRunner(TestCase):
         # Specify the type of optimizer wrapper
         model = nn.Linear(1, 1)
         optimizer = SGD(model.parameters(), lr=0.1)
-        optim_wrapper_cfg = dict(
-            optimizer=optimizer, type='ToyOptimWrapper', accumulative_counts=2)
+        optim_wrapper_cfg = dict(optimizer=optimizer,
+                                 type='ToyOptimWrapper',
+                                 accumulative_counts=2)
         optim_wrapper = runner.build_optim_wrapper(optim_wrapper_cfg)
         self.assertIsInstance(optim_wrapper, ToyOptimWrapper)
         self.assertIs(optim_wrapper.optimizer, optimizer)
@@ -1065,10 +1071,10 @@ class TestRunner(TestCase):
         # `build_param_scheduler`
         cfg = dict(type='MultiStepLR', milestones=[1, 2])
         runner.optim_wrapper = dict(
-            key1=dict(
-                type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)),
-            key2=dict(
-                type='OptimWrapper', optimizer=dict(type='Adam', lr=0.02)),
+            key1=dict(type='OptimWrapper', optimizer=dict(type='SGD',
+                                                          lr=0.01)),
+            key2=dict(type='OptimWrapper',
+                      optimizer=dict(type='Adam', lr=0.02)),
         )
         with self.assertRaisesRegex(AssertionError, 'should be called before'):
             runner.build_param_scheduler(cfg)
@@ -1129,12 +1135,11 @@ class TestRunner(TestCase):
         self.assertEqual(len(param_schedulers['key2']), 2)
 
         # 4. test multiple optimizers and multiple parameter shceduers
-        cfg = dict(
-            key1=dict(type='MultiStepLR', milestones=[1, 2]),
-            key2=[
-                dict(type='MultiStepLR', milestones=[1, 2]),
-                dict(type='StepLR', step_size=1)
-            ])
+        cfg = dict(key1=dict(type='MultiStepLR', milestones=[1, 2]),
+                   key2=[
+                       dict(type='MultiStepLR', milestones=[1, 2]),
+                       dict(type='StepLR', step_size=1)
+                   ])
         param_schedulers = runner.build_param_scheduler(cfg)
         self.assertIsInstance(param_schedulers, dict)
         self.assertEqual(len(param_schedulers), 2)
@@ -1146,16 +1151,16 @@ class TestRunner(TestCase):
             dict(type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)))
 
         # 5.1 train loop should be built before converting scheduler
-        cfg = dict(
-            type='MultiStepLR', milestones=[1, 2], convert_to_iter_based=True)
+        cfg = dict(type='MultiStepLR',
+                   milestones=[1, 2],
+                   convert_to_iter_based=True)
 
         # 5.2 convert epoch-based to iter-based scheduler
-        cfg = dict(
-            type='MultiStepLR',
-            milestones=[1, 2],
-            begin=1,
-            end=7,
-            convert_to_iter_based=True)
+        cfg = dict(type='MultiStepLR',
+                   milestones=[1, 2],
+                   begin=1,
+                   end=7,
+                   convert_to_iter_based=True)
         runner._train_loop = runner.build_train_loop(runner.train_loop)
         param_schedulers = runner.build_param_scheduler(cfg)
         self.assertFalse(param_schedulers[0].by_epoch)
@@ -1170,11 +1175,10 @@ class TestRunner(TestCase):
         # runner.max_epochs = 3
         self.assertEqual(param_schedulers[0].end, 3)
 
-        cfg = dict(
-            type='MultiStepLR',
-            milestones=[1, 2],
-            begin=1,
-            convert_to_iter_based=True)
+        cfg = dict(type='MultiStepLR',
+                   milestones=[1, 2],
+                   begin=1,
+                   convert_to_iter_based=True)
         param_schedulers = runner.build_param_scheduler(cfg)
         self.assertFalse(param_schedulers[0].by_epoch)
         self.assertEqual(param_schedulers[0].begin, 4)
@@ -1217,12 +1221,11 @@ class TestRunner(TestCase):
         self.assertEqual(_evaluator.metrics[1].collect_device, 'gpu')
 
         # test build a customize evaluator
-        evaluator = dict(
-            type='ToyEvaluator',
-            metrics=[
-                dict(type='ToyMetric1', collect_device='cpu'),
-                dict(type='ToyMetric2', collect_device='gpu')
-            ])
+        evaluator = dict(type='ToyEvaluator',
+                         metrics=[
+                             dict(type='ToyMetric1', collect_device='cpu'),
+                             dict(type='ToyMetric2', collect_device='gpu')
+                         ])
         _evaluator = runner.build_evaluator(evaluator)
         self.assertIsInstance(runner.build_evaluator(evaluator), ToyEvaluator)
         self.assertEqual(_evaluator.metrics[0].collect_device, 'cpu')
@@ -1237,11 +1240,10 @@ class TestRunner(TestCase):
         cfg.experiment_name = 'test_build_dataloader'
         runner = Runner.from_cfg(cfg)
 
-        cfg = dict(
-            dataset=dict(type='ToyDataset'),
-            sampler=dict(type='DefaultSampler', shuffle=True),
-            batch_size=1,
-            num_workers=0)
+        cfg = dict(dataset=dict(type='ToyDataset'),
+                   sampler=dict(type='DefaultSampler', shuffle=True),
+                   batch_size=1,
+                   num_workers=0)
         seed = np.random.randint(2**31)
         dataloader = runner.build_dataloader(cfg, seed=seed)
         self.assertIsInstance(dataloader, DataLoader)
@@ -1250,28 +1252,27 @@ class TestRunner(TestCase):
         self.assertEqual(dataloader.sampler.seed, seed)
 
         # diff_rank_seed is True
-        dataloader = runner.build_dataloader(
-            cfg, seed=seed, diff_rank_seed=True)
+        dataloader = runner.build_dataloader(cfg,
+                                             seed=seed,
+                                             diff_rank_seed=True)
         self.assertNotEqual(dataloader.sampler.seed, seed)
 
         # custom worker_init_fn
-        cfg = dict(
-            dataset=dict(type='ToyDataset'),
-            sampler=dict(type='DefaultSampler', shuffle=True),
-            worker_init_fn=dict(type='custom_worker_init'),
-            batch_size=1,
-            num_workers=2)
+        cfg = dict(dataset=dict(type='ToyDataset'),
+                   sampler=dict(type='DefaultSampler', shuffle=True),
+                   worker_init_fn=dict(type='custom_worker_init'),
+                   batch_size=1,
+                   num_workers=2)
         dataloader = runner.build_dataloader(cfg)
         self.assertIs(dataloader.worker_init_fn.func, custom_worker_init)
 
         # collate_fn is a dict
-        cfg = dict(
-            dataset=dict(type='ToyDataset'),
-            sampler=dict(type='DefaultSampler', shuffle=True),
-            worker_init_fn=dict(type='custom_worker_init'),
-            batch_size=1,
-            num_workers=2,
-            collate_fn=dict(type='pseudo_collate'))
+        cfg = dict(dataset=dict(type='ToyDataset'),
+                   sampler=dict(type='DefaultSampler', shuffle=True),
+                   worker_init_fn=dict(type='custom_worker_init'),
+                   batch_size=1,
+                   num_workers=2,
+                   collate_fn=dict(type='pseudo_collate'))
         dataloader = runner.build_dataloader(cfg)
         self.assertIsInstance(dataloader.collate_fn, partial)
 
@@ -1279,36 +1280,33 @@ class TestRunner(TestCase):
         def custom_collate(data_batch):
             return data_batch
 
-        cfg = dict(
-            dataset=dict(type='ToyDataset'),
-            sampler=dict(type='DefaultSampler', shuffle=True),
-            worker_init_fn=dict(type='custom_worker_init'),
-            batch_size=1,
-            num_workers=2,
-            collate_fn=custom_collate)
+        cfg = dict(dataset=dict(type='ToyDataset'),
+                   sampler=dict(type='DefaultSampler', shuffle=True),
+                   worker_init_fn=dict(type='custom_worker_init'),
+                   batch_size=1,
+                   num_workers=2,
+                   collate_fn=custom_collate)
         dataloader = runner.build_dataloader(cfg)
         self.assertIs(dataloader.collate_fn, custom_collate)
         # collate_fn is a invalid value
         with self.assertRaisesRegex(
                 TypeError, 'collate_fn should be a dict or callable object'):
-            cfg = dict(
-                dataset=dict(type='ToyDataset'),
-                sampler=dict(type='DefaultSampler', shuffle=True),
-                worker_init_fn=dict(type='custom_worker_init'),
-                batch_size=1,
-                num_workers=2,
-                collate_fn='collate_fn')
+            cfg = dict(dataset=dict(type='ToyDataset'),
+                       sampler=dict(type='DefaultSampler', shuffle=True),
+                       worker_init_fn=dict(type='custom_worker_init'),
+                       batch_size=1,
+                       num_workers=2,
+                       collate_fn='collate_fn')
             dataloader = runner.build_dataloader(cfg)
             self.assertIsInstance(dataloader.collate_fn, partial)
 
         # num_batch_per_epoch is not None
-        cfg = dict(
-            dataset=dict(type='ToyDataset'),
-            sampler=dict(type='DefaultSampler', shuffle=True),
-            collate_fn=dict(type='default_collate'),
-            batch_size=3,
-            num_workers=2,
-            num_batch_per_epoch=2)
+        cfg = dict(dataset=dict(type='ToyDataset'),
+                   sampler=dict(type='DefaultSampler', shuffle=True),
+                   collate_fn=dict(type='default_collate'),
+                   batch_size=3,
+                   num_workers=2,
+                   num_batch_per_epoch=2)
         dataloader = runner.build_dataloader(cfg)
         self.assertEqual(len(dataloader.dataset), 6)
 
@@ -1432,8 +1430,8 @@ class TestRunner(TestCase):
         self.assertIsInstance(log_processor, LogProcessor)
 
         # input is a LogProcessor object
-        self.assertEqual(
-            id(runner.build_log_processor(log_processor)), id(log_processor))
+        self.assertEqual(id(runner.build_log_processor(log_processor)),
+                         id(log_processor))
 
         # test custom validation log_processor
         cfg = dict(type='CustomLogProcessor')
@@ -1525,8 +1523,10 @@ class TestRunner(TestCase):
         cfg = copy.deepcopy(self.iter_based_cfg)
         cfg.experiment_name = 'test_train3'
         cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
-        cfg.train_cfg = dict(
-            by_epoch=False, max_iters=12, val_interval=4, val_begin=4)
+        cfg.train_cfg = dict(by_epoch=False,
+                             max_iters=12,
+                             val_interval=4,
+                             val_begin=4)
         runner = Runner.from_cfg(cfg)
         runner.train()
 
@@ -1562,11 +1562,13 @@ class TestRunner(TestCase):
 
         cfg = copy.deepcopy(self.iter_based_cfg)
         cfg.experiment_name = 'test_train4'
-        cfg.train_dataloader.sampler = dict(
-            type='DefaultSampler', shuffle=True)
+        cfg.train_dataloader.sampler = dict(type='DefaultSampler',
+                                            shuffle=True)
         cfg.custom_hooks = [dict(type='TestIterHook', priority=50)]
-        cfg.train_cfg = dict(
-            by_epoch=False, max_iters=12, val_interval=4, val_begin=4)
+        cfg.train_cfg = dict(by_epoch=False,
+                             max_iters=12,
+                             val_interval=4,
+                             val_begin=4)
         runner = Runner.from_cfg(cfg)
         # Warning should be raised since the sampler is not InfiniteSampler.
         with self.assertLogs(MMLogger.get_current_instance(), level='WARNING'):
@@ -1610,16 +1612,15 @@ class TestRunner(TestCase):
 
         cfg = copy.deepcopy(self.iter_based_cfg)
         cfg.experiment_name = 'test_train5'
-        cfg.train_dataloader.sampler = dict(
-            type='DefaultSampler', shuffle=True)
+        cfg.train_dataloader.sampler = dict(type='DefaultSampler',
+                                            shuffle=True)
         cfg.custom_hooks = [
             dict(type='TestIterDynamicIntervalHook', priority=50)
         ]
-        cfg.train_cfg = dict(
-            by_epoch=False,
-            max_iters=max_iters,
-            val_interval=interval,
-            dynamic_intervals=dynamic_intervals)
+        cfg.train_cfg = dict(by_epoch=False,
+                             max_iters=max_iters,
+                             val_interval=interval,
+                             dynamic_intervals=dynamic_intervals)
         runner = Runner.from_cfg(cfg)
         runner.train()
         for result, target, in zip(iter_results, iter_targets):
@@ -1647,16 +1648,15 @@ class TestRunner(TestCase):
 
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_train6'
-        cfg.train_dataloader.sampler = dict(
-            type='DefaultSampler', shuffle=True)
+        cfg.train_dataloader.sampler = dict(type='DefaultSampler',
+                                            shuffle=True)
         cfg.custom_hooks = [
             dict(type='TestEpochDynamicIntervalHook', priority=50)
         ]
-        cfg.train_cfg = dict(
-            by_epoch=True,
-            max_epochs=max_epochs,
-            val_interval=interval,
-            dynamic_intervals=dynamic_intervals)
+        cfg.train_cfg = dict(by_epoch=True,
+                             max_epochs=max_epochs,
+                             val_interval=interval,
+                             dynamic_intervals=dynamic_intervals)
         runner = Runner.from_cfg(cfg)
         runner.train()
         for result, target, in zip(epoch_results, epoch_targets):
@@ -1687,12 +1687,13 @@ class TestRunner(TestCase):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_train8'
         cfg.param_scheduler = dict(type='MultiStepLR', milestones=[1, 2])
-        cfg.optim_wrapper = dict(
-            linear1=dict(
-                type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)),
-            linear2=dict(
-                type='OptimWrapper', optimizer=dict(type='Adam', lr=0.02)),
-            constructor='ToyMultipleOptimizerConstructor')
+        cfg.optim_wrapper = dict(linear1=dict(type='OptimWrapper',
+                                              optimizer=dict(type='SGD',
+                                                             lr=0.01)),
+                                 linear2=dict(type='OptimWrapper',
+                                              optimizer=dict(type='Adam',
+                                                             lr=0.02)),
+                                 constructor='ToyMultipleOptimizerConstructor')
         cfg.model = dict(type='ToyGANModel')
         runner = runner.from_cfg(cfg)
         runner.train()
@@ -1701,12 +1702,13 @@ class TestRunner(TestCase):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_train8.1.1'
         cfg.param_scheduler = dict(type='MultiStepLR', milestones=[1, 2])
-        cfg.optim_wrapper = dict(
-            linear1=dict(
-                type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)),
-            linear2=dict(
-                type='OptimWrapper', optimizer=dict(type='Adam', lr=0.02)),
-            constructor='ToyMultipleOptimizerConstructor')
+        cfg.optim_wrapper = dict(linear1=dict(type='OptimWrapper',
+                                              optimizer=dict(type='SGD',
+                                                             lr=0.01)),
+                                 linear2=dict(type='OptimWrapper',
+                                              optimizer=dict(type='Adam',
+                                                             lr=0.02)),
+                                 constructor='ToyMultipleOptimizerConstructor')
         cfg.model = dict(type='ToyGANModel')
         runner = runner.from_cfg(cfg)
         runner.train()
@@ -1759,8 +1761,8 @@ class TestRunner(TestCase):
         # 10.3 Test build dataloader with custom worker_init function
         cfg = copy.deepcopy(self.iter_based_cfg)
         cfg.experiment_name = 'test_train10.3'
-        cfg.train_dataloader.update(
-            worker_init_fn=dict(type='custom_worker_init'))
+        cfg.train_dataloader.update(worker_init_fn=dict(
+            type='custom_worker_init'))
         runner = Runner.from_cfg(cfg)
         runner.train()
 
@@ -1835,9 +1837,8 @@ class TestRunner(TestCase):
         runner.train()
         self.assertEqual(runner.iter, 3 * 2)
 
-    @skipIf(
-        SKIP_TEST_COMPILE,
-        reason='torch.compile is not valid, please install PyTorch>=2.0.0')
+    @skipIf(SKIP_TEST_COMPILE,
+            reason='torch.compile is not valid, please install PyTorch>=2.0.0')
     def test_train_with_compile(self):
         # 1. test with simple configuration
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -1947,9 +1948,8 @@ class TestRunner(TestCase):
         runner.val()
         self.assertEqual(val_result, 2)
 
-    @skipIf(
-        SKIP_TEST_COMPILE,
-        reason='torch.compile is not valid, please install PyTorch>=2.0.0')
+    @skipIf(SKIP_TEST_COMPILE,
+            reason='torch.compile is not valid, please install PyTorch>=2.0.0')
     def test_val_with_compile(self):
         # 1. test with simple configuration
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -2052,9 +2052,8 @@ class TestRunner(TestCase):
         runner.test()
         self.assertEqual(test_result, 2)
 
-    @skipIf(
-        SKIP_TEST_COMPILE,
-        reason='torch.compile is not valid, please install PyTorch>=2.0.0')
+    @skipIf(SKIP_TEST_COMPILE,
+            reason='torch.compile is not valid, please install PyTorch>=2.0.0')
     def test_test_with_compile(self):
         # 1. test with simple configuration
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -2088,8 +2087,8 @@ class TestRunner(TestCase):
         self.assertEqual(len(runner._hooks), 1)
         self.assertTrue(isinstance(runner._hooks[0], IterTimerHook))
         # default priority of `IterTimerHook` is 'NORMAL'
-        self.assertEqual(
-            get_priority(runner._hooks[0].priority), get_priority('NORMAL'))
+        self.assertEqual(get_priority(runner._hooks[0].priority),
+                         get_priority('NORMAL'))
 
         runner._hooks = []
         # 1.2.1 `hook` is a dict and contains `priority` field
@@ -2098,9 +2097,8 @@ class TestRunner(TestCase):
         runner.register_hook(timer_cfg)
         self.assertEqual(len(runner._hooks), 1)
         self.assertTrue(isinstance(runner._hooks[0], IterTimerHook))
-        self.assertEqual(
-            get_priority(runner._hooks[0].priority),
-            get_priority('BELOW_NORMAL'))
+        self.assertEqual(get_priority(runner._hooks[0].priority),
+                         get_priority('BELOW_NORMAL'))
 
         # 1.3 `hook` is a hook object
         runtime_info_hook = RuntimeInfoHook()
@@ -2110,8 +2108,8 @@ class TestRunner(TestCase):
         # `IterTimerHook`, so the first item of `_hooks` should be
         # `runtime_info_hook`
         self.assertTrue(isinstance(runner._hooks[0], RuntimeInfoHook))
-        self.assertEqual(
-            get_priority(runner._hooks[0].priority), get_priority('VERY_HIGH'))
+        self.assertEqual(get_priority(runner._hooks[0].priority),
+                         get_priority('VERY_HIGH'))
 
         # 2. test `priority` parameter
         # `priority` argument is not None and it will be set as priority of
@@ -2120,16 +2118,16 @@ class TestRunner(TestCase):
         runner.register_hook(param_scheduler_cfg, priority='VERY_LOW')
         self.assertEqual(len(runner._hooks), 3)
         self.assertTrue(isinstance(runner._hooks[2], ParamSchedulerHook))
-        self.assertEqual(
-            get_priority(runner._hooks[2].priority), get_priority('VERY_LOW'))
+        self.assertEqual(get_priority(runner._hooks[2].priority),
+                         get_priority('VERY_LOW'))
 
         # `priority` is Priority
         logger_cfg = dict(type='LoggerHook', priority='BELOW_NORMAL')
         runner.register_hook(logger_cfg, priority=Priority.VERY_LOW)
         self.assertEqual(len(runner._hooks), 4)
         self.assertTrue(isinstance(runner._hooks[3], LoggerHook))
-        self.assertEqual(
-            get_priority(runner._hooks[3].priority), get_priority('VERY_LOW'))
+        self.assertEqual(get_priority(runner._hooks[3].priority),
+                         get_priority('VERY_LOW'))
 
     def test_default_hooks(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
@@ -2189,8 +2187,9 @@ class TestRunner(TestCase):
 
             def __init__(self, runner, dataloader, max_iters, warmup_loader,
                          max_warmup_iters):
-                super().__init__(
-                    runner=runner, dataloader=dataloader, max_iters=max_iters)
+                super().__init__(runner=runner,
+                                 dataloader=dataloader,
+                                 max_iters=max_iters)
                 self.warmup_loader = self.runner.build_dataloader(
                     warmup_loader)
                 self.max_warmup_iters = max_warmup_iters
@@ -2213,13 +2212,13 @@ class TestRunner(TestCase):
                 self.runner.call_hook('after_train')
 
             def warmup_iter(self, data_batch):
-                self.runner.call_hook(
-                    'before_warmup_iter', data_batch=data_batch)
+                self.runner.call_hook('before_warmup_iter',
+                                      data_batch=data_batch)
                 train_logs = self.runner.model.train_step(
                     data_batch, self.runner.optim_wrapper)
                 self.runner.message_hub.update_info('train_logs', train_logs)
-                self.runner.call_hook(
-                    'after_warmup_iter', data_batch=data_batch)
+                self.runner.call_hook('after_warmup_iter',
+                                      data_batch=data_batch)
 
         before_warmup_iter_results = []
         after_warmup_iter_results = []
@@ -2237,11 +2236,11 @@ class TestRunner(TestCase):
         self.iter_based_cfg.train_cfg = dict(
             type='CustomTrainLoop2',
             max_iters=10,
-            warmup_loader=dict(
-                dataset=dict(type='ToyDataset'),
-                sampler=dict(type='InfiniteSampler', shuffle=True),
-                batch_size=1,
-                num_workers=0),
+            warmup_loader=dict(dataset=dict(type='ToyDataset'),
+                               sampler=dict(type='InfiniteSampler',
+                                            shuffle=True),
+                               batch_size=1,
+                               num_workers=0),
             max_warmup_iters=5)
         self.iter_based_cfg.custom_hooks = [
             dict(type='TestWarmupHook', priority=50)
@@ -2304,8 +2303,8 @@ class TestRunner(TestCase):
         # 1.3.1 test `resume`
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_checkpoint3'
-        cfg.optim_wrapper = dict(
-            type='OptimWrapper', optimizer=dict(type='SGD', lr=0.2))
+        cfg.optim_wrapper = dict(type='OptimWrapper',
+                                 optimizer=dict(type='SGD', lr=0.2))
         cfg.param_scheduler = dict(type='MultiStepLR', milestones=[1, 2, 3])
         runner = Runner.from_cfg(cfg)
         runner.resume(path)
@@ -2380,12 +2379,13 @@ class TestRunner(TestCase):
         # 1.6 multiple optimizers
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_checkpoint6'
-        cfg.optim_wrapper = dict(
-            linear1=dict(
-                type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)),
-            linear2=dict(
-                type='OptimWrapper', optimizer=dict(type='Adam', lr=0.02)),
-            constructor='ToyMultipleOptimizerConstructor')
+        cfg.optim_wrapper = dict(linear1=dict(type='OptimWrapper',
+                                              optimizer=dict(type='SGD',
+                                                             lr=0.01)),
+                                 linear2=dict(type='OptimWrapper',
+                                              optimizer=dict(type='Adam',
+                                                             lr=0.02)),
+                                 constructor='ToyMultipleOptimizerConstructor')
         cfg.model = dict(type='ToyGANModel')
         # disable OptimizerHook because it only works with one optimizer
         runner = Runner.from_cfg(cfg)
@@ -2400,12 +2400,13 @@ class TestRunner(TestCase):
 
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_checkpoint7'
-        cfg.optim_wrapper = dict(
-            linear1=dict(
-                type='OptimWrapper', optimizer=dict(type='SGD', lr=0.2)),
-            linear2=dict(
-                type='OptimWrapper', optimizer=dict(type='Adam', lr=0.03)),
-            constructor='ToyMultipleOptimizerConstructor')
+        cfg.optim_wrapper = dict(linear1=dict(type='OptimWrapper',
+                                              optimizer=dict(type='SGD',
+                                                             lr=0.2)),
+                                 linear2=dict(type='OptimWrapper',
+                                              optimizer=dict(type='Adam',
+                                                             lr=0.03)),
+                                 constructor='ToyMultipleOptimizerConstructor')
         cfg.model = dict(type='ToyGANModel')
         cfg.param_scheduler = dict(type='MultiStepLR', milestones=[1, 2, 3])
         runner = Runner.from_cfg(cfg)
@@ -2518,12 +2519,11 @@ class TestRunner(TestCase):
 
         # 2.7.1 test `resume` 2 optimizers and 1 scheduler list.
         path = osp.join(self.temp_dir, 'epoch_3.pth')
-        optim_cfg = dict(
-            linear1=dict(
-                type='OptimWrapper', optimizer=dict(type='SGD', lr=0.01)),
-            linear2=dict(
-                type='OptimWrapper', optimizer=dict(type='Adam', lr=0.02)),
-            constructor='ToyMultipleOptimizerConstructor')
+        optim_cfg = dict(linear1=dict(type='OptimWrapper',
+                                      optimizer=dict(type='SGD', lr=0.01)),
+                         linear2=dict(type='OptimWrapper',
+                                      optimizer=dict(type='Adam', lr=0.02)),
+                         constructor='ToyMultipleOptimizerConstructor')
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_checkpoint14'
         cfg.optim_wrapper = optim_cfg
@@ -2546,9 +2546,11 @@ class TestRunner(TestCase):
         cfg = copy.deepcopy(self.epoch_based_cfg)
         cfg.experiment_name = 'test_checkpoint16'
         cfg.optim_wrapper = optim_cfg
-        cfg.param_scheduler = dict(
-            linear1=dict(type='MultiStepLR', milestones=[1, 2, 3]),
-            linear2=dict(type='StepLR', gamma=0.1, step_size=3))
+        cfg.param_scheduler = dict(linear1=dict(type='MultiStepLR',
+                                                milestones=[1, 2, 3]),
+                                   linear2=dict(type='StepLR',
+                                                gamma=0.1,
+                                                step_size=3))
         cfg.model = dict(type='ToyGANModel')
         resumed_cfg = copy.deepcopy(cfg)
         runner = Runner.from_cfg(cfg)

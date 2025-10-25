@@ -79,10 +79,12 @@ class TestBaseTTAModel(RunnerTestCase):
         ]
         tuple_dataset = [([1, 2], [3, 4]) for _ in range(10)]
 
-        dict_dataloader = DataLoader(
-            dict_dataset, batch_size=2, collate_fn=pseudo_collate)
-        tuple_dataloader = DataLoader(
-            tuple_dataset, batch_size=2, collate_fn=pseudo_collate)
+        dict_dataloader = DataLoader(dict_dataset,
+                                     batch_size=2,
+                                     collate_fn=pseudo_collate)
+        tuple_dataloader = DataLoader(tuple_dataset,
+                                      batch_size=2,
+                                      collate_fn=pseudo_collate)
 
         for data in dict_dataloader:
             result = tta_model.test_step(data)
@@ -103,8 +105,8 @@ class TestBaseTTAModel(RunnerTestCase):
 
     def test_with_runner(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
-        cfg.model = dict(
-            type='ToyTestTimeAugModel', module=dict(type='ToyModel'))
+        cfg.model = dict(type='ToyTestTimeAugModel',
+                         module=dict(type='ToyModel'))
         cfg.test_dataloader.dataset = dict(type='ToyDatasetTTA')
         cfg.test_dataloader.dataset['pipeline'] = dict(type='ToyTTAPipeline')
         runner = self.build_runner(cfg)

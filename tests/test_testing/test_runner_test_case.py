@@ -46,8 +46,8 @@ class TestRunnerTestCase(RunnerTestCase):
 
     def test_init_dist(self):
         self.setup_dist_env()
-        self.assertEqual(
-            str(self.dist_cfg['MASTER_PORT']), os.environ['MASTER_PORT'])
+        self.assertEqual(str(self.dist_cfg['MASTER_PORT']),
+                         os.environ['MASTER_PORT'])
         self.assertEqual(self.dist_cfg['MASTER_ADDR'],
                          os.environ['MASTER_ADDR'])
         self.assertEqual(self.dist_cfg['RANK'], os.environ['RANK'])

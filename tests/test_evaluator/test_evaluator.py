@@ -100,8 +100,10 @@ class TestEvaluator(TestCase):
         size = 10
         batch_size = 4
 
-        for data_samples, outputs in generate_test_results(
-                size, batch_size, pred=1, label=1):
+        for data_samples, outputs in generate_test_results(size,
+                                                           batch_size,
+                                                           pred=1,
+                                                           label=1):
             evaluator.process(data_samples=outputs, data_batch=data_samples)
 
         metrics = evaluator.evaluate(size=size)
@@ -126,8 +128,10 @@ class TestEvaluator(TestCase):
         size = 10
         batch_size = 4
 
-        for data_samples, outputs in generate_test_results(
-                size, batch_size, pred=1, label=1):
+        for data_samples, outputs in generate_test_results(size,
+                                                           batch_size,
+                                                           pred=1,
+                                                           label=1):
             evaluator.process(data_samples=outputs, data_batch=data_samples)
 
         metrics = evaluator.evaluate(size=size)
@@ -147,8 +151,10 @@ class TestEvaluator(TestCase):
         size = 10
         batch_size = 4
 
-        for data_samples, outputs in generate_test_results(
-                size, batch_size, pred=1, label=1):
+        for data_samples, outputs in generate_test_results(size,
+                                                           batch_size,
+                                                           pred=1,
+                                                           label=1):
             evaluator.process(data_samples=outputs, data_batch=data_samples)
 
         with self.assertRaisesRegex(
@@ -175,10 +181,9 @@ class TestEvaluator(TestCase):
     def test_collect_device(self):
         cfg = [
             dict(type='ToyMetric', collect_device='cpu'),
-            dict(
-                type='ToyMetric',
-                collect_device='gpu',
-                dummy_metrics=dict(mAP=0.0))
+            dict(type='ToyMetric',
+                 collect_device='gpu',
+                 dummy_metrics=dict(mAP=0.0))
         ]
 
         evaluator = Evaluator(cfg)
@@ -262,16 +267,15 @@ class TestEvaluator(TestCase):
         size = 10
 
         all_data = [
-            dict(
-                inputs=torch.zeros((3, 10, 10), device='cuda'),
-                data_sample=BaseDataElement(
-                    label=torch.ones((1, ), device='cuda')))
+            dict(inputs=torch.zeros((3, 10, 10), device='cuda'),
+                 data_sample=BaseDataElement(
+                     label=torch.ones((1, ), device='cuda')))
             for _ in range(size)
         ]
         all_predictions = [
-            BaseDataElement(
-                pred=torch.zeros((1, ), device='cuda'),
-                label=torch.ones((1, ), device='cuda')) for _ in range(size)
+            BaseDataElement(pred=torch.zeros((1, ), device='cuda'),
+                            label=torch.ones((1, ), device='cuda'))
+            for _ in range(size)
         ]
         for data, pred in zip(all_data, all_predictions):
             evaluator.process([pred], [data])

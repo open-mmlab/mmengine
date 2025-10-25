@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import inspect
 import logging
 import os
 import os.path as osp
@@ -41,6 +42,7 @@ from mmengine.utils import apply_to, digit_version, get_git_hash, is_seq_of
 from mmengine.utils.dl_utils import (TORCH_VERSION, collect_env,
                                      set_multi_processing)
 from mmengine.visualization import Visualizer
+
 from .activation_checkpointing import turn_on_activation_checkpointing
 from .base_loop import BaseLoop
 from .checkpoint import (_load_checkpoint, _load_checkpoint_to_model,
@@ -428,8 +430,8 @@ class Runner:
             model.setdefault('data_preprocessor', data_preprocessor)
         self.model = self.build_model(model)
         # wrap model
-        self.model = self.wrap_model(
-            self.cfg.get('model_wrapper_cfg'), self.model)
+        self.model = self.wrap_model(self.cfg.get('model_wrapper_cfg'),
+                                     self.model)
 
         # get model name from the model class
         if hasattr(self.model, 'module'):
@@ -713,10 +715,9 @@ class Runner:
                 more details.
         """
         self._deterministic = deterministic
-        self._seed = set_random_seed(
-            seed=seed,
-            deterministic=deterministic,
-            diff_rank_seed=diff_rank_seed)
+        self._seed = set_random_seed(seed=seed,
+                                     deterministic=deterministic,
+                                     diff_rank_seed=diff_rank_seed)
 
     def build_logger(self,
                      log_level: Union[int, str] = 'INFO',
@@ -787,10 +788,9 @@ class Runner:
             Visualizer: A Visualizer object build from ``visualizer``.
         """
         if visualizer is None:
-            visualizer = dict(
-                name=self._experiment_name,
-                vis_backends=[dict(type='LocalVisBackend')],
-                save_dir=self._log_dir)
+            visualizer = dict(name=self._experiment_name,
+                              vis_backends=[dict(type='LocalVisBackend')],
+                              save_dir=self._log_dir)
             return Visualizer.get_instance(**visualizer)
 
         if isinstance(visualizer, Visualizer):
@@ -902,16 +902,28 @@ class Runner:
                 find_unused_parameters=find_unused_parameters)
         else:
             model_wrapper_cfg.setdefault('type', 'MMDistributedDataParallel')
-            model_wrapper_type = MODEL_WRAPPERS.get(
-                model_wrapper_cfg.get('type'))  # type: ignore
+
+            model_wrapper_type = model_wrapper_cfg.get('type')
+            if isinstance(model_wrapper_type, str):
+                model_wrapper_type = MODEL_WRAPPERS.get(
+                    model_wrapper_type)  # type: ignore
+            elif inspect.isclass(model_wrapper_type):
+                pass
+            else:
+                raise KeyError(
+                    f'{model_wrapper_type} is not in the '
+                    'registry. Please check whether the value of '
+                    f'`{model_wrapper_type}` is correct or it was registered '
+                    'as expected. More details can be found at https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#import-the-custom-module'  # noqa: E501
+                )
             default_args: dict = dict()
             if issubclass(
                     model_wrapper_type,  # type: ignore
                     DistributedDataParallel):
                 default_args['device_ids'] = [int(os.environ['LOCAL_RANK'])]
             default_args['module'] = model
-            model = MODEL_WRAPPERS.build(
-                model_wrapper_cfg, default_args=default_args)
+            model = MODEL_WRAPPERS.build(model_wrapper_cfg,
+                                         default_args=default_args)
         return model
 
     def _init_model_weights(self) -> None:
@@ -1176,11 +1188,11 @@ class Runner:
                         'Use the max epochs/iters of train loop as default.')
 
                 param_schedulers.append(
-                    PARAM_SCHEDULERS.build(
-                        _scheduler,
-                        default_args=dict(
-                            optimizer=optim_wrapper,
-                            epoch_length=len(self.train_dataloader))))
+                    PARAM_SCHEDULERS.build(_scheduler,
+                                           default_args=dict(
+                                               optimizer=optim_wrapper,
+                                               epoch_length=len(
+                                                   self.train_dataloader))))
             else:
                 raise TypeError(
                     'scheduler should be a _ParamScheduler object or dict, '
@@ -1378,18 +1390,17 @@ class Runner:
         num_batch_per_epoch = dataloader_cfg.pop('num_batch_per_epoch', None)
         if num_batch_per_epoch is not None:
             world_size = get_world_size()
-            num_samples = (
-                num_batch_per_epoch * _get_batch_size(dataloader_cfg) *
-                world_size)
+            num_samples = (num_batch_per_epoch *
+                           _get_batch_size(dataloader_cfg) * world_size)
             dataset = _SlicedDataset(dataset, num_samples)
 
         # build sampler
         sampler_cfg = dataloader_cfg.pop('sampler')
         if isinstance(sampler_cfg, dict):
             sampler_seed = None if diff_rank_seed else seed
-            sampler = DATA_SAMPLERS.build(
-                sampler_cfg,
-                default_args=dict(dataset=dataset, seed=sampler_seed))
+            sampler = DATA_SAMPLERS.build(sampler_cfg,
+                                          default_args=dict(dataset=dataset,
+                                                            seed=sampler_seed))
         else:
             # fallback to raise error in dataloader
             # if `sampler_cfg` is not a valid type
@@ -1402,9 +1413,8 @@ class Runner:
         elif isinstance(batch_sampler_cfg, dict):
             batch_sampler = DATA_SAMPLERS.build(
                 batch_sampler_cfg,
-                default_args=dict(
-                    sampler=sampler,
-                    batch_size=dataloader_cfg.pop('batch_size')))
+                default_args=dict(sampler=sampler,
+                                  batch_size=dataloader_cfg.pop('batch_size')))
         else:
             # fallback to raise error in dataloader
             # if `batch_sampler_cfg` is not a valid type
@@ -1517,18 +1527,20 @@ class Runner:
                 'Only one of `type` or `by_epoch` can exist in `loop_cfg`.')
 
         if 'type' in loop_cfg:
-            loop = LOOPS.build(
-                loop_cfg,
-                default_args=dict(
-                    runner=self, dataloader=self._train_dataloader))
+            loop = LOOPS.build(loop_cfg,
+                               default_args=dict(
+                                   runner=self,
+                                   dataloader=self._train_dataloader))
         else:
             by_epoch = loop_cfg.pop('by_epoch')
             if by_epoch:
-                loop = EpochBasedTrainLoop(
-                    **loop_cfg, runner=self, dataloader=self._train_dataloader)
+                loop = EpochBasedTrainLoop(**loop_cfg,
+                                           runner=self,
+                                           dataloader=self._train_dataloader)
             else:
-                loop = IterBasedTrainLoop(
-                    **loop_cfg, runner=self, dataloader=self._train_dataloader)
+                loop = IterBasedTrainLoop(**loop_cfg,
+                                          runner=self,
+                                          dataloader=self._train_dataloader)
         return loop  # type: ignore
 
     def build_val_loop(self, loop: Union[BaseLoop, Dict]) -> BaseLoop:
@@ -1559,18 +1571,16 @@ class Runner:
         loop_cfg = copy.deepcopy(loop)
 
         if 'type' in loop_cfg:
-            loop = LOOPS.build(
-                loop_cfg,
-                default_args=dict(
-                    runner=self,
-                    dataloader=self._val_dataloader,
-                    evaluator=self._val_evaluator))
+            loop = LOOPS.build(loop_cfg,
+                               default_args=dict(
+                                   runner=self,
+                                   dataloader=self._val_dataloader,
+                                   evaluator=self._val_evaluator))
         else:
-            loop = ValLoop(
-                **loop_cfg,
-                runner=self,
-                dataloader=self._val_dataloader,
-                evaluator=self._val_evaluator)  # type: ignore
+            loop = ValLoop(**loop_cfg,
+                           runner=self,
+                           dataloader=self._val_dataloader,
+                           evaluator=self._val_evaluator)  # type: ignore
 
         return loop  # type: ignore
 
@@ -1601,18 +1611,16 @@ class Runner:
         loop_cfg = copy.deepcopy(loop)  # type: ignore
 
         if 'type' in loop_cfg:
-            loop = LOOPS.build(
-                loop_cfg,
-                default_args=dict(
-                    runner=self,
-                    dataloader=self._test_dataloader,
-                    evaluator=self._test_evaluator))
+            loop = LOOPS.build(loop_cfg,
+                               default_args=dict(
+                                   runner=self,
+                                   dataloader=self._test_dataloader,
+                                   evaluator=self._test_evaluator))
         else:
-            loop = TestLoop(
-                **loop_cfg,
-                runner=self,
-                dataloader=self._test_dataloader,
-                evaluator=self._test_evaluator)  # type: ignore
+            loop = TestLoop(**loop_cfg,
+                            runner=self,
+                            dataloader=self._test_dataloader,
+                            evaluator=self._test_evaluator)  # type: ignore
 
         return loop  # type: ignore
 
@@ -1838,7 +1846,7 @@ class Runner:
                 try:
                     getattr(hook, fn_name)(self, **kwargs)
                 except TypeError as e:
-                    raise TypeError(f'{e} in {hook}') from None
+                    raise TypeError(f'{e} in {hook}') from e
 
     def register_hook(
             self,
@@ -2016,8 +2024,8 @@ class Runner:
             device = get_device()
             checkpoint = self.load_checkpoint(filename, map_location=device)
         else:
-            checkpoint = self.load_checkpoint(
-                filename, map_location=map_location)
+            checkpoint = self.load_checkpoint(filename,
+                                              map_location=map_location)
 
         self.train_loop._epoch = checkpoint['meta']['epoch']
         self.train_loop._iter = checkpoint['meta']['iter']
@@ -2025,8 +2033,8 @@ class Runner:
         # check whether the number of GPU used for current experiment
         # is consistent with resuming from checkpoint
         if 'config' in checkpoint['meta']:
-            config = mmengine.Config.fromstring(
-                checkpoint['meta']['config'], file_format='.py')
+            config = mmengine.Config.fromstring(checkpoint['meta']['config'],
+                                                file_format='.py')
             previous_gpu_ids = config.get('gpu_ids', None)
             if (previous_gpu_ids is not None and len(previous_gpu_ids) > 0
                     and len(previous_gpu_ids) != self._world_size):
@@ -2134,8 +2142,10 @@ class Runner:
         else:
             model = self.model
 
-        checkpoint = _load_checkpoint_to_model(
-            model, checkpoint, strict, revise_keys=revise_keys)
+        checkpoint = _load_checkpoint_to_model(model,
+                                               checkpoint,
+                                               strict,
+                                               revise_keys=revise_keys)
 
         self._has_loaded = True
 
@@ -2211,12 +2221,11 @@ class Runner:
             filepath = join_path(  # type: ignore
                 out_dir, filename, backend_args=backend_args)
 
-        meta.update(
-            cfg=self.cfg.pretty_text,
-            seed=self.seed,
-            experiment_name=self.experiment_name,
-            time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
-            mmengine_version=mmengine.__version__ + get_git_hash())
+        meta.update(cfg=self.cfg.pretty_text,
+                    seed=self.seed,
+                    experiment_name=self.experiment_name,
+                    time=time.strftime('%Y%m%d_%H%M%S', time.localtime()),
+                    mmengine_version=mmengine.__version__ + get_git_hash())
 
         if hasattr(self.train_dataloader.dataset, 'metainfo'):
             meta.update(dataset_meta=self.train_dataloader.dataset.metainfo)
@@ -2268,11 +2277,10 @@ class Runner:
                     checkpoint['param_schedulers'].append(state_dict)
 
         self.call_hook('before_save_checkpoint', checkpoint=checkpoint)
-        save_checkpoint(
-            checkpoint,
-            filepath,
-            file_client_args=file_client_args,
-            backend_args=backend_args)
+        save_checkpoint(checkpoint,
+                        filepath,
+                        file_client_args=file_client_args,
+                        backend_args=backend_args)
 
     @master_only
     def dump_config(self) -> None:

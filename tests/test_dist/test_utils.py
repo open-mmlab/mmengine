@@ -101,8 +101,8 @@ class TestUtils(TestCase):
                 'data should be a Tensor, sequence of tensor or dict'):
             dist.get_data_device('123')
 
-    @unittest.skipIf(
-        torch.cuda.device_count() == 0, reason='at lest need 1 gpu to test')
+    @unittest.skipIf(torch.cuda.device_count() == 0,
+                     reason='at lest need 1 gpu to test')
     def test_cast_data_device(self):
         expected_device = torch.device('cuda', torch.cuda.current_device())
         # data is a Tensor
@@ -181,8 +181,8 @@ class TestUtils(TestCase):
         self.assertEqual(output['key1'].device, expected_device)
         self.assertTrue(torch.allclose(output['key1'].cpu(), out['key1']))
         self.assertEqual(output['key2'][0].device, expected_device)
-        self.assertTrue(
-            torch.allclose(output['key2'][0].cpu(), out['key2'][0]))
+        self.assertTrue(torch.allclose(output['key2'][0].cpu(),
+                                       out['key2'][0]))
 
         # data is not a valid type
         with self.assertRaisesRegex(
@@ -218,8 +218,9 @@ class TestUtilsWithGLOOBackend(MultiProcessTestCase):
         os.environ['MASTER_PORT'] = '29505'
         os.environ['RANK'] = str(rank)
 
-        torch_dist.init_process_group(
-            backend='gloo', rank=rank, world_size=world_size)
+        torch_dist.init_process_group(backend='gloo',
+                                      rank=rank,
+                                      world_size=world_size)
         dist.init_local_group(0, world_size)
 
     def setUp(self):
@@ -247,8 +248,8 @@ class TestUtilsWithGLOOBackend(MultiProcessTestCase):
 
     def test_local_rank(self):
         self._init_dist_env(self.rank, self.world_size)
-        self.assertEqual(
-            torch_dist.get_rank(dist.get_local_group()), dist.get_local_rank())
+        self.assertEqual(torch_dist.get_rank(dist.get_local_group()),
+                         dist.get_local_rank())
 
     def test_get_dist_info(self):
         self._init_dist_env(self.rank, self.world_size)
@@ -337,8 +338,8 @@ class TestUtilsWithGLOOBackend(MultiProcessTestCase):
         assert dist.get_comm_device(group) == torch.device('cpu')
 
 
-@unittest.skipIf(
-    torch.cuda.device_count() < 2, reason='need 2 gpu to test nccl')
+@unittest.skipIf(torch.cuda.device_count() < 2,
+                 reason='need 2 gpu to test nccl')
 class TestUtilsWithNCCLBackend(MultiProcessTestCase):
 
     def _init_dist_env(self, rank, world_size):
@@ -349,8 +350,9 @@ class TestUtilsWithNCCLBackend(MultiProcessTestCase):
 
         num_gpus = torch.cuda.device_count()
         torch.cuda.set_device(rank % num_gpus)
-        torch_dist.init_process_group(
-            backend='nccl', rank=rank, world_size=world_size)
+        torch_dist.init_process_group(backend='nccl',
+                                      rank=rank,
+                                      world_size=world_size)
         dist.init_local_group(0, world_size)
 
     def setUp(self):
@@ -378,8 +380,8 @@ class TestUtilsWithNCCLBackend(MultiProcessTestCase):
 
     def test_local_rank(self):
         self._init_dist_env(self.rank, self.world_size)
-        self.assertEqual(
-            torch_dist.get_rank(dist.get_local_group()), dist.get_local_rank())
+        self.assertEqual(torch_dist.get_rank(dist.get_local_group()),
+                         dist.get_local_rank())
 
     def test_get_dist_info(self):
         self._init_dist_env(self.rank, self.world_size)
@@ -579,8 +581,8 @@ class TestUtilsWithNCCLBackend(MultiProcessTestCase):
         self.assertEqual(output['key1'].device, expected_device)
         self.assertTrue(torch.allclose(output['key1'].cpu(), out['key1']))
         self.assertEqual(output['key2'][0].device, expected_device)
-        self.assertTrue(
-            torch.allclose(output['key2'][0].cpu(), out['key2'][0]))
+        self.assertTrue(torch.allclose(output['key2'][0].cpu(),
+                                       out['key2'][0]))
 
         # data is not a valid type
         with self.assertRaisesRegex(

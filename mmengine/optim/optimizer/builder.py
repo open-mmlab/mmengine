@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import inspect
+import warnings
 from typing import List, Union
 
 import torch
@@ -9,6 +10,8 @@ import torch.nn as nn
 from mmengine.config import Config, ConfigDict
 from mmengine.device import is_npu_available, is_npu_support_full_precision
 from mmengine.registry import OPTIM_WRAPPER_CONSTRUCTORS, OPTIMIZERS
+
+from .default_constructor import DefaultOptimWrapperConstructor
 from .optimizer_wrapper import OptimWrapper
 
 
@@ -26,8 +29,8 @@ def register_torch_optimizers() -> List[str]:
         if inspect.isclass(_optim) and issubclass(_optim,
                                                   torch.optim.Optimizer):
             if module_name == 'Adafactor':
-                OPTIMIZERS.register_module(
-                    name='TorchAdafactor', module=_optim)
+                OPTIMIZERS.register_module(name='TorchAdafactor',
+                                           module=_optim)
             else:
                 OPTIMIZERS.register_module(module=_optim)
             torch_optimizers.append(module_name)
@@ -115,7 +118,7 @@ def register_sophia_optimizers() -> List[str]:
     Returns:
         List[str]: A list of registered optimizers' name.
     """
-    optimizers = []
+    optimizers: List[str] = []
     try:
         import Sophia
     except ImportError:
@@ -128,7 +131,8 @@ def register_sophia_optimizers() -> List[str]:
                 try:
                     OPTIMIZERS.register_module(module=_optim)
                 except Exception as e:
-                    warnings.warn(f"Failed to import {optim_cls.__name__} for {e}")
+                    warnings.warn(
+                        f"Failed to import {_optim.__name__} for {e}")
     return optimizers
 
 
@@ -169,8 +173,8 @@ def register_bitsandbytes_optimizers() -> List[str]:
 BITSANDBYTES_OPTIMIZERS = register_bitsandbytes_optimizers()
 
 
-def register_transformers_optimizers():
-    transformer_optimizers = []
+def register_transformers_optimizers() -> List[str]:
+    transformer_optimizers: List[str] = []
     try:
         from transformers import Adafactor
     except ImportError:
@@ -179,7 +183,7 @@ def register_transformers_optimizers():
         try:
             OPTIMIZERS.register_module(name='Adafactor', module=Adafactor)
         except Exception as e:
-            warnings.warn(f"Failed to import {optim_cls.__name__} for {e}")
+            warnings.warn(f"Failed to import {Adafactor.__name__} for {e}")
         transformer_optimizers.append('Adafactor')
     return transformer_optimizers
 
@@ -205,8 +209,9 @@ def build_optim_wrapper(model: nn.Module,
         OptimWrapper: The built optimizer wrapper.
     """
     optim_wrapper_cfg = copy.deepcopy(cfg)
-    constructor_type = optim_wrapper_cfg.pop('constructor',
-                                             'DefaultOptimWrapperConstructor')
+    constructor_cfg = optim_wrapper_cfg.pop('constructor', None)
+    if constructor_cfg is None:
+        constructor_cfg = dict(type=DefaultOptimWrapperConstructor)
     paramwise_cfg = optim_wrapper_cfg.pop('paramwise_cfg', None)
 
     # Since the current generation of NPU(Ascend 910) only supports
@@ -215,10 +220,10 @@ def build_optim_wrapper(model: nn.Module,
     if is_npu_available() and not is_npu_support_full_precision():
         optim_wrapper_cfg['type'] = 'AmpOptimWrapper'
 
+    constructor_cfg.update(
+        dict(optim_wrapper_cfg=optim_wrapper_cfg, paramwise_cfg=paramwise_cfg))
+
     optim_wrapper_constructor = OPTIM_WRAPPER_CONSTRUCTORS.build(
-        dict(
-            type=constructor_type,
-            optim_wrapper_cfg=optim_wrapper_cfg,
-            paramwise_cfg=paramwise_cfg))
+        constructor_cfg)
     optim_wrapper = optim_wrapper_constructor(model)
     return optim_wrapper

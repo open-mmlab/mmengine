@@ -70,5 +70,6 @@ class TestSyncBuffersHook(MultiProcessTestCase, RunnerTestCase):
     def setup_dist_env(self):
         super().setup_dist_env()
         os.environ['RANK'] = str(self.rank)
-        torch_dist.init_process_group(
-            backend='gloo', rank=self.rank, world_size=self.world_size)
+        torch_dist.init_process_group(backend='gloo',
+                                      rank=self.rank,
+                                      world_size=self.world_size)

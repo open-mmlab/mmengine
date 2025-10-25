@@ -111,10 +111,12 @@ def efficient_conv_bn_eval_graph_transform(fx_model):
         # note that we directly call `create_node` to fill the `name`
         # argument. `fx_model.graph.get_attr` and
         # `fx_model.graph.call_function` does not allow the `name` argument.
-        conv_get_node = fx_model.graph.create_node(
-            op='get_attr', target=conv_node.target, name='get_conv')
-        bn_get_node = fx_model.graph.create_node(
-            op='get_attr', target=bn_node.target, name='get_bn')
+        conv_get_node = fx_model.graph.create_node(op='get_attr',
+                                                   target=conv_node.target,
+                                                   name='get_conv')
+        bn_get_node = fx_model.graph.create_node(op='get_attr',
+                                                 target=bn_node.target,
+                                                 name='get_bn')
         # prepare args for the fused function
         args = (bn_get_node, conv_get_node, conv_node.args[0])
         # create a new node

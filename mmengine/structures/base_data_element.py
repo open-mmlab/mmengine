@@ -395,8 +395,10 @@ class BaseDataElement:
                 raise AttributeError(f'{name} has been used as a '
                                      'private attribute, which is immutable.')
         else:
-            self.set_field(
-                name=name, value=value, field_type='data', dtype=None)
+            self.set_field(name=name,
+                           value=value,
+                           field_type='data',
+                           dtype=None)
 
     def __delattr__(self, item: str):
         """Delete the item in dataelement.

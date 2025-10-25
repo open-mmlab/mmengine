@@ -57,8 +57,10 @@ class MMFormatter(logging.Formatter):
         **kwargs: Keyword arguments passed to
             :meth:`logging.Formatter.__init__`.
     """
-    _color_mapping: dict = dict(
-        ERROR='red', WARNING='yellow', INFO='white', DEBUG='green')
+    _color_mapping: dict = dict(ERROR='red',
+                                WARNING='yellow',
+                                INFO='white',
+                                DEBUG='green')
 
     def __init__(self, color: bool = True, blink: bool = False, **kwargs):
         super().__init__(**kwargs)

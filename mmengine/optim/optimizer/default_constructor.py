@@ -13,6 +13,7 @@ from mmengine.registry import (OPTIM_WRAPPER_CONSTRUCTORS, OPTIM_WRAPPERS,
 from mmengine.utils import is_list_of
 from mmengine.utils.dl_utils import mmcv_full_available
 from mmengine.utils.dl_utils.parrots_wrapper import _BatchNorm, _InstanceNorm
+
 from .optimizer_wrapper import OptimWrapper
 
 
@@ -199,9 +200,8 @@ class DefaultOptimWrapperConstructor:
         # special rules for norm layers and depth-wise conv layers
         is_norm = isinstance(module,
                              (_BatchNorm, _InstanceNorm, GroupNorm, LayerNorm))
-        is_dwconv = (
-            isinstance(module, torch.nn.Conv2d)
-            and module.in_channels == module.groups)
+        is_dwconv = (isinstance(module, torch.nn.Conv2d)
+                     and module.in_channels == module.groups)
 
         for name, param in module.named_parameters(recurse=False):
             param_group = {'params': [param]}
@@ -272,9 +272,8 @@ class DefaultOptimWrapperConstructor:
                 if key == 'params':
                     continue
                 full_name = f'{prefix}.{name}' if prefix else name
-                print_log(
-                    f'paramwise_options -- {full_name}:{key}={value}',
-                    logger='current')
+                print_log(f'paramwise_options -- {full_name}:{key}={value}',
+                          logger='current')
 
         if mmcv_full_available():
             from mmcv.ops import DeformConv2d, ModulatedDeformConv2d
@@ -284,11 +283,10 @@ class DefaultOptimWrapperConstructor:
             is_dcn_module = False
         for child_name, child_mod in module.named_children():
             child_prefix = f'{prefix}.{child_name}' if prefix else child_name
-            self.add_params(
-                params,
-                child_mod,
-                prefix=child_prefix,
-                is_dcn_module=is_dcn_module)
+            self.add_params(params,
+                            child_mod,
+                            prefix=child_prefix,
+                            is_dcn_module=is_dcn_module)
 
     def __call__(self, model: nn.Module) -> OptimWrapper:
         if hasattr(model, 'module'):
@@ -304,8 +302,8 @@ class DefaultOptimWrapperConstructor:
         if isinstance(optimizer_cls, str):
             with OPTIMIZERS.switch_scope_and_registry(None) as registry:
                 optimizer_cls = registry.get(self.optimizer_cfg['type'])
-        fisrt_arg_name = next(
-            iter(inspect.signature(optimizer_cls).parameters))
+        fisrt_arg_name = next(iter(
+            inspect.signature(optimizer_cls).parameters))
         # if no paramwise option is specified, just use the global setting
         if not self.paramwise_cfg:
             optimizer_cfg[fisrt_arg_name] = model.parameters()

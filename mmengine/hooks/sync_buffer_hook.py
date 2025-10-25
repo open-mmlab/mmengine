@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from mmengine.dist import all_reduce_params, is_distributed
 from mmengine.registry import HOOKS
+
 from .hook import Hook
 
 

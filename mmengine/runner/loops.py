@@ -7,11 +7,13 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union
 import torch
 from torch.utils.data import DataLoader
 
+from mmengine.dataset.sampler import InfiniteSampler
 from mmengine.evaluator import Evaluator
 from mmengine.logging import HistoryBuffer, print_log
 from mmengine.registry import LOOPS
 from mmengine.structures import BaseDataElement
 from mmengine.utils import is_list_of
+
 from .amp import autocast
 from .base_loop import BaseLoop
 from .utils import calc_dynamic_intervals
@@ -123,19 +125,19 @@ class EpochBasedTrainLoop(BaseLoop):
         Args:
             data_batch (Sequence[dict]): Batch of data from dataloader.
         """
-        self.runner.call_hook(
-            'before_train_iter', batch_idx=idx, data_batch=data_batch)
+        self.runner.call_hook('before_train_iter',
+                              batch_idx=idx,
+                              data_batch=data_batch)
         # Enable gradient accumulation mode and avoid unnecessary gradient
         # synchronization during gradient accumulation process.
         # outputs should be a dict of loss.
         outputs = self.runner.model.train_step(
             data_batch, optim_wrapper=self.runner.optim_wrapper)
 
-        self.runner.call_hook(
-            'after_train_iter',
-            batch_idx=idx,
-            data_batch=data_batch,
-            outputs=outputs)
+        self.runner.call_hook('after_train_iter',
+                              batch_idx=idx,
+                              data_batch=data_batch,
+                              outputs=outputs)
         self._iter += 1
 
     def _decide_current_val_interval(self) -> None:
@@ -274,7 +276,8 @@ class IterBasedTrainLoop(BaseLoop):
         # In iteration-based training loop, we treat the whole training process
         # as a big epoch and execute the corresponding hook.
         self.runner.call_hook('before_train_epoch')
-        if self._iter > 0:
+        if self._iter > 0 and not isinstance(self.dataloader.sampler,
+                                             InfiniteSampler):
             print_log(
                 f'Advance dataloader {self._iter} steps to skip data '
                 'that has already been trained',
@@ -305,19 +308,19 @@ class IterBasedTrainLoop(BaseLoop):
         Args:
             data_batch (Sequence[dict]): Batch of data from dataloader.
         """
-        self.runner.call_hook(
-            'before_train_iter', batch_idx=self._iter, data_batch=data_batch)
+        self.runner.call_hook('before_train_iter',
+                              batch_idx=self._iter,
+                              data_batch=data_batch)
         # Enable gradient accumulation mode and avoid unnecessary gradient
         # synchronization during gradient accumulation process.
         # outputs should be a dict of loss.
         outputs = self.runner.model.train_step(
             data_batch, optim_wrapper=self.runner.optim_wrapper)
 
-        self.runner.call_hook(
-            'after_train_iter',
-            batch_idx=self._iter,
-            data_batch=data_batch,
-            outputs=outputs)
+        self.runner.call_hook('after_train_iter',
+                              batch_idx=self._iter,
+                              data_batch=data_batch,
+                              outputs=outputs)
         self._iter += 1
 
     def _decide_current_val_interval(self) -> None:
@@ -397,8 +400,9 @@ class ValLoop(BaseLoop):
             data_batch (Sequence[dict]): Batch of data
                 from dataloader.
         """
-        self.runner.call_hook(
-            'before_val_iter', batch_idx=idx, data_batch=data_batch)
+        self.runner.call_hook('before_val_iter',
+                              batch_idx=idx,
+                              data_batch=data_batch)
         # outputs should be sequence of BaseDataElement
         with autocast(enabled=self.fp16):
             outputs = self.runner.model.val_step(data_batch)
@@ -406,11 +410,10 @@ class ValLoop(BaseLoop):
         outputs, self.val_loss = _update_losses(outputs, self.val_loss)
 
         self.evaluator.process(data_samples=outputs, data_batch=data_batch)
-        self.runner.call_hook(
-            'after_val_iter',
-            batch_idx=idx,
-            data_batch=data_batch,
-            outputs=outputs)
+        self.runner.call_hook('after_val_iter',
+                              batch_idx=idx,
+                              data_batch=data_batch,
+                              outputs=outputs)
 
 
 @LOOPS.register_module()
@@ -480,8 +483,9 @@ class TestLoop(BaseLoop):
         Args:
             data_batch (Sequence[dict]): Batch of data from dataloader.
         """
-        self.runner.call_hook(
-            'before_test_iter', batch_idx=idx, data_batch=data_batch)
+        self.runner.call_hook('before_test_iter',
+                              batch_idx=idx,
+                              data_batch=data_batch)
         # predictions should be sequence of BaseDataElement
         with autocast(enabled=self.fp16):
             outputs = self.runner.model.test_step(data_batch)
@@ -489,11 +493,10 @@ class TestLoop(BaseLoop):
         outputs, self.test_loss = _update_losses(outputs, self.test_loss)
 
         self.evaluator.process(data_samples=outputs, data_batch=data_batch)
-        self.runner.call_hook(
-            'after_test_iter',
-            batch_idx=idx,
-            data_batch=data_batch,
-            outputs=outputs)
+        self.runner.call_hook('after_test_iter',
+                              batch_idx=idx,
+                              data_batch=data_batch,
+                              outputs=outputs)
 
 
 def _parse_losses(losses: Dict[str, HistoryBuffer],
