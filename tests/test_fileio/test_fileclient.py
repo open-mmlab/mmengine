@@ -16,8 +16,6 @@ from mmengine.fileio import BaseStorageBackend, FileClient
 from mmengine.utils import has_method
 
 sys.modules['ceph'] = MagicMock()
-sys.modules['petrel_client'] = MagicMock()
-sys.modules['petrel_client.client'] = MagicMock()
 sys.modules['mc'] = MagicMock()
 
 
@@ -289,7 +287,9 @@ class TestFileClient:
                         osp.join('dir2', 'img.jpg'), 'text1.txt', 'text2.txt'
                     }
 
-    @patch('petrel_client.client.Client', MockPetrelClient)
+    @patch.dict(
+        sys.modules,
+        {'petrel_client': MagicMock(**{'client.Client': MockPetrelClient})})
     @pytest.mark.parametrize('backend,prefix', [('petrel', None),
                                                 (None, 's3')])
     def test_petrel_backend(self, backend, prefix):
