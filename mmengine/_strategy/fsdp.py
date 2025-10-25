@@ -408,7 +408,9 @@ class FSDPStrategy(DDPStrategy):
                 ``optimizer.state_dict()``
         """
         optim_state_dict = FSDP.optim_state_dict_to_load(
-            state_dict, self.model, self.optim_wrapper.optimizer)
+            optim_state_dict=state_dict,
+            model=self.model,
+            optim=self.optim_wrapper.optimizer)
         self.optim_wrapper.load_state_dict(optim_state_dict)
 
     def _init_state_dict_cfg(self, state_dict_cfg: Union[str, dict]) -> None:
@@ -539,7 +541,9 @@ class FSDPStrategy(DDPStrategy):
             # Force to load the converted optim_state_dict in full mode.
             with FSDP.state_dict_type(model, StateDictType.FULL_STATE_DICT):
                 optim_state_dict = FSDP.optim_state_dict_to_load(
-                    optim_state_dict, model, new_optimizer)
+                    optim_state_dict=optim_state_dict,
+                    model=model,
+                    optim=new_optimizer)
                 new_optimizer.load_state_dict(optim_state_dict)
             optim_wrapper.optimizer = new_optimizer
             return optim_wrapper
