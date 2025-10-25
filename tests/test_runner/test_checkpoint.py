@@ -354,6 +354,7 @@ def test_checkpoint_loader():
     assert loader.__name__ == 'load_from_abc'
 
 
+@patch.dict(sys.modules, {'petrel_client': MagicMock()})
 def test_save_checkpoint(tmp_path):
     model = Model()
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
