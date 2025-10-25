@@ -458,13 +458,17 @@ class TestCheckpointHook(RunnerTestCase):
         cfg = copy.deepcopy(common_cfg)
         runner = self.build_runner(cfg)
         runner.train()
-        ckpt = torch.load(osp.join(cfg.work_dir, f'{training_type}_11.pth'))
+        ckpt = torch.load(
+            osp.join(cfg.work_dir, f'{training_type}_11.pth'),
+            weights_only=False)
         self.assertIn('optimizer', ckpt)
 
         cfg.default_hooks.checkpoint.save_optimizer = False
         runner = self.build_runner(cfg)
         runner.train()
-        ckpt = torch.load(osp.join(cfg.work_dir, f'{training_type}_11.pth'))
+        ckpt = torch.load(
+            osp.join(cfg.work_dir, f'{training_type}_11.pth'),
+            weights_only=False)
         self.assertNotIn('optimizer', ckpt)
 
         # Test save_param_scheduler=False
@@ -479,13 +483,17 @@ class TestCheckpointHook(RunnerTestCase):
         ]
         runner = self.build_runner(cfg)
         runner.train()
-        ckpt = torch.load(osp.join(cfg.work_dir, f'{training_type}_11.pth'))
+        ckpt = torch.load(
+            osp.join(cfg.work_dir, f'{training_type}_11.pth'),
+            weights_only=False)
         self.assertIn('param_schedulers', ckpt)
 
         cfg.default_hooks.checkpoint.save_param_scheduler = False
         runner = self.build_runner(cfg)
         runner.train()
-        ckpt = torch.load(osp.join(cfg.work_dir, f'{training_type}_11.pth'))
+        ckpt = torch.load(
+            osp.join(cfg.work_dir, f'{training_type}_11.pth'),
+            weights_only=False)
         self.assertNotIn('param_schedulers', ckpt)
 
         self.clear_work_dir()
@@ -533,7 +541,9 @@ class TestCheckpointHook(RunnerTestCase):
             self.assertFalse(
                 osp.isfile(osp.join(cfg.work_dir, f'{training_type}_{i}.pth')))
 
-        ckpt = torch.load(osp.join(cfg.work_dir, f'{training_type}_11.pth'))
+        ckpt = torch.load(
+            osp.join(cfg.work_dir, f'{training_type}_11.pth'),
+            weights_only=False)
         self.assertEqual(ckpt['message_hub']['runtime_info']['keep_ckpt_ids'],
                          [9, 10, 11])
 
@@ -574,9 +584,11 @@ class TestCheckpointHook(RunnerTestCase):
         runner.train()
         best_ckpt_path = osp.join(cfg.work_dir,
                                   f'best_test_acc_{training_type}_5.pth')
-        best_ckpt = torch.load(best_ckpt_path)
+        best_ckpt = torch.load(best_ckpt_path, weights_only=False)
 
-        ckpt = torch.load(osp.join(cfg.work_dir, f'{training_type}_5.pth'))
+        ckpt = torch.load(
+            osp.join(cfg.work_dir, f'{training_type}_5.pth'),
+            weights_only=False)
         self.assertEqual(best_ckpt_path,
                          ckpt['message_hub']['runtime_info']['best_ckpt'])
 
@@ -603,11 +615,13 @@ class TestCheckpointHook(RunnerTestCase):
         runner.train()
         best_ckpt_path = osp.join(cfg.work_dir,
                                   f'best_test_acc_{training_type}_5.pth')
-        best_ckpt = torch.load(best_ckpt_path)
+        best_ckpt = torch.load(best_ckpt_path, weights_only=False)
 
         # if the current ckpt is the best, the interval will be ignored the
         # the ckpt will also be saved
-        ckpt = torch.load(osp.join(cfg.work_dir, f'{training_type}_5.pth'))
+        ckpt = torch.load(
+            osp.join(cfg.work_dir, f'{training_type}_5.pth'),
+            weights_only=False)
         self.assertEqual(best_ckpt_path,
                          ckpt['message_hub']['runtime_info']['best_ckpt'])
 
