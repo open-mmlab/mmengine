@@ -14,7 +14,7 @@ def is_installed(package: str) -> bool:
     # Therefore, import it in function scope to save time.
     import importlib.util
 
-    import pkg_resources
+    import pkg_resources  # type: ignore
     from pkg_resources import get_distribution
 
     # refresh the pkg_resources
