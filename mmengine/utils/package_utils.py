@@ -12,23 +12,19 @@ def is_installed(package: str) -> bool:
     Args:
         package (str): Name of package to be checked.
     """
-    # Use importlib.metadata instead of deprecated pkg_resources
-    # importlib.metadata is available in Python 3.8+
-    # For Python 3.7, importlib_metadata backport can be used
     import importlib.util
 
+    # First check if it's an importable module
+    spec = importlib.util.find_spec(package)
+    if spec is not None and spec.origin is not None:
+        return True
+    
+    # If not found as module, check if it's a distribution package
     try:
         distribution(package)
         return True
     except PackageNotFoundError:
-        # If distribution not found, check if module can be imported
-        spec = importlib.util.find_spec(package)
-        if spec is None:
-            return False
-        elif spec.origin is not None:
-            return True
-        else:
-            return False
+        return False
 
 
 def get_installed_path(package: str) -> str:
@@ -47,29 +43,18 @@ def get_installed_path(package: str) -> str:
     # inferred. For example, mmcv-full is the package name, but mmcv is module
     # name. If we want to get the installed path of mmcv-full, we should concat
     # the pkg.location and module name
+    
+    # Try to get location from distribution package metadata
+    location = None
     try:
         dist = distribution(package)
-        # In importlib.metadata, we use dist.locate_file() or files
-        if hasattr(dist, 'locate_file'):
-            # Python 3.9+
-            # locate_file returns PathLike, need to access parent
-            locate_result: Any = dist.locate_file('')
-            location = str(locate_result.parent)
-        elif hasattr(dist, '_path'):
-            # Python 3.8 - _path is a pathlib.Path object
-            # We know _path exists because we checked with hasattr
-            dist_any: Any = dist
-            location = str(dist_any._path.parent)  # type: ignore[attr-defined]
-        else:
-            # Fallback: try to find via importlib
-            spec = importlib.util.find_spec(package)
-            if spec is not None and spec.origin is not None:
-                return osp.dirname(spec.origin)
-            raise RuntimeError(
-                f'Cannot determine installation path for {package}')
-    except PackageNotFoundError as e:
-        # if the package is not installed, package path set in PYTHONPATH
-        # can be detected by `find_spec`
+        locate_result: Any = dist.locate_file('')
+        location = str(locate_result.parent)
+    except PackageNotFoundError:
+        pass
+    
+    # If distribution package not found, try to find via importlib
+    if location is None:
         spec = importlib.util.find_spec(package)
         if spec is not None:
             if spec.origin is not None:
@@ -81,8 +66,10 @@ def get_installed_path(package: str) -> str:
                     f'{package} is a namespace package, which is invalid '
                     'for `get_install_path`')
         else:
-            raise e
+            raise PackageNotFoundError(
+                f'Package {package} is not installed')
 
+    # Check if package directory exists in the location
     possible_path = osp.join(location, package)
     if osp.exists(possible_path):
         return possible_path
@@ -101,7 +88,7 @@ def package2module(package: str) -> str:
     # In importlib.metadata,
     # top-level modules are in dist.read_text('top_level.txt')
     top_level_text = dist.read_text('top_level.txt')
-    if top_level_text:
+    if top_level_text is None:
         module_name = top_level_text.split('\n')[0]
         return module_name
     else:
