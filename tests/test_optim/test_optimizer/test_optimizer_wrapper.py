@@ -426,13 +426,13 @@ class TestAmpOptimWrapper(TestCase):
     def test_init(self):
         # Test with default arguments.
         amp_optim_wrapper = AmpOptimWrapper(optimizer=self.optimizer)
-        self.assertIsInstance(amp_optim_wrapper.loss_scaler, GradScaler)
+        self.assertIsInstance(amp_optim_wrapper.loss_scaler, amp_GradScaler)
 
         # Test with dynamic.
         amp_optim_wrapper = AmpOptimWrapper(
             'dynamic', optimizer=self.optimizer)
         self.assertIsNone(amp_optim_wrapper._scale_update_param)
-        self.assertIsInstance(amp_optim_wrapper.loss_scaler, GradScaler)
+        self.assertIsInstance(amp_optim_wrapper.loss_scaler, amp_GradScaler)
 
         # Test with dtype float16
         amp_optim_wrapper = AmpOptimWrapper(
@@ -447,7 +447,7 @@ class TestAmpOptimWrapper(TestCase):
         # Test with dict loss_scale.
         amp_optim_wrapper = AmpOptimWrapper(
             dict(init_scale=1, growth_factor=2), optimizer=self.optimizer)
-        self.assertIsInstance(amp_optim_wrapper.loss_scaler, GradScaler)
+        self.assertIsInstance(amp_optim_wrapper.loss_scaler, amp_GradScaler)
         self.assertIsNone(amp_optim_wrapper._scale_update_param)
         with self.assertRaisesRegex(TypeError,
                                     'loss_scale must be of type float'):
