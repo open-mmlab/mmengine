@@ -1,6 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
 import subprocess
+from typing import Any
+from importlib.metadata import PackageNotFoundError, distribution
+
 
 
 def is_installed(package: str) -> bool:
@@ -9,21 +12,16 @@ def is_installed(package: str) -> bool:
     Args:
         package (str): Name of package to be checked.
     """
-    # When executing `import mmengine.runner`,
-    # pkg_resources will be imported and it takes too much time.
-    # Therefore, import it in function scope to save time.
+    # Use importlib.metadata instead of deprecated pkg_resources
+    # importlib.metadata is available in Python 3.8+
+    # For Python 3.7, importlib_metadata backport can be used
     import importlib.util
 
-    import pkg_resources  # type: ignore
-    from pkg_resources import get_distribution
-
-    # refresh the pkg_resources
-    # more datails at https://github.com/pypa/setuptools/issues/373
-    importlib.reload(pkg_resources)
     try:
-        get_distribution(package)
+        distribution(package)
         return True
-    except pkg_resources.DistributionNotFound:
+    except Exception:
+        # If distribution not found, check if module can be imported
         spec = importlib.util.find_spec(package)
         if spec is None:
             return False
@@ -45,15 +43,31 @@ def get_installed_path(package: str) -> str:
     """
     import importlib.util
 
-    from pkg_resources import DistributionNotFound, get_distribution
-
     # if the package name is not the same as module name, module name should be
     # inferred. For example, mmcv-full is the package name, but mmcv is module
     # name. If we want to get the installed path of mmcv-full, we should concat
     # the pkg.location and module name
     try:
-        pkg = get_distribution(package)
-    except DistributionNotFound as e:
+        dist = distribution(package)
+        # In importlib.metadata, we use dist.locate_file() or files
+        if hasattr(dist, 'locate_file'):
+            # Python 3.9+
+            # locate_file returns PathLike, need to access parent
+            locate_result: Any = dist.locate_file('')
+            location = str(locate_result.parent)
+        elif hasattr(dist, '_path'):
+            # Python 3.8 - _path is a pathlib.Path object
+            # We know _path exists because we checked with hasattr
+            dist_any: Any = dist
+            location = str(dist_any._path.parent)  # type: ignore[attr-defined]
+        else:
+            # Fallback: try to find via importlib
+            spec = importlib.util.find_spec(package)
+            if spec is not None and spec.origin is not None:
+                return osp.dirname(spec.origin)
+            raise RuntimeError(
+                f'Cannot determine installation path for {package}')
+    except PackageNotFoundError as e:
         # if the package is not installed, package path set in PYTHONPATH
         # can be detected by `find_spec`
         spec = importlib.util.find_spec(package)
@@ -69,23 +83,26 @@ def get_installed_path(package: str) -> str:
         else:
             raise e
 
-    possible_path = osp.join(pkg.location, package)  # type: ignore
+    possible_path = osp.join(location, package)
     if osp.exists(possible_path):
         return possible_path
     else:
-        return osp.join(pkg.location, package2module(package))  # type: ignore
+        return osp.join(location, package2module(package))
 
 
-def package2module(package: str):
+def package2module(package: str) -> str:
     """Infer module name from package.
 
     Args:
         package (str): Package to infer module name.
     """
-    from pkg_resources import get_distribution
-    pkg = get_distribution(package)
-    if pkg.has_metadata('top_level.txt'):
-        module_name = pkg.get_metadata('top_level.txt').split('\n')[0]
+    dist = distribution(package)
+
+    # In importlib.metadata,
+    # top-level modules are in dist.read_text('top_level.txt')
+    top_level_text = dist.read_text('top_level.txt')
+    if top_level_text:
+        module_name = top_level_text.split('\n')[0]
         return module_name
     else:
         raise ValueError(f'can not infer the module name of {package}')
