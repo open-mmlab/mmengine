@@ -22,6 +22,11 @@ def is_installed(package: str) -> bool:
     # For Python 3.7, importlib_metadata backport can be used
     import importlib.util
 
+    import pkg_resources  # type: ignore
+
+    # refresh the pkg_resources
+    # more datails at https://github.com/pypa/setuptools/issues/373
+    importlib.reload(pkg_resources)
     try:
         distribution(package)
         return True

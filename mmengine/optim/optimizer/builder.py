@@ -118,7 +118,7 @@ def register_sophia_optimizers() -> List[str]:
     Returns:
         List[str]: A list of registered optimizers' name.
     """
-    optimizers: List[str] = []
+    optimizers = []  # type: ignore
     try:
         import Sophia
     except ImportError:
@@ -131,8 +131,7 @@ def register_sophia_optimizers() -> List[str]:
                 try:
                     OPTIMIZERS.register_module(module=_optim)
                 except Exception as e:
-                    warnings.warn(
-                        f"Failed to import {_optim.__name__} for {e}")
+                    warnings.warn(f'Failed to import {Sophia} for {e}')
     return optimizers
 
 
@@ -165,7 +164,7 @@ def register_bitsandbytes_optimizers() -> List[str]:
             try:
                 OPTIMIZERS.register_module(module=optim_cls, name=name)
             except Exception as e:
-                warnings.warn(f"Failed to import {optim_cls.__name__} for {e}")
+                warnings.warn(f'Failed to import {optim_cls.__name__} for {e}')
             dadaptation_optimizers.append(name)
     return dadaptation_optimizers
 
@@ -183,7 +182,7 @@ def register_transformers_optimizers() -> List[str]:
         try:
             OPTIMIZERS.register_module(name='Adafactor', module=Adafactor)
         except Exception as e:
-            warnings.warn(f"Failed to import {Adafactor.__name__} for {e}")
+            warnings.warn(f'Failed to import Adafactor for {e}')
         transformer_optimizers.append('Adafactor')
     return transformer_optimizers
 
