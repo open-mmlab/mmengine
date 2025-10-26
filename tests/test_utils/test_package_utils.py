@@ -2,7 +2,7 @@
 import os.path as osp
 import sys
 
-import pkg_resources
+import pkg_resources  # type: ignore
 import pytest
 
 from mmengine.utils import get_installed_path, is_installed
