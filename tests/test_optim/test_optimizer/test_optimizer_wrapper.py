@@ -1,5 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
+from functools import partial
+
 import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock
@@ -8,7 +10,8 @@ import torch
 import torch.distributed as torch_dist
 import torch.nn as nn
 from parameterized import parameterized
-from torch.cuda.amp import GradScaler
+from torch.amp import GradScaler as amp_GradScaler
+GradScaler = partial(amp_GradScaler, device='cuda')
 from torch.nn.parallel.distributed import DistributedDataParallel
 from torch.optim import SGD, Adam, Optimizer
 
