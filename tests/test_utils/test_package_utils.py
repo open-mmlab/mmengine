@@ -2,7 +2,8 @@
 import os.path as osp
 import sys
 
-import pkg_resources  # type: ignore
+from importlib.metadata import PackageNotFoundError
+
 import pytest
 
 from mmengine.utils import get_installed_path, is_installed
@@ -33,5 +34,5 @@ def test_get_install_path():
     assert get_installed_path('optim') == osp.join(PYTHONPATH, 'optim')
     sys.path.pop()
 
-    with pytest.raises(pkg_resources.DistributionNotFound):
+    with pytest.raises(PackageNotFoundError):
         get_installed_path('unknown')
