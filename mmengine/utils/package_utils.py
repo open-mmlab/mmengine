@@ -20,7 +20,7 @@ def is_installed(package: str) -> bool:
     try:
         distribution(package)
         return True
-    except Exception:
+    except PackageNotFoundError:
         # If distribution not found, check if module can be imported
         spec = importlib.util.find_spec(package)
         if spec is None:
