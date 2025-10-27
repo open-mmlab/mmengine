@@ -64,8 +64,7 @@ def get_installed_path(package: str) -> str:
                     f'{package} is a namespace package, which is invalid '
                     'for `get_install_path`')
         else:
-            raise PackageNotFoundError(
-                f'Package {package} is not installed')
+            raise PackageNotFoundError(f'Package {package} is not installed')
 
     # Check if package directory exists in the location
     possible_path = osp.join(location, package)

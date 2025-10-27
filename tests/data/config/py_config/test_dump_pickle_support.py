@@ -24,5 +24,5 @@ dict_item4 = dict(
 dict_item5 = {'x/x': {'a.0': 233}}
 dict_list_item6 = {'x/x': [{'a.0': 1., 'b.0': 2.}, {'c/3': 3.}]}
 # Test windows path and escape.
-str_item_7 = osp.join(osp.expanduser('~'), 'folder') # with backslash in
+str_item_7 = osp.join(osp.expanduser('~'), 'folder')  # with backslash in
 str_item_8 = func()

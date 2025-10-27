@@ -13,7 +13,6 @@ with read_base():
 
 param_scheduler.milestones = [2, 4]
 
-
 train_dataloader = dict(
     dataset=dict(type=ToyDataset),
     sampler=dict(type=DefaultSampler, shuffle=True),

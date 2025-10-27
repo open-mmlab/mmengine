@@ -310,10 +310,10 @@ class DeepSpeedStrategy(BaseStrategy):
             self.config.setdefault('gradient_accumulation_steps', 1)
         self.config['steps_per_print'] = steps_per_print
         self._inputs_to_half = inputs_to_half
-        assert (exclude_frozen_parameters is None or
-                digit_version(deepspeed.__version__) >= digit_version('0.13.2')
-                ), ('DeepSpeed >= 0.13.2 is required to enable '
-                    'exclude_frozen_parameters')
+        assert (exclude_frozen_parameters is None or digit_version(
+            deepspeed.__version__) >= digit_version('0.13.2')), (
+                'DeepSpeed >= 0.13.2 is required to enable '
+                'exclude_frozen_parameters')
         self.exclude_frozen_parameters = exclude_frozen_parameters
 
         register_deepspeed_optimizers()
