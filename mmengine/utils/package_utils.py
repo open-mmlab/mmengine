@@ -1,9 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
 import subprocess
-from typing import Any
 from importlib.metadata import PackageNotFoundError, distribution
-
+from typing import Any
 
 
 def is_installed(package: str) -> bool:
@@ -18,7 +17,7 @@ def is_installed(package: str) -> bool:
     spec = importlib.util.find_spec(package)
     if spec is not None and spec.origin is not None:
         return True
-    
+
     # If not found as module, check if it's a distribution package
     try:
         distribution(package)
@@ -43,7 +42,6 @@ def get_installed_path(package: str) -> str:
     # inferred. For example, mmcv-full is the package name, but mmcv is module
     # name. If we want to get the installed path of mmcv-full, we should concat
     # the pkg.location and module name
-    
     # Try to get location from distribution package metadata
     location = None
     try:
@@ -52,7 +50,7 @@ def get_installed_path(package: str) -> str:
         location = str(locate_result.parent)
     except PackageNotFoundError:
         pass
-    
+
     # If distribution package not found, try to find via importlib
     if location is None:
         spec = importlib.util.find_spec(package)
@@ -88,11 +86,12 @@ def package2module(package: str) -> str:
     # In importlib.metadata,
     # top-level modules are in dist.read_text('top_level.txt')
     top_level_text = dist.read_text('top_level.txt')
-    if top_level_text is None:
-        module_name = top_level_text.split('\n')[0]
-        return module_name
-    else:
-        raise ValueError(f'can not infer the module name of {package}')
+    if top_level_text is not None:
+        lines = top_level_text.strip().split('\n')
+        if lines:
+            module_name = lines[0].strip()
+            return module_name
+    raise ValueError(f'can not infer the module name of {package}')
 
 
 def call_command(cmd: list) -> None:
