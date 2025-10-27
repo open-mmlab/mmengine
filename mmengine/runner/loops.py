@@ -162,27 +162,39 @@ class _InfiniteDataloaderIterator:
     def __iter__(self):
         return self
 
-    def __next__(self) -> Sequence[dict]:
+    def skip_iter(self, iter: int) -> None:
+        for _ in range(iter):
+            self._next_data(skip_loading=True)
+
+    def __next__(self) -> Union[Sequence[dict], None]:
+        return self._next_data()
+
+    def _next_data(self, skip_loading=False) -> Union[Sequence[dict], None]:
+        data = None
         try:
-            data = next(self._iterator)
+            if skip_loading:
+                self._iterator._next_index()
+            else:
+                data = next(self._iterator)
         except StopIteration:
             print_log(
-                'Reach the end of the dataloader, it will be '
-                'restarted and continue to iterate. It is '
-                'recommended to use '
-                '`mmengine.dataset.InfiniteSampler` to enable the '
-                'dataloader to iterate infinitely.',
-                logger='current',
-                level=logging.WARNING)
+                "Reach the end of the dataloader, it will be "
+                "restarted and continue to iterate. It is "
+                "recommended to use "
+                "`mmengine.dataset.InfiniteSampler` to enable the "
+                "dataloader to iterate infinitely.",
+                logger="current",
+                level=logging.WARNING,
+            )
             self._epoch += 1
-            if hasattr(self._dataloader, 'sampler') and hasattr(
-                    self._dataloader.sampler, 'set_epoch'):
+            if hasattr(self._dataloader, "sampler") and hasattr(self._dataloader.sampler, "set_epoch"):
                 # In case the` _SingleProcessDataLoaderIter` has no sampler,
                 # or data loader uses `SequentialSampler` in Pytorch.
                 self._dataloader.sampler.set_epoch(self._epoch)
 
-            elif hasattr(self._dataloader, 'batch_sampler') and hasattr(
-                    self._dataloader.batch_sampler.sampler, 'set_epoch'):
+            elif hasattr(self._dataloader, "batch_sampler") and hasattr(
+                self._dataloader.batch_sampler.sampler, "set_epoch"
+            ):
                 # In case the` _SingleProcessDataLoaderIter` has no batch
                 # sampler. batch sampler in pytorch warps the sampler as its
                 # attributes.
@@ -280,8 +292,7 @@ class IterBasedTrainLoop(BaseLoop):
                 'that has already been trained',
                 logger='current',
                 level=logging.WARNING)
-            for _ in range(self._iter):
-                next(self.dataloader_iterator)
+            self.dataloader_iterator.skip_iter(self._iter)
         while self._iter < self._max_iters and not self.stop_training:
             self.runner.model.train()
 
@@ -299,7 +310,7 @@ class IterBasedTrainLoop(BaseLoop):
         self.runner.call_hook('after_train')
         return self.runner.model
 
-    def run_iter(self, data_batch: Sequence[dict]) -> None:
+    def run_iter(self, data_batch: Union[Sequence[dict], None]) -> None:
         """Iterate one mini-batch.
 
         Args:
