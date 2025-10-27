@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
 import sys
-
 from importlib.metadata import PackageNotFoundError
 
 import pytest
@@ -20,6 +19,12 @@ def test_is_installed():
     sys.path.append(PYTHONPATH)
     assert is_installed('optim')
     sys.path.pop()
+
+    assert is_installed('nonexistentpackage12345') is False
+    assert is_installed('os') is True  # 'os' is a module name
+    assert is_installed('setuptools') is True
+    # Should work on both distribution and module name
+    assert is_installed('pillow') is True and is_installed('PIL') is True
 
 
 def test_get_install_path():
