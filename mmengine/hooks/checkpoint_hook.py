@@ -196,10 +196,10 @@ class CheckpointHook(Hook):
         self.save_best = save_best
 
         # rule logic
-        assert (isinstance(rule, str) or is_list_of(rule, str)
-                or (rule is None)), (
-                    '"rule" should be a str or list of str or None, '
-                    f'but got {type(rule)}')
+        assert (isinstance(rule, str) or is_list_of(rule, str) or
+                (rule
+                 is None)), ('"rule" should be a str or list of str or None, '
+                             f'but got {type(rule)}')
         if isinstance(rule, list):
             # check the length of rule list
             assert len(rule) in [

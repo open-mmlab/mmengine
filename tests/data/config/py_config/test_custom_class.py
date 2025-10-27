@@ -2,4 +2,5 @@
 class A:
     ...
 
+
 item_a = dict(a=A)
