@@ -400,7 +400,7 @@ class Runner:
         self.logger = self.build_logger(log_level=log_level)
 
         # Collect and log environment information.
-        self._log_env(env_cfg)
+        # self._log_env(env_cfg)
 
         # Build `message_hub` for communication among components.
         # `message_hub` can store log scalars (loss, learning rate) and
