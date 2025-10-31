@@ -2,6 +2,7 @@
 import ast
 import copy
 import difflib
+import inspect
 import os
 import os.path as osp
 import platform
@@ -53,6 +54,12 @@ def _lazy2string(cfg_dict, dict_type=None):
         return type(cfg_dict)(_lazy2string(v, dict_type) for v in cfg_dict)
     elif isinstance(cfg_dict, (LazyAttr, LazyObject)):
         return f'{cfg_dict.module}.{str(cfg_dict)}'
+    elif ((inspect.isclass(cfg_dict) or inspect.isfunction(cfg_dict))
+          and hasattr(cfg_dict, '__module__')
+          and hasattr(cfg_dict, '__name__')
+          and cfg_dict.__module__ != 'builtins'):
+        # Handle regular class objects by converting to module path string
+        return f"{cfg_dict.__module__}.{cfg_dict.__name__}"
     else:
         return cfg_dict
 
