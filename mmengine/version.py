@@ -3,7 +3,7 @@
 __version__ = '0.11.0rc2'
 
 
-def parse_version_info(version_str):
+def parse_version_info(version_str: str):
     """Parse the version information.
 
     Args:
