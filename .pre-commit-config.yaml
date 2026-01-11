@@ -63,4 +63,4 @@ repos:
               ^examples
               | ^docs
           )
-        additional_dependencies: ["types-setuptools", "types-requests", "types-PyYAML"]
+        additional_dependencies: ["setuptools", "types-setuptools", "types-requests", "types-PyYAML"]
