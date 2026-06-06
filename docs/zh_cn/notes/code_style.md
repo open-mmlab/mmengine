@@ -34,7 +34,7 @@
   "A style guide is about consistency. Consistency with this style guide is important. Consistency within a project is more important. Consistency within one module or function is the most important." PEP 8 -- Style Guide for Python Code
 
 :::{note}
-PEP 8 的代码规范并不是绝对的，项目内的一致性要优先于 PEP 8 的规范。OpenMMLab 各个项目都在 setup.cfg 设定了一些代码规范的设置，请遵照这些设置。一个例子是在 PEP 8 中有如下一个例子：
+PEP 8 的代码规范并不是绝对的，项目内的一致性要优先于 PEP 8 的规范。OpenMMLab 各个项目会在 pyproject.toml 等项目配置文件中设定代码规范，请遵照这些设置。一个例子是在 PEP 8 中有如下一个例子：
 
 ```python
 # Correct:

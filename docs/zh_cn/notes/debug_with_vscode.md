@@ -14,7 +14,9 @@
 # 如果克隆代码仓库的速度过慢，可以从 https://gitee.com/open-mmlab/mmengine.git 克隆
 git clone https://github.com/open-mmlab/mmengine.git
 cd mmengine
-pip install -e . -v
+pip install -U uv
+uv sync --no-default-groups
+uv run python -c 'import mmengine;print(mmengine.__version__)'
 ```
 
 ### 运行多卡程序

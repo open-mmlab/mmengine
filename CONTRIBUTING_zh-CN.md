@@ -61,14 +61,14 @@ upstream	git@github.com:open-mmlab/mmengine (push)
 在本地开发环境中，我们使用 [pre-commit](https://pre-commit.com/#intro) 来检查代码风格，以确保代码风格的统一。在提交代码，需要先安装 pre-commit（需要在 mmengine 目录下执行）:
 
 ```shell
-pip install -U pre-commit
-pre-commit install
+uv sync --group lint
+uv run pre-commit install
 ```
 
 检查 pre-commit 是否配置成功，并安装 `.pre-commit-config.yaml` 中的钩子：
 
 ```shell
-pre-commit run --all-files
+uv run pre-commit run --all-files
 ```
 
 <img src="https://user-images.githubusercontent.com/57566630/173660750-3df20a63-cb66-4d33-a986-1f643f1d8aaf.png" width="1200">
@@ -77,9 +77,9 @@ pre-commit run --all-files
 
 > 如果你是中国用户，由于网络原因，可能会出现安装失败的情况，这时可以使用国内源
 
-> pre-commit install -c .pre-commit-config-zh-cn.yaml
+> uv run pre-commit install -c .pre-commit-config-zh-cn.yaml
 
-> pre-commit run --all-files -c .pre-commit-config-zh-cn.yaml
+> uv run pre-commit run --all-files -c .pre-commit-config-zh-cn.yaml
 
 如果安装过程被中断，可以重复执行 `pre-commit run ...` 继续安装。
 
@@ -115,10 +115,10 @@ git pull upstream master
 
   ```shell
   # 通过全量单元测试
-  pytest tests
+  uv run pytest tests
 
   # 我们需要保证提交的代码能够通过修改模块的单元测试，以 runner 为例
-  pytest tests/test_runner/test_runner.py
+  uv run pytest tests/test_runner/test_runner.py
   ```
 
   如果你由于缺少依赖无法运行修改模块的单元测试，可以参考[指引-单元测试](#单元测试)
@@ -193,8 +193,8 @@ git merge upstream/master
 在提交修复代码错误或新增特性的拉取请求时，我们应该尽可能的让单元测试覆盖所有提交的代码，计算单元测试覆盖率的方法如下
 
 ```shell
-python -m coverage run -m pytest /path/to/test_file
-python -m coverage html
+uv run python -m coverage run -m pytest /path/to/test_file
+uv run python -m coverage html
 # check file in htmlcov/index.html
 ```
 
@@ -204,10 +204,10 @@ python -m coverage html
 本地生成渲染后的文档的方法如下
 
 ```shell
-pip install -r requirements/docs.txt
+uv sync --group docs
 cd docs/zh_cn/
 # or docs/en
-make html
+uv run make html
 # check file in ./docs/zh_cn/_build/html/index.html
 ```
 
@@ -222,9 +222,9 @@ make html
 - [mdformat](https://github.com/executablebooks/mdformat): 检查 markdown 文件的工具
 - [docformatter](https://github.com/myint/docformatter): 格式化 docstring 的工具
 
-yapf 和 isort 的配置可以在 [setup.cfg](./setup.cfg) 找到
+yapf 和 isort 的配置可以在 [pyproject.toml](./pyproject.toml) 找到
 
-通过配置 [pre-commit hook](https://pre-commit.com/) ，我们可以在提交代码时自动检查和格式化 `flake8`、`yapf`、`isort`、`trailing whitespaces`、`markdown files`，修复 `end-of-files`、`double-quoted-strings`、`python-encoding-pragma`、`mixed-line-ending`，调整 `requirments.txt` 的包顺序。
+通过配置 [pre-commit hook](https://pre-commit.com/) ，我们可以在提交代码时自动检查和格式化 `flake8`、`yapf`、`isort`、`trailing whitespaces`、`markdown files`，修复 `end-of-files`、`double-quoted-strings`、`python-encoding-pragma`、`mixed-line-ending`。
 pre-commit 钩子的配置可以在 [.pre-commit-config](./.pre-commit-config.yaml) 找到。
 
 pre-commit 具体的安装使用方式见[拉取请求](#2-配置-pre-commit)。

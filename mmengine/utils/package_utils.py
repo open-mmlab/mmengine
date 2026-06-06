@@ -82,14 +82,28 @@ def package2module(package: str) -> str:
     """
     dist = distribution(package)
 
-    # In importlib.metadata,
-    # top-level modules are in dist.read_text('top_level.txt')
     top_level_text = dist.read_text('top_level.txt')
     if top_level_text is not None:
         lines = top_level_text.strip().split('\n')
         if lines:
             module_name = lines[0].strip()
             return module_name
+
+    import importlib.util
+    module_name = package.replace('-', '_')
+    if importlib.util.find_spec(module_name) is not None:
+        return module_name
+
+    for file in dist.files or []:
+        parts = str(file).split('/')
+        if (len(parts) > 1 and parts[1] == '__init__.py'
+                and parts[0].isidentifier()):
+            return parts[0]
+        if len(parts) == 1 and parts[0].endswith('.py'):
+            module_name = parts[0][:-3]
+            if module_name.isidentifier():
+                return module_name
+
     raise ValueError(f'can not infer the module name of {package}')
 
 

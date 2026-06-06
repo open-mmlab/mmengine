@@ -27,7 +27,7 @@
 ## Install MMEngine
 
 :::{note}
-If you only want to use the fileio, registry, and config modules in MMEngine, you can install `mmengine-lite`, which will only install the few third-party library dependencies that are necessary (e.g., it will not install opencv, matplotlib):
+If you only want to use the fileio, registry, and config modules in MMEngine, you can install `mmengine-lite`, which installs a smaller dependency set than `mmengine` and uses `opencv-python-headless` instead of the full OpenCV package:
 
 ```bash
 pip install mmengine-lite
@@ -74,7 +74,9 @@ pip install mmengine
 # if cloning speed is too slow, you can switch the source to https://gitee.com/open-mmlab/mmengine.git
 git clone https://github.com/open-mmlab/mmengine.git
 cd mmengine
-pip install -e . -v
+pip install -U uv
+uv sync --no-default-groups
+uv run python -c 'import mmengine;print(mmengine.__version__)'
 ```
 
 #### Build mmengine-lite
@@ -83,7 +85,9 @@ pip install -e . -v
 # if cloning speed is too slow, you can switch the source to https://gitee.com/open-mmlab/mmengine.git
 git clone https://github.com/open-mmlab/mmengine.git
 cd mmengine
-MMENGINE_LITE=1 pip install -e . -v
+uv run --no-sync python scripts/build_lite.py --wheel
+uv pip install --reinstall dist/mmengine_lite-*.whl
+python -c 'import mmengine;print(mmengine.__version__)'
 ```
 
 ## Verify the Installation

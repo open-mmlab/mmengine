@@ -1,0 +1,157 @@
+[build-system]
+requires = ["hatchling>=1.17.1,<1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mmengine"
+dynamic = ["version"]
+description = "Engine of OpenMMLab projects"
+readme = "README.md"
+requires-python = ">=3.7,<3.11"
+license = { file = "LICENSE" }
+authors = [
+    { name = "MMEngine Authors", email = "openmmlab@gmail.com" },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "addict",
+    "matplotlib",
+    "numpy",
+    "pyyaml",
+    "regex; sys_platform == 'win32'",
+    "rich",
+    "termcolor",
+    "yapf",
+]
+
+[project.urls]
+Homepage = "https://github.com/open-mmlab/mmengine"
+Repository = "https://github.com/open-mmlab/mmengine"
+
+[project.optional-dependencies]
+all = [
+    "aim<=3.17.5; sys_platform != 'win32'",
+    "bitsandbytes",
+    "clearml",
+    "coverage",
+    "dadaptation",
+    "dvclive",
+    "lion-pytorch",
+    "lmdb",
+    "mlflow",
+    "parameterized",
+    "pydantic==1.10.9",
+    "pytest",
+    "transformers",
+]
+tests = [
+    "aim<=3.17.5; sys_platform != 'win32'",
+    "bitsandbytes",
+    "clearml",
+    "coverage",
+    "dadaptation",
+    "dvclive",
+    "lion-pytorch",
+    "lmdb",
+    "mlflow",
+    "parameterized",
+    "pydantic==1.10.9",
+    "pytest",
+    "transformers",
+]
+
+[dependency-groups]
+test-lite = [
+    "lmdb",
+    "opencv-python-headless",
+    "parameterized",
+    "pytest",
+    "setuptools",
+]
+docs = [
+    "docutils==0.18.1",
+    "myst-parser",
+    "opencv-python",
+    "pytorch-sphinx-theme",
+    "sphinx==6.2.1",
+    "sphinx-copybutton",
+    "sphinx-tabs",
+    "sphinx_markdown_tables",
+    "tabulate",
+    "torch",
+    "torchvision",
+    "urllib3<2.0.0",
+]
+docs-extra = [
+    "deepspeed",
+]
+lint = [
+    "interrogate",
+    "pre-commit",
+]
+
+[tool.uv]
+default-groups = []
+
+[tool.uv.dependency-groups]
+test-lite = { requires-python = ">=3.8" }
+docs = { requires-python = ">=3.8" }
+docs-extra = { requires-python = ">=3.8" }
+lint = { requires-python = ">=3.8" }
+
+[tool.uv.sources]
+pytorch-sphinx-theme = { git = "https://github.com/open-mmlab/pytorch_sphinx_theme.git" }
+
+
+[tool.hatch.version]
+path = "mmengine/version.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/CITATION.cff",
+    "/LICENSE",
+    "/README.md",
+    "/README_zh-CN.md",
+    "/mmengine",
+    "/pyproject.toml",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["mmengine"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"mmengine/hub/openmmlab.json" = "mmengine/hub/openmmlab.json"
+"mmengine/hub/deprecated.json" = "mmengine/hub/deprecated.json"
+"mmengine/hub/mmcls.json" = "mmengine/hub/mmcls.json"
+"mmengine/hub/torchvision_0.12.json" = "mmengine/hub/torchvision_0.12.json"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["tests/data"]
+
+[tool.isort]
+line_length = 79
+multi_line_output = 0
+extra_standard_library = ["setuptools"]
+known_first_party = ["mmengine"]
+known_third_party = ["pytest", "yaml"]
+no_lines_before = ["STDLIB", "LOCALFOLDER"]
+default_section = "THIRDPARTY"
+
+[tool.yapf]
+BASED_ON_STYLE = "pep8"
+BLANK_LINE_BEFORE_NESTED_CLASS_OR_DEF = true
+SPLIT_BEFORE_EXPRESSION_AFTER_OPENING_PAREN = true
+
+[tool.codespell]
+ignore-words-list = "nd,ba,warmup"

@@ -9,7 +9,8 @@ Note: This example requires PyTorch 2.0+ and MMEngine 0.8.0+.
   ```bash
   git clone https://github.com/open-mmlab/mmengine.git
   cd mmengine
-  pip install -e . -v
+  pip install -U uv
+  uv sync --no-default-groups
   ```
 
 - Install third-party dependencies

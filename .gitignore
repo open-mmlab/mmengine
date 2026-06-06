@@ -121,3 +121,7 @@ work_dirs/
 *.pth
 *.py~
 *.sh~
+
+.ccg
+.claude
+CLAUDE.md
