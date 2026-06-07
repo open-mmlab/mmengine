@@ -6,17 +6,6 @@ from unittest import TestCase, skipIf
 
 import torch
 import torch.nn as nn
-
-try:
-    from torch.distributed.fsdp import (FullStateDictConfig,
-                                        FullyShardedDataParallel,
-                                        LocalStateDictConfig, StateDictType)
-    from torch.distributed.fsdp.fully_sharded_data_parallel import (
-        FullOptimStateDictConfig, LocalOptimStateDictConfig)
-
-    from mmengine._strategy import FSDPStrategy
-except:  # noqa: E722
-    pass
 from torch.multiprocessing.spawn import start_processes
 from torch.optim import SGD
 
@@ -25,6 +14,19 @@ from mmengine.dist import (all_gather_object, broadcast_object_list,
 from mmengine.optim import LinearLR, OptimWrapper
 from mmengine.testing.runner_test_case import ToyModel
 from mmengine.utils import digit_version
+
+FSDP_AVAILABLE = False
+try:
+    from torch.distributed.fsdp import (FullStateDictConfig,
+                                        FullyShardedDataParallel,
+                                        LocalStateDictConfig, StateDictType)
+    from torch.distributed.fsdp.fully_sharded_data_parallel import (
+        FullOptimStateDictConfig, LocalOptimStateDictConfig)
+except ImportError:
+    pass
+else:
+    from mmengine._strategy import FSDPStrategy
+    FSDP_AVAILABLE = True
 
 
 def linear_wrap_policy(
@@ -39,8 +41,8 @@ def linear_wrap_policy(
 
 @skipIf(
     digit_version(torch.__version__) < digit_version('2.0.0')
-    or not torch.cuda.is_available(),
-    'Only test FSDP with CUDA and PyTorch >= 2.0.0')
+    or not FSDP_AVAILABLE,
+    'Only test FSDP with PyTorch >= 2.0.0 and FSDP available')
 class TestStrategy(TestCase):
 
     def setUp(self):
@@ -203,6 +205,8 @@ class TestStrategy(TestCase):
         getattr(self, func)()
         self.tearDown()
 
+    @skipIf(torch.cuda.device_count() < 2,
+            'Only test FSDP strategy run with at least 2 CUDA devices')
     def test_run_strategy(self):
         start_processes(
             TestStrategy._worker,

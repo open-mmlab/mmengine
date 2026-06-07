@@ -411,50 +411,71 @@ class TestNeptuneVisBackend:
     reason='DVCLiveVisBackend does not support python version < 3.8')
 class TestDVCLiveVisBackend:
 
-    def test_init(self):
-        DVCLiveVisBackend('temp_dir')
-        VISBACKENDS.build(dict(type='DVCLiveVisBackend', save_dir='temp_dir'))
+    def _build_backend(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        init_kwargs = dict(save_dvc_exp=False, cache_images=False)
+        return DVCLiveVisBackend('temp_dir', init_kwargs=init_kwargs)
 
-    def test_experiment(self):
-        dvclive_vis_backend = DVCLiveVisBackend('temp_dir')
-        assert dvclive_vis_backend.experiment == dvclive_vis_backend._dvclive
-        shutil.rmtree('temp_dir')
+    def test_init(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        init_kwargs = dict(save_dvc_exp=False, cache_images=False)
+        DVCLiveVisBackend('temp_dir', init_kwargs=init_kwargs)
+        VISBACKENDS.build(
+            dict(
+                type='DVCLiveVisBackend',
+                save_dir='temp_dir',
+                init_kwargs=init_kwargs))
 
-    def test_add_config(self):
+    def test_experiment(self, tmp_path, monkeypatch):
+        dvclive_vis_backend = self._build_backend(tmp_path, monkeypatch)
+        try:
+            assert dvclive_vis_backend.experiment == \
+                dvclive_vis_backend._dvclive
+        finally:
+            dvclive_vis_backend.close()
+
+    def test_add_config(self, tmp_path, monkeypatch):
         cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
-        dvclive_vis_backend = DVCLiveVisBackend('temp_dir')
-        dvclive_vis_backend.add_config(cfg)
-        shutil.rmtree('temp_dir')
+        dvclive_vis_backend = self._build_backend(tmp_path, monkeypatch)
+        try:
+            dvclive_vis_backend.add_config(cfg)
+        finally:
+            dvclive_vis_backend.close()
 
-    def test_add_image(self):
+    def test_add_image(self, tmp_path, monkeypatch):
         img = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
-        dvclive_vis_backend = DVCLiveVisBackend('temp_dir')
-        dvclive_vis_backend.add_image('img', img)
-        shutil.rmtree('temp_dir')
+        dvclive_vis_backend = self._build_backend(tmp_path, monkeypatch)
+        try:
+            dvclive_vis_backend.add_image('img', img)
+        finally:
+            dvclive_vis_backend.close()
 
-    def test_add_scalar(self):
-        dvclive_vis_backend = DVCLiveVisBackend('temp_dir')
-        dvclive_vis_backend.add_scalar('mAP', 0.9)
-        # test append mode
-        dvclive_vis_backend.add_scalar('mAP', 0.9)
-        dvclive_vis_backend.add_scalar('mAP', 0.95)
-        shutil.rmtree('temp_dir')
+    def test_add_scalar(self, tmp_path, monkeypatch):
+        dvclive_vis_backend = self._build_backend(tmp_path, monkeypatch)
+        try:
+            dvclive_vis_backend.add_scalar('mAP', 0.9)
+            # test append mode
+            dvclive_vis_backend.add_scalar('mAP', 0.9)
+            dvclive_vis_backend.add_scalar('mAP', 0.95)
+        finally:
+            dvclive_vis_backend.close()
 
-    def test_add_scalars(self):
-        dvclive_vis_backend = DVCLiveVisBackend('temp_dir')
+    def test_add_scalars(self, tmp_path, monkeypatch):
+        dvclive_vis_backend = self._build_backend(tmp_path, monkeypatch)
         input_dict = {'map': 0.7, 'acc': 0.9}
-        dvclive_vis_backend.add_scalars(input_dict)
-        # test append mode
-        dvclive_vis_backend.add_scalars({'map': 0.8, 'acc': 0.8})
-        shutil.rmtree('temp_dir')
+        try:
+            dvclive_vis_backend.add_scalars(input_dict)
+            # test append mode
+            dvclive_vis_backend.add_scalars({'map': 0.8, 'acc': 0.8})
+        finally:
+            dvclive_vis_backend.close()
 
-    def test_close(self):
+    def test_close(self, tmp_path, monkeypatch):
         cfg = Config(dict(work_dir='temp_dir'))
-        dvclive_vis_backend = DVCLiveVisBackend('temp_dir')
+        dvclive_vis_backend = self._build_backend(tmp_path, monkeypatch)
         dvclive_vis_backend._init_env()
         dvclive_vis_backend.add_config(cfg)
         dvclive_vis_backend.close()
-        shutil.rmtree('temp_dir')
 
 
 @pytest.mark.skipif(
@@ -462,37 +483,58 @@ class TestDVCLiveVisBackend:
     reason='Aim does not support Windows for now.')
 class TestAimVisBackend:
 
-    def test_init(self):
-        AimVisBackend()
-        VISBACKENDS.build(dict(type='AimVisBackend'))
+    def _build_backend(self, tmp_path):
+        return AimVisBackend(init_kwargs=dict(repo=str(tmp_path)))
 
-    def test_experiment(self):
-        aim_vis_backend = AimVisBackend()
-        assert aim_vis_backend.experiment == aim_vis_backend._aim_run
+    def test_init(self, tmp_path):
+        aim_vis_backend = AimVisBackend(init_kwargs=dict(repo=str(tmp_path)))
+        built_backend = VISBACKENDS.build(
+            dict(type='AimVisBackend', init_kwargs=dict(repo=str(tmp_path))))
+        aim_vis_backend.close()
+        built_backend.close()
 
-    def test_add_config(self):
+    def test_experiment(self, tmp_path):
+        aim_vis_backend = self._build_backend(tmp_path)
+        try:
+            assert aim_vis_backend.experiment == aim_vis_backend._aim_run
+        finally:
+            aim_vis_backend.close()
+
+    def test_add_config(self, tmp_path):
         cfg = Config(dict(a=1, b=dict(b1=[0, 1])))
-        aim_vis_backend = AimVisBackend()
-        aim_vis_backend.add_config(cfg)
+        aim_vis_backend = self._build_backend(tmp_path)
+        try:
+            aim_vis_backend.add_config(cfg)
+        finally:
+            aim_vis_backend.close()
 
-    def test_add_image(self):
+    def test_add_image(self, tmp_path):
         image = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
-        aim_vis_backend = AimVisBackend()
-        aim_vis_backend.add_image('img', image)
-        aim_vis_backend.add_image('img', image, step=1)
+        aim_vis_backend = self._build_backend(tmp_path)
+        try:
+            aim_vis_backend.add_image('img', image)
+            aim_vis_backend.add_image('img', image, step=1)
+        finally:
+            aim_vis_backend.close()
 
-    def test_add_scalar(self):
-        aim_vis_backend = AimVisBackend()
-        aim_vis_backend.add_scalar('map', 0.9)
-        aim_vis_backend.add_scalar('map', 0.9, step=1)
-        aim_vis_backend.add_scalar('map', 0.95, step=2)
+    def test_add_scalar(self, tmp_path):
+        aim_vis_backend = self._build_backend(tmp_path)
+        try:
+            aim_vis_backend.add_scalar('map', 0.9)
+            aim_vis_backend.add_scalar('map', 0.9, step=1)
+            aim_vis_backend.add_scalar('map', 0.95, step=2)
+        finally:
+            aim_vis_backend.close()
 
-    def test_add_scalars(self):
-        aim_vis_backend = AimVisBackend()
+    def test_add_scalars(self, tmp_path):
+        aim_vis_backend = self._build_backend(tmp_path)
         input_dict = {'map': 0.7, 'acc': 0.9}
-        aim_vis_backend.add_scalars(input_dict)
+        try:
+            aim_vis_backend.add_scalars(input_dict)
+        finally:
+            aim_vis_backend.close()
 
-    def test_close(self):
-        aim_vis_backend = AimVisBackend()
+    def test_close(self, tmp_path):
+        aim_vis_backend = self._build_backend(tmp_path)
         aim_vis_backend._init_env()
         aim_vis_backend.close()

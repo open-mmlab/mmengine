@@ -33,6 +33,8 @@ class TestProfilerHook(RunnerTestCase):
         ProfilerHook(schedule=dict(wait=1, warmup=1, active=3, repeat=1))
         with self.assertRaises(TypeError):
             ProfilerHook(schedule=dict())
+        with self.assertRaises(ValueError):
+            ProfilerHook(activity_with_cpu=False, activity_with_cuda=False)
 
     def test_parse_trace_config(self):
         # Test on_trace_ready_args
@@ -162,8 +164,8 @@ class TestProfilerHook(RunnerTestCase):
                 activity_with_cpu=False,
                 activity_with_cuda=False)
         ]
-        runner = self.build_runner(self.epoch_based_cfg)
-        runner.train()
+        with self.assertRaises(ValueError):
+            self.build_runner(self.epoch_based_cfg)
 
         json_path = ops.join(self.temp_dir.name, 'demo.json')
         self.epoch_based_cfg['custom_hooks'] = [

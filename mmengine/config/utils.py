@@ -3,6 +3,7 @@ import ast
 import os.path as osp
 import re
 import sys
+import sysconfig
 import warnings
 from collections import defaultdict
 from importlib.util import find_spec
@@ -13,6 +14,13 @@ from mmengine.utils import check_file_exist
 
 PYTHON_ROOT_DIR = osp.dirname(osp.dirname(sys.executable))
 SYSTEM_PYTHON_PREFIX = '/usr/lib/python'
+PYTHON_STDLIB_DIRS = tuple(
+    path for path in {
+        PYTHON_ROOT_DIR,
+        SYSTEM_PYTHON_PREFIX,
+        sysconfig.get_path('stdlib'),
+        sysconfig.get_path('platstdlib'),
+    } if path is not None)
 
 MODULE2PACKAGE = {
     'mmcls': 'mmcls',
@@ -164,11 +172,13 @@ def _is_builtin_module(module_name: str) -> bool:
     """
     if module_name.startswith('.'):
         return False
-    if module_name.startswith('mmengine.config'):
+    if module_name == 'mmengine.config' or module_name.startswith(
+            'mmengine.config.'):
         return True
-    if module_name in sys.builtin_module_names:
+    module_root = module_name.split('.')[0]
+    if module_root in sys.builtin_module_names:
         return True
-    spec = find_spec(module_name.split('.')[0])
+    spec = find_spec(module_root)
     # Module not found
     if spec is None:
         return False
@@ -179,8 +189,7 @@ def _is_builtin_module(module_name: str) -> bool:
         return True
     origin_path = osp.abspath(origin_path)
     if ('site-package' in origin_path or 'dist-package' in origin_path
-            or not origin_path.startswith(
-                (PYTHON_ROOT_DIR, SYSTEM_PYTHON_PREFIX))):
+            or not origin_path.startswith(PYTHON_STDLIB_DIRS)):
         return False
     else:
         return True

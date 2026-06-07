@@ -1,8 +1,11 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import ast
 import copy
+import importlib
 import os
 import os.path as osp
+import sys
+import tempfile
 from importlib import import_module
 from importlib.util import find_spec
 from unittest import TestCase
@@ -15,7 +18,9 @@ from rich.progress import Progress
 import mmengine
 from mmengine.config import Config
 from mmengine.config.lazy import LazyAttr, LazyObject
-from mmengine.config.utils import ImportTransformer, _gather_abs_import_lazyobj
+from mmengine.config.utils import (ImportTransformer,
+                                   _gather_abs_import_lazyobj,
+                                   _is_builtin_module)
 from mmengine.fileio import LocalBackend, PetrelBackend
 
 
@@ -117,6 +122,24 @@ class TestImportTransformer(TestCase):
                 RuntimeError,
                 r'Illegal syntax in config! `from xxx import \*`'):
             codeobj = ImportTransformer(global_dict).visit(codeobj)
+
+    def test_shadowed_stdlib_module(self):
+        module_name = 'mailbox'
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            shadow_module = osp.join(tmp_dir, f'{module_name}.py')
+            with open(shadow_module, 'w') as f:
+                f.write('VALUE = 1\n')
+
+            old_module = sys.modules.pop(module_name, None)
+            sys.path.insert(0, tmp_dir)
+            importlib.invalidate_caches()
+            try:
+                self.assertFalse(_is_builtin_module(module_name))
+            finally:
+                sys.path.remove(tmp_dir)
+                if old_module is not None:
+                    sys.modules[module_name] = old_module
+                importlib.invalidate_caches()
 
 
 class TestLazyObject(TestCase):

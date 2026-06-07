@@ -125,3 +125,9 @@ work_dirs/
 .ccg
 .claude
 CLAUDE.md
+
+# Test temp files
+.aim
+.dvc
+.dvcignore
+dvc.yaml

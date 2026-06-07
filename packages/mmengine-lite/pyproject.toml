@@ -7,7 +7,7 @@ name = "mmengine-lite"
 dynamic = ["version"]
 description = "Lite distribution of MMEngine"
 readme = "README.md"
-requires-python = ">=3.7,<3.11"
+requires-python = ">=3.8,<3.11"
 license = { file = "LICENSE" }
 authors = [
     { name = "MMEngine Authors", email = "openmmlab@gmail.com" },
@@ -17,7 +17,6 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",

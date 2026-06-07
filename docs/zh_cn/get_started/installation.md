@@ -2,7 +2,7 @@
 
 ## 环境依赖
 
-- Python 3.7+
+- Python 3.8+
 - PyTorch 1.6+
 - CUDA 9.2+
 - GCC 5.4+
@@ -12,7 +12,7 @@
 1. 使用 conda 新建虚拟环境，并进入该虚拟环境；
 
    ```bash
-   conda create -n open-mmlab python=3.7 -y
+   conda create -n open-mmlab python=3.8 -y
    conda activate open-mmlab
    ```
 

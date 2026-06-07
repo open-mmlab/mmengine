@@ -7,7 +7,7 @@ name = "mmengine"
 dynamic = ["version"]
 description = "Engine of OpenMMLab projects"
 readme = "README.md"
-requires-python = ">=3.7,<3.11"
+requires-python = ">=3.8,<3.11"
 license = { file = "LICENSE" }
 authors = [
     { name = "MMEngine Authors", email = "openmmlab@gmail.com" },
@@ -17,7 +17,6 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -39,21 +38,6 @@ Homepage = "https://github.com/open-mmlab/mmengine"
 Repository = "https://github.com/open-mmlab/mmengine"
 
 [project.optional-dependencies]
-all = [
-    "aim<=3.17.5; sys_platform != 'win32'",
-    "bitsandbytes",
-    "clearml",
-    "coverage",
-    "dadaptation",
-    "dvclive",
-    "lion-pytorch",
-    "lmdb",
-    "mlflow",
-    "parameterized",
-    "pydantic==1.10.9",
-    "pytest",
-    "transformers",
-]
 tests = [
     "aim<=3.17.5; sys_platform != 'win32'",
     "bitsandbytes",
@@ -62,20 +46,74 @@ tests = [
     "dadaptation",
     "dvclive",
     "lion-pytorch",
+    "expecttest",
     "lmdb",
     "mlflow",
+    "numpy",
+    "opencv-python-headless",
     "parameterized",
     "pydantic==1.10.9",
-    "pytest",
+    "pytest<9",
+    "setuptools",
+    "torch>=2.1,<2.2; python_version >= '3.8' and python_version < '3.10'",
+    "torch>=2.6; python_version >= '3.10'",
+    "torchvision>=0.16,<0.17; python_version >= '3.8' and python_version < '3.10'",
+    "torchvision>=0.21; python_version >= '3.10'",
+    "transformers",
+]
+all = [
+    "aim<=3.17.5; sys_platform != 'win32'",
+    "bitsandbytes",
+    "clearml",
+    "coverage",
+    "dadaptation",
+    "dvclive",
+    "lion-pytorch",
+    "expecttest",
+    "lmdb",
+    "mlflow",
+    "numpy",
+    "opencv-python-headless",
+    "parameterized",
+    "pydantic==1.10.9",
+    "pytest<9",
+    "setuptools",
+    "torch>=2.1,<2.2; python_version >= '3.8' and python_version < '3.10'",
+    "torch>=2.6; python_version >= '3.10'",
+    "torchvision>=0.16,<0.17; python_version >= '3.8' and python_version < '3.10'",
+    "torchvision>=0.21; python_version >= '3.10'",
     "transformers",
 ]
 
 [dependency-groups]
+test = [
+    "aim<=3.17.5; sys_platform != 'win32'",
+    "bitsandbytes",
+    "clearml",
+    "coverage",
+    "dadaptation",
+    "dvclive",
+    "lion-pytorch",
+    "expecttest",
+    "lmdb",
+    "mlflow",
+    "numpy",
+    "opencv-python-headless",
+    "parameterized",
+    "pydantic==1.10.9",
+    "pytest<9",
+    "setuptools",
+    "torch>=2.1,<2.2; python_version >= '3.8' and python_version < '3.10'",
+    "torch>=2.6; python_version >= '3.10'",
+    "torchvision>=0.16,<0.17; python_version >= '3.8' and python_version < '3.10'",
+    "torchvision>=0.21; python_version >= '3.10'",
+    "transformers",
+]
 test-lite = [
     "lmdb",
     "opencv-python-headless",
     "parameterized",
-    "pytest",
+    "pytest<9",
     "setuptools",
 ]
 docs = [
@@ -88,8 +126,10 @@ docs = [
     "sphinx-tabs",
     "sphinx_markdown_tables",
     "tabulate",
-    "torch",
-    "torchvision",
+    "torch>=2.1,<2.2; python_version >= '3.8' and python_version < '3.10'",
+    "torch>=2.6; python_version >= '3.10'",
+    "torchvision>=0.16,<0.17; python_version >= '3.8' and python_version < '3.10'",
+    "torchvision>=0.21; python_version >= '3.10'",
     "urllib3<2.0.0",
 ]
 docs-extra = [
@@ -104,6 +144,7 @@ lint = [
 default-groups = []
 
 [tool.uv.dependency-groups]
+test = { requires-python = ">=3.8" }
 test-lite = { requires-python = ">=3.8" }
 docs = { requires-python = ">=3.8" }
 docs-extra = { requires-python = ">=3.8" }
