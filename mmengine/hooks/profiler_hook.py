@@ -134,6 +134,9 @@ class ProfilerHook(Hook):
             self.activities.append(profiler.ProfilerActivity.CPU)
         if activity_with_cuda:
             self.activities.append(profiler.ProfilerActivity.CUDA)
+        if not self.activities:
+            raise ValueError(
+                'At least one profiler activity should be enabled.')
 
         if schedule is not None:
             assert isinstance(schedule, dict), '``schedule`` should be a dict.'

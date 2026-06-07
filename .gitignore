@@ -121,3 +121,13 @@ work_dirs/
 *.pth
 *.py~
 *.sh~
+
+.ccg
+.claude
+CLAUDE.md
+
+# Test temp files
+.aim
+.dvc
+.dvcignore
+dvc.yaml

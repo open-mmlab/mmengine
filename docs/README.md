@@ -10,7 +10,7 @@
 2. Install the building dependencies of documentation
 
    ```bash
-   pip install -r requirements/docs.txt
+   uv sync --group docs
    ```
 
 3. Change directory to `docs/en` or `docs/zh_cn`
@@ -22,7 +22,7 @@
 4. Build documentation
 
    ```bash
-   make html
+   uv run make html
    ```
 
 5. Open `_build/html/index.html` with browser

@@ -18,7 +18,9 @@ RUN apt-get update && apt-get install -y git \
 RUN git clone https://github.com/open-mmlab/mmengine.git /mmengine
 WORKDIR /mmengine
 RUN git rev-parse --short HEAD
-RUN pip install --no-cache-dir -e .[all] -v && pip install pre-commit && pre-commit install
+RUN pip install --no-cache-dir uv \
+    && uv sync --all-extras --group test-lite --group lint \
+    && uv run pre-commit install
 
 # Verify the installation
-RUN python -c 'from mmengine.utils.dl_utils import collect_env;print(collect_env())'
+RUN uv run python -c 'from mmengine.utils.dl_utils import collect_env;print(collect_env())'

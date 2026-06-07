@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  UV_NO_PROGRESS: "1"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - run: uv lock --check
+
+      - run: uv sync --frozen --group lint --python 3.10
+
+      - run: uv run --frozen pre-commit run --all-files
+
+      - run: uv run --frozen interrogate -v --ignore-init-method --ignore-magic --ignore-module --ignore-nested-functions --ignore-regex "__repr__" --fail-under 80 mmengine
+
+  tests:
+    name: tests / py${{ matrix.python-version }} / full
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libglib2.0-0
+
+      - run: uv sync --frozen --group test --python ${{ matrix.python-version }}
+
+      - run: uv run --frozen python -c "import torch, torchvision; print('torch', torch.__version__); print('torchvision', torchvision.__version__)"
+
+      - run: uv run --frozen python -m coverage run --branch --source mmengine -m pytest tests/ --ignore tests/test_dist
+
+      - run: uv run --frozen python -m coverage report -m
+
+  build:
+    name: build / wheels
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    needs: [lint, tests]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Build mmengine wheel
+        run: |
+          rm -rf wheelhouse
+          uv build --no-sources --wheel --out-dir wheelhouse
+
+      - name: Prepare mmengine-lite source tree
+        run: python scripts/build_lite.py --prepare "${RUNNER_TEMP}/mmengine-lite-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+      - name: Build mmengine-lite wheel
+        run: >
+          uv build --no-sources --wheel --out-dir wheelhouse
+          "${RUNNER_TEMP}/mmengine-lite-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+      - name: Verify wheels on supported Python versions
+        id: wheels
+        run: |
+          mmengine_wheel=$(find wheelhouse -name 'mmengine-[0-9]*.whl' -print -quit)
+          mmengine_lite_wheel=$(find wheelhouse -name 'mmengine_lite-*.whl' -print -quit)
+          mmengine_wheel_name=$(basename "${mmengine_wheel}")
+          mmengine_lite_wheel_name=$(basename "${mmengine_lite_wheel}")
+          {
+            echo "mmengine_wheel=${mmengine_wheel}"
+            echo "mmengine_lite_wheel=${mmengine_lite_wheel}"
+            echo "mmengine_wheel_name=${mmengine_wheel_name}"
+            echo "mmengine_lite_wheel_name=${mmengine_lite_wheel_name}"
+          } >> "${GITHUB_OUTPUT}"
+          for python_version in 3.8 3.9 3.10 3.11 3.12 3.13; do
+            uv run --isolated --no-project --python "${python_version}" --with "${mmengine_wheel}" python -c "import importlib.metadata as metadata; import mmengine; print(mmengine.__version__); print(metadata.version('mmengine'))"
+            uv run --isolated --no-project --python "${python_version}" --with "${mmengine_lite_wheel}" python -c "import importlib.metadata as metadata; import mmengine; print(mmengine.__version__); print(metadata.version('mmengine-lite'))"
+          done
+
+      - name: Upload mmengine wheel
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: ${{ steps.wheels.outputs.mmengine_wheel_name }}
+          path: ${{ steps.wheels.outputs.mmengine_wheel }}
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          overwrite: true
+
+      - name: Upload mmengine-lite wheel
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: ${{ steps.wheels.outputs.mmengine_lite_wheel_name }}
+          path: ${{ steps.wheels.outputs.mmengine_lite_wheel }}
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          overwrite: true

@@ -1474,7 +1474,7 @@ class Config:
         cfg_dict = self.to_dict()
         text = _format_dict(cfg_dict, outest_level=True)
         if self._format_python_code:
-            # copied from setup.cfg
+            # Keep this in sync with pyproject.toml.
             yapf_style = dict(
                 based_on_style='pep8',
                 blank_line_before_nested_class_or_def=True,

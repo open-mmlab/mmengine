@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from pathlib import Path
 from unittest import TestCase
+from unittest.mock import patch
 
 import cv2
 import numpy as np
@@ -31,21 +32,32 @@ class TestHTTPBackend(TestCase):
         cls.text_url = (
             'https://download.openmmlab.com/mmengine/test-data/filelist.txt')
         cls.test_data_dir = Path(__file__).parent.parent.parent / 'data'
+        cls.img_path = cls.test_data_dir / 'color.jpg'
         cls.text_path = cls.test_data_dir / 'filelist.txt'
 
     def test_get(self):
         backend = HTTPBackend()
-        img_bytes = backend.get(self.img_url)
+        with patch('mmengine.fileio.backends.http_backend.urlopen') as urlopen:
+            urlopen.return_value.read.return_value = self.img_path.read_bytes()
+            img_bytes = backend.get(self.img_url)
+            urlopen.assert_called_once_with(self.img_url)
         img = imfrombytes(img_bytes)
         self.assertEqual(img.shape, self.img_shape)
 
     def test_get_text(self):
         backend = HTTPBackend()
-        text = backend.get_text(self.text_url)
-        self.assertEqual(self.text_path.open('r').read(), text)
+        expected_text = self.text_path.read_text()
+        with patch('mmengine.fileio.backends.http_backend.urlopen') as urlopen:
+            urlopen.return_value.read.return_value = expected_text.encode()
+            text = backend.get_text(self.text_url)
+            urlopen.assert_called_once_with(self.text_url)
+        self.assertEqual(expected_text, text)
 
     def test_get_local_path(self):
         backend = HTTPBackend()
-        with backend.get_local_path(self.img_url) as filepath:
-            img = imread(filepath)
-            self.assertEqual(img.shape, self.img_shape)
+        with patch('mmengine.fileio.backends.http_backend.urlopen') as urlopen:
+            urlopen.return_value.read.return_value = self.img_path.read_bytes()
+            with backend.get_local_path(self.img_url) as filepath:
+                img = imread(filepath)
+            urlopen.assert_called_once_with(self.img_url)
+        self.assertEqual(img.shape, self.img_shape)

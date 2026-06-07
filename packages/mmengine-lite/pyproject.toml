@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling>=1.17.1,<1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mmengine-lite"
+dynamic = ["version"]
+description = "Lite distribution of MMEngine"
+readme = "README.md"
+requires-python = ">=3.8,<3.14"
+license = { file = "LICENSE" }
+authors = [
+    { name = "MMEngine Authors", email = "openmmlab@gmail.com" },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "addict",
+    "numpy",
+    "packaging",
+    "opencv-python-headless",
+    "pyyaml",
+    "regex; sys_platform == 'win32'",
+    "rich",
+    "termcolor",
+    "yapf",
+]
+
+[project.urls]
+Homepage = "https://github.com/open-mmlab/mmengine"
+Repository = "https://github.com/open-mmlab/mmengine"
+
+[project.optional-dependencies]
+tests-lite = [
+    "lmdb<2; python_version < '3.9'",
+    "lmdb; python_version >= '3.9'",
+    "opencv-python-headless",
+    "parameterized",
+    "pytest<9",
+    "setuptools",
+]
+
+[tool.hatch.version]
+path = "mmengine/version.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/CITATION.cff",
+    "/LICENSE",
+    "/README.md",
+    "/README_zh-CN.md",
+    "/mmengine",
+    "/pyproject.toml",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["mmengine"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"mmengine/hub/openmmlab.json" = "mmengine/hub/openmmlab.json"
+"mmengine/hub/deprecated.json" = "mmengine/hub/deprecated.json"
+"mmengine/hub/mmcls.json" = "mmengine/hub/mmcls.json"
+"mmengine/hub/torchvision_0.12.json" = "mmengine/hub/torchvision_0.12.json"

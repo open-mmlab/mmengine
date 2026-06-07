@@ -688,7 +688,7 @@ print(cfg.train_cfg)
 {'type': 'EpochBasedTrainLoop', 'max_epochs': 12, 'val_interval': 1, '_scope_': 'mmdet'}
 ```
 
-`Config` will parse `mmdet::` to find mmdet package and inherits the specified configuration file. Actually, as long as the `setup.py` of the repository(package) conforms to [MMEngine Installation specification](todo), `Config` can use `{package_name}::` to inherit the specific configuration file.
+`Config` will parse `mmdet::` to find mmdet package and inherits the specified configuration file. Actually, as long as the `pyproject.toml` metadata and package data of the repository(package) conform to [MMEngine Installation specification](todo), `Config` can use `{package_name}::` to inherit the specific configuration file.
 
 ### Get configuration files across repository
 

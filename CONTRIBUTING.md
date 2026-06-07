@@ -59,14 +59,14 @@ upstream	git@github.com:open-mmlab/mmengine (push)
 You should configure [pre-commit](https://pre-commit.com/#intro) in the local development environment to make sure the code style matches that of OpenMMLab. **Note**: The following code should be executed under the mmengine directory.
 
 ```shell
-pip install -U pre-commit
-pre-commit install
+uv sync --group lint
+uv run pre-commit install
 ```
 
 Check that pre-commit is configured successfully, and install the hooks defined in `.pre-commit-config.yaml`.
 
 ```shell
-pre-commit run --all-files
+uv run pre-commit run --all-files
 ```
 
 <img src="https://user-images.githubusercontent.com/57566630/173660750-3df20a63-cb66-4d33-a986-1f643f1d8aaf.png" width="1200">
@@ -107,10 +107,10 @@ git pull upstream master
 
   ```shell
   # Pass all unit tests
-  pytest tests
+  uv run pytest tests
 
   # Pass the unit test of runner
-  pytest tests/test_runner/test_runner.py
+  uv run pytest tests/test_runner/test_runner.py
   ```
 
   If the unit test fails for lack of dependencies, you can install the dependencies referring to the [guidance](#unit-test)
@@ -182,8 +182,8 @@ If you are very good at handling conflicts, then you can use rebase to resolve c
 We should also make sure the committed code will not decrease the coverage of unit test, we could run the following command to check the coverage of unit test:
 
 ```shell
-python -m coverage run -m pytest /path/to/test_file
-python -m coverage html
+uv run python -m coverage run -m pytest /path/to/test_file
+uv run python -m coverage html
 # check file in htmlcov/index.html
 ```
 
@@ -192,10 +192,10 @@ python -m coverage html
 If the documents are modified/added, we should check the rendering result. We could install the dependencies and run the following command to render the documents and check the results:
 
 ```shell
-pip install -r requirements/docs.txt
+uv sync --group docs
 cd docs/zh_cn/
 # or docs/en
-make html
+uv run make html
 # check file in ./docs/zh_cn/_build/html/index.html
 ```
 
@@ -212,10 +212,10 @@ We use the following tools for linting and formatting:
 - [mdformat](https://github.com/executablebooks/mdformat): Mdformat is an opinionated Markdown formatter that can be used to enforce a consistent style in Markdown files.
 - [docformatter](https://github.com/myint/docformatter): A formatter to format docstring.
 
-Style configurations of yapf and isort can be found in [setup.cfg](./setup.cfg).
+Style configurations of yapf and isort can be found in [pyproject.toml](./pyproject.toml).
 
 We use [pre-commit hook](https://pre-commit.com/) that checks and formats for `flake8`, `yapf`, `isort`, `trailing whitespaces`, `markdown files`,
-fixes `end-of-files`, `double-quoted-strings`, `python-encoding-pragma`, `mixed-line-ending`, sorts `requirments.txt` automatically on every commit.
+fixes `end-of-files`, `double-quoted-strings`, `python-encoding-pragma`, and `mixed-line-ending` on every commit.
 The config for a pre-commit hook is stored in [.pre-commit-config](./.pre-commit-config.yaml).
 
 ### PR Specs

@@ -6,7 +6,7 @@ import tempfile
 from contextlib import contextmanager
 from copy import deepcopy
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import cv2
 import numpy as np
@@ -591,22 +591,34 @@ class TestFileClient:
         with pytest.raises(Exception):
             http_backend.get_text(str(self.text_path))
 
-        # input url is http image
-        img_bytes = http_backend.get(img_url)
-        img = imfrombytes(img_bytes)
-        assert img.shape == self.img_shape
+        img_content = self.img_path.read_bytes()
+        text_content = self.text_path.read_bytes()
+        with patch('mmengine.fileio.backends.http_backend.urlopen') as urlopen:
+            urlopen.return_value.read.side_effect = [
+                img_content, text_content, img_content
+            ]
 
-        # input url is http text
-        value_buf = http_backend.get_text(text_url)
-        assert self.text_path.open('r').read() == value_buf
-
-        # test `_get_local_path`
-        # exist the with block and path will be released
-        with http_backend.get_local_path(img_url) as path:
-            img_bytes = Path(path).open('rb').read()
+            # input url is http image
+            img_bytes = http_backend.get(img_url)
             img = imfrombytes(img_bytes)
             assert img.shape == self.img_shape
-        assert not osp.isfile(path)
+
+            # input url is http text
+            value_buf = http_backend.get_text(text_url)
+            assert self.text_path.open('r').read() == value_buf
+
+            # test `_get_local_path`
+            # exist the with block and path will be released
+            with http_backend.get_local_path(img_url) as path:
+                img_bytes = Path(path).open('rb').read()
+                img = imfrombytes(img_bytes)
+                assert img.shape == self.img_shape
+            assert not osp.isfile(path)
+            assert urlopen.call_args_list == [
+                call(img_url),
+                call(text_url),
+                call(img_url),
+            ]
 
     def test_new_magic_method(self):
 

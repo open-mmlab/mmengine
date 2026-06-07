@@ -700,7 +700,7 @@ print(cfg.train_cfg)
 {'type': 'EpochBasedTrainLoop', 'max_epochs': 12, 'val_interval': 1, '_scope_': 'mmdet'}
 ```
 
-通过指定 `mmdet::`，Config 类会去检索 mmdet 包中的配置文件目录，并继承指定的配置文件。实际上，只要算法库的 `setup.py` 文件符合 [MMEngine 安装规范](todo)，在正确安装算法库以后，新的项目就可以使用上述用法去继承已有算法库的配置文件而无需拷贝。
+通过指定 `mmdet::`，Config 类会去检索 mmdet 包中的配置文件目录，并继承指定的配置文件。实际上，只要算法库的 `pyproject.toml` 元数据和包数据符合 [MMEngine 安装规范](todo)，在正确安装算法库以后，新的项目就可以使用上述用法去继承已有算法库的配置文件而无需拷贝。
 
 ### 跨项目获取配置文件
 

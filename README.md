@@ -19,7 +19,7 @@
   <div>&nbsp;</div>
 
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mmengine)](https://pypi.org/project/mmengine/)
-[![pytorch](https://img.shields.io/badge/pytorch-1.6~2.1-yellow)](#installation)
+[![pytorch](https://img.shields.io/badge/pytorch-2.1%2B-yellow)](#installation)
 [![PyPI](https://img.shields.io/pypi/v/mmengine)](https://pypi.org/project/mmengine)
 [![license](https://img.shields.io/github/license/open-mmlab/mmengine.svg)](https://github.com/open-mmlab/mmengine/blob/main/LICENSE)
 
@@ -99,10 +99,11 @@ MMEngine is a foundational library for training deep learning models based on Py
 <details>
 <summary>Supported PyTorch Versions</summary>
 
-| MMEngine           | PyTorch      | Python         |
-| ------------------ | ------------ | -------------- |
-| main               | >=1.6 \<=2.1 | >=3.8, \<=3.11 |
-| >=0.9.0, \<=0.10.4 | >=1.6 \<=2.1 | >=3.8, \<=3.11 |
+| MMEngine           | PyTorch      | Python          |
+| ------------------ | ------------ | --------------- |
+| main               | >=2.1, \<2.2 | >=3.8, \<3.10   |
+| main               | >=2.6        | >=3.10, \<=3.13 |
+| >=0.9.0, \<=0.10.4 | >=1.6 \<=2.1 | >=3.8, \<=3.11  |
 
 </details>
 

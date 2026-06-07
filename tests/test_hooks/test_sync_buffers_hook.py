@@ -1,15 +1,29 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import unittest
 from unittest.mock import MagicMock
 
 import torch
 import torch.distributed as torch_dist
 import torch.nn as nn
-from torch.testing._internal.common_distributed import DistributedTestBase
 
 from mmengine.dist import all_gather
 from mmengine.hooks import SyncBuffersHook
 from mmengine.registry import MODELS
 from mmengine.testing.runner_test_case import RunnerTestCase, ToyModel
+from mmengine.utils import digit_version
+
+
+class _UnavailableDistributedTestBase:
+    pass
+
+
+try:
+    from torch.testing._internal.common_distributed import DistributedTestBase
+    DISTRIBUTED_TEST_BASE_AVAILABLE = digit_version(
+        torch.__version__) >= digit_version('2.6.0')
+except ImportError:
+    DistributedTestBase = _UnavailableDistributedTestBase
+    DISTRIBUTED_TEST_BASE_AVAILABLE = False
 
 
 class ToyModuleWithNorm(ToyModel):
@@ -26,6 +40,9 @@ class ToyModuleWithNorm(ToyModel):
         return super().init_weights()
 
 
+@unittest.skipIf(not DISTRIBUTED_TEST_BASE_AVAILABLE
+                 or torch.cuda.device_count() < 2,
+                 'requires DistributedTestBase and at least 2 CUDA devices')
 class TestSyncBuffersHook(DistributedTestBase, RunnerTestCase):
 
     def test_sync_buffers_hook(self):
