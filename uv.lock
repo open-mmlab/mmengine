@@ -3742,27 +3742,32 @@ wheels = [
 
 [[package]]
 name = "lmdb"
-version = "2.1.1"
+version = "1.8.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.8.1' and python_full_version < '3.9'",
     "python_full_version < '3.8.1'",
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5a/4e/d78a06af228216102fcb4b703f4b6a2f565978224d5623e20e02d90aeed3/lmdb-2.1.1.tar.gz", hash = "sha256:0317062326ae2f66e3bbde6400907651ea58c27a250097511a28d13c467fa5f1", size = 913160, upload-time = "2026-03-19T13:56:26.139Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/23/19/392f028e7ebcc1cc8212fe8a315a909b7a556278456f0bab9234d3a3b665/lmdb-1.8.1.tar.gz", hash = "sha256:44ef24033929e9cc227a7e17287473c452b462d716f118db885c667c80f57429", size = 886349, upload-time = "2026-03-12T23:21:48.42Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1f/dd/7d9656f5a646dd5ac894170f20c5c16142def843ac44a4331f4230e4dce8/lmdb-2.1.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:e39e54b810833ad4e33358e339bb49c2ed193b0ef3bb731b816f5fa103a864db", size = 107742, upload-time = "2026-03-19T13:55:31.313Z" },
-    { url = "https://files.pythonhosted.org/packages/fd/f1/50d03d174d761d6cfea3fa4b92c520814a7d90762c3cf7524d05bbe2c2d2/lmdb-2.1.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:a48a6ff641b901875b481a754f6d3b8137888c652f0fcdad27fc9e2685aa95f5", size = 106755, upload-time = "2026-03-19T13:55:32.989Z" },
-    { url = "https://files.pythonhosted.org/packages/83/2d/193405da2bae67ecb535262765dfd28ebe209cc26fe846d23db1923a49bd/lmdb-2.1.1-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:13ba4301a0046108beb83b733244454e392c7a4a9f492cc55463f28a23d591f9", size = 312660, upload-time = "2026-03-19T13:55:34.503Z" },
-    { url = "https://files.pythonhosted.org/packages/03/91/da2448c7280c11c56bafb8ef72088530535fbd957b3609cba61f86c8845b/lmdb-2.1.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:de2a1b2014a6511266df082c7a3b1975c9c7f603afd9b6d909f21e06dbd79ef4", size = 314693, upload-time = "2026-03-19T13:55:36.458Z" },
-    { url = "https://files.pythonhosted.org/packages/bc/f9/4784b30c273b1a22e2ff4e41db32c3322ed5e82541c6435959393a15900e/lmdb-2.1.1-cp310-cp310-win_amd64.whl", hash = "sha256:701881f7287dd8a116820f7bfff78eebe23f5632480a0bdac417945d05a2629d", size = 105003, upload-time = "2026-03-19T13:55:37.82Z" },
-    { url = "https://files.pythonhosted.org/packages/32/c3/48a901874ed6720a6fe00d3dd36561ac2a0b2b1267a967852c5a522e2596/lmdb-2.1.1-cp310-cp310-win_arm64.whl", hash = "sha256:06364b2637ea09a746a3e8dd07d0d94e082851263a68dd9c9e2f1054cdb8182b", size = 98784, upload-time = "2026-03-19T13:55:39.368Z" },
-    { url = "https://files.pythonhosted.org/packages/2a/7b/209946d72a9312ee17ec277f5b99a148785bf34206aca61ffd2c7a9f3c96/lmdb-2.1.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:e73aa92f138a50b30ebaf73662eac78137f638524096ed287d786d9d12544707", size = 107746, upload-time = "2026-03-19T13:56:15.271Z" },
-    { url = "https://files.pythonhosted.org/packages/b5/d4/cca4dc0b70919a83e2fc01ee4959adf55ffcf5501b3bf2dbdaf5015bb553/lmdb-2.1.1-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:9ce228e7b0644043fa0ac5d418b5b4d332c74dd30d401618838e0fdfccc679ad", size = 106755, upload-time = "2026-03-19T13:56:16.672Z" },
-    { url = "https://files.pythonhosted.org/packages/95/34/b622bc677b5dd564957eee542a327fe1c2b44e53af27b7c6814b4a355680/lmdb-2.1.1-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:627700f90bc12e03b8c30d47190dde6c23f0a0775290a7bddca227b6634b346b", size = 312272, upload-time = "2026-03-19T13:56:18.195Z" },
-    { url = "https://files.pythonhosted.org/packages/56/f7/2ee0ba985baabd369ce385d2d2e06cc4e0c738730afb24c5a651b8af7d1e/lmdb-2.1.1-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:117b452ad17a072c4b9f9a450a3a4670db56d3933777d3f02851262e55b17bd8", size = 314309, upload-time = "2026-03-19T13:56:20.089Z" },
-    { url = "https://files.pythonhosted.org/packages/34/58/f9e15a94562969c7f12b336ddedcb5eaddb41af0cbd0e7d292754dff0ec7/lmdb-2.1.1-cp39-cp39-win_amd64.whl", hash = "sha256:9254ef68cd9efc5a9d30e40a92eb1080dd2bbe330ffd78274c28824e9e742b25", size = 105120, upload-time = "2026-03-19T13:56:21.532Z" },
-    { url = "https://files.pythonhosted.org/packages/92/ac/8e33919e88d1b4a81ed99c4ee75880cf7e5c47d249ebf82b8aae4037d4dd/lmdb-2.1.1-cp39-cp39-win_arm64.whl", hash = "sha256:ffdeeeb196a6f6b50537d7bebaf0cfa2f831cad359cb9309570175c9da06d105", size = 98814, upload-time = "2026-03-19T13:56:22.835Z" },
-    { url = "https://files.pythonhosted.org/packages/a2/c0/f617cf8a6062b3343151ed45b5e093daff8ec2107d72ab637ffc9bd23970/lmdb-2.1.1-pp310-pypy310_pp73-manylinux_2_38_x86_64.whl", hash = "sha256:8ff72667a8cef22a71fbd91b4c078b94ab45f38881b0bb64481b4477fc779d80", size = 91155, upload-time = "2026-03-19T13:56:24.204Z" },
+    { url = "https://files.pythonhosted.org/packages/74/51/723153e9ca3286eb36a59b69f62fedfbfe13cc2c3d33a6c0bea171c40273/lmdb-1.8.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:1102b5e75ca690387ce0b74dfe1fb048c3eb0ef960fd2b4721caa17c2eb8fa94", size = 101115, upload-time = "2026-03-12T23:20:50.549Z" },
+    { url = "https://files.pythonhosted.org/packages/1a/4a/721ec0493a312f3c5930a36025429e15c0f94b05aa9ad722e41846c3d316/lmdb-1.8.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:bdd93e49b1b0be27dbccfd194dfdffbd72079410e353e920dead924baac2d6ea", size = 99543, upload-time = "2026-03-12T23:20:51.671Z" },
+    { url = "https://files.pythonhosted.org/packages/40/c3/25549456f1a8483401e344a7d30c085e4b2d7d773e4a3ecf48b429e937af/lmdb-1.8.1-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:5419f17a5d10668f5527c50257dcf748e86e879417648767a3b1be519969bdb2", size = 292959, upload-time = "2026-03-12T23:20:52.93Z" },
+    { url = "https://files.pythonhosted.org/packages/f0/e8/ff37c10fe5cf51fab00455d5e8f245e016b782248627c6d06e5ba4998884/lmdb-1.8.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:0a4b742c8128848e784f595c4a90fde1065ab4c56481824ddff4c8b7dfa14191", size = 292703, upload-time = "2026-03-12T23:20:54.295Z" },
+    { url = "https://files.pythonhosted.org/packages/06/dd/b574f94c4ed3dab345cfd3121dd7515939fe10aeb7dc0823a2ccb8ba32e0/lmdb-1.8.1-cp310-cp310-win_amd64.whl", hash = "sha256:79523c55272a049feef8de995ca7a6c4b644bfc634018869804ab3ed04f66b1d", size = 99583, upload-time = "2026-03-12T23:20:55.736Z" },
+    { url = "https://files.pythonhosted.org/packages/f0/3a/524c18408c5d822873fdb4fa80fdf7102beee565c92207e4cafa56648a99/lmdb-1.8.1-cp310-cp310-win_arm64.whl", hash = "sha256:b1b336ccbc047d6d9cffc90ba2ffaa88e61dae33f78aeb35825cfcca34553c31", size = 94350, upload-time = "2026-03-12T23:20:56.774Z" },
+    { url = "https://files.pythonhosted.org/packages/e8/7f/4686a064343fca850536f878000534c9dbc3426df3d0540b2f3e9da576ef/lmdb-1.8.1-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:029d728e2e0c1a180355a4f770a35498c7f26ff3c9d9ea25d0065efb6444b458", size = 100906, upload-time = "2026-03-12T23:21:34.625Z" },
+    { url = "https://files.pythonhosted.org/packages/83/52/1ce9ce4a83793fc4bf21bb282a10bbb23e5aca99644890a3e73ff32df0ae/lmdb-1.8.1-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:aba381617771a512ac4cd53a9bc2979e0fc74772028b267a33f09dc5f6e9a18a", size = 99328, upload-time = "2026-03-12T23:21:35.63Z" },
+    { url = "https://files.pythonhosted.org/packages/53/c6/f78c7cd728e36b82286d9c285ba60184bdab8f4d6bcdd4184bcb5eeeda8e/lmdb-1.8.1-cp38-cp38-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:463fe5fb0300ce7dc85295cacda03cd27fe8f294f66c92bd62de10c36c07434b", size = 293232, upload-time = "2026-03-12T23:21:36.744Z" },
+    { url = "https://files.pythonhosted.org/packages/0f/15/df07e605e5abe9cf0fe527d3905237270d6222c5ea257d5bbe2098f2c6e7/lmdb-1.8.1-cp38-cp38-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:9953de2f1831e349f24abc6db74e0b4af8d0ed7f14874e396c62e5eb2d4109b8", size = 292924, upload-time = "2026-03-12T23:21:37.857Z" },
+    { url = "https://files.pythonhosted.org/packages/f9/33/52fd07a36a2b8897f424eebdff1983fdba25e228321694c5357abdf5df45/lmdb-1.8.1-cp38-cp38-win_amd64.whl", hash = "sha256:dbd41dc63a04ac7d0232203130eef98382d33efa3847a1579d45c080b02d563e", size = 99438, upload-time = "2026-03-12T23:21:39.016Z" },
+    { url = "https://files.pythonhosted.org/packages/be/ae/38ef071187ab8b655e9e28ab2c1d0bca8225952654fc9d22d39e13a4ca5c/lmdb-1.8.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:d42b2f279651a1215825c16c052200d87062d0c91ef2137da16898dd5a077ce2", size = 101130, upload-time = "2026-03-12T23:21:40.087Z" },
+    { url = "https://files.pythonhosted.org/packages/87/58/62118e1c66d528f30aa6abaa17126e09a49fdb0987fe4f63a1791899f9da/lmdb-1.8.1-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:01b4cb913bf13ac3a90a890379cd3c5d951bd3c12e4fc4a954cd47bd44e5fff7", size = 99546, upload-time = "2026-03-12T23:21:41.102Z" },
+    { url = "https://files.pythonhosted.org/packages/97/88/34c32942f00edfdcbba1b5aa0c3ec5438060965c3e8dae465f849150d28f/lmdb-1.8.1-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:8270ead70776cdf3fcfbda81c704be804abe0f6ea17c7687c9b8d812e994a138", size = 292498, upload-time = "2026-03-12T23:21:42.266Z" },
+    { url = "https://files.pythonhosted.org/packages/a8/b2/eba0519dbb070b512c35e8ca80fb009f65b32aa414b498af1d2de23e13df/lmdb-1.8.1-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:91141755034ff8052120f2cb0979ce2a8487684f28fab402212656340227f1d1", size = 292269, upload-time = "2026-03-12T23:21:43.704Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/2f/b8f1cdaaa58af72f23f2ed80c6712902c7a4c531004eeedc4f9e8776beaf/lmdb-1.8.1-cp39-cp39-win_amd64.whl", hash = "sha256:6c47f26ac264e534bae4331cf7e544cd6256b8aac493da0b4e22be99307f632f", size = 99666, upload-time = "2026-03-12T23:21:45.038Z" },
+    { url = "https://files.pythonhosted.org/packages/b4/b0/9c59c7a074a54d12e923f0f0841b4ba0b77085136fc910fb1c4be997b7c8/lmdb-1.8.1-cp39-cp39-win_arm64.whl", hash = "sha256:f1ccf05b1bc31952475fe46cb2f6e4981215375620dfaad2818f4592817c2206", size = 94394, upload-time = "2026-03-12T23:21:46.333Z" },
+    { url = "https://files.pythonhosted.org/packages/44/d3/961e79d78e71c7b69157ed924d60c5f5cc6c96034074a6f01a144842057a/lmdb-1.8.1-pp310-pypy310_pp73-manylinux_2_38_x86_64.whl", hash = "sha256:556eb811b480a5f2e226378fb6ca11d9e9655446beeaf5094a5dac0feb9f9921", size = 87319, upload-time = "2026-03-12T23:21:47.297Z" },
 ]
 
 [[package]]
@@ -4221,7 +4226,7 @@ all = [
     { name = "expecttest", version = "0.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8.1'" },
     { name = "lion-pytorch", version = "0.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "lion-pytorch", version = "0.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
-    { name = "lmdb", version = "2.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "lmdb", version = "1.8.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "lmdb", version = "2.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "mlflow" },
     { name = "numpy", version = "1.24.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
@@ -4254,7 +4259,7 @@ tests = [
     { name = "expecttest", version = "0.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8.1'" },
     { name = "lion-pytorch", version = "0.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "lion-pytorch", version = "0.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
-    { name = "lmdb", version = "2.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "lmdb", version = "1.8.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "lmdb", version = "2.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "mlflow" },
     { name = "numpy", version = "1.24.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
@@ -4316,7 +4321,7 @@ test = [
     { name = "expecttest", version = "0.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8.1'" },
     { name = "lion-pytorch", version = "0.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "lion-pytorch", version = "0.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
-    { name = "lmdb", version = "2.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "lmdb", version = "1.8.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "lmdb", version = "2.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "mlflow" },
     { name = "numpy", version = "1.24.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
@@ -4336,7 +4341,7 @@ test = [
     { name = "transformers" },
 ]
 test-lite = [
-    { name = "lmdb", version = "2.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "lmdb", version = "1.8.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "lmdb", version = "2.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "opencv-python-headless", version = "4.11.0.86", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "opencv-python-headless", version = "4.13.0.92", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
@@ -4366,8 +4371,10 @@ requires-dist = [
     { name = "expecttest", marker = "extra == 'tests'" },
     { name = "lion-pytorch", marker = "extra == 'all'" },
     { name = "lion-pytorch", marker = "extra == 'tests'" },
-    { name = "lmdb", marker = "extra == 'all'" },
-    { name = "lmdb", marker = "extra == 'tests'" },
+    { name = "lmdb", marker = "python_full_version >= '3.9' and extra == 'all'" },
+    { name = "lmdb", marker = "python_full_version >= '3.9' and extra == 'tests'" },
+    { name = "lmdb", marker = "python_full_version < '3.9' and extra == 'all'", specifier = "<2" },
+    { name = "lmdb", marker = "python_full_version < '3.9' and extra == 'tests'", specifier = "<2" },
     { name = "matplotlib" },
     { name = "mlflow", marker = "extra == 'all'" },
     { name = "mlflow", marker = "extra == 'tests'" },
@@ -4433,7 +4440,8 @@ test = [
     { name = "dvclive", marker = "python_full_version >= '3.8'" },
     { name = "expecttest", marker = "python_full_version >= '3.8'" },
     { name = "lion-pytorch", marker = "python_full_version >= '3.8'" },
-    { name = "lmdb", marker = "python_full_version >= '3.8'" },
+    { name = "lmdb", marker = "python_full_version == '3.8.*'", specifier = "<2" },
+    { name = "lmdb", marker = "python_full_version >= '3.9'" },
     { name = "mlflow", marker = "python_full_version >= '3.8'" },
     { name = "numpy", marker = "python_full_version >= '3.8'" },
     { name = "opencv-python-headless", marker = "python_full_version >= '3.8'" },
@@ -4448,7 +4456,8 @@ test = [
     { name = "transformers", marker = "python_full_version >= '3.8'" },
 ]
 test-lite = [
-    { name = "lmdb", marker = "python_full_version >= '3.8'" },
+    { name = "lmdb", marker = "python_full_version == '3.8.*'", specifier = "<2" },
+    { name = "lmdb", marker = "python_full_version >= '3.9'" },
     { name = "opencv-python-headless", marker = "python_full_version >= '3.8'" },
     { name = "parameterized", marker = "python_full_version >= '3.8'" },
     { name = "pytest", marker = "python_full_version >= '3.8'", specifier = "<9" },
