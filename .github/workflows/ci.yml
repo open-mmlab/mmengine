@@ -31,7 +31,7 @@ jobs:
         with:
           python-version: "3.10"
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
@@ -59,7 +59,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
@@ -88,7 +88,7 @@ jobs:
         with:
           python-version: "3.10"
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
@@ -115,7 +115,7 @@ jobs:
             uv run --isolated --no-project --python "${python_version}" --with "${mmengine_lite_wheel}" python -c "import importlib.metadata as metadata; import mmengine; print(mmengine.__version__); print(metadata.version('mmengine-lite'))"
           done
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.1
         with:
           name: wheels-${{ github.run_id }}-${{ github.run_attempt }}
           path: wheelhouse/*.whl
