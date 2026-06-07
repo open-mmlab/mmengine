@@ -7,7 +7,7 @@ name = "mmengine-lite"
 dynamic = ["version"]
 description = "Lite distribution of MMEngine"
 readme = "README.md"
-requires-python = ">=3.8,<3.11"
+requires-python = ">=3.8,<3.14"
 license = { file = "LICENSE" }
 authors = [
     { name = "MMEngine Authors", email = "openmmlab@gmail.com" },
@@ -20,6 +20,9 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Utilities",
 ]
 dependencies = [
@@ -40,9 +43,12 @@ Repository = "https://github.com/open-mmlab/mmengine"
 
 [project.optional-dependencies]
 tests-lite = [
-    "lmdb",
+    "lmdb<2; python_version < '3.9'",
+    "lmdb; python_version >= '3.9'",
+    "opencv-python-headless",
     "parameterized",
-    "pytest",
+    "pytest<9",
+    "setuptools",
 ]
 
 [tool.hatch.version]

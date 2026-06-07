@@ -479,8 +479,8 @@ class TestDVCLiveVisBackend:
 
 
 @pytest.mark.skipif(
-    platform.system() == 'Windows',
-    reason='Aim does not support Windows for now.')
+    platform.system() == 'Windows' or sys.version_info >= (3, 13),
+    reason='Aim does not support Windows or Python 3.13 for now.')
 class TestAimVisBackend:
 
     def _build_backend(self, tmp_path):

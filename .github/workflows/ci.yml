@@ -51,7 +51,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v5
 
@@ -107,18 +107,39 @@ jobs:
           "${RUNNER_TEMP}/mmengine-lite-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
 
       - name: Verify wheels on supported Python versions
+        id: wheels
         run: |
           mmengine_wheel=$(find wheelhouse -name 'mmengine-[0-9]*.whl' -print -quit)
           mmengine_lite_wheel=$(find wheelhouse -name 'mmengine_lite-*.whl' -print -quit)
-          for python_version in 3.8 3.9 3.10; do
+          mmengine_wheel_name=$(basename "${mmengine_wheel}")
+          mmengine_lite_wheel_name=$(basename "${mmengine_lite_wheel}")
+          {
+            echo "mmengine_wheel=${mmengine_wheel}"
+            echo "mmengine_lite_wheel=${mmengine_lite_wheel}"
+            echo "mmengine_wheel_name=${mmengine_wheel_name}"
+            echo "mmengine_lite_wheel_name=${mmengine_lite_wheel_name}"
+          } >> "${GITHUB_OUTPUT}"
+          for python_version in 3.8 3.9 3.10 3.11 3.12 3.13; do
             uv run --isolated --no-project --python "${python_version}" --with "${mmengine_wheel}" python -c "import importlib.metadata as metadata; import mmengine; print(mmengine.__version__); print(metadata.version('mmengine'))"
             uv run --isolated --no-project --python "${python_version}" --with "${mmengine_lite_wheel}" python -c "import importlib.metadata as metadata; import mmengine; print(mmengine.__version__); print(metadata.version('mmengine-lite'))"
           done
 
-      - uses: actions/upload-artifact@v7.0.1
+      - name: Upload mmengine wheel
+        uses: actions/upload-artifact@v7.0.1
         with:
-          name: wheels-${{ github.run_id }}-${{ github.run_attempt }}
-          path: wheelhouse/*.whl
+          name: ${{ steps.wheels.outputs.mmengine_wheel_name }}
+          path: ${{ steps.wheels.outputs.mmengine_wheel }}
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
+          overwrite: true
+
+      - name: Upload mmengine-lite wheel
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: ${{ steps.wheels.outputs.mmengine_lite_wheel_name }}
+          path: ${{ steps.wheels.outputs.mmengine_lite_wheel }}
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          overwrite: true

@@ -58,8 +58,11 @@ try:
     # without mock.
     import petrel_client  # noqa: F401
 except ImportError:
-    sys.modules['petrel_client'] = MagicMock()
-    sys.modules['petrel_client.client'] = MagicMock()
+    petrel_client_mock = MagicMock()
+    petrel_client_client_mock = MagicMock()
+    petrel_client_mock.client = petrel_client_client_mock
+    sys.modules['petrel_client'] = petrel_client_mock
+    sys.modules['petrel_client.client'] = petrel_client_client_mock
 
     class MockPetrelClient:
 
@@ -95,6 +98,8 @@ except ImportError:
                 elif osp.isdir(entry.path):
                     yield entry.name + '/'
 
+    petrel_client_client_mock.Client = MockPetrelClient
+
     @contextmanager
     def delete_and_reset_method(obj, method):
         method_obj = deepcopy(getattr(type(obj), method))
@@ -104,7 +109,11 @@ except ImportError:
         finally:
             setattr(type(obj), method, method_obj)
 
-    @patch('petrel_client.client.Client', MockPetrelClient)
+    @patch.dict(
+        sys.modules, {
+            'petrel_client': petrel_client_mock,
+            'petrel_client.client': petrel_client_client_mock,
+        })
     class TestPetrelBackend(TestCase):
 
         @classmethod

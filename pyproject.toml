@@ -7,7 +7,7 @@ name = "mmengine"
 dynamic = ["version"]
 description = "Engine of OpenMMLab projects"
 readme = "README.md"
-requires-python = ">=3.8,<3.11"
+requires-python = ">=3.8,<3.14"
 license = { file = "LICENSE" }
 authors = [
     { name = "MMEngine Authors", email = "openmmlab@gmail.com" },
@@ -20,6 +20,9 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Utilities",
 ]
 dependencies = [
@@ -40,7 +43,7 @@ Repository = "https://github.com/open-mmlab/mmengine"
 
 [project.optional-dependencies]
 tests = [
-    "aim<=3.17.5; sys_platform != 'win32'",
+    "aim>=3.18,<4; python_version < '3.13' and sys_platform != 'win32'",
     "bitsandbytes",
     "clearml",
     "coverage",
@@ -61,10 +64,11 @@ tests = [
     "torch>=2.6; python_version >= '3.10'",
     "torchvision>=0.16,<0.17; python_version >= '3.8' and python_version < '3.10'",
     "torchvision>=0.21; python_version >= '3.10'",
-    "transformers",
+    "transformers<4.31; python_version < '3.12'",
+    "transformers>=4.57,<5; python_version >= '3.12'",
 ]
 all = [
-    "aim<=3.17.5; sys_platform != 'win32'",
+    "aim>=3.18,<4; python_version < '3.13' and sys_platform != 'win32'",
     "bitsandbytes",
     "clearml",
     "coverage",
@@ -85,12 +89,13 @@ all = [
     "torch>=2.6; python_version >= '3.10'",
     "torchvision>=0.16,<0.17; python_version >= '3.8' and python_version < '3.10'",
     "torchvision>=0.21; python_version >= '3.10'",
-    "transformers",
+    "transformers<4.31; python_version < '3.12'",
+    "transformers>=4.57,<5; python_version >= '3.12'",
 ]
 
 [dependency-groups]
 test = [
-    "aim<=3.17.5; sys_platform != 'win32'",
+    "aim>=3.18,<4; python_version < '3.13' and sys_platform != 'win32'",
     "bitsandbytes",
     "clearml",
     "coverage",
@@ -111,7 +116,8 @@ test = [
     "torch>=2.6; python_version >= '3.10'",
     "torchvision>=0.16,<0.17; python_version >= '3.8' and python_version < '3.10'",
     "torchvision>=0.21; python_version >= '3.10'",
-    "transformers",
+    "transformers<4.31; python_version < '3.12'",
+    "transformers>=4.57,<5; python_version >= '3.12'",
 ]
 test-lite = [
     "lmdb<2; python_version < '3.9'",
