@@ -93,27 +93,17 @@ jobs:
           cache-dependency-glob: uv.lock
 
       - name: Build mmengine wheel
-        uses: pypa/cibuildwheel@v3.4.1
-        with:
-          package-dir: .
-          output-dir: wheelhouse
-          only: cp38-manylinux_x86_64
-        env:
-          CIBW_TEST_COMMAND: >
-            python -c "import importlib.metadata as metadata; import mmengine; print(mmengine.__version__); print(metadata.version('mmengine'))"
+        run: |
+          rm -rf wheelhouse
+          uv build --no-sources --wheel --out-dir wheelhouse
 
       - name: Prepare mmengine-lite source tree
         run: python scripts/build_lite.py --prepare "${RUNNER_TEMP}/mmengine-lite-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
 
       - name: Build mmengine-lite wheel
-        uses: pypa/cibuildwheel@v3.4.1
-        with:
-          package-dir: ${{ runner.temp }}/mmengine-lite-${{ github.run_id }}-${{ github.run_attempt }}
-          output-dir: wheelhouse
-          only: cp38-manylinux_x86_64
-        env:
-          CIBW_TEST_COMMAND: >
-            python -c "import importlib.metadata as metadata; import mmengine; print(mmengine.__version__); print(metadata.version('mmengine-lite'))"
+        run: >
+          uv build --no-sources --wheel --out-dir wheelhouse
+          "${RUNNER_TEMP}/mmengine-lite-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
 
       - name: Verify wheels on supported Python versions
         run: |

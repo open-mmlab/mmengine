@@ -26,6 +26,7 @@ dependencies = [
     "addict",
     "matplotlib",
     "numpy",
+    "packaging",
     "pyyaml",
     "regex; sys_platform == 'win32'",
     "rich",

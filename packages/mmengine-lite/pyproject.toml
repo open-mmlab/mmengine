@@ -25,6 +25,7 @@ classifiers = [
 dependencies = [
     "addict",
     "numpy",
+    "packaging",
     "opencv-python-headless",
     "pyyaml",
     "regex; sys_platform == 'win32'",
