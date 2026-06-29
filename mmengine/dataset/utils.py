@@ -162,4 +162,6 @@ def default_collate(data_batch: Sequence) -> Any:
             for key in data_item
         })
     else:
+        if isinstance(data_item,np.ndarray):
+            data_batch=[np.ascontiguousarray(item) for item in data_batch]
         return torch_default_collate(data_batch)
