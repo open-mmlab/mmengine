@@ -83,8 +83,10 @@ def package2module(package: str) -> str:
     dist = distribution(package)
     top_level_text = dist.read_text('top_level.txt')
     if top_level_text is not None:
-        lines = [line.strip() for line in top_level_text.splitlines()
-                 if line.strip()]
+        lines = [
+            line.strip() for line in top_level_text.splitlines()
+            if line.strip()
+        ]
         if lines:
             return lines[0]
     raise ValueError(f'can not infer the module name of {package}')
