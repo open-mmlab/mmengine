@@ -113,7 +113,7 @@ else:
 
 setup(
     name='mmengine'
-    if os.getenv('MMENGINE_LITE', '0') == '0' else 'mmengine-lite',
+    if os.getenv('MMENGINE_LITE', '0') == '0' else 'mmengine_lite',
     version=get_version(),
     description='Engine of OpenMMLab projects',
     long_description=readme(),

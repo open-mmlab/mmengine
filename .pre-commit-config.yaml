@@ -63,4 +63,8 @@ repos:
               ^examples
               | ^docs
           )
-        additional_dependencies: ["types-setuptools", "types-requests", "types-PyYAML"]
+        # Pin types-setuptools: newer stubs (>=69) declare a `_DictLike`
+        # protocol that the pinned mypy v1.2.0 misreads, producing a false
+        # `extras_require` arg-type error in setup.py. Keep the stub version
+        # contemporary with mypy until mypy itself is bumped.
+        additional_dependencies: ["types-setuptools==68.2.0.0", "types-requests", "types-PyYAML"]
