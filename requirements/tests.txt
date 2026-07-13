@@ -11,3 +11,4 @@ parameterized
 pydantic==1.10.9
 pytest
 transformers
+wandb>=0.16.3
