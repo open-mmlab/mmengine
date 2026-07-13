@@ -38,3 +38,4 @@ visualization Backend
    NeptuneVisBackend
    DVCLiveVisBackend
    AimVisBackend
+   SwanLabVisBackend
