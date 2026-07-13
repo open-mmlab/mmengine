@@ -299,6 +299,7 @@ class TestMLflowVisBackend:
         image = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
         mlflow_vis_backend = MLflowVisBackend('temp_dir')
         mlflow_vis_backend.add_image('img.png', image)
+        mlflow_vis_backend.add_image('img', image, step=2)
 
     def test_add_scalar(self):
         mlflow_vis_backend = MLflowVisBackend('temp_dir')

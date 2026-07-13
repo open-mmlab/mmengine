@@ -781,6 +781,8 @@ class MLflowVisBackend(BaseVisBackend):
                 should be RGB.
             step (int): Global step value to record. Default to 0.
         """
+        if not osp.splitext(name)[1]:
+            name = f'{name}_{step}.png'
         self._mlflow.log_image(image, name)
 
     @force_init_env
