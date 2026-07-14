@@ -1835,10 +1835,13 @@ class Runner:
         for hook in self._hooks:
             # support adding additional custom hook methods
             if hasattr(hook, fn_name):
+                logger = MMLogger.get_current_instance()
                 try:
                     getattr(hook, fn_name)(self, **kwargs)
-                except TypeError as e:
-                    raise TypeError(f'{e} in {hook}') from None
+                except Exception as e:
+                    logger.error(
+                        f'{e}, {e.__class__.__name__} raised in hook {hook}!')
+                    raise e
 
     def register_hook(
             self,
