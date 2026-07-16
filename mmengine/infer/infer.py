@@ -529,7 +529,22 @@ class BaseInferencer(metaclass=InferencerMeta):
         """
         try:
             with FUNCTIONS.switch_scope_and_registry(self.scope) as registry:
-                collate_fn = registry.get(cfg.test_dataloader.collate_fn)
+                collate_fn_cfg = cfg.test_dataloader.collate_fn
+                if isinstance(collate_fn_cfg, dict):
+                    collate_fn_type = collate_fn_cfg.pop('type')
+                    if isinstance(collate_fn_type, str):
+                        collate_fn = registry.get(collate_fn_type)
+                    else:
+                        collate_fn = collate_fn_type
+                    from functools import partial
+                    collate_fn = partial(collate_fn,
+                                         **collate_fn_cfg)  # type: ignore
+                elif callable(collate_fn_cfg):
+                    collate_fn = collate_fn_cfg
+                else:
+                    raise TypeError(
+                        'collate_fn should be a dict or callable object, '
+                        f'but got {collate_fn_cfg}')
         except AttributeError:
             collate_fn = pseudo_collate
         return collate_fn  # type: ignore
