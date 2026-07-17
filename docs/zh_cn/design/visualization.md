@@ -13,6 +13,7 @@
 
 - 为了方便调用，Visualizer 提供的接口实现了绘制和存储的功能。可视化存储后端 VisBackend 作为 Visualizer 的内部属性，会在需要的时候被 Visualizer 调用，将数据存到不同的后端
 - 考虑到绘制后会希望存储到多个后端，Visualizer 可以配置多个 VisBackend，当用户调用 Visualizer 的存储接口时候，Visualizer 内部会遍历的调用 VisBackend 存储接口
+- 考虑到绘图性能的差异，绘图后端 backend 作为 Visualizer 的内部属性，用户可根据使用场景选择绘图后端，以达到绘图性能和绘图功能丰富性的平衡
 
 两者的 UML 关系图如下
 
