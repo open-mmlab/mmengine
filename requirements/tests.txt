@@ -4,6 +4,7 @@ clearml
 coverage
 dadaptation
 dvclive
+expecttest
 lion-pytorch
 lmdb
 mlflow
