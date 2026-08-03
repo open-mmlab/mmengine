@@ -27,8 +27,10 @@ def choose_requirement(primary, secondary):
 
 def get_version():
     with open(version_file) as f:
-        exec(compile(f.read(), version_file, 'exec'))
-    return locals()['__version__']
+        code = compile(f.read(), version_file, 'exec')
+        namespace = {}
+        exec(code, namespace)
+    return namespace['__version__']
 
 
 def parse_requirements(fname='requirements/runtime.txt', with_version=True):
