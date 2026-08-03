@@ -385,25 +385,67 @@ class Visualizer(ManagerMixin):
     @master_only
     def draw_points(self,
                     positions: Union[np.ndarray, torch.Tensor],
-                    colors: Union[str, tuple, List[str], List[tuple]] = 'g',
+                    colors: Union[str, tuple, List[str],
+                                  List[tuple]] = (0, 255, 0),
                     marker: Optional[str] = None,
-                    sizes: Optional[Union[np.ndarray, torch.Tensor]] = None):
-        """Draw single or multiple points.
+                    sizes: Optional[Union[np.ndarray, torch.Tensor]] = None,
+                    backend: str = 'matplotlib'):
+        """Draw single or multiple points on the plot or image.
 
         Args:
-            positions (Union[np.ndarray, torch.Tensor]): Positions to draw.
-            colors (Union[str, tuple, List[str], List[tuple]]): The colors
-                of points. ``colors`` can have the same length with points or
-                just single value. If ``colors`` is single value, all the
-                points will have the same colors. Reference to
+            positions (Union[np.ndarray, torch.Tensor]):
+                Positions of the points to be drawn.
+                It should be a 2D array-like object with shape (N, 2),
+                where N is the number of points.
+            colors (Union[str, tuple, List[str], List[tuple]]):
+                The colors of the points.
+                It can have the same length as the number of points
+                or just a single value.
+                If a single value is provided,
+                all points will have the same color.
+                Colors can be specified using named colors
+                from the matplotlib color library.
+                See
                 https://matplotlib.org/stable/gallery/color/named_colors.html
-                for more details. Defaults to 'g.
-            marker (str, optional): The marker style.
-                See :mod:`matplotlib.markers` for more information about
-                marker styles. Defaults to None.
-            sizes (Optional[Union[np.ndarray, torch.Tensor]]): The marker size.
-                Defaults to None.
+                for more details.
+                When using the 'cv2' backend,
+                colors should be a tuple of integers (e.g., (0, 255, 0)).
+                Defaults to 'g' (green).
+            marker (str, optional):
+                The marker style to be used for the points.
+                Refer to the matplotlib markers documentation
+                for available marker styles.
+                Defaults to None, which results in circular markers.
+            sizes (Optional[Union[np.ndarray, torch.Tensor]]):
+                The size of the markers.
+                It can be a 1D array-like object with length N,
+                specifying the size for each point,
+                or a single value for a uniform marker size across all points.
+                Defaults to None, which uses the default marker size.
+            backend (str): The backend to use for drawing the points.
+                Supported backends are 'matplotlib' and 'cv2' (OpenCV).
+                Defaults to 'matplotlib'.
+
+        Raises:
+            ValueError:
+                If the shape of the `positions` array is not (N, 2),
+                where N is the number of points.
+            ValueError:
+                If the `backend` argument is not one of 'matplotlib' or 'cv2'.
+
+        Returns:
+            self: Returns the instance of the class, allowing method chaining.
+
+        Note:
+            - When using the 'matplotlib' backend,
+              the points are drawn on a plot.
+            - When using the 'cv2' backend, the points are drawn on an image.
+            - The 'cv2' backend expects the positions to be in
+                normalized coordinates,
+                with values ranging from 0 to 1,
+                representing the relative position within the image.
         """
+
         check_type('positions', positions, (np.ndarray, torch.Tensor))
         positions = tensor2ndarray(positions)
 
@@ -412,87 +454,173 @@ class Visualizer(ManagerMixin):
         assert positions.shape[-1] == 2, (
             'The shape of `positions` should be (N, 2), '
             f'but got {positions.shape}')
-        colors = color_val_matplotlib(colors)  # type: ignore
-        self.ax_save.scatter(
-            positions[:, 0], positions[:, 1], c=colors, s=sizes, marker=marker)
-        return self
+        if backend == 'matplotlib':
+            colors = color_val_matplotlib(colors)  # type: ignore
+            self.ax_save.scatter(
+                positions[:, 0],
+                positions[:, 1],
+                c=colors,
+                s=sizes,
+                marker=marker)
+            return self
+
+        elif backend == 'cv2':
+            if marker is not None:
+                warnings.warn(
+                    "The 'marker' argument is not applicable in the 'cv2'"
+                    'backend and will be ignored.', UserWarning)
+            positions[:, 0] *= self._image.shape[1]
+            positions[:, 1] *= self._image.shape[0]
+            for i in range(len(positions)):
+                x = int(positions[i, 0])
+                y = int(positions[i, 1])
+                if sizes is not None:
+                    if isinstance(sizes, (np.ndarray, torch.Tensor)):
+                        size = int(sizes[i])
+                    else:
+                        size = int(sizes[i])
+                else:
+                    size = 0  # Use default marker size
+                if colors[i] == 'g':
+                    colors[i] = (0, 255, 0)  # type: ignore
+                elif colors[i] == 'r':
+                    colors[i] = (0, 0, 255)  # type: ignore
+                elif colors[i] == 'b':
+                    colors[i] = (255, 0, 0)  # type: ignore
+                cv2.circle(self._image, (x, y), size, colors[i], -1)
+
+        else:
+            raise ValueError('backend should be "matplotlib" or "cv2", '
+                             f'but got {backend} instead')
 
     @master_only
-    def draw_texts(
-        self,
-        texts: Union[str, List[str]],
-        positions: Union[np.ndarray, torch.Tensor],
-        font_sizes: Optional[Union[int, List[int]]] = None,
-        colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-        vertical_alignments: Union[str, List[str]] = 'top',
-        horizontal_alignments: Union[str, List[str]] = 'left',
-        font_families: Union[str, List[str]] = 'sans-serif',
-        bboxes: Optional[Union[dict, List[dict]]] = None,
-        font_properties: Optional[Union['FontProperties',
-                                        List['FontProperties']]] = None
-    ) -> 'Visualizer':
+    def draw_texts(self,
+                   texts: Union[str, List[str]],
+                   positions: Union[np.ndarray, torch.Tensor],
+                   font_sizes: Optional[Union[int, List[int]]] = 1,
+                   colors: Union[str, tuple, List[str],
+                                 List[tuple]] = (0, 255, 0),
+                   vertical_alignments: Union[str, List[str]] = 'top',
+                   horizontal_alignments: Union[str, List[str]] = 'left',
+                   font_families: Union[str, List[str]] = 'sans-serif',
+                   bboxes: Optional[Union[dict, List[dict]]] = None,
+                   font_properties: Optional[Union[
+                       'FontProperties', List['FontProperties']]] = None,
+                   backend: str = 'matplotlib') -> 'Visualizer':
         """Draw single or multiple text boxes.
 
         Args:
-            texts (Union[str, List[str]]): Texts to draw.
-            positions (Union[np.ndarray, torch.Tensor]): The position to draw
-                the texts, which should have the same length with texts and
-                each dim contain x and y.
-            font_sizes (Union[int, List[int]], optional): The font size of
-                texts. ``font_sizes`` can have the same length with texts or
-                just single value. If ``font_sizes`` is single value, all the
-                texts will have the same font size. Defaults to None.
-            colors (Union[str, tuple, List[str], List[tuple]]): The colors
-                of texts. ``colors`` can have the same length with texts or
-                just single value. If ``colors`` is single value, all the
-                texts will have the same colors. Reference to
-                https://matplotlib.org/stable/gallery/color/named_colors.html
-                for more details. Defaults to 'g.
-            vertical_alignments (Union[str, List[str]]): The verticalalignment
-                of texts. verticalalignment controls whether the y positional
-                argument for the text indicates the bottom, center or top side
-                of the text bounding box.
-                ``vertical_alignments`` can have the same length with
-                texts or just single value. If ``vertical_alignments`` is
-                single value, all the texts will have the same
-                verticalalignment. verticalalignment can be 'center' or
-                'top', 'bottom' or 'baseline'. Defaults to 'top'.
-            horizontal_alignments (Union[str, List[str]]): The
-                horizontalalignment of texts. Horizontalalignment controls
-                whether the x positional argument for the text indicates the
-                left, center or right side of the text bounding box.
-                ``horizontal_alignments`` can have
-                the same length with texts or just single value.
-                If ``horizontal_alignments`` is single value, all the texts
-                will have the same horizontalalignment. Horizontalalignment
-                can be 'center','right' or 'left'. Defaults to 'left'.
-            font_families (Union[str, List[str]]): The font family of
-                texts. ``font_families`` can have the same length with texts or
-                just single value. If ``font_families`` is single value, all
-                the texts will have the same font family.
-                font_familiy can be 'serif', 'sans-serif', 'cursive', 'fantasy'
-                or 'monospace'.  Defaults to 'sans-serif'.
-            bboxes (Union[dict, List[dict]], optional): The bounding box of the
-                texts. If bboxes is None, there are no bounding box around
-                texts. ``bboxes`` can have the same length with texts or
-                just single value. If ``bboxes`` is single value, all
-                the texts will have the same bbox. Reference to
-                https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.FancyBboxPatch.html#matplotlib.patches.FancyBboxPatch
-                for more details. Defaults to None.
-            font_properties (Union[FontProperties, List[FontProperties]], optional):
-                The font properties of texts. FontProperties is
-                a ``font_manager.FontProperties()`` object.
-                If you want to draw Chinese texts, you need to prepare
-                a font file that can show Chinese characters properly.
-                For example: `simhei.ttf`, `simsun.ttc`, `simkai.ttf` and so on.
-                Then set ``font_properties=matplotlib.font_manager.FontProperties(fname='path/to/font_file')``
-                ``font_properties`` can have the same length with texts or
-                just single value. If ``font_properties`` is single value,
-                all the texts will have the same font properties.
+            texts (Union[str, List[str]]):
+                Texts to draw.
+            positions (Union[np.ndarray, torch.Tensor]):
+                The positions to draw the texts.
+                It should have the same length as `texts`,
+                and each dimension should contain the x and y coordinates.
+            font_sizes (Optional[Union[int, List[int]]]):
+                The font sizes of the texts.
+                `font_sizes` can have the same length as `texts`
+                or just a single value.
+                If `font_sizes` is a single value, all the texts will
+                have the same font size. Defaults to None.
+            colors (Union[str, tuple, List[str], List[tuple]]):
+                The colors of the texts.
+                `colors` can have the same length as `texts`
+                or just a single value.
+                If `colors` is a single value, all the texts will
+                have the same colors.
+                When using the 'matplotlib' backend, colors can be specified
+                using named colors from the matplotlib color library.
+                See
+                https://matplotlib.org/stable/gallery/color/named_colors.html for more details.
+                Defaults to 'g'.
+            vertical_alignments (Union[str, List[str]]):
+                The vertical alignment of the texts.
+                `vertical_alignments` can have the same length
+                as `texts` or just a single value.
+                If `vertical_alignments` is a single value,
+                all the texts will have the same vertical alignment.
+                Valid values for vertical alignment
+                are 'center', 'top', 'bottom', or 'baseline'.
+                Defaults to 'top'.
+            horizontal_alignments (Union[str, List[str]]):
+                The horizontal alignment of the texts.
+                `horizontal_alignments` can have the same length
+                as `texts` or just a single value.
+                If `horizontal_alignments` is a single value,
+                all the texts will have the same horizontal alignment.
+                Valid values for horizontal alignment
+                are 'center', 'right', or 'left'. Defaults to 'left'.
+            font_families (Union[str, List[str]]):
+                The font family of the texts.
+                `font_families` can have the same length as `texts`
+                or just a single value.
+                If `font_families` is a single value, all the texts will
+                have the same font family.
+                Valid font family values are 'serif', 'sans-serif',
+                'cursive', 'fantasy', or 'monospace'.
+                Defaults to 'sans-serif'.
+            bboxes (Optional[Union[dict, List[dict]]]):
+                The bounding box of the texts.
+                If `bboxes` is None, there will be no bounding box
+                around the texts.
+                `bboxes` can have the same length as `texts`
+                or just a single value.
+                If `bboxes` is a single value,
+                all the texts will have the same bounding box.
+                When using the 'matplotlib' backend,
+                `bboxes` can be a dictionary with properties for
+                the FancyBboxPatch.
+                See matplotlib.patches.FancyBboxPatch for more details.
                 Defaults to None.
-                `New in version 0.6.0.`
+            font_properties (Optional[Union[FontProperties, List[FontProperties]]]):
+                The font properties of the texts.
+                `font_properties` can have the same length as `texts`
+                or just a single value.
+                If `font_properties` is a single value,
+                all the texts will
+                have the same font properties.
+                When using the 'matplotlib' backend, `font_properties`
+                should be a matplotlib.font_manager.FontProperties object.
+                This can be used to specify
+                custom font files for drawing Chinese characters, for example.
+                Defaults to None.
+            backend (str):
+                The backend to use for drawing the texts. Supported options are 'matplotlib' and 'cv2'.
+                Defaults to 'matplotlib'.
+
+        Returns:
+            self (Visualizer):
+                Returns the instance of the class,
+                allowing method chaining.
+
+        Raises:
+            ValueError:
+                If the `backend` argument is not
+                one of the supported backends: 'matplotlib' or 'cv2'.
+            AssertionError:
+                If the shapes of the input arrays are not valid.
+
+        Notes:
+            - When using the 'matplotlib' backend,
+              the drawn texts may not appear within the image boundaries
+              if they extend beyond the bounds of the image.
+            - The `positions` argument should be provided
+              as a numpy array or tensor with shape (N, 2),
+              where N is the number of texts and
+              each position is represented as (x, y) coordinates.
+            - The `font_sizes`, `colors`, `vertical_alignments`,
+              `horizontal_alignments`, `font_families`,
+              `bboxes`, and `font_properties` arguments
+              can be specified as a single value or a list
+              to provide different values for each text.
+
+        Warnings:
+            - When using the 'matplotlib' backend,
+              a warning will be displayed if any of the texts extend
+              beyond the bounds of the image,
+              indicating that the drawn text may not appear within the image
+              boundaries.
         """  # noqa: E501
-        from matplotlib.font_manager import FontProperties
         check_type('texts', texts, (str, list))
         if isinstance(texts, str):
             texts = [texts]
@@ -509,94 +637,197 @@ class Visualizer(ManagerMixin):
                 'Warning: The text is out of bounds,'
                 ' the drawn text may not be in the image', UserWarning)
         positions = positions.tolist()
-
-        if font_sizes is None:
-            font_sizes = self._default_font_size
         check_type_and_length('font_sizes', font_sizes, (int, float, list),
                               num_text)
-        font_sizes = value2list(font_sizes, (int, float), num_text)
 
         check_type_and_length('colors', colors, (str, tuple, list), num_text)
-        colors = value2list(colors, (str, tuple), num_text)
-        colors = color_val_matplotlib(colors)  # type: ignore
-
         check_type_and_length('vertical_alignments', vertical_alignments,
                               (str, list), num_text)
-        vertical_alignments = value2list(vertical_alignments, str, num_text)
-
         check_type_and_length('horizontal_alignments', horizontal_alignments,
                               (str, list), num_text)
-        horizontal_alignments = value2list(horizontal_alignments, str,
-                                           num_text)
-
         check_type_and_length('font_families', font_families, (str, list),
                               num_text)
-        font_families = value2list(font_families, str, num_text)
 
-        if font_properties is None:
-            font_properties = [None for _ in range(num_text)]  # type: ignore
+        if backend == 'matplotlib':
+            from matplotlib.font_manager import FontProperties
+            if font_sizes is None:
+                font_sizes = self._default_font_size
+            font_sizes = value2list(font_sizes, (int, float), num_text)
+
+            colors = value2list(colors, (str, tuple), num_text)
+            colors = color_val_matplotlib(colors)  # type: ignore
+
+            vertical_alignments = value2list(vertical_alignments, str,
+                                             num_text)
+
+            horizontal_alignments = value2list(horizontal_alignments, str,
+                                               num_text)
+
+            font_families = value2list(font_families, str, num_text)
+
+            if font_properties is None:
+                font_properties = [None
+                                   for _ in range(num_text)]  # type: ignore
+            else:
+                check_type_and_length('font_properties', font_properties,
+                                      (FontProperties, list), num_text)
+                font_properties = value2list(font_properties, FontProperties,
+                                             num_text)
+
+            if bboxes is None:
+                bboxes = [None for _ in range(num_text)]  # type: ignore
+            else:
+                check_type_and_length('bboxes', bboxes, (dict, list), num_text)
+                bboxes = value2list(bboxes, dict, num_text)
+
+            for i in range(num_text):
+                self.ax_save.text(
+                    positions[i][0],
+                    positions[i][1],
+                    texts[i],
+                    size=font_sizes[i],  # type: ignore
+                    bbox=bboxes[i],  # type: ignore
+                    verticalalignment=vertical_alignments[i],
+                    horizontalalignment=horizontal_alignments[i],
+                    family=font_families[i],
+                    fontproperties=font_properties[i],
+                    color=colors[i])
+            return self
+
+        elif backend == 'cv2':
+            if font_sizes is None:
+                font_sizes = [16] * num_text
+            elif isinstance(font_sizes, int):
+                font_sizes = [font_sizes] * num_text
+            else:
+                font_sizes = font_sizes[:num_text]
+
+            if colors is None:
+                colors = [(0, 0, 255)] * num_text
+
+            if vertical_alignments is None:
+                vertical_alignments = ['bottom'] * num_text
+
+            if horizontal_alignments is None:
+                horizontal_alignments = [
+                    'left'
+                ] * num_text  # Default horizontal alignment is left
+
+            if font_families is None or font_families == 'sans-serif':
+                font_families = [
+                    cv2.FONT_HERSHEY_SIMPLEX
+                ] * num_text  # Default font family is HERSHEY_SIMPLEX
+
+            for i in range(num_text):
+                position = tuple(positions[i])
+                text = texts[i]
+                font_size = font_sizes[i]
+                if colors[i] == 'r':
+                    color = (0, 0, 255)
+                elif colors[i] == 'g':
+                    color = (0, 255, 0)
+                elif colors[i] == 'b':
+                    color = (255, 0, 0)
+                else:
+                    color = colors[i]  # type: ignore
+                vertical_alignment = vertical_alignments[i]
+                horizontal_alignment = horizontal_alignments[i]
+                font_family = font_families[i]
+
+                print(f'color: {color}')
+                # Calculate text size to determine the bounding box
+                (text_width,
+                 text_height), _ = cv2.getTextSize(text, font_family,
+                                                   font_size, 1)
+
+                # Adjust position based on alignment
+                if vertical_alignment == 'top':
+                    position = (position[0], position[1] + text_height)
+                elif vertical_alignment == 'center':
+                    position = (position[0], position[1] + text_height // 2)
+
+                if horizontal_alignment == 'right':
+                    position = (position[0] - text_width, position[1])
+                elif horizontal_alignment == 'center':
+                    position = (position[0] - text_width // 2, position[1])
+
+                # Draw the text on the image
+                cv2.putText(self._image, text, position, font_family,
+                            font_size, color, 1, cv2.LINE_AA)
+
+            return self
+
         else:
-            check_type_and_length('font_properties', font_properties,
-                                  (FontProperties, list), num_text)
-            font_properties = value2list(font_properties, FontProperties,
-                                         num_text)
-
-        if bboxes is None:
-            bboxes = [None for _ in range(num_text)]  # type: ignore
-        else:
-            check_type_and_length('bboxes', bboxes, (dict, list), num_text)
-            bboxes = value2list(bboxes, dict, num_text)
-
-        for i in range(num_text):
-            self.ax_save.text(
-                positions[i][0],
-                positions[i][1],
-                texts[i],
-                size=font_sizes[i],  # type: ignore
-                bbox=bboxes[i],  # type: ignore
-                verticalalignment=vertical_alignments[i],
-                horizontalalignment=horizontal_alignments[i],
-                family=font_families[i],
-                fontproperties=font_properties[i],
-                color=colors[i])
-        return self
+            raise ValueError('backend should be "matplotlib" or "cv2", '
+                             f'but got {backend} instead')
 
     @master_only
-    def draw_lines(
-        self,
-        x_datas: Union[np.ndarray, torch.Tensor],
-        y_datas: Union[np.ndarray, torch.Tensor],
-        colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-        line_styles: Union[str, List[str]] = '-',
-        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2
-    ) -> 'Visualizer':
-        """Draw single or multiple line segments.
+    def draw_lines(self,
+                   x_datas: Union[np.ndarray, torch.Tensor],
+                   y_datas: Union[np.ndarray, torch.Tensor],
+                   colors: Union[str, tuple, List[str],
+                                 List[tuple]] = (0, 255, 0),
+                   line_styles: Union[str, List[str]] = '-',
+                   line_widths: Union[Union[int, float],
+                                      List[Union[int, float]], int] = 2,
+                   backend: str = 'matplotlib') -> 'Visualizer':
+        """Draw single or multiple line segments on the plot or image.
 
         Args:
-            x_datas (Union[np.ndarray, torch.Tensor]): The x coordinate of
-                each line' start and end points.
-            y_datas (Union[np.ndarray, torch.Tensor]): The y coordinate of
-                each line' start and end points.
-            colors (Union[str, tuple, List[str], List[tuple]]): The colors of
-                lines. ``colors`` can have the same length with lines or just
-                single value. If ``colors`` is single value, all the lines
-                will have the same colors. Reference to
+            x_datas (Union[np.ndarray, torch.Tensor]):
+                The x-coordinate of the start and end points
+                of each line segment.
+            y_datas (Union[np.ndarray, torch.Tensor]):
+                The y-coordinate of the start and end points
+                of each line segment.
+            colors (Union[str, tuple, List[str], List[tuple]]):
+                The colors of the lines.
+                `colors` can have the same length as the number of lines
+                or just a single value.
+                If a single value is provided,
+                all lines will have the same color.
+                When using the 'matplotlib' backend,
+                colors can be specified using named colors
+                from the matplotlib color library.
+                See
                 https://matplotlib.org/stable/gallery/color/named_colors.html
-                for more details. Defaults to 'g'.
-            line_styles (Union[str, List[str]]): The linestyle
-                of lines. ``line_styles`` can have the same length with
-                texts or just single value. If ``line_styles`` is single
-                value, all the lines will have the same linestyle.
-                Reference to
-                https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
-                for more details. Defaults to '-'.
+                for more details.
+                When using the 'cv2' backend,
+                colors should be a tuple of integers (e.g., (0, 255, 0)).
+                Defaults to 'g' (green).
+            line_styles (Union[str, List[str]]): The line style of the lines.
+                `line_styles` can have the same length as the number of lines
+                or just a single value.
+                If a single value is provided,
+                all lines will have the same line style.
+                Refer to the matplotlib documentation
+                for available line styles.
+                Defaults to '-' (solid line).
             line_widths (Union[Union[int, float], List[Union[int, float]]]):
-                The linewidth of lines. ``line_widths`` can have
-                the same length with lines or just single value.
-                If ``line_widths`` is single value, all the lines will
-                have the same linewidth. Defaults to 2.
+                The line width of the lines.
+                `line_widths` can have the same length as the number of lines
+                or just a single value.
+                If a single value is provided,
+                all lines will have the same line width.
+                Defaults to 2.
+            backend (str): The backend to use for drawing the lines.
+                Supported backends are 'matplotlib' and 'cv2' (OpenCV).
+                Defaults to 'matplotlib'.
+
+        Raises:
+            TypeError: If the types of `line_widths` are invalid.
+            ValueError: If the shapes of `x_datas` and `y_datas` do not match.
+            ValueError: If the `backend` argument is not one of 'matplotlib'
+                        or 'cv2'.
+
+        Returns:
+            self: Returns the instance of the class, allowing method chaining.
+
+        Note:
+            - When using the 'matplotlib' backend,
+              the lines are drawn on a plot.
+            - When using the 'cv2' backend, the lines are drawn on an image.
         """
-        from matplotlib.collections import LineCollection
         check_type('x_datas', x_datas, (np.ndarray, torch.Tensor))
         x_datas = tensor2ndarray(x_datas)
         check_type('y_datas', y_datas, (np.ndarray, torch.Tensor))
@@ -609,64 +840,165 @@ class Visualizer(ManagerMixin):
         if len(x_datas.shape) == 1:
             x_datas = x_datas[None]
             y_datas = y_datas[None]
-        colors = color_val_matplotlib(colors)  # type: ignore
         lines = np.concatenate(
             (x_datas.reshape(-1, 2, 1), y_datas.reshape(-1, 2, 1)), axis=-1)
         if not self._is_posion_valid(lines):
             warnings.warn(
                 'Warning: The line is out of bounds,'
                 ' the drawn line may not be in the image', UserWarning)
-        line_collect = LineCollection(
-            lines.tolist(),
-            colors=colors,
-            linestyles=line_styles,
-            linewidths=line_widths)
-        self.ax_save.add_collection(line_collect)
-        return self
+        if backend == 'matplotlib':
+            from matplotlib.collections import LineCollection
+            colors = color_val_matplotlib(colors)  # type: ignore
+            line_collect = LineCollection(
+                lines.tolist(),
+                colors=colors,
+                linestyles=line_styles,
+                linewidths=line_widths)
+            self.ax_save.add_collection(line_collect)
+            return self
+
+        elif backend == 'cv2':
+            image_with_lines = self._image.copy(
+            )  # Create a copy of the original image
+
+            for i, line in enumerate(lines):
+                start = (int(line[0, 0]), int(line[0, 1]))
+                end = (int(line[1, 0]), int(line[1, 1]))
+
+                # Get the line width for the current line segment
+                if isinstance(line_widths, int):
+                    current_line_width = line_widths
+                elif isinstance(line_widths, list):
+                    if isinstance(line_widths[0], int):
+                        current_line_width = int(
+                            line_widths[i])  # Use the width at index i
+                    elif isinstance(line_widths[0], list):
+                        current_line_width = [
+                            int(width) for width in line_widths[i]
+                        ]
+                    else:
+                        raise TypeError('Invalid type for line_widths')
+                else:
+                    raise TypeError('Invalid type for line_widths')
+                # Draw the line segment
+
+                if colors == 'r':
+                    colors = (0, 0, 255)
+                elif colors == 'g':
+                    colors = (0, 255, 0)
+                elif colors == 'b':
+                    colors = (255, 0, 0)
+                cv2.line(
+                    image_with_lines,
+                    start,
+                    end,
+                    color=colors,
+                    thickness=current_line_width)
+
+                self._image = image_with_lines
+
+            return self
+
+        else:
+            raise ValueError('backend should be "matplotlib" or "cv2", '
+                             f'but got {backend} instead')
 
     @master_only
-    def draw_circles(
-        self,
-        center: Union[np.ndarray, torch.Tensor],
-        radius: Union[np.ndarray, torch.Tensor],
-        edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-        line_styles: Union[str, List[str]] = '-',
-        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
-        face_colors: Union[str, tuple, List[str], List[tuple]] = 'none',
-        alpha: Union[float, int] = 0.8,
-    ) -> 'Visualizer':
-        """Draw single or multiple circles.
+    def draw_circles(self,
+                     center: Union[np.ndarray, torch.Tensor],
+                     radius: Union[np.ndarray, torch.Tensor],
+                     edge_colors: Union[str, tuple, List[str],
+                                        List[tuple]] = (0, 255, 0),
+                     line_styles: Union[str, List[str]] = '-',
+                     line_widths: Union[Union[int, float],
+                                        List[Union[int, float]]] = 2,
+                     face_colors: Union[str, tuple, List[str],
+                                        List[tuple]] = (0, 255, 0),
+                     alpha: Union[float, int] = 0.8,
+                     backend: str = 'matplotlib') -> 'Visualizer':
+        """Draw single or multiple circles on the plot or image.
 
         Args:
-            center (Union[np.ndarray, torch.Tensor]): The x coordinate of
-                each line' start and end points.
-            radius (Union[np.ndarray, torch.Tensor]): The y coordinate of
-                each line' start and end points.
-            edge_colors (Union[str, tuple, List[str], List[tuple]]): The
-                colors of circles. ``colors`` can have the same length with
-                lines or just single value. If ``colors`` is single value,
-                all the lines will have the same colors. Reference to
+            center (Union[np.ndarray, torch.Tensor]):
+                The x and y coordinates of the center of each circle.
+            radius (Union[np.ndarray, torch.Tensor]):
+                The radius of each circle.
+            edge_colors (Union[str, tuple, List[str], List[tuple]]):
+                The edge colors of the circles.
+                `edge_colors` can have the same length as the number of circles
+                or just a single value.
+                If a single value is provided,
+                all circles will have the same edge color.
+                When using the 'matplotlib' backend,
+                colors can be specified using named colors
+                from the matplotlib color library.
+                See
                 https://matplotlib.org/stable/gallery/color/named_colors.html
-                for more details. Defaults to 'g.
-            line_styles (Union[str, List[str]]): The linestyle
-                of lines. ``line_styles`` can have the same length with
-                texts or just single value. If ``line_styles`` is single
-                value, all the lines will have the same linestyle.
-                Reference to
-                https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
-                for more details. Defaults to '-'.
+                for more details.
+                When using the 'cv2' backend,
+                colors should be a tuple of integers (e.g., (0, 255, 0))
+                since 'cv2' does not support named colors.
+                Defaults to 'g' (green).
+            line_styles (Union[str, List[str]]):
+                The line style of the circles' edges.
+                `line_styles` can have the same length as the number of circles
+                or just a single value.
+                If a single value is provided,
+                all circles will have the same line style.
+                Refer to the matplotlib documentation
+                for available line styles.
+                Defaults to '-' (solid line).
             line_widths (Union[Union[int, float], List[Union[int, float]]]):
-                The linewidth of lines. ``line_widths`` can have
-                the same length with lines or just single value.
-                If ``line_widths`` is single value, all the lines will
-                have the same linewidth. Defaults to 2.
+                The line width of the circles' edges.
+                `line_widths` can have the same length as the number of circles
+                or just a single value.
+                If a single value is provided,
+                all circles will have the same line width.
+                Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
-                The face colors. Defaults to None.
-            alpha (Union[int, float]): The transparency of circles.
+                The face colors of the circles.
+                `face_colors` can have the same length as the number of circles
+                or just a single value.
+                If a single value is provided,
+                all circles will have the same face color.
+                When using the 'matplotlib' backend,
+                colors can be specified using named colors from the matplotlib
+                color library.
+                See
+                https://matplotlib.org/stable/gallery/color/named_colors.html
+                for more details.
+                When using the 'cv2' backend,
+                colors should be a tuple of integers (e.g., (0, 255, 0))
+                since 'cv2' does not support named colors.
+                Defaults to 'none'.
+            alpha (Union[float, int]):
+                The transparency of the circles.
+                Valid values are between 0 and 1.
                 Defaults to 0.8.
+            backend (str): The backend to use for drawing the circles.
+                Supported backends are 'matplotlib' and 'cv2' (OpenCV).
+                Defaults to 'matplotlib'.
+
+        Raises:
+            TypeError: If the types of `center` or `radius` are invalid.
+            ValueError: If the shapes of `center` and `radius` do not match.
+            ValueError: If the `backend` argument is not one of 'matplotlib'
+                        or 'cv2'.
+
+        Returns:
+            self: Returns the instance of the class,
+                  allowing method chaining.
+
+        Note:
+            - When using the 'matplotlib' backend,
+              the circles are drawn on a plot.
+            - When using the 'cv2' backend,
+              the circles are drawn on an image.
+
+        Warning:
+            - If a circle is out of bounds,
+              the drawn circle may not be fully visible in the image.
         """
-        from matplotlib.collections import PatchCollection
-        from matplotlib.patches import Circle
         check_type('center', center, (np.ndarray, torch.Tensor))
         center = tensor2ndarray(center)
         check_type('radius', radius, (np.ndarray, torch.Tensor))
@@ -686,65 +1018,162 @@ class Visualizer(ManagerMixin):
 
         center = center.tolist()
         radius = radius.tolist()
-        edge_colors = color_val_matplotlib(edge_colors)  # type: ignore
-        face_colors = color_val_matplotlib(face_colors)  # type: ignore
-        circles = []
-        for i in range(len(center)):
-            circles.append(Circle(tuple(center[i]), radius[i]))
+        if backend == 'matplotlib':
+            from matplotlib.collections import PatchCollection
+            from matplotlib.patches import Circle
+            edge_colors = color_val_matplotlib(edge_colors)  # type: ignore
+            face_colors = color_val_matplotlib(face_colors)  # type: ignore
+            circles = []
+            for i in range(len(center)):
+                circles.append(Circle(tuple(center[i]), radius[i]))
 
-        if isinstance(line_widths, (int, float)):
-            line_widths = [line_widths] * len(circles)
-        line_widths = [
-            min(max(linewidth, 1), self._default_font_size / 4)
-            for linewidth in line_widths
-        ]
-        p = PatchCollection(
-            circles,
-            alpha=alpha,
-            facecolors=face_colors,
-            edgecolors=edge_colors,
-            linewidths=line_widths,
-            linestyles=line_styles)
-        self.ax_save.add_collection(p)
-        return self
+            if isinstance(line_widths, (int, float)):
+                line_widths = [line_widths] * len(circles)
+            line_widths = [
+                min(max(linewidth, 1), self._default_font_size / 4)
+                for linewidth in line_widths
+            ]
+            p = PatchCollection(
+                circles,
+                alpha=alpha,
+                facecolors=face_colors,
+                edgecolors=edge_colors,
+                linewidths=line_widths,
+                linestyles=line_styles)
+            self.ax_save.add_collection(p)
+            return self
+
+        elif backend == 'cv2':
+            if not isinstance(edge_colors, list):
+                edge_colors = [edge_colors] * len(center)  # type: ignore
+            if not isinstance(face_colors, list):
+                face_colors = [face_colors] * len(center)  # type: ignore
+            for i in range(len(center)):
+                x, y = int(center[i][0]), int(center[i][1])
+                r = int(radius[i])
+
+                # Get the edge color and face color for the current circle
+                current_edge_color = edge_colors[i]
+                current_face_color = face_colors[i]
+
+                # Get the line width for the current circle
+                current_line_width = line_widths[i] if isinstance(
+                    line_widths, list) else int(line_widths)
+
+                # Draw the circle for the edge
+                if current_edge_color == 'g':
+                    current_edge_color = (0, 255, 0)
+                elif current_edge_color == 'r':
+                    current_edge_color = (0, 0, 255)
+                elif current_edge_color == 'b':
+                    current_edge_color = (255, 0, 0)
+
+                cv2.circle(
+                    self._image, (x, y),
+                    r,
+                    current_edge_color,
+                    thickness=current_line_width)
+
+                # Draw the circle for the face
+                cv2.circle(self._image, (x, y), abs(r - current_line_width),
+                           current_face_color, -1)
+
+            return self
+
+        else:
+            raise ValueError('backend should be "matplotlib" or "cv2", '
+                             f'but got {backend} instead')
 
     @master_only
-    def draw_bboxes(
-        self,
-        bboxes: Union[np.ndarray, torch.Tensor],
-        edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-        line_styles: Union[str, List[str]] = '-',
-        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
-        face_colors: Union[str, tuple, List[str], List[tuple]] = 'none',
-        alpha: Union[int, float] = 0.8,
-    ) -> 'Visualizer':
-        """Draw single or multiple bboxes.
+    def draw_bboxes(self,
+                    bboxes: Union[np.ndarray, torch.Tensor],
+                    edge_colors: Union[str, tuple, List[str],
+                                       List[tuple]] = (0, 255, 0),
+                    line_styles: Union[str, List[str]] = '-',
+                    line_widths: Union[Union[int, float],
+                                       List[Union[int, float]]] = 2,
+                    face_colors: Union[str, tuple, List[str],
+                                       List[tuple]] = (0, 255, 0),
+                    alpha: Union[int, float] = 0.8,
+                    backend: str = 'matplotlib') -> 'Visualizer':
+        """Draw single or multiple bounding boxes.
 
         Args:
-            bboxes (Union[np.ndarray, torch.Tensor]): The bboxes to draw with
-                the format of(x1,y1,x2,y2).
-            edge_colors (Union[str, tuple, List[str], List[tuple]]): The
-                colors of bboxes. ``colors`` can have the same length with
-                lines or just single value. If ``colors`` is single value, all
-                the lines will have the same colors. Refer to `matplotlib.
-                colors` for full list of formats that are accepted.
-                Defaults to 'g'.
-            line_styles (Union[str, List[str]]): The linestyle
-                of lines. ``line_styles`` can have the same length with
-                texts or just single value. If ``line_styles`` is single
-                value, all the lines will have the same linestyle.
-                Reference to
-                https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
-                for more details. Defaults to '-'.
+            bboxes (Union[np.ndarray, torch.Tensor]):
+                The bounding boxes to draw.
+                The format of each bbox should be (x1, y1, x2, y2).
+            edge_colors (Union[str, tuple, List[str], List[tuple]]):
+                The edge colors of the bounding boxes.
+                `edge_colors` can have the same length
+                as the number of bboxes or just a single value.
+                If a single value is provided,
+                all bounding boxes will have the same edge color.
+                When using the 'matplotlib' backend,
+                colors can be specified using named colors
+                from the matplotlib color library.
+                See
+                https://matplotlib.org/stable/gallery/color/named_colors.html
+                for more details.
+                When using the 'cv2' backend,
+                colors should be a tuple of integers (e.g., (0, 255, 0)).
+                Defaults to 'g' (green).
+            line_styles (Union[str, List[str]]):
+                The line style of the bounding box edges.
+                `line_styles` can have the same length
+                as the number of bboxes or just a single value.
+                If a single value is provided,
+                all bounding boxes will have the same line style.
+                Refer to the matplotlib documentation
+                for available line styles.
+                Defaults to '-' (solid line).
             line_widths (Union[Union[int, float], List[Union[int, float]]]):
-                The linewidth of lines. ``line_widths`` can have
-                the same length with lines or just single value.
-                If ``line_widths`` is single value, all the lines will
-                have the same linewidth. Defaults to 2.
+                The line width of the bounding box edges.
+                `line_widths` can have the same length
+                as the number of bboxes or just a single value.
+                If a single value is provided,
+                all bounding boxes will have the same line width.
+                Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
-                The face colors. Defaults to None.
-            alpha (Union[int, float]): The transparency of bboxes.
+                The face colors of the bounding boxes.
+                `face_colors` can have the same length
+                as the number of bboxes or just a single value.
+                If a single value is provided,
+                all bounding boxes will have the same face color.
+                When using the 'matplotlib' backend,
+                colors can be specified using named colors
+                from the matplotlib color library.
+                See
+                https://matplotlib.org/stable/gallery/color/named_colors.html
+                for more details.
+                When using the 'cv2' backend,
+                colors should be a tuple of integers (e.g., (0, 255, 0)).
+                Defaults to 'none'.
+            alpha (Union[int, float]):
+                The transparency of the bounding boxes.
+                Valid values are between 0 and 1.
                 Defaults to 0.8.
+            backend (str):
+                The backend to use for drawing the bounding boxes.
+                Supported backends are 'matplotlib' and 'cv2' (OpenCV).
+                Defaults to 'matplotlib'.
+
+        Returns:
+            self: Returns the instance of the class,
+                  allowing method chaining.
+
+        Note:
+            - When using the 'matplotlib' backend,
+              the bounding boxes are drawn on a plot.
+            - When using the 'cv2' backend,
+              the bounding boxes are drawn on an image.
+
+        Warning:
+            - If a bounding box is out of bounds,
+              the drawn bounding box may not be fully visible in the image.
+
+        Raises:
+            ValueError: If the `backend` argument is not one of 'matplotlib'
+                        or 'cv2'.
         """
         check_type('bboxes', bboxes, (np.ndarray, torch.Tensor))
         bboxes = tensor2ndarray(bboxes)
@@ -760,64 +1189,155 @@ class Visualizer(ManagerMixin):
             warnings.warn(
                 'Warning: The bbox is out of bounds,'
                 ' the drawn bbox may not be in the image', UserWarning)
-        poly = np.stack(
-            (bboxes[:, 0], bboxes[:, 1], bboxes[:, 2], bboxes[:, 1],
-             bboxes[:, 2], bboxes[:, 3], bboxes[:, 0], bboxes[:, 3]),
-            axis=-1).reshape(-1, 4, 2)
-        poly = [p for p in poly]
-        return self.draw_polygons(
-            poly,
-            alpha=alpha,
-            edge_colors=edge_colors,
-            line_styles=line_styles,
-            line_widths=line_widths,
-            face_colors=face_colors)
+        if backend == 'matplotlib':
+            poly = np.stack(
+                (bboxes[:, 0], bboxes[:, 1], bboxes[:, 2], bboxes[:, 1],
+                 bboxes[:, 2], bboxes[:, 3], bboxes[:, 0], bboxes[:, 3]),
+                axis=-1).reshape(-1, 4, 2)
+            poly = [p for p in poly]
+            return self.draw_polygons(
+                poly,
+                alpha=alpha,
+                edge_colors=edge_colors,
+                line_styles=line_styles,
+                line_widths=line_widths,
+                face_colors=face_colors)
+
+        elif backend == 'cv2':
+            if not isinstance(edge_colors, list):
+                edgeColors = [edge_colors] * len(bboxes)
+            if not isinstance(face_colors, list):
+                faceColors = [face_colors] * len(bboxes)
+            if not isinstance(line_widths, list):
+                line_widths = [line_widths] * len(bboxes)
+
+            for points, edge_color, face_color, line_width in zip(
+                    bboxes, edgeColors, faceColors, line_widths):
+                start = (int(points[0]), int(points[1]))
+                end = (int(points[2]), int(points[3]))
+                cv2.rectangle(self._image, start, end, face_color,
+                              -1)  # Fill the rectangle
+                cv2.rectangle(self._image, start, end, edge_color,
+                              line_width)  # Outline the rectangle
+
+            return self
+
+        else:
+            raise ValueError('backend should be "matplotlib" or "cv2", '
+                             f'but got {backend} instead')
 
     @master_only
-    def draw_polygons(
-        self,
-        polygons: Union[Union[np.ndarray, torch.Tensor],
-                        List[Union[np.ndarray, torch.Tensor]]],
-        edge_colors: Union[str, tuple, List[str], List[tuple]] = 'g',
-        line_styles: Union[str, List[str]] = '-',
-        line_widths: Union[Union[int, float], List[Union[int, float]]] = 2,
-        face_colors: Union[str, tuple, List[str], List[tuple]] = 'none',
-        alpha: Union[int, float] = 0.8,
-    ) -> 'Visualizer':
-        """Draw single or multiple bboxes.
+    def draw_polygons(self,
+                      polygons: Union[Union[np.ndarray, torch.Tensor],
+                                      List[Union[np.ndarray, torch.Tensor]]],
+                      edge_colors: Union[str, tuple, List[str],
+                                         List[tuple]] = (0, 255, 0),
+                      line_styles: Union[str, List[str]] = '-',
+                      line_widths: Union[Union[int, float],
+                                         List[Union[int, float]]] = 2,
+                      face_colors: Union[str, tuple, List[str],
+                                         List[tuple]] = (0, 255, 0),
+                      alpha: Union[int, float] = 0.8,
+                      backend: str = 'matplotlib') -> 'Visualizer':
+        """Draw single or multiple polygons.
 
         Args:
-            polygons (Union[Union[np.ndarray, torch.Tensor],\
-                List[Union[np.ndarray, torch.Tensor]]]): The polygons to draw
-                with the format of (x1,y1,x2,y2,...,xn,yn).
-            edge_colors (Union[str, tuple, List[str], List[tuple]]): The
-                colors of polygons. ``colors`` can have the same length with
-                lines or just single value. If ``colors`` is single value,
-                all the lines will have the same colors. Refer to
-                `matplotlib.colors` for full list of formats that are accepted.
-                Defaults to 'g.
-            line_styles (Union[str, List[str]]): The linestyle
-                of lines. ``line_styles`` can have the same length with
-                texts or just single value. If ``line_styles`` is single
-                value, all the lines will have the same linestyle.
-                Reference to
-                https://matplotlib.org/stable/api/collections_api.html?highlight=collection#matplotlib.collections.AsteriskPolygonCollection.set_linestyle
-                for more details. Defaults to '-'.
+            polygons (Union[Union[np.ndarray, torch.Tensor],
+                      List[Union[np.ndarray, torch.Tensor]]]):
+                The polygons to draw.
+                Each polygon should be a numpy array
+                or tensor of shape (N, 2),
+                where N is the number of vertices
+                and each vertex is represented as (x, y) coordinates.
+            edge_colors (Union[str, tuple, List[str], List[tuple]]):
+                The colors of the polygon edges.
+                `edge_colors` can have the same length
+                as the number of polygons
+                or just a single value. If a single value is provided,
+                all polygons will have the same edge color.
+                When using the 'matplotlib' backend,
+                colors can be specified using named colors from the matplotlib
+                color library.
+                See
+                https://matplotlib.org/stable/gallery/color/named_colors.html
+                for more details.
+                When using the 'cv2' backend,
+                colors should be specified as a tuple of integers
+                (e.g., (0, 255, 0)).
+                Defaults to 'g' (green).
+            line_styles (Union[str, List[str]]):
+                The line style of the polygon edges.
+                `line_styles` can have the same length
+                as the number of polygons
+                or just a single value.
+                If a single value is provided,
+                all polygons will have the same line style.
+                Refer to the matplotlib documentation
+                for available line styles.
+                Defaults to '-' (solid line).
             line_widths (Union[Union[int, float], List[Union[int, float]]]):
-                The linewidth of lines. ``line_widths`` can have
-                the same length with lines or just single value.
-                If ``line_widths`` is single value, all the lines will
-                have the same linewidth. Defaults to 2.
+                The line width of the polygon edges.
+                `line_widths` can have the same length as the number
+                of polygons
+                or just a single value.
+                If a single value is provided,
+                all polygons will have the same line width.
+                Defaults to 2.
             face_colors (Union[str, tuple, List[str], List[tuple]]):
-                The face colors. Defaults to None.
-            alpha (Union[int, float]): The transparency of polygons.
+                The face colors of the polygons.
+                `face_colors` can have the same length as
+                the number of polygons
+                or just a single value.
+                If a single value is provided,
+                all polygons will have the same face color.
+                When using the 'matplotlib' backend,
+                colors can be specified using named colors from the matplotlib
+                color library.
+                See
+                https://matplotlib.org/stable/gallery/color/named_colors.html
+                for more details.
+                When using the 'cv2' backend,
+                colors should be specified as a tuple of integers
+                (e.g., (0, 255, 0)).
+                Defaults to 'none'.
+            alpha (Union[int, float]):
+                The transparency of the polygons.
+                Valid values are between 0 and 1.
                 Defaults to 0.8.
-        """
-        from matplotlib.collections import PolyCollection
-        check_type('polygons', polygons, (list, np.ndarray, torch.Tensor))
-        edge_colors = color_val_matplotlib(edge_colors)  # type: ignore
-        face_colors = color_val_matplotlib(face_colors)  # type: ignore
+            backend (str):
+                The backend to use for drawing the polygons.
+                Supported backends are 'matplotlib' and 'cv2' (OpenCV).
+                Defaults to 'matplotlib'.
 
+        Returns:
+            self: Returns the instance of the class, allowing method chaining.
+
+        Notes:
+            - The `polygons` argument should be provided
+              as a list of numpy arrays or tensors,
+              even when drawing
+              a single polygon.
+              If a single numpy array or tensor is provided,
+              it will be converted to a list
+              internally to handle multiple polygons.
+            - The shape of each polygon in `polygons` should be (N, 2),
+              where N is the number of vertices and
+              each vertex is represented as (x, y) coordinates.
+
+        Warnings:
+            - If any of the polygons extend beyond the bounds of the image,
+              a warning will be displayed indicating
+              that the drawn polygon may not appear within
+              the image boundaries.
+
+        Raises:
+            - ValueError:
+              If the `backend` argument is not one of the supported backends:
+              'matplotlib' or 'cv2'.
+            - AssertionError:
+              If the shapes of the polygons in `polygons` are not valid.
+        """
+        check_type('polygons', polygons, (list, np.ndarray, torch.Tensor))
         if isinstance(polygons, (np.ndarray, torch.Tensor)):
             polygons = [polygons]
         if isinstance(polygons, list):
@@ -831,22 +1351,81 @@ class Visualizer(ManagerMixin):
                 warnings.warn(
                     'Warning: The polygon is out of bounds,'
                     ' the drawn polygon may not be in the image', UserWarning)
-        if isinstance(line_widths, (int, float)):
-            line_widths = [line_widths] * len(polygons)
-        line_widths = [
-            min(max(linewidth, 1), self._default_font_size / 4)
-            for linewidth in line_widths
-        ]
-        polygon_collection = PolyCollection(
-            polygons,
-            alpha=alpha,
-            facecolor=face_colors,
-            linestyles=line_styles,
-            edgecolors=edge_colors,
-            linewidths=line_widths)
+        if backend == 'matplotlib':
+            from matplotlib.collections import PolyCollection
+            edge_colors = color_val_matplotlib(edge_colors)  # type: ignore
+            face_colors = color_val_matplotlib(face_colors)  # type: ignore
+            if isinstance(line_widths, (int, float)):
+                line_widths = [line_widths] * len(polygons)
+            line_widths = [
+                min(max(linewidth, 1), self._default_font_size / 4)
+                for linewidth in line_widths
+            ]
+            polygon_collection = PolyCollection(
+                polygons,
+                alpha=alpha,
+                facecolor=face_colors,
+                linestyles=line_styles,
+                edgecolors=edge_colors,
+                linewidths=line_widths)
 
-        self.ax_save.add_collection(polygon_collection)
-        return self
+            self.ax_save.add_collection(polygon_collection)
+            return self
+
+        elif backend == 'cv2':
+            if isinstance(line_widths, (int, float)):
+                line_widths = [line_widths]
+            else:
+                line_widths = line_widths
+
+            if isinstance(edge_colors, (tuple)):
+                edge_colors = [edge_colors]
+            else:
+                edge_colors = edge_colors
+
+            if isinstance(face_colors, (tuple)):
+                face_colors = [face_colors]
+            else:
+                face_colors = face_colors
+
+            if len(edge_colors) != len(polygons):
+                edge_colors = edge_colors * len(polygons)
+
+            if len(face_colors) != len(polygons):
+                face_colors = face_colors * len(polygons)
+
+            if len(line_widths) != len(polygons):
+                line_widths = line_widths * len(polygons)
+
+            assert len(polygons) == len(
+                edge_colors), 'Number of polygons and edge colors must match'
+            assert len(polygons) == len(
+                line_widths), 'Number of polygons and line widths must match'
+            if face_colors is not None:
+                assert len(polygons) == len(
+                    face_colors
+                ), 'Number of polygons and face colors must match'
+
+            for i, polygon in enumerate(polygons):
+                assert polygon.shape[
+                    1] == 2, f'Invalid shape for polygon {i + 1}'
+                polygon = polygon.reshape((-1, 1, 2)).astype(np.int32)
+                if face_colors is not None:
+                    if edge_colors[i] == 'r':
+                        edge_colors[i] = (0, 0, 255)  # type: ignore
+                    elif edge_colors[i] == 'g':
+                        edge_colors[i] = (0, 255, 0)  # type: ignore
+                    elif edge_colors[i] == 'b':
+                        edge_colors[i] = (255, 0, 0)  # type: ignore
+                    cv2.fillPoly(self._image, [polygon], face_colors[i])
+                cv2.polylines(self._image, [polygon], True, edge_colors[i],
+                              line_widths[i])
+
+            return self
+
+        else:
+            raise ValueError('backend should be "matplotlib" or "cv2", '
+                             f'but got {backend} instead')
 
     @master_only
     def draw_binary_masks(
