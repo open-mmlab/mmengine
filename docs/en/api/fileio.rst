@@ -27,6 +27,7 @@ File Backend
    LmdbBackend
    MemcachedBackend
    PetrelBackend
+   OSSBackend
 
 .. autosummary::
    :toctree: generated
