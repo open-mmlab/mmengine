@@ -18,14 +18,14 @@
 ```bash
 # https://opendatalab.com/CamVid
 # Configure install
-pip install opendatalab
+pip install openxlab
 # Upgraded version
-pip install -U opendatalab
-# Login
-odl login
+pip install -U openxlab
+# Login, use AK/SK generated from usercenter(https://sso.openxlab.org.cn/usercenter?lang=zh-CN)
+openxlab login
 # Download this dataset
 mkdir data
-odl get CamVid -d data
+openxlab dataset get --dataset-repo data/CamVid
 # Preprocess data in Linux. You should extract the files to data manually in
 # Windows
 tar -xzvf data/CamVid/raw/CamVid.tar.gz.00 -C ./data
