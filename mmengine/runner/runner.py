@@ -1364,10 +1364,10 @@ class Runner:
 
         dataloader_cfg = copy.deepcopy(dataloader)
 
-        # build dataset
+        # build dataset  构建dataset
         dataset_cfg = dataloader_cfg.pop('dataset')
         if isinstance(dataset_cfg, dict):
-            dataset = DATASETS.build(dataset_cfg)
+            dataset = DATASETS.build(dataset_cfg) # 根据dataset_cfg的type构建对应的dataset类
             if hasattr(dataset, 'full_init'):
                 dataset.full_init()
         else:
@@ -1473,7 +1473,7 @@ class Runner:
             raise TypeError(
                 'collate_fn should be a dict or callable object, but got '
                 f'{collate_fn_cfg}')
-        data_loader = DataLoader(
+        data_loader = DataLoader( # 最终构建pytroch的DataLoader
             dataset=dataset,
             sampler=sampler if batch_sampler is None else None,
             batch_sampler=batch_sampler,
@@ -1724,7 +1724,7 @@ class Runner:
                 'method. Please provide `train_dataloader`, `train_cfg`, '
                 '`optimizer` and `param_scheduler` arguments when '
                 'initializing runner.')
-
+        # ! 构建训练loop
         self._train_loop = self.build_train_loop(
             self._train_loop)  # type: ignore
 
@@ -1742,10 +1742,10 @@ class Runner:
             self._val_loop = self.build_val_loop(
                 self._val_loop)  # type: ignore
         # TODO: add a contextmanager to avoid calling `before_run` many times
-        self.call_hook('before_run')
+        self.call_hook('before_run') # 运行之前的hook
 
         # initialize the model weights
-        self._init_model_weights()
+        self._init_model_weights() # 初始化模型
 
         # try to enable activation_checkpointing feature
         modules = self.cfg.get('activation_checkpointing', None)
@@ -1773,9 +1773,10 @@ class Runner:
         # Maybe compile the model according to options in self.cfg.compile
         # This must be called **AFTER** model has been wrapped.
         self._maybe_compile('train_step')
-
+        
+        # !开始训练模型
         model = self.train_loop.run()  # type: ignore
-        self.call_hook('after_run')
+        self.call_hook('after_run')  # !运行之后的hook
         return model
 
     def val(self) -> dict:
@@ -1874,7 +1875,7 @@ class Runner:
             if 'priority' in hook:
                 _priority = hook.pop('priority')
 
-            hook_obj = HOOKS.build(hook)
+            hook_obj = HOOKS.build(hook) # 构建hook类
         else:
             hook_obj = hook
 
@@ -1963,7 +1964,7 @@ class Runner:
                     default_hooks[name] = hook
 
         for hook in default_hooks.values():
-            self.register_hook(hook)
+            self.register_hook(hook)  # 一个一个的注册
 
     def register_custom_hooks(self, hooks: List[Union[Hook, Dict]]) -> None:
         """Register custom hooks into hook list.
