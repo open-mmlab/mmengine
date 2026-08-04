@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
+import os
 import random
 from typing import List, Optional, Tuple
 
@@ -80,13 +81,22 @@ def set_random_seed(seed: Optional[int] = None,
             print_log(
                 'torch.backends.cudnn.benchmark is going to be set as '
                 '`False` to cause cuDNN to deterministically select an '
-                'algorithm',
+                'algorithm, which may limit overall performance, see more '
+                'informaton in https://docs.nvidia.com/cuda/cublas/index.html#results-reproducibility',  # noqa: E501
                 logger='current',
                 level=logging.WARNING)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
-        if digit_version(TORCH_VERSION) >= digit_version('1.10.0'):
+        if digit_version(TORCH_VERSION) >= digit_version('1.8.0'):
+            # CUBLAS_WORKSPACE_CONFIG must be set for cudatoolkit version
+            # higher than 10.2 if deterministic is True.
+            if digit_version(torch.version.cuda) >= digit_version('10.2'):
+                # set a debug environment variable CUBLAS_WORKSPACE_CONFIG to
+                # :16:8 (may limit overall performance) or :4096:8 (will
+                # increase library footprint in GPU memory by approximately
+                # 24MiB).
+                os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':16:8'
             torch.use_deterministic_algorithms(True)
     return seed
 
