@@ -733,13 +733,13 @@ class TestConcatDataset:
     def test_getitem(self):
         assert (
             self.cat_datasets[0]['imgs'] == self.dataset_a[0]['imgs']).all()
-        assert (self.cat_datasets[0]['imgs'] !=
-                self.dataset_b[0]['imgs']).all()
+        assert (self.cat_datasets[0]['imgs']
+                != self.dataset_b[0]['imgs']).all()
 
         assert (
             self.cat_datasets[-1]['imgs'] == self.dataset_b[-1]['imgs']).all()
-        assert (self.cat_datasets[-1]['imgs'] !=
-                self.dataset_a[-1]['imgs']).all()
+        assert (self.cat_datasets[-1]['imgs']
+                != self.dataset_a[-1]['imgs']).all()
 
     def test_get_data_info(self):
         assert self.cat_datasets.get_data_info(

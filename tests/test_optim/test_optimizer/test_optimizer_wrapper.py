@@ -455,8 +455,8 @@ class TestAmpOptimWrapper(TestCase):
         not torch.cuda.is_available(),
         reason='`torch.cuda.amp` is only available when pytorch-gpu installed')
     def test_step(self, dtype):
-        if dtype is not None and (digit_version(TORCH_VERSION) <
-                                  digit_version('1.10.0')):
+        if dtype is not None and (digit_version(TORCH_VERSION)
+                                  < digit_version('1.10.0')):
             raise unittest.SkipTest('Require PyTorch version >= 1.10.0 to '
                                     'support `dtype` argument in autocast')
         if dtype == 'bfloat16' and not bf16_supported():
@@ -478,8 +478,8 @@ class TestAmpOptimWrapper(TestCase):
         not torch.cuda.is_available(),
         reason='`torch.cuda.amp` is only available when pytorch-gpu installed')
     def test_backward(self, dtype):
-        if dtype is not None and (digit_version(TORCH_VERSION) <
-                                  digit_version('1.10.0')):
+        if dtype is not None and (digit_version(TORCH_VERSION)
+                                  < digit_version('1.10.0')):
             raise unittest.SkipTest('Require PyTorch version >= 1.10.0 to '
                                     'support `dtype` argument in autocast')
         if dtype == 'bfloat16' and not bf16_supported():
@@ -539,8 +539,8 @@ class TestAmpOptimWrapper(TestCase):
         not torch.cuda.is_available(),
         reason='`torch.cuda.amp` is only available when pytorch-gpu installed')
     def test_optim_context(self, dtype, target_dtype):
-        if dtype is not None and (digit_version(TORCH_VERSION) <
-                                  digit_version('1.10.0')):
+        if dtype is not None and (digit_version(TORCH_VERSION)
+                                  < digit_version('1.10.0')):
             raise unittest.SkipTest('Require PyTorch version >= 1.10.0 to '
                                     'support `dtype` argument in autocast')
         if dtype == 'bfloat16' and not bf16_supported():

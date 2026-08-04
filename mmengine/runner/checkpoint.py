@@ -601,9 +601,10 @@ def _load_checkpoint_to_model(model,
     # strip prefix of state_dict
     metadata = getattr(state_dict, '_metadata', OrderedDict())
     for p, r in revise_keys:
-        state_dict = OrderedDict(
-            {re.sub(p, r, k): v
-             for k, v in state_dict.items()})
+        state_dict = OrderedDict({
+            re.sub(p, r, k): v
+            for k, v in state_dict.items()
+        })
     # Keep metadata in state_dict
     state_dict._metadata = metadata
 

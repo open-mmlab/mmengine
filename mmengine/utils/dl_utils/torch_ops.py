@@ -4,9 +4,9 @@ import torch
 from ..version_utils import digit_version
 from .parrots_wrapper import TORCH_VERSION
 
-_torch_version_meshgrid_indexing = (
-    'parrots' not in TORCH_VERSION
-    and digit_version(TORCH_VERSION) >= digit_version('1.10.0a0'))
+_torch_version_meshgrid_indexing = ('parrots' not in TORCH_VERSION
+                                    and digit_version(TORCH_VERSION)
+                                    >= digit_version('1.10.0a0'))
 
 
 def torch_meshgrid(*tensors):
