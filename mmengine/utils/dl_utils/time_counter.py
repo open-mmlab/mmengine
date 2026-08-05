@@ -4,7 +4,8 @@ from typing import Optional, Union
 
 import torch
 
-from mmengine.device import is_cuda_available, is_musa_available
+from mmengine.device import (is_cuda_available, is_musa_available,
+                             is_supa_available)
 from mmengine.dist.utils import master_only
 from mmengine.logging import MMLogger, print_log
 
@@ -86,7 +87,9 @@ class TimeCounter:
             self.__count += 1
 
             if self.with_sync:
-                if is_cuda_available():
+                if is_supa_available():
+                    torch.supa.synchronize()
+                elif is_cuda_available():
                     torch.cuda.synchronize()
                 elif is_musa_available():
                     torch.musa.synchronize()
@@ -95,7 +98,9 @@ class TimeCounter:
             result = fn(*args, **kwargs)
 
             if self.with_sync:
-                if is_cuda_available():
+                if is_supa_available():
+                    torch.supa.synchronize()
+                elif is_cuda_available():
                     torch.cuda.synchronize()
                 elif is_musa_available():
                     torch.musa.synchronize()
@@ -115,14 +120,20 @@ class TimeCounter:
 
         self.__count += 1
 
-        if self.with_sync and torch.cuda.is_available():
-            torch.cuda.synchronize()
+        if self.with_sync:
+            if is_supa_available():
+                torch.supa.synchronize()
+            elif is_cuda_available():
+                torch.cuda.synchronize()
         self.__start_time = time.perf_counter()
 
     @master_only
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.with_sync and torch.cuda.is_available():
-            torch.cuda.synchronize()
+        if self.with_sync:
+            if is_supa_available():
+                torch.supa.synchronize()
+            elif is_cuda_available():
+                torch.cuda.synchronize()
         elapsed = time.perf_counter() - self.__start_time
         self.print_time(elapsed)
 

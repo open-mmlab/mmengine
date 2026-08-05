@@ -398,6 +398,23 @@ def _get_device_id():
     except ImportError:
         return 0
     else:
+        SUPA_AVAILABLE = False
+        try:
+            import torch_supa  # noqa: F401
+            SUPA_AVAILABLE = (
+                hasattr(torch, 'supa') and torch.supa.is_available())
+        except ImportError:
+            pass
+        if SUPA_AVAILABLE:
+            local_rank = int(os.getenv('LOCAL_RANK', '0'))
+            supa_visible_devices = os.getenv('SUPA_VISIBLE_DEVICES', None)
+            if supa_visible_devices is None:
+                num_device = torch.supa.device_count()
+                supa_visible_devices = list(range(num_device))
+            else:
+                supa_visible_devices = supa_visible_devices.split(',')
+            return int(supa_visible_devices[local_rank])
+
         MUSA_AVAILABLE = False
         try:
             import torch_musa

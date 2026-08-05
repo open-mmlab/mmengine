@@ -7,7 +7,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from mmengine.device import is_cuda_available, is_musa_available
+from mmengine.device import (is_cuda_available, is_musa_available,
+                             is_supa_available)
 from mmengine.dist import get_rank, sync_random_seed
 from mmengine.logging import print_log
 from mmengine.utils import digit_version, is_list_of
@@ -70,7 +71,9 @@ def set_random_seed(seed: Optional[int] = None,
     np.random.seed(seed)
     torch.manual_seed(seed)
     # torch.cuda.manual_seed(seed)
-    if is_cuda_available():
+    if is_supa_available():
+        torch.supa.manual_seed_all(seed)
+    elif is_cuda_available():
         torch.cuda.manual_seed_all(seed)
     elif is_musa_available():
         torch.musa.manual_seed_all(seed)

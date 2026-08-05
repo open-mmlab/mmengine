@@ -10,7 +10,8 @@ import numpy as np
 import torch
 
 import mmengine
-from mmengine.device import is_cuda_available, is_musa_available
+from mmengine.device import (is_cuda_available, is_musa_available,
+                             is_supa_available)
 from .parrots_wrapper import TORCH_VERSION, get_build_config, is_rocm_pytorch
 
 
@@ -58,12 +59,20 @@ def collect_env():
     env_info['Python'] = sys.version.replace('\n', '')
 
     cuda_available = is_cuda_available()
+    supa_available = is_supa_available()
     musa_available = is_musa_available()
     env_info['CUDA available'] = cuda_available
+    env_info['SUPA available'] = supa_available
     env_info['MUSA available'] = musa_available
     env_info['numpy_random_seed'] = np.random.get_state()[1][0]
 
-    if cuda_available:
+    if supa_available:
+        devices = defaultdict(list)
+        for k in range(torch.supa.device_count()):
+            devices[torch.supa.get_device_name(k)].append(str(k))
+        for name, device_ids in devices.items():
+            env_info['SUPA ' + ','.join(device_ids)] = name
+    elif cuda_available:
         devices = defaultdict(list)
         for k in range(torch.cuda.device_count()):
             devices[torch.cuda.get_device_name(k)].append(str(k))
