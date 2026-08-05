@@ -4,7 +4,7 @@ from typing import Optional, Sequence, Union
 import torch
 
 from mmengine.registry import HOOKS
-from ..device import (is_cuda_available, is_musa_available, is_supa_available)
+from ..device import is_cuda_available, is_musa_available, is_supa_available
 from .hook import Hook
 
 DATA_BATCH = Optional[Union[dict, tuple, list]]
