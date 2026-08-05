@@ -416,6 +416,7 @@ def _broadcast_object_list(object_list: List[Any],
     is_hccl_backend = group_backend == 'hccl'
     is_cncl_backend = group_backend == 'cncl'
     is_mccl_backend = group_backend == 'mccl'
+    is_bccl_backend = group_backend == 'bccl'
     if is_hccl_backend:
         current_device = torch.device('npu', torch.npu.current_device())
         object_sizes_tensor = object_sizes_tensor.to(current_device)
@@ -424,6 +425,9 @@ def _broadcast_object_list(object_list: List[Any],
         object_sizes_tensor = object_sizes_tensor.to(current_device)
     elif is_mccl_backend:
         current_device = torch.device('musa', torch.musa.current_device())
+        object_sizes_tensor = object_sizes_tensor.to(current_device)
+    elif is_bccl_backend:
+        current_device = torch.device('supa', torch.supa.current_device())
         object_sizes_tensor = object_sizes_tensor.to(current_device)
     elif is_nccl_backend:
         # See note about using torch.cuda.current_device() here in
@@ -444,7 +448,8 @@ def _broadcast_object_list(object_list: List[Any],
             dtype=torch.uint8,
         )
 
-    if is_nccl_backend or is_hccl_backend or is_cncl_backend:
+    if (is_nccl_backend or is_hccl_backend or is_cncl_backend
+            or is_bccl_backend):
         object_tensor = object_tensor.to(current_device)
     torch_dist.broadcast(object_tensor, src=src, group=group)
     # Deserialize objects using their stored sizes.
@@ -629,7 +634,12 @@ def _all_gather_object(object_list: List[Any],
     current_device = torch.device('cpu')
     is_nccl_backend = group_backend == torch_dist.Backend.NCCL
     is_mccl_backend = group_backend == 'mccl'
-    if is_nccl_backend:
+    is_bccl_backend = group_backend == 'bccl'
+    if is_bccl_backend:
+        current_device = torch.device('supa', torch.supa.current_device())
+        input_tensor = input_tensor.to(current_device)
+        local_size = local_size.to(current_device)
+    elif is_nccl_backend:
         # See note about using torch.cuda.current_device() here in docstring.
         # We cannot simply use my_rank since rank == device is not necessarily
         # true.
@@ -789,7 +799,12 @@ def _gather_object(obj: Any,
     current_device = torch.device('cpu')
     is_nccl_backend = group_backend == torch_dist.Backend.NCCL
     is_mccl_backend = group_backend == 'mccl'
-    if is_nccl_backend:
+    is_bccl_backend = group_backend == 'bccl'
+    if is_bccl_backend:
+        current_device = torch.device('supa', torch.supa.current_device())
+        input_tensor = input_tensor.to(current_device)
+        local_size = local_size.to(current_device)
+    elif is_nccl_backend:
         current_device = torch.device('cuda', torch.cuda.current_device())
         input_tensor = input_tensor.to(current_device)
         local_size = local_size.to(current_device)

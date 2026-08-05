@@ -12,7 +12,7 @@ from torch import Tensor
 from torch import distributed as torch_dist
 from torch.distributed import ProcessGroup
 from mmengine.device import (is_mlu_available, is_npu_available,
-                             is_musa_available)
+                             is_musa_available, is_supa_available)
 
 from collections.abc import Iterable, Mapping
 
@@ -62,8 +62,8 @@ def init_dist(launcher,
     Args:
         launcher (str): Way to launcher multi processes. Supported launchers
             are 'pytorch', 'mpi' and 'slurm'.
-        backend (str): Communication Backends. Supported backends are 'nccl',
-            'gloo' and 'mpi'. Defaults to 'nccl'.
+        backend (str): Communication Backends. Supported backends include
+            'nccl', 'bccl', 'gloo' and 'mpi'. Defaults to 'nccl'.
         **kwargs: keyword arguments are passed to ``init_process_group``.
     """
     timeout = kwargs.get('timeout', None)
@@ -95,8 +95,8 @@ def _init_dist_pytorch(backend, init_backend='torch', **kwargs) -> None:
     """Initialize distributed environment with PyTorch launcher.
 
     Args:
-        backend (str): Backend of torch.distributed. Supported backends are
-            'nccl', 'gloo' and 'mpi'. Defaults to 'nccl'.
+        backend (str): Backend of torch.distributed. Supported backends include
+            'nccl', 'bccl', 'gloo' and 'mpi'. Defaults to 'nccl'.
         **kwargs: keyword arguments are passed to ``init_process_group``.
     """
     rank = int(os.environ['RANK'])
@@ -115,6 +115,13 @@ def _init_dist_pytorch(backend, init_backend='torch', **kwargs) -> None:
         torch.npu.set_device(local_rank)
         torch_dist.init_process_group(
             backend='hccl',
+            rank=rank,
+            world_size=int(os.environ['WORLD_SIZE']),
+            **kwargs)
+    elif is_supa_available():
+        torch.supa.set_device(local_rank)
+        torch_dist.init_process_group(
+            backend='bccl',
             rank=rank,
             world_size=int(os.environ['WORLD_SIZE']),
             **kwargs)
@@ -161,7 +168,11 @@ def _init_dist_mpi(backend, **kwargs) -> None:
                 '/available_images.md#sagemaker-framework-containers'
                 '-sm-support-only') from e
     local_rank = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK'])
-    torch.cuda.set_device(local_rank)
+    if is_supa_available():
+        torch.supa.set_device(local_rank)
+        backend = 'bccl'
+    else:
+        torch.cuda.set_device(local_rank)
     if 'MASTER_PORT' not in os.environ:
         # 29500 is torch.distributed default port
         os.environ['MASTER_PORT'] = '29500'
@@ -194,7 +205,9 @@ def _init_dist_slurm(backend,
     if local_rank_env is not None:
         local_rank = int(local_rank_env)
     else:
-        num_gpus = torch.cuda.device_count()
+        num_gpus = (
+            torch.supa.device_count()
+            if is_supa_available() else torch.cuda.device_count())
         local_rank = proc_id % num_gpus
     addr = subprocess.getoutput(
         f'scontrol show hostname {node_list} | head -n1')
@@ -217,6 +230,9 @@ def _init_dist_slurm(backend,
         import torch_mlu  # noqa: F401
         torch.mlu.set_device(local_rank)
         torch_dist.init_process_group(backend='cncl', **kwargs)
+    elif is_supa_available():
+        torch.supa.set_device(local_rank)
+        torch_dist.init_process_group(backend='bccl', **kwargs)
     else:
         torch.cuda.set_device(local_rank)
 
@@ -529,6 +545,8 @@ def get_comm_device(group: Optional[ProcessGroup] = None) -> torch.device:
     if backend == 'hccl':
         import torch_npu  # noqa: F401
         return torch.device('npu', torch.npu.current_device())
+    elif backend == 'bccl':
+        return torch.device('supa', torch.supa.current_device())
     elif backend == torch_dist.Backend.NCCL:
         return torch.device('cuda', torch.cuda.current_device())
     elif backend == 'cncl':

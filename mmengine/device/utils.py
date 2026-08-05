@@ -17,6 +17,12 @@ except Exception:
     IS_NPU_AVAILABLE = False
 
 try:
+    import torch_supa  # noqa: F401
+    IS_SUPA_AVAILABLE = hasattr(torch, 'supa') and torch.supa.is_available()
+except Exception:
+    IS_SUPA_AVAILABLE = False
+
+try:
     import torch_mlu  # noqa: F401
     IS_MLU_AVAILABLE = hasattr(torch, 'mlu') and torch.mlu.is_available()
 except Exception:
@@ -61,6 +67,11 @@ def get_max_cuda_memory(device: Optional[torch.device] = None) -> int:
 def is_cuda_available() -> bool:
     """Returns True if cuda devices exist."""
     return torch.cuda.is_available()
+
+
+def is_supa_available() -> bool:
+    """Returns True if Biren SUPA devices exist."""
+    return IS_SUPA_AVAILABLE
 
 
 def is_npu_available() -> bool:
@@ -109,6 +120,16 @@ def get_max_musa_memory(device: Optional[torch.device] = None) -> int:
     return int(mem_mb.item())
 
 
+def get_max_supa_memory(device: Optional[torch.device] = None) -> int:
+    """Return peak tensor memory on a SUPA device in megabytes (MB)."""
+    mem = torch.supa.max_memory_allocated(device=device)
+    mem_mb = torch.tensor([int(mem) // (1024 * 1024)],
+                          dtype=torch.int,
+                          device=device)
+    torch.supa.reset_peak_memory_stats(device=device)
+    return int(mem_mb.item())
+
+
 def is_musa_available() -> bool:
     return IS_MUSA_AVAILABLE
 
@@ -123,6 +144,8 @@ def is_npu_support_full_precision() -> bool:
 DEVICE = 'cpu'
 if is_npu_available():
     DEVICE = 'npu'
+elif is_supa_available():
+    DEVICE = 'supa'
 elif is_cuda_available():
     DEVICE = 'cuda'
 elif is_mlu_available():
@@ -139,6 +162,6 @@ def get_device() -> str:
     """Returns the currently existing device type.
 
     Returns:
-        str: cuda | npu | mlu | mps | musa | cpu.
+        str: cuda | npu | mlu | mps | musa | supa | cpu.
     """
     return DEVICE

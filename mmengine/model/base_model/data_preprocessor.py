@@ -113,6 +113,11 @@ class BaseDataPreprocessor(nn.Module):
         self._device = torch.device(torch.cuda.current_device())
         return super().cuda()
 
+    def supa(self, *args, **kwargs) -> nn.Module:
+        """Move the module to SUPA and record its current device."""
+        self._device = torch.device('supa', torch.supa.current_device())
+        return super().to(self._device)
+
     def musa(self, *args, **kwargs) -> nn.Module:
         """Overrides this method to set the :attr:`device`
 

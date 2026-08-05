@@ -6,7 +6,7 @@ from typing import Optional
 import torch
 
 from mmengine.device import (get_device, is_cuda_available, is_mlu_available,
-                             is_npu_available)
+                             is_npu_available, is_supa_available)
 from mmengine.logging import print_log
 from mmengine.utils import digit_version
 from mmengine.utils.dl_utils import TORCH_VERSION
@@ -92,6 +92,9 @@ def autocast(device_type: Optional[str] = None,
         if is_npu_available():
             with torch.npu.amp.autocast(enabled=enabled):
                 yield
+        elif is_supa_available():
+            with torch.supa.amp.autocast(enabled=enabled):
+                yield
         elif is_mlu_available():
             with torch.mlu.amp.autocast(enabled=enabled):
                 yield
@@ -124,6 +127,15 @@ def autocast(device_type: Optional[str] = None,
                     'Current CUDA Device does not support bfloat16. Please '
                     'switch dtype to float16.')
 
+        elif device_type == 'supa':
+            if dtype is None:
+                dtype = torch.float16
+            if (dtype == torch.bfloat16
+                    and not torch.supa.is_bf16_supported()):
+                raise RuntimeError(
+                    'Current SUPA device does not support bfloat16. Please '
+                    'switch dtype to float16.')
+
         elif device_type == 'cpu':
             if dtype is None:
                 dtype = torch.bfloat16
@@ -151,7 +163,8 @@ def autocast(device_type: Optional[str] = None,
                 return
             else:
                 raise ValueError('User specified autocast device_type must be '
-                                 f'cuda or cpu, but got {device_type}')
+                                 'cuda, supa or cpu, but got '
+                                 f'{device_type}')
 
         with torch.autocast(
                 device_type=device_type,
