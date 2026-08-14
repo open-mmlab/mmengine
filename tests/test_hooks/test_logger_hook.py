@@ -120,6 +120,8 @@ class TestLoggerHook(RunnerTestCase):
     def test_after_val_epoch(self):
         logger_hook = LoggerHook()
         runner = MagicMock()
+        runner._train_loop = object()
+        runner.epoch = 3
         # Test when `log_metric_by_epoch` is True
         runner.log_processor.get_log_after_epoch = MagicMock(
             return_value=({
@@ -135,7 +137,8 @@ class TestLoggerHook(RunnerTestCase):
             call({
                 'time': 1,
                 'datatime': 1,
-                'acc': 0.8
+                'acc': 0.8,
+                'epoch': 3
             }, **args),
         ]
         self.assertEqual(
@@ -157,7 +160,8 @@ class TestLoggerHook(RunnerTestCase):
             call({
                 'time': 1,
                 'datatime': 1,
-                'acc': 0.8
+                'acc': 0.8,
+                'epoch': 3
             }, **args),
             call({
                 'time': 5,

@@ -262,6 +262,7 @@ class LoggerHook(Hook):
                 epoch = 0
             else:
                 epoch = runner.epoch
+            tag['epoch'] = epoch
             runner.visualizer.add_scalars(
                 tag, step=epoch, file_path=self.json_log_path)
         else:
