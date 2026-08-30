@@ -336,7 +336,6 @@ class TestCheckpointHook(RunnerTestCase):
         petrel_client = MagicMock()
         for by_epoch, cfg in [(True, self.epoch_based_cfg),
                               (False, self.iter_based_cfg)]:
-            isfile = MagicMock(return_value=True)
             self.clear_work_dir()
             with patch.dict(sys.modules, {'petrel_client': petrel_client}), \
                  patch('mmengine.fileio.backends.PetrelBackend.put') as put_mock, \
@@ -361,6 +360,18 @@ class TestCheckpointHook(RunnerTestCase):
                 checkpoint_hook.after_val_epoch(runner, metrics)
                 isfile.assert_called_once()
                 remove_mock.assert_called_once()
+
+    def test_before_val_initializes_save_best(self):
+        runner = self.build_runner(self.epoch_based_cfg)
+        checkpoint_hook = CheckpointHook(save_best='acc')
+
+        checkpoint_hook.before_val(runner)
+        checkpoint_hook.after_val_epoch(runner, {'acc': 0.5})
+
+        self.assertEqual(runner.message_hub.get_info('best_score'), 0.5)
+        self.assertTrue(
+            osp.isfile(
+                osp.join(runner.work_dir, 'best_acc_epoch_0.pth')))
 
     def test_after_train_epoch(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
