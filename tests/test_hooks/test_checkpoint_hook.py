@@ -370,8 +370,7 @@ class TestCheckpointHook(RunnerTestCase):
 
         self.assertEqual(runner.message_hub.get_info('best_score'), 0.5)
         self.assertTrue(
-            osp.isfile(
-                osp.join(runner.work_dir, 'best_acc_epoch_0.pth')))
+            osp.isfile(osp.join(runner.work_dir, 'best_acc_epoch_0.pth')))
 
     def test_after_train_epoch(self):
         cfg = copy.deepcopy(self.epoch_based_cfg)
