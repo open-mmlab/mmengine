@@ -560,6 +560,7 @@ class TestVisualizer(TestCase):
             vis_backends=copy.deepcopy(self.vis_backend_cfg),
             save_dir='temp_dir')
 
+        is_main_process.reset_mock()
         visualizer.add_image('img', self.image)
 
         for name in ['mock1', 'mock2']:
