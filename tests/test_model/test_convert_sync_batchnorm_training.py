@@ -11,4 +11,4 @@ def test_convert_sync_batchnorm_keeps_training_state():
     sync_bn = convert_sync_batchnorm(bn)
 
     assert isinstance(sync_bn, nn.SyncBatchNorm)
-    assert sync_bn.training is False
+    assert not sync_bn.training
