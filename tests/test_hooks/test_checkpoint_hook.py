@@ -336,7 +336,6 @@ class TestCheckpointHook(RunnerTestCase):
         petrel_client = MagicMock()
         for by_epoch, cfg in [(True, self.epoch_based_cfg),
                               (False, self.iter_based_cfg)]:
-            isfile = MagicMock(return_value=True)
             self.clear_work_dir()
             with patch.dict(sys.modules, {'petrel_client': petrel_client}), \
                  patch('mmengine.fileio.backends.PetrelBackend.put') as put_mock, \

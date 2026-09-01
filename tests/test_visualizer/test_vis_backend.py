@@ -62,6 +62,18 @@ class TestLocalVisBackend:
             os.path.join(local_vis_backend._img_save_dir, 'img_2.png'))
         shutil.rmtree('temp_dir')
 
+    @patch('mmengine.visualization.vis_backend.get_rank', return_value=1)
+    def test_add_image_on_non_master_process(self, get_rank):
+        image = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
+        local_vis_backend = LocalVisBackend('temp_dir')
+
+        local_vis_backend.add_image('img', image)
+
+        assert os.path.exists(
+            os.path.join(local_vis_backend._img_save_dir, 'img_0_rank1.png'))
+        get_rank.assert_called()
+        shutil.rmtree('temp_dir')
+
     def test_add_scalar(self):
         local_vis_backend = LocalVisBackend('temp_dir')
         local_vis_backend.add_scalar('map', 0.9)

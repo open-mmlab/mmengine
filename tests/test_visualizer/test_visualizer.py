@@ -554,6 +554,19 @@ class TestVisualizer(TestCase):
         for name in ['mock1', 'mock2']:
             assert visualizer.get_backend(name)._add_image is True
 
+    @patch('mmengine.dist.utils.is_main_process', return_value=False)
+    def test_add_image_on_non_master_process(self, is_main_process):
+        visualizer = Visualizer(
+            vis_backends=copy.deepcopy(self.vis_backend_cfg),
+            save_dir='temp_dir')
+
+        is_main_process.reset_mock()
+        visualizer.add_image('img', self.image)
+
+        for name in ['mock1', 'mock2']:
+            assert visualizer._vis_backends[name]._add_image is True
+        is_main_process.assert_not_called()
+
     def test_add_scalar(self):
         visualizer = Visualizer(
             vis_backends=copy.deepcopy(self.vis_backend_cfg),

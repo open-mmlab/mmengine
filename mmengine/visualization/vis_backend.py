@@ -15,6 +15,7 @@ import numpy as np
 import torch
 
 from mmengine.config import Config, ConfigDict
+from mmengine.dist import get_rank
 from mmengine.fileio import dump
 from mmengine.hooks.logger_hook import SUFFIX_TYPE
 from mmengine.logging import MMLogger, print_log
@@ -256,7 +257,11 @@ class LocalVisBackend(BaseVisBackend):
         assert image.dtype == np.uint8
         drawn_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         os.makedirs(self._img_save_dir, exist_ok=True)
-        save_file_name = f'{name}_{step}.png'
+        save_file_name = f'{name}_{step}'
+        rank = get_rank()
+        if rank > 0:
+            save_file_name += f'_rank{rank}'
+        save_file_name += '.png'
         cv2.imwrite(osp.join(self._img_save_dir, save_file_name), drawn_image)
 
     @force_init_env

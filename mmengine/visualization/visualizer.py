@@ -1082,7 +1082,6 @@ class Visualizer(ManagerMixin):
         for vis_backend in self._vis_backends.values():
             vis_backend.add_graph(model, data_batch, **kwargs)
 
-    @master_only
     def add_image(self, name: str, image: np.ndarray, step: int = 0) -> None:
         """Record the image.
 
