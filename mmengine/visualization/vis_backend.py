@@ -8,6 +8,7 @@ import platform
 import warnings
 from abc import ABCMeta, abstractmethod
 from collections.abc import MutableMapping
+from pathlib import Path
 from typing import Any, Callable, List, Optional, Sequence, Union
 
 import cv2
@@ -662,7 +663,8 @@ class MLflowVisBackend(BaseVisBackend):
             Defaults to None.
         params (dict, optional): The params to be added to the experiment.
             Defaults to None.
-        tracking_uri (str, optional): The tracking uri. Defaults to None.
+        tracking_uri (str, optional): The tracking uri. If None, a local
+            SQLite database is created in ``save_dir``. Defaults to None.
         artifact_suffix (Tuple[str] or str, optional): The artifact suffix.
             Defaults to ('.json', '.log', '.py', 'yaml').
         tracked_config_keys (dict, optional): The top level keys of config that
@@ -670,8 +672,9 @@ class MLflowVisBackend(BaseVisBackend):
             the config will be added. Defaults to None.
             `New in version 0.7.4.`
         artifact_location (str, optional): The location to store run artifacts.
-            If None, the server picks an appropriate default.
-            Defaults to None.
+            If None, local artifacts are stored in ``save_dir/artifacts`` when
+            using the default SQLite database. Otherwise, the tracking server
+            picks an appropriate default. Defaults to None.
             `New in version 0.10.4.`
     """
 
@@ -718,22 +721,23 @@ class MLflowVisBackend(BaseVisBackend):
             if handler.stream is None or handler.stream.closed:
                 handler.stream = open(handler.baseFilename, 'a')
 
+        artifact_location = self._artifact_location
         if self._tracking_uri is not None:
             logger.warning(
                 'Please make sure that the mlflow server is running.')
             self._mlflow.set_tracking_uri(self._tracking_uri)
         else:
-            if os.name == 'nt':
-                file_url = f'file:\\{os.path.abspath(self._save_dir)}'
-            else:
-                file_url = f'file://{os.path.abspath(self._save_dir)}'
-            self._mlflow.set_tracking_uri(file_url)
+            save_dir = Path(self._save_dir).resolve()
+            database_path = (save_dir / 'mlflow.db').as_posix()
+            self._mlflow.set_tracking_uri(f'sqlite:///{database_path}')
+            if artifact_location is None:
+                artifact_location = (save_dir / 'artifacts').as_uri()
 
         self._exp_name = self._exp_name or 'Default'
 
         if self._mlflow.get_experiment_by_name(self._exp_name) is None:
             self._mlflow.create_experiment(
-                self._exp_name, artifact_location=self._artifact_location)
+                self._exp_name, artifact_location=artifact_location)
 
         self._mlflow.set_experiment(self._exp_name)
 

@@ -274,6 +274,12 @@ class TestWandbVisBackend:
 
 class TestMLflowVisBackend:
 
+    @pytest.fixture(autouse=True)
+    def use_null_pool(self, monkeypatch):
+        # Release SQLite handles so the test directory can be removed
+        # on Windows.
+        monkeypatch.setenv('MLFLOW_SQLALCHEMYSTORE_POOLCLASS', 'NullPool')
+
     def test_init(self):
         MLflowVisBackend('temp_dir')
         VISBACKENDS.build(dict(type='MLflowVisBackend', save_dir='temp_dir'))
@@ -318,6 +324,9 @@ class TestMLflowVisBackend:
         cfg = Config(dict(work_dir='temp_dir'))
         mlflow_vis_backend = MLflowVisBackend('temp_dir')
         mlflow_vis_backend._init_env()
+        assert mlflow_vis_backend._mlflow.get_tracking_uri().startswith(
+            'sqlite:///')
+        assert os.path.isfile(os.path.join('temp_dir', 'mlflow.db'))
         mlflow_vis_backend.add_config(cfg)
         mlflow_vis_backend.close()
         shutil.rmtree('temp_dir')
