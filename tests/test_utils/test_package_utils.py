@@ -26,6 +26,10 @@ def test_is_installed():
     # Should work on both distribution and module name
     assert is_installed('pillow') is True and is_installed('PIL') is True
 
+    # `find_spec` imports the leading component of a dotted name to resolve
+    # it, so a missing leading component must not raise.
+    assert is_installed('nonexistentnamespace12345.submodule') is False
+
 
 def test_get_install_path():
     # TODO: Windows CI may failed in unknown reason. Skip check the value
@@ -41,3 +45,6 @@ def test_get_install_path():
 
     with pytest.raises(PackageNotFoundError):
         get_installed_path('unknown')
+
+    with pytest.raises(PackageNotFoundError):
+        get_installed_path('nonexistentnamespace12345.submodule')

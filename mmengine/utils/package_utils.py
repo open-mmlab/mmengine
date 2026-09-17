@@ -12,8 +12,14 @@ def is_installed(package: str) -> bool:
     """
     import importlib.util
 
-    # First check if it's an importable module
-    spec = importlib.util.find_spec(package)
+    # First check if it's an importable module. For a dotted name (e.g.
+    # `zope.interface`), `find_spec` imports the parent package to resolve
+    # it and raises `ModuleNotFoundError` instead of returning None if the
+    # parent isn't importable.
+    try:
+        spec = importlib.util.find_spec(package)
+    except ModuleNotFoundError:
+        spec = None
     if spec is not None and spec.origin is not None:
         return True
 
@@ -75,7 +81,13 @@ def package2module(package: str) -> str:
     # The importable module name usually matches the package name. Probing the
     # import machinery first also covers editable installs, whose
     # `top_level.txt` may be absent even though the module is importable.
-    if importlib.util.find_spec(package) is not None:
+    # As above, `find_spec` raises rather than returning None when a dotted
+    # name's parent isn't importable.
+    try:
+        found = importlib.util.find_spec(package) is not None
+    except ModuleNotFoundError:
+        found = False
+    if found:
         return package
 
     # Distribution name differs from the module name (e.g. `mmcv-full` ->
