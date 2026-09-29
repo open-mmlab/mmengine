@@ -30,6 +30,7 @@ Examples:
     >>> # Directory call unified I/O functions
     >>> fileio.get('s3://path/of/your/file')
 """
+import fnmatch
 import json
 import warnings
 from contextlib import contextmanager
@@ -705,6 +706,120 @@ def copy_if_symlink_fails(
     backend = get_file_backend(
         src, backend_args=backend_args, enable_singleton=True)
     return backend.copy_if_symlink_fails(src, dst)
+
+
+def _split_glob_pattern(pattern: str) -> Tuple[str, str]:
+    """分离通配模式的静态目录和相对模式。"""
+    magic_index = next(
+        (index for index, char in enumerate(pattern) if char in '*?['), -1)
+    if magic_index < 0:
+        return '', pattern
+
+    separator_index = max(
+        pattern.rfind('/', 0, magic_index),
+        pattern.rfind('\\', 0, magic_index))
+    if separator_index < 0:
+        return '', pattern
+    if separator_index == 0:
+        return pattern[:1], pattern[1:]
+
+    root = pattern[:separator_index]
+    # 保留 Windows 驱动器根目录（例如 ``C:\\``）的分隔符。
+    if root.endswith(':'):
+        root += pattern[separator_index]
+    return root, pattern[separator_index + 1:]
+
+
+def _split_glob_path(path: str) -> list:
+    """按统一的路径分隔符拆分相对路径。"""
+    return [
+        part for part in path.replace('\\', '/').split('/')
+        if part not in ('', '.')
+    ]
+
+
+def _match_glob_path(path: str, pattern: str, recursive: bool) -> bool:
+    """匹配相对路径，避免普通 ``*`` 跨越目录分隔符。"""
+    path_parts = _split_glob_path(path)
+    pattern_parts = _split_glob_path(pattern)
+
+    def _match(path_index: int, pattern_index: int) -> bool:
+        if pattern_index == len(pattern_parts):
+            return path_index == len(path_parts)
+
+        current_pattern = pattern_parts[pattern_index]
+        if recursive and current_pattern == '**':
+            skip_current = _match(path_index, pattern_index + 1)
+            consume_current = False
+            if path_index < len(path_parts):
+                consume_current = _match(path_index + 1, pattern_index)
+            return skip_current or consume_current
+
+        if path_index >= len(path_parts):
+            return False
+        if not fnmatch.fnmatchcase(path_parts[path_index], current_pattern):
+            return False
+        return _match(path_index + 1, pattern_index + 1)
+
+    return _match(0, 0)
+
+
+def iglob(
+    pattern: Union[str, Path],
+    *,
+    recursive: bool = False,
+    backend_args: Optional[dict] = None,
+) -> Iterator[str]:
+    """返回匹配文件后端路径模式的迭代器。
+
+    Args:
+        pattern (str or Path): 包含 ``*``、``?`` 或字符组模式的路径。
+        recursive (bool): 是否让独立的 ``**`` 匹配多级目录。默认为 ``False``。
+        backend_args (dict, optional): 初始化文件后端的参数。默认为 ``None``。
+
+    Yields:
+        str: 匹配到的文件或目录路径。
+    """
+    pattern = str(pattern)
+    if not any(char in pattern for char in '*?['):
+        if exists(pattern, backend_args=backend_args):
+            yield pattern
+        return
+
+    root, relative_pattern = _split_glob_pattern(pattern)
+    search_root = root or '.'
+    try:
+        entries = list_dir_or_file(
+            search_root,
+            list_dir=True,
+            list_file=True,
+            recursive=True,
+            backend_args=backend_args)
+        for relative_path in entries:
+            relative_path = str(relative_path)
+            if not _match_glob_path(relative_path, relative_pattern,
+                                    recursive):
+                continue
+            if root:
+                yield str(
+                    join_path(root, relative_path, backend_args=backend_args))
+            else:
+                yield relative_path
+    except FileNotFoundError:
+        return
+
+
+def glob(
+    pattern: Union[str, Path],
+    *,
+    recursive: bool = False,
+    backend_args: Optional[dict] = None,
+) -> list:
+    """返回匹配文件后端路径模式的列表。
+
+    参数与 :func:`iglob` 相同；结果按后端枚举顺序返回。
+    """
+    return list(iglob(pattern, recursive=recursive, backend_args=backend_args))
 
 
 def list_dir_or_file(

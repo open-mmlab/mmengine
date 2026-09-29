@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import mmengine.fileio as fileio
+import mmengine.fileio.io as fileio_io
 
 sys.modules['petrel_client'] = MagicMock()
 sys.modules['petrel_client.client'] = MagicMock()
@@ -533,3 +534,51 @@ def test_list_dir_or_file():
                     osp.join('dir2', 'dir3', 'text4.txt'),
                     osp.join('dir2', 'img.jpg'), 'text1.txt', 'text2.txt'
                 }
+
+
+def test_glob_and_iglob():
+    # 使用本地后端验证单层和递归模式。
+    with build_temporary_directory() as tmp_dir:
+        assert set(fileio.glob(osp.join(tmp_dir, '*.txt'))) == {
+            osp.join(tmp_dir, 'text1.txt'),
+            osp.join(tmp_dir, 'text2.txt')
+        }
+        assert set(fileio.glob(
+            osp.join(tmp_dir, '*',
+                     '*.txt'))) == {osp.join(tmp_dir, 'dir1', 'text3.txt')}
+        expected = {
+            osp.join(tmp_dir, 'text1.txt'),
+            osp.join(tmp_dir, 'text2.txt'),
+            osp.join(tmp_dir, 'dir1', 'text3.txt'),
+            osp.join(tmp_dir, 'dir2', 'dir3', 'text4.txt')
+        }
+        assert set(
+            fileio.iglob(osp.join(tmp_dir, '**', '*.txt'),
+                         recursive=True)) == expected
+        assert fileio.glob(
+            osp.join(tmp_dir, 'missing', '*.txt'),
+            backend_args={'backend': 'local'}) == []
+
+
+def test_iglob_passes_backend_args():
+    with patch.object(
+            fileio_io,
+            'list_dir_or_file',
+            return_value=iter([osp.join('dir', 'a.txt'),
+                               'b.txt'])) as list_mock:
+        result = list(
+            fileio.iglob(
+                'virtual/**/*.txt',
+                recursive=True,
+                backend_args={'backend': 'local'}))
+
+    assert result == [
+        osp.join('virtual', 'dir', 'a.txt'),
+        osp.join('virtual', 'b.txt')
+    ]
+    list_mock.assert_called_once_with(
+        'virtual',
+        list_dir=True,
+        list_file=True,
+        recursive=True,
+        backend_args={'backend': 'local'})
