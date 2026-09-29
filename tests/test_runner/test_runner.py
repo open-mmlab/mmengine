@@ -1835,6 +1835,57 @@ class TestRunner(TestCase):
         runner.train()
         self.assertEqual(runner.iter, 3 * 2)
 
+    def test_val_begin_zero(self):
+        # `val_begin=0` should additionally validate before the first epoch is
+        # trained, so that the model can be evaluated at epoch 0. See #1448.
+        val_epochs = []
+        val_iters = []
+
+        @HOOKS.register_module(force=True)
+        class TestValBeginZeroHook(Hook):
+
+            def before_val_epoch(self, runner):
+                val_epochs.append(runner.epoch)
+                val_iters.append(runner.iter)
+
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_val_begin_zero'
+        cfg.custom_hooks = [dict(type='TestValBeginZeroHook', priority=50)]
+        cfg.train_cfg = dict(
+            by_epoch=True, max_epochs=2, val_interval=1, val_begin=0)
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+
+        # epoch 0 is validated before any training step has been taken, and
+        # the regular per-epoch validation is unaffected
+        self.assertEqual(val_epochs, [0, 1, 2])
+        self.assertEqual(val_iters, [0, 4, 8])
+        HOOKS.module_dict.pop('TestValBeginZeroHook')
+
+        # the default behaviour must stay unchanged: validation only happens
+        # after an epoch has been trained
+        val_epochs = []
+        val_iters = []
+
+        @HOOKS.register_module(force=True)
+        class TestValBeginDefaultHook(Hook):
+
+            def before_val_epoch(self, runner):
+                val_epochs.append(runner.epoch)
+                val_iters.append(runner.iter)
+
+        cfg = copy.deepcopy(self.epoch_based_cfg)
+        cfg.experiment_name = 'test_val_begin_default'
+        cfg.custom_hooks = [dict(type='TestValBeginDefaultHook', priority=50)]
+        cfg.train_cfg = dict(
+            by_epoch=True, max_epochs=2, val_interval=1, val_begin=1)
+        runner = Runner.from_cfg(cfg)
+        runner.train()
+
+        self.assertEqual(val_epochs, [1, 2])
+        self.assertEqual(val_iters, [4, 8])
+        HOOKS.module_dict.pop('TestValBeginDefaultHook')
+
     @skipIf(
         SKIP_TEST_COMPILE,
         reason='torch.compile is not valid, please install PyTorch>=2.0.0')
