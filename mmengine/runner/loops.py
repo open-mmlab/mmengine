@@ -26,7 +26,9 @@ class EpochBasedTrainLoop(BaseLoop):
         dataloader (Dataloader or dict): A dataloader object or a dict to
             build a dataloader.
         max_epochs (int): Total training epochs.
-        val_begin (int): The epoch that begins validating.
+        val_begin (int): The epoch that begins validating. If it is set to
+            0, an additional validation is performed before the first epoch
+            is trained, which allows the model to be evaluated at epoch 0.
             Defaults to 1.
         val_interval (int): Validation interval. Defaults to 1.
         dynamic_intervals (List[Tuple[int, int]], optional): The
@@ -93,6 +95,12 @@ class EpochBasedTrainLoop(BaseLoop):
     def run(self) -> torch.nn.Module:
         """Launch training."""
         self.runner.call_hook('before_train')
+
+        # `val_begin` is 1-based for the validation performed after an epoch.
+        # Allowing it to be 0 additionally validates at epoch 0, i.e. before
+        # any training step has been taken.
+        if self.val_begin <= 0 and self.runner.val_loop is not None:
+            self.runner.val_loop.run()
 
         while self._epoch < self._max_epochs and not self.stop_training:
             self.run_epoch()
