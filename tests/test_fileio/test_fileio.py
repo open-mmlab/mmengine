@@ -226,3 +226,18 @@ def test_dict_from_file():
         mapping = mmengine.dict_from_file(
             filename, backend_args={'backend': 'petrel'})
         assert mapping == {'1': 'cat', '2': ['dog', 'cow'], '3': 'panda'}
+
+
+def test_yaml_handler_uses_safe_loader():
+    # YAML configs should not construct arbitrary Python objects. A python-object
+    # tag must be rejected rather than executed (SafeLoader behaviour).
+    import tempfile
+    import pytest
+    content = 'a: 1
+b: !!python/object/apply:os.getcwd []
+'
+    with tempfile.NamedTemporaryFile('w', suffix='.yaml', delete=False) as f:
+        f.write(content)
+        name = f.name
+    with pytest.raises(Exception):
+        mmengine.load(name)
