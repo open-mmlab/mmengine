@@ -6,6 +6,7 @@ import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
+import yaml
 
 import mmengine
 from mmengine.fileio import HTTPBackend, PetrelBackend
@@ -226,3 +227,16 @@ def test_dict_from_file():
         mapping = mmengine.dict_from_file(
             filename, backend_args={'backend': 'petrel'})
         assert mapping == {'1': 'cat', '2': ['dog', 'cow'], '3': 'panda'}
+
+
+def test_yaml_handler_uses_safe_loader():
+    # A python-object tag must be rejected, not executed (SafeLoader)
+    content = 'a: 1\nb: !!python/object/apply:os.getcwd []\n'
+    with tempfile.NamedTemporaryFile('w', suffix='.yaml', delete=False) as f:
+        f.write(content)
+        name = f.name
+    try:
+        with pytest.raises(yaml.constructor.ConstructorError):
+            mmengine.load(name)
+    finally:
+        os.remove(name)
