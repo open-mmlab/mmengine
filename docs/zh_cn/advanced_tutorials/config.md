@@ -665,6 +665,22 @@ print(custom_optim)
 <my_module.CustomOptim object at 0x7f6983a87970>
 ```
 
+#### 带 scope 的自定义模块（跨仓库场景）
+
+上面的 `custom_imports` 字段适用于目标注册器没有设置 scope 的情况。如果要构建的自定义模块来自**其他算法库**，且该库的注册器带有 scope（例如 MMDetection 的 `DATASETS` 使用 `mmdet` scope），那么仅导入模块还不够：注册器在构建时还会按 scope 查找，而读取带 `custom_imports` 的配置文件并不会自动设置这个 scope，构建时仍可能报"注册器中找不到该类"。
+
+此时需要在构建前初始化默认 scope，其 `scope_name` 与目标注册器保持一致：
+
+```python
+from mmengine.registry import DefaultScope
+
+default_scope = DefaultScope.get_instance(  # type: ignore
+    'mmdet', scope_name='mmdet'
+)
+```
+
+设置默认 scope 后，`custom_imports` 就会把自定义模块注册到对应的 scope 注册器中，即可按上面的方式从配置构建该模块。关于 scope 的更多说明见 [Registry](./registry.md)。
+
 ### 跨项目继承配置文件
 
 为了避免基于已有算法库开发新项目时需要复制大量的配置文件，MMEngine 的配置类支持配置文件的跨项目继承。例如我们基于 MMDetection 开发新的算法库，需要使用以下 MMDetection 的配置文件：

@@ -664,6 +664,22 @@ print(custom_optim)
 <my_module.CustomOptim object at 0x7f6983a87970>
 ```
 
+#### Custom modules in a scoped (cross-repository) registry
+
+The `custom_imports` field above is enough when the target registry has no scope. When you build a custom module from **another repository** whose registries carry a scope (for example MMDetection's `DATASETS` uses the `mmdet` scope), importing the module alone is not sufficient: the registry lookup also needs the matching default scope. Loading a config with `custom_imports` does not set that scope for you, so the build can still fail with "class not found in registry".
+
+In that case, initialize the default scope before building, using the same `scope_name` as the target registry:
+
+```python
+from mmengine.registry import DefaultScope
+
+default_scope = DefaultScope.get_instance(  # type: ignore
+    'mmdet', scope_name='mmdet'
+)
+```
+
+After the default scope is set, `custom_imports` registers the custom module into the scoped registry and the module can be built from the config as shown above. See [Registry](./registry.md) for more on scopes.
+
 ### Inherit configuration files across repository
 
 It is annoying to copy a large number of configuration files when developing a new repository based on some existing repositories. To address this issue, `Config` support inherit configuration files from other repositories. For example, based on MMDetection, we want to develop a repository, we can use the MMDetection configuration file like this:
