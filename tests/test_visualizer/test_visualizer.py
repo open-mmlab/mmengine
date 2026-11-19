@@ -64,6 +64,44 @@ class TestVisualizer(TestCase):
             dict(type='MockVisBackend', name='mock2')
         ]
 
+    def test_master_only(self):
+        # By default, only the main process records the image.
+        with patch(
+                'mmengine.visualization.visualizer.is_main_process',
+                return_value=False):
+            visualizer = Visualizer(
+                name='test_master_only_true',
+                vis_backends=copy.deepcopy(self.vis_backend_cfg),
+                save_dir='temp_dir')
+            assert visualizer.master_only is True
+            visualizer.add_image('image', self.image)
+            assert not hasattr(visualizer.get_backend('mock1'), '_add_image')
+            assert not hasattr(visualizer.get_backend('mock2'), '_add_image')
+
+        # With master_only=False every rank records its own image.
+        with patch(
+                'mmengine.visualization.visualizer.is_main_process',
+                return_value=False):
+            visualizer = Visualizer(
+                name='test_master_only_false',
+                vis_backends=copy.deepcopy(self.vis_backend_cfg),
+                save_dir='temp_dir',
+                master_only=False)
+            visualizer.add_image('image', self.image)
+            assert visualizer.get_backend('mock1')._add_image
+            assert visualizer.get_backend('mock2')._add_image
+
+        # The main process records the image in both cases.
+        with patch(
+                'mmengine.visualization.visualizer.is_main_process',
+                return_value=True):
+            visualizer = Visualizer(
+                name='test_master_only_main',
+                vis_backends=copy.deepcopy(self.vis_backend_cfg),
+                save_dir='temp_dir')
+            visualizer.add_image('image', self.image)
+            assert visualizer.get_backend('mock1')._add_image
+
     def test_init(self):
         visualizer = Visualizer(image=self.image)
         visualizer.get_image()

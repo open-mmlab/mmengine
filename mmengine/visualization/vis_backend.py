@@ -15,6 +15,7 @@ import numpy as np
 import torch
 
 from mmengine.config import Config, ConfigDict
+from mmengine.dist import get_rank, is_main_process
 from mmengine.fileio import dump
 from mmengine.hooks.logger_hook import SUFFIX_TYPE
 from mmengine.logging import MMLogger, print_log
@@ -257,6 +258,12 @@ class LocalVisBackend(BaseVisBackend):
         drawn_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         os.makedirs(self._img_save_dir, exist_ok=True)
         save_file_name = f'{name}_{step}.png'
+        # Suffix the file name with the rank for the non-main processes,
+        # otherwise all ranks would overwrite the same file when a
+        # Visualizer is built with master_only=False in distributed
+        # training.
+        if not is_main_process():
+            save_file_name = f'{name}_{step}_rank{get_rank()}.png'
         cv2.imwrite(osp.join(self._img_save_dir, save_file_name), drawn_image)
 
     @force_init_env
