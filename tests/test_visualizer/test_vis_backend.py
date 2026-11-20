@@ -62,6 +62,22 @@ class TestLocalVisBackend:
             os.path.join(local_vis_backend._img_save_dir, 'img_2.png'))
         shutil.rmtree('temp_dir')
 
+    def test_add_image_non_main_process(self):
+        image = np.random.randint(0, 256, size=(10, 10, 3)).astype(np.uint8)
+        save_dir = 'temp_dir_non_main'
+        local_vis_backend = LocalVisBackend(save_dir)
+        # The file name of a non-main process carries its rank, otherwise
+        # all ranks would overwrite the same image.
+        with patch(
+                'mmengine.visualization.vis_backend.is_main_process',
+                return_value=False), patch(
+                    'mmengine.visualization.vis_backend.get_rank',
+                    return_value=3):
+            local_vis_backend.add_image('img', image, step=1)
+        assert os.path.exists(
+            os.path.join(local_vis_backend._img_save_dir, 'img_1_rank3.png'))
+        shutil.rmtree(save_dir)
+
     def test_add_scalar(self):
         local_vis_backend = LocalVisBackend('temp_dir')
         local_vis_backend.add_scalar('map', 0.9)

@@ -13,7 +13,7 @@ import torch
 import torch.nn.functional as F
 
 from mmengine.config import Config
-from mmengine.dist import master_only
+from mmengine.dist import is_main_process, master_only
 from mmengine.registry import VISBACKENDS, VISUALIZERS
 from mmengine.structures import BaseDataElement
 from mmengine.utils import ManagerMixin, is_seq_of
@@ -82,6 +82,15 @@ class Visualizer(ManagerMixin):
             Defaults to empty dict.
         fig_show_cfg (dict): Keyword parameters of figure for showing.
             Defaults to empty dict.
+        master_only (bool): Whether to record the image only in the main
+            process. If ``True`` (default), ``add_image`` is executed in the
+            main process only, which keeps the behaviour of previous
+            versions. If ``False``, every rank records its own image, which
+            is useful to inspect the predictions of all processes in
+            distributed training. In that case the vis backend should name
+            the files differently for each rank to avoid overwriting each
+            other, which ``LocalVisBackend`` does by appending the rank to
+            the file name. Defaults to True.
 
     Examples:
         >>> # Basic info methods
@@ -160,7 +169,8 @@ class Visualizer(ManagerMixin):
         vis_backends: VisBackendsType = None,
         save_dir: Optional[str] = None,
         fig_save_cfg=dict(frameon=False),
-        fig_show_cfg=dict(frameon=False)
+        fig_show_cfg=dict(frameon=False),
+        master_only: bool = True
     ) -> None:
         super().__init__(name)
         self._dataset_meta: Optional[dict] = None
@@ -207,6 +217,7 @@ class Visualizer(ManagerMixin):
         self.fig_save = None
         self.fig_save_cfg = fig_save_cfg
         self.fig_show_cfg = fig_show_cfg
+        self.master_only = master_only
 
         (self.fig_save_canvas, self.fig_save,
          self.ax_save) = self._initialize_fig(fig_save_cfg)
@@ -1082,7 +1093,6 @@ class Visualizer(ManagerMixin):
         for vis_backend in self._vis_backends.values():
             vis_backend.add_graph(model, data_batch, **kwargs)
 
-    @master_only
     def add_image(self, name: str, image: np.ndarray, step: int = 0) -> None:
         """Record the image.
 
@@ -1092,6 +1102,8 @@ class Visualizer(ManagerMixin):
                 should be RGB. Defaults to None.
             step (int): Global step value to record. Defaults to 0.
         """
+        if self.master_only and not is_main_process():
+            return
         for vis_backend in self._vis_backends.values():
             vis_backend.add_image(name, image, step)  # type: ignore
 
